@@ -1,0 +1,525 @@
+/* ===================================
+   REGISTEREVENT COMPONENT - SCOPED STYLES
+   All styles are prefixed with .registerevent-
+   =================================== */
+
+/* CSS Variables - scoped to component */
+.registerevent-page {
+  --re-background: #0b0e14;
+  --re-foreground: #e6e7ea;
+  --re-muted: #98a1b2;
+  --re-primary: #0ea5e9;
+  --re-accent: #22d3ee;
+  --re-card: color-mix(in oklab, #0b0e14 70%, white 6%);
+  --re-success: #10b981;
+  --re-error: #ef4444;
+}
+
+/* Main page container */
+.registerevent-page {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  color: var(--re-foreground);
+  background: var(--re-background);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Lightweight geometric hero background (CSS-only) */
+.registerevent-hero-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--re-background);
+  background-image: 
+    radial-gradient(60rem 60rem at 20% 20%, color-mix(in oklab, var(--re-primary) 22%, transparent), transparent 55%),
+    radial-gradient(48rem 48rem at 80% 28%, color-mix(in oklab, #22d3ee 18%, transparent), transparent 52%),
+    radial-gradient(44rem 44rem at 50% 80%, color-mix(in oklab, #60a5fa 16%, transparent), transparent 50%),
+    radial-gradient(100% 100% at 50% 0%, color-mix(in oklab, black 6%, transparent), transparent 60%);
+  filter: saturate(1.05) brightness(1.02);
+}
+
+/* Container */
+.registerevent-container {
+  position: relative;
+  z-index: 1;
+  padding: 96px 16px 48px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+/* Glass surface effect */
+.registerevent-surface {
+  background: color-mix(in oklab, var(--re-background) 75%, white 5%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* Flash messages */
+.registerevent-flash {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+  animation: registerevent-slideIn 0.3s ease-out;
+}
+
+@keyframes registerevent-slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.registerevent-flash-success {
+  background: color-mix(in oklab, var(--re-success) 16%, transparent);
+  border-color: color-mix(in oklab, var(--re-success) 36%, transparent);
+  color: #d1fae5;
+}
+
+.registerevent-flash-error {
+  background: color-mix(in oklab, var(--re-error) 16%, transparent);
+  border-color: color-mix(in oklab, var(--re-error) 36%, transparent);
+  color: #fee2e2;
+}
+
+/* Header */
+.registerevent-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  flex-wrap: wrap;
+}
+
+.registerevent-header-text {
+  min-width: 288px;
+}
+
+.registerevent-title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--re-foreground);
+  line-height: 1.2;
+}
+
+.registerevent-subtitle {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--re-muted);
+  line-height: 1.5;
+}
+
+/* Filters */
+.registerevent-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.registerevent-filter-btn {
+  appearance: none;
+  border: 1px solid color-mix(in oklab, white 10%, transparent);
+  background: color-mix(in oklab, var(--re-background) 80%, white 4%);
+  color: var(--re-foreground);
+  border-radius: 12px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 180ms ease;
+  min-width: 84px;
+}
+
+.registerevent-filter-btn:hover {
+  transform: translateY(-1px);
+  background: color-mix(in oklab, var(--re-background) 75%, white 6%);
+}
+
+.registerevent-filter-btn:focus-visible {
+  outline: 2px solid var(--re-primary);
+  outline-offset: 2px;
+}
+
+.registerevent-filter-active {
+  background: var(--re-primary) !important;
+  border-color: var(--re-primary) !important;
+  color: white !important;
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.35);
+}
+
+/* Loading, error, no events states */
+.registerevent-state {
+  text-align: center;
+  padding: 48px 12px 24px;
+}
+
+.registerevent-spinner {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid color-mix(in oklab, var(--re-primary) 20%, transparent);
+  border-top-color: var(--re-primary);
+  border-radius: 50%;
+  animation: registerevent-spin 0.8s linear infinite;
+}
+
+@keyframes registerevent-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.registerevent-muted {
+  margin-top: 12px;
+  color: var(--re-muted);
+  font-size: 15px;
+}
+
+.registerevent-error {
+  color: var(--re-error);
+  font-weight: 600;
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+
+.registerevent-retry-btn {
+  margin-top: 12px;
+  border: 1px solid color-mix(in oklab, white 14%, transparent);
+  background: color-mix(in oklab, var(--re-background) 80%, white 6%);
+  color: var(--re-foreground);
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.registerevent-retry-btn:hover {
+  background: color-mix(in oklab, var(--re-background) 75%, white 8%);
+  transform: translateY(-1px);
+}
+
+/* Events list */
+.registerevent-list {
+  margin-top: 24px;
+  display: grid;
+  gap: 20px;
+  padding: 0 16px;
+}
+
+/* Event card */
+.registerevent-card {
+  background: color-mix(in oklab, var(--re-background) 60%, white 4%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+  border-radius: 14px;
+  padding: 20px;
+  transition: all 200ms ease;
+}
+
+.registerevent-card:hover {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+  transform: translateY(-2px);
+}
+
+.registerevent-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.registerevent-card-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.registerevent-card-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--re-foreground);
+  line-height: 1.3;
+}
+
+.registerevent-card-desc {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--re-muted);
+  line-height: 1.6;
+}
+
+/* Status badges */
+.registerevent-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  letter-spacing: 0.025em;
+}
+
+.registerevent-badge-upcoming {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.registerevent-badge-ongoing {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.registerevent-badge-completed {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* Register button with animated outline */
+.registerevent-register-btn {
+  position: relative;
+  border: none;
+  background: transparent;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 200ms ease;
+  box-shadow: inset 0 -6px 10px rgba(143, 223, 255, 0.12);
+}
+
+.registerevent-register-btn:hover {
+  box-shadow: inset 0 -5px 10px rgba(143, 223, 255, 0.24);
+  transform: translateY(-1px);
+}
+
+.registerevent-register-btn:focus-visible {
+  outline: 2px solid var(--re-primary);
+  outline-offset: 2px;
+}
+
+.registerevent-btn-border,
+.registerevent-btn-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  content: "";
+  display: block;
+  pointer-events: none;
+}
+
+.registerevent-btn-border {
+  padding: 1px;
+  background: linear-gradient(90deg, rgba(255, 170, 64, 0.5), rgba(156, 64, 255, 0.5), rgba(255, 170, 64, 0.5));
+  background-size: 300% 100%;
+  animation: registerevent-gradient-x 8s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+.registerevent-btn-fill {
+  background: color-mix(in oklab, var(--re-background) 80%, white 4%);
+}
+
+.registerevent-btn-label {
+  position: relative;
+  z-index: 2;
+  font-weight: 600;
+  font-size: 14px;
+  background: linear-gradient(90deg, #ffaa40, #ffffff, #ffaa40);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: registerevent-gradient-x 8s linear infinite;
+}
+
+@keyframes registerevent-gradient-x {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 140% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Section titles */
+.registerevent-section-title {
+  margin: 20px 0 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--re-foreground);
+  letter-spacing: -0.015em;
+}
+
+/* Details grid */
+.registerevent-details {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 0 24px;
+}
+
+.registerevent-detail-row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  border-top: 1px solid color-mix(in oklab, white 12%, transparent);
+  padding: 16px 0;
+}
+
+.registerevent-detail-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.registerevent-detail-label {
+  margin: 0;
+  color: var(--re-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.registerevent-detail-value {
+  margin: 0;
+  color: var(--re-foreground);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* About section */
+.registerevent-about {
+  margin-top: 8px;
+  padding-bottom: 12px;
+  color: var(--re-foreground);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Back button */
+.registerevent-back {
+  margin-top: 24px;
+  padding: 16px;
+}
+
+.registerevent-back-btn {
+  appearance: none;
+  background: color-mix(in oklab, var(--re-background) 80%, white 6%);
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+  color: var(--re-foreground);
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.registerevent-back-btn:hover {
+  background: color-mix(in oklab, var(--re-background) 75%, white 8%);
+  transform: translateY(-1px);
+}
+
+.registerevent-back-btn:focus-visible {
+  outline: 2px solid var(--re-primary);
+  outline-offset: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .registerevent-container {
+    padding-top: 64px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .registerevent-surface {
+    padding: 16px;
+  }
+
+  .registerevent-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .registerevent-title {
+    font-size: 28px;
+  }
+
+  .registerevent-filters {
+    width: 100%;
+  }
+
+  .registerevent-filter-btn {
+    flex: 1;
+    min-width: auto;
+  }
+
+  .registerevent-details {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .registerevent-detail-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 12px 0;
+  }
+
+  .registerevent-card-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .registerevent-register-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .registerevent-list {
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .registerevent-title {
+    font-size: 24px;
+  }
+
+  .registerevent-card-title {
+    font-size: 20px;
+  }
+
+  .registerevent-card {
+    padding: 16px;
+  }
+}

@@ -1,0 +1,16 @@
+# Node/Frontend
+node_modules/
+dist/
+.build/
+.next/
+*.log
+
+# Python/Backend
+__pycache__/
+*.pyc
+.env
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+.vscode/

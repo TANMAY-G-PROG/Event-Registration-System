@@ -1,0 +1,204 @@
+@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;700&family=VT323&display=swap');
+
+/* Scoped container for Event Form */
+.event-form-container {
+  font-family: 'Libre Franklin', sans-serif;
+  cursor: crosshair;
+  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  background: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow: auto;
+}
+
+.event-form-wrap {
+  position: relative;
+  margin: 0 auto;
+  max-width: 1150px;
+  width: 90%;
+  box-shadow: 7px 13px 49px -5px rgba(0, 165, 120, 0.47);
+  overflow: hidden;
+}
+
+.event-form-registration {
+  animation: event-form-open 0.3s;
+  animation-iteration-count: 1;
+  background: radial-gradient(circle farthest-corner, black 40%, transparent 0) no-repeat, white;
+  background-position: -480px -250px;
+}
+
+.event-form-registration .event-form-button {
+  background: #000;
+}
+
+.event-form-left {
+  background: radial-gradient(circle farthest-corner, #00a578 40%, transparent 0) no-repeat;
+  background-position: 140px 170px;
+}
+
+.event-form-logo-text {
+  font-family: 'VT323', monospace;
+  font-size: 130px;
+  color: #00a578;
+  mix-blend-mode: difference;
+  margin: 220px 0 0 90px;
+  line-height: 82%;
+}
+
+.event-form-card-side {
+  width: 50%;
+  min-height: 650px;
+  box-sizing: border-box;
+}
+
+.event-form-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 30px;
+  box-sizing: border-box;
+}
+
+.event-form-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 380px;
+}
+
+.event-form-card {
+  display: flex;
+}
+
+.event-form-input,
+.event-form-textarea {
+  border: none;
+  border-bottom: 1px solid black;
+  margin-bottom: 22px;
+  padding: 8px 5px;
+  font-family: 'Libre Franklin', sans-serif;
+  box-sizing: border-box;
+  font-size: 15px;
+}
+
+.event-form-textarea {
+  resize: vertical;
+  font-size: 14px;
+}
+
+.event-form-input:focus,
+.event-form-textarea:focus {
+  outline-color: black;
+}
+
+.event-form-button {
+  background: #00a578;
+  color: white;
+  border: none;
+  padding: 12px;
+  cursor: alias;
+  box-shadow: 0 3px 0 1px rgba(0, 165, 120, 0.47);
+  font-family: 'Libre Franklin', sans-serif;
+  font-size: 17px;
+  font-weight: bold;
+  box-sizing: border-box;
+  margin-top: 10px;
+}
+
+.event-form-button:hover {
+  box-shadow: none;
+  transform: translateY(3px);
+  transition: all 0.1s linear;
+}
+
+.event-form-button:focus {
+  outline-color: #fb5b87;
+}
+
+.event-form-title {
+  font-size: 34px;
+  margin-bottom: 20px;
+  font-family: 'Libre Franklin', sans-serif;
+}
+
+.event-form-welcome {
+  font-size: 52px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  font-family: 'Libre Franklin', sans-serif;
+  color: black;
+  position: relative;
+}
+
+@keyframes event-form-open {
+  0% { background: black; }
+  100% { }
+}
+
+.event-form-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 5px;
+  color: white;
+  font-weight: normal;
+  z-index: 1000;
+  animation: event-form-slideIn 0.3s ease-in-out;
+  font-family: 'Libre Franklin', sans-serif;
+}
+
+.event-form-message-success {
+  background-color: rgb(114, 221, 158);
+}
+
+.event-form-message-error {
+  background-color: rgb(225, 108, 95);
+}
+
+@keyframes event-form-slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media screen and (max-width: 900px) {
+  .event-form-wrap {
+    width: fit-content;
+    margin-bottom: 140px;
+  }
+  
+  .event-form-card-side {
+    width: 100%;
+    min-height: 0;
+  }
+  
+  .event-form-card {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .event-form-logo-text {
+    margin: 10px 0 0 90px;
+    font-size: 80px;
+  }
+  
+  .event-form-right {
+    padding: 25px;
+  }
+}
