@@ -5,11 +5,13 @@ const supabase = require('./lib/supabase');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// STEP 1: CORS MUST BE FIRST - Before any other middleware
+
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true,
@@ -18,10 +20,10 @@ app.use(cors({
   exposedHeaders: ['set-cookie']
 }));
 
-// STEP 2: Parse JSON bodies
+
 app.use(express.json());
 
-// STEP 3: Session configuration - CRITICAL
+
 app.use(session({
     secret: 'your-event-management-secret-key-change-this-in-production',
     resave: false,
@@ -56,6 +58,24 @@ async function testSupabaseConnection() {
     }
 }
 testSupabaseConnection();
+
+// ADDED: Configure Gmail transporter
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD
+    }
+});
+
+// ADDED: Verify email configuration on startup
+transporter.verify((error, success) => {
+    if (error) {
+        console.error('❌ Email configuration error:', error);
+    } else {
+        console.log('✅ Email server is ready');
+    }
+});
 
 // Middleware to check if user is authenticated
 function requireAuth(req, res, next) {
@@ -837,7 +857,130 @@ app.get('/api/students', requireAuth, async (req, res) => {
     }
 });
 
-// Scan QR code to update participant status
+// ==================== NEW ATTENDANCE ENDPOINTS ====================
+
+// Mark participant attendance (NEW - CORRECTED)
+app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
+    try {
+        const { eventId, usn } = req.body;
+        
+        // Verify the USN matches the logged-in user
+        if (usn !== req.session.userUSN) {
+            return res.status(403).json({ error: 'Unauthorized: USN mismatch' });
+        }
+        
+        if (!usn || !eventId) {
+            return res.status(400).json({ error: 'USN and Event ID are required' });
+        }
+
+        // Check if participant is registered for this event
+        const { data: existing, error: existingError } = await supabase
+            .from('participant')
+            .select('*')
+            .eq('partusn', usn)
+            .eq('parteid', eventId)
+            .limit(1);
+
+        if (existingError) {
+            console.error('Error checking participant:', existingError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!existing || existing.length === 0) {
+            return res.status(404).json({ error: 'You are not registered for this event' });
+        }
+
+        if (existing[0].partstatus === true) {
+            return res.status(400).json({ error: 'Attendance already marked' });
+        }
+
+        // Mark attendance
+        const { error: updateError } = await supabase
+            .from('participant')
+            .update({ partstatus: true })
+            .eq('partusn', usn)
+            .eq('parteid', eventId);
+        
+        if (updateError) {
+            console.error('Error updating participant status:', updateError);
+            return res.status(500).json({ error: 'Failed to mark attendance' });
+        }
+
+        console.log(`✅ Participant attendance marked: ${usn} for event ${eventId}`);
+        res.json({ 
+            success: true, 
+            message: 'Participant attendance marked successfully',
+            usn: usn,
+            eventId: eventId
+        });
+    } catch (err) {
+        console.error('Error marking participant attendance:', err);
+        res.status(500).json({ error: 'Error marking attendance: ' + err.message });
+    }
+});
+
+// Mark volunteer attendance (NEW - CORRECTED)
+app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
+    try {
+        const { eventId, usn } = req.body;
+        
+        // Verify the USN matches the logged-in user
+        if (usn !== req.session.userUSN) {
+            return res.status(403).json({ error: 'Unauthorized: USN mismatch' });
+        }
+        
+        if (!usn || !eventId) {
+            return res.status(400).json({ error: 'USN and Event ID are required' });
+        }
+
+        // Check if volunteer is registered for this event
+        const { data: existing, error: existingError } = await supabase
+            .from('volunteer')
+            .select('*')
+            .eq('volnusn', usn)
+            .eq('volneid', eventId)
+            .limit(1);
+
+        if (existingError) {
+            console.error('Error checking volunteer:', existingError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!existing || existing.length === 0) {
+            return res.status(404).json({ error: 'You are not registered as a volunteer for this event' });
+        }
+
+        if (existing[0].volnstatus === true) {
+            return res.status(400).json({ error: 'Attendance already marked' });
+        }
+
+        // Mark attendance
+        const { error: updateError } = await supabase
+            .from('volunteer')
+            .update({ volnstatus: true })
+            .eq('volnusn', usn)
+            .eq('volneid', eventId);
+        
+        if (updateError) {
+            console.error('Error updating volunteer status:', updateError);
+            return res.status(500).json({ error: 'Failed to mark attendance' });
+        }
+
+        console.log(`✅ Volunteer attendance marked: ${usn} for event ${eventId}`);
+        res.json({ 
+            success: true, 
+            message: 'Volunteer attendance marked successfully',
+            usn: usn,
+            eventId: eventId
+        });
+    } catch (err) {
+        console.error('Error marking volunteer attendance:', err);
+        res.status(500).json({ error: 'Error marking attendance: ' + err.message });
+    }
+});
+
+// OLD scan-qr endpoint (DEPRECATED - kept for backward compatibility)
+// You can remove this if you want, as the new endpoints replace it
 app.get('/api/scan-qr', async (req, res) => {
     try {
         const { usn, eid } = req.query;
@@ -884,9 +1027,184 @@ app.get('/api/scan-qr', async (req, res) => {
     }
 });
 
+
+// ==================================================
+// ADDED FORGOT/RESET PASSWORD ROUTES
+// ==================================================
+
+// Forgot Password - Send reset email
+app.post('/api/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+        // Check if user exists
+        const { data: user, error: userError } = await supabase
+            .from('student')
+            .select('usn, sname, emailid')
+            .eq('emailid', email)
+            .limit(1);
+        
+        if (userError) {
+            console.error('Error finding user:', userError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        // Always return success (don't reveal if email exists for security)
+        if (!user || user.length === 0) {
+            console.log('Password reset requested for non-existent email:', email);
+            return res.json({
+                success: true,
+                message: 'If an account exists with this email, you will receive a password reset link.'
+            });
+        }
+        // Generate secure reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+        // Save token to database
+        const { error: updateError } = await supabase
+            .from('student')
+            .update({
+                reset_token: resetToken,
+                reset_token_expiry: resetTokenExpiry.toISOString()
+            })
+            .eq('emailid', email);
+        
+        if (updateError) {
+            console.error('Error saving reset token:', updateError);
+            return res.status(500).json({ error: 'Failed to generate reset link' });
+        }
+        // Create reset link
+        const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+        // Send email
+        const mailOptions = {
+            from: `"E-Pass Event System" <${process.env.GMAIL_USER}>`,
+            to: email,
+            subject: 'Password Reset Request - E-Pass',
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: linear-gradient(to right, #1A2980, #26D0CE); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                        .button { display: inline-block; padding: 15px 30px; background: linear-gradient(to right, #1A2980, #26D0CE); color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+                        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+                        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🔒 Password Reset Request</h1>
+                        </div>
+                        <div class="content">
+                            <p>Hello <strong>${user[0].sname}</strong>,</p>
+                            <p>We received a request to reset the password for your account associated with <strong>${email}</strong>.</p>
+                            <p>Click the button below to reset your password:</p>
+                            <center>
+                                <a href="${resetLink}" class="button">Reset Password</a>
+                            </center>
+                            <p>Or copy and paste this link into your browser:</p>
+                            <p style="background: #fff; padding: 10px; border: 1px solid #ddd; word-break: break-all;">
+                                ${resetLink}
+                            </p>
+                            <div class="warning">
+                                <strong>⚠️ Important:</strong>
+                                <ul>
+                                    <li>This link will expire in <strong>1 hour</strong></li>
+                                    <li>If you didn't request this reset, please ignore this email</li>
+                                    <li>Your password won't change until you create a new one</li>
+                                </ul>
+                            </div>
+                            <p>Your USN: <strong>${user[0].usn}</strong></p>
+                        </div>
+                        <div class="footer">
+                            <p>E-Pass Event Management System</p>
+                            <p>This is an automated email. Please do not reply.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `
+        };
+        await transporter.sendMail(mailOptions);
+        console.log('✅ Password reset email sent to:', email);
+        res.json({
+            success: true,
+            message: 'If an account exists with this email, you will receive a password reset link.'
+        });
+    } catch (err) {
+        console.error('Error in forgot password:', err);
+        res.status(500).json({ error: 'Failed to process password reset request' });
+    }
+});
+
+// Reset Password - Update password with token
+app.post('/api/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        
+        if (!token || !newPassword) {
+            return res.status(400).json({ error: 'Token and new password are required' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+        }
+        // Find user with valid token
+        const { data: user, error: userError } = await supabase
+            .from('student')
+            .select('usn, sname, emailid, reset_token_expiry')
+            .eq('reset_token', token)
+            .limit(1);
+        
+        if (userError) {
+            console.error('Error finding user with token:', userError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        if (!user || user.length === 0) {
+            return res.status(400).json({ error: 'Invalid or expired reset link' });
+        }
+        // Check if token is expired
+        const tokenExpiry = new Date(user[0].reset_token_expiry);
+        if (tokenExpiry < new Date()) {
+            return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
+        }
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        // Update password and clear reset token
+        const { error: updateError } = await supabase
+            .from('student')
+            .update({
+                password: hashedPassword,
+                reset_token: null,
+                reset_token_expiry: null
+            })
+            .eq('reset_token', token);
+        
+        if (updateError) {
+            console.error('Error updating password:', updateError);
+            return res.status(500).json({ error: 'Failed to reset password' });
+        }
+        console.log('✅ Password reset successful for:', user[0].usn);
+        res.json({
+            success: true,
+            message: 'Password reset successfully! You can now sign in with your new password.',
+            userName: user[0].sname
+        });
+    } catch (err) {
+        console.error('Error in reset password:', err);
+        res.status(500).json({ error: 'Failed to reset password' });
+    }
+});
+
+
 // Start server
 app.listen(PORT, () => {
     console.log(`\n🚀 Server running at http://localhost:${PORT}`);
     console.log(`📡 CORS enabled for http://localhost:5173`);
-    console.log(`🔍 Session debugging ENABLED\n`);
+    console.log(`🔐 Session debugging ENABLED\n`);
 });
