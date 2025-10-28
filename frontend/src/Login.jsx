@@ -308,7 +308,17 @@ export default function Login() {
               value={signInData.password}
               onChange={handleSignInChange}
             />
-            <a href="#">Forgot Your Password?</a>
+            {/* UPDATED: Made Forgot Password clickable */}
+            <a 
+              href="#" 
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/forgot-password');
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              Forgot Your Password?
+            </a>
             <button type="button" onClick={handleSignIn}>
               Sign In
             </button>

@@ -24,8 +24,9 @@ export default function OrganizerTicket() {
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch('/api/me', {
+      const response = await fetch('http://localhost:3000/api/me', {
         method: 'GET',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
       if (!response.ok) {
@@ -49,8 +50,9 @@ export default function OrganizerTicket() {
       }
       setUserUSN(usn);
 
-      const response = await fetch(`/api/events/${eventId}`, {
+      const response = await fetch(`http://localhost:3000/api/events/${eventId}`, {
         method: 'GET',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
 
@@ -61,8 +63,9 @@ export default function OrganizerTicket() {
       const data = await response.json();
       
       if (data.eid) {
-        if (!data.isRegistered) {
-          setError('You are not registered for this event. Please join the event first.');
+        // Check if user is the organizer
+        if (data.OrgUsn !== usn) {
+          setError('You are not the organizer of this event.');
           setLoading(false);
           return;
         }
@@ -73,13 +76,19 @@ export default function OrganizerTicket() {
       }
     } catch (err) {
       console.error('Error fetching event:', err);
-      setError(`Could not load event details. Event ID may not exist or another error occurred.`);
+      setError(`Could not load event details. ${err.message}`);
       setLoading(false);
     }
   };
 
   const handleBack = () => {
     window.location.href = '/organisers.html';
+  };
+
+  const handleShowQR = () => {
+    // Generate QR code with EVENT ID ONLY (no USN)
+    // Participants/Volunteers will scan this to mark their own attendance
+    navigate(`/qr?eventId=${eventData.eid}`);
   };
 
   const formatDate = (dateString) => {
@@ -133,6 +142,7 @@ export default function OrganizerTicket() {
             <div className="tk-ticket-header">
               <h1 className="tk-event-title">{eventData.ename || 'Untitled Event'}</h1>
               <p className="tk-event-id">Event ID: {eventData.eid}</p>
+              <p className="tk-organizer-badge">👤 Organizer View</p>
             </div>
 
             <div className="tk-ticket-content">
@@ -202,12 +212,16 @@ export default function OrganizerTicket() {
 
             <div className="tk-ticket-footer">
               <button 
-                onClick={() => navigate(`/qr?eventId=${eventData.eid}&usn=${userUSN}`)}
-                className="tk-qr-placeholder"
-                title="View QR Code"
+                onClick={handleShowQR}
+                className="tk-qr-placeholder tk-qr-generator"
+                title="Show Event QR Code"
               >
-                QR
+                📱
+                <div className="tk-qr-text">SHOW EVENT QR CODE</div>
               </button>
+              <p style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
+                Display this QR code for participants and volunteers to scan for attendance
+              </p>
             </div>
           </div>
         )}

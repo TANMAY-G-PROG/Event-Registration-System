@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ticket.css';
 
 export default function VolunteerTicket() {
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userUSN, setUserUSN] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -19,10 +22,38 @@ export default function VolunteerTicket() {
     fetchEventData(eventId);
   }, []);
 
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/me', {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user data`);
+      }
+      const data = await response.json();
+      return data.userUSN;
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      return null;
+    }
+  };
+
   const fetchEventData = async (eventId) => {
     try {
-      const response = await fetch('/api/my-volunteer-events');
-      
+      const usn = await fetchUserData();
+      if (!usn) {
+        setError('User not authenticated. Please sign in.');
+        setLoading(false);
+        return;
+      }
+      setUserUSN(usn);
+
+      const response = await fetch('http://localhost:3000/api/my-volunteer-events', {
+        credentials: 'include',
+      });
+
       if (!response.ok) {
         throw new Error('Failed to fetch volunteer events');
       }
@@ -32,16 +63,19 @@ export default function VolunteerTicket() {
 
       // Search in array format
       if (data.volunteerEvents && Array.isArray(data.volunteerEvents)) {
-        foundEvent = data.volunteerEvents.find(event => 
-          event.eid == eventId || event.id == eventId
+        foundEvent = data.volunteerEvents.find(
+          (event) => event.eid == eventId || event.id == eventId
         );
-      } 
+      }
       // Search in object format with categories
       else if (data.volunteerEvents && typeof data.volunteerEvents === 'object') {
         for (const category of ['ongoing', 'completed', 'upcoming']) {
-          if (data.volunteerEvents[category] && Array.isArray(data.volunteerEvents[category])) {
-            foundEvent = data.volunteerEvents[category].find(event => 
-              event.eid == eventId || event.id == eventId
+          if (
+            data.volunteerEvents[category] &&
+            Array.isArray(data.volunteerEvents[category])
+          ) {
+            foundEvent = data.volunteerEvents[category].find(
+              (event) => event.eid == eventId || event.id == eventId
             );
             if (foundEvent) break;
           }
@@ -66,13 +100,18 @@ export default function VolunteerTicket() {
     window.location.href = '/volunteers.html';
   };
 
+  const handleScanQR = () => {
+    // Volunteer scans organizer's QR code to mark attendance
+    navigate(`/scanner?role=volunteer`);
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'Not specified';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 
@@ -118,9 +157,8 @@ export default function VolunteerTicket() {
               <h1 className="tk-event-title">
                 {eventData.ename || eventData.name || 'Untitled Event'}
               </h1>
-              <p className="tk-event-id">
-                Event ID: {eventData.eid || eventData.id}
-              </p>
+              <p className="tk-event-id">Event ID: {eventData.eid || eventData.id}</p>
+              {userUSN && <p className="tk-user-badge">🤝 Volunteer: {userUSN}</p>}
             </div>
 
             <div className="tk-ticket-content">
@@ -189,14 +227,17 @@ export default function VolunteerTicket() {
             </div>
 
             <div className="tk-ticket-footer">
-              <a 
-                href="/scanner.html" 
+              <button
+                onClick={handleScanQR}
                 className="tk-qr-placeholder tk-qr-scanner"
-                title="Open QR Scanner"
+                title="Scan Event QR Code"
               >
                 📱
-                <div className="tk-qr-text">SCAN QR</div>
-              </a>
+                <div className="tk-qr-text">SCAN EVENT QR</div>
+              </button>
+              <p style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
+                Scan the organizer's QR code to mark your attendance
+              </p>
             </div>
           </div>
         )}

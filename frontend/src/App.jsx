@@ -12,14 +12,19 @@ import VolunteerEvents from './Volunteer_events';
 import OrganizerTicket from './OrganizerTicket';
 import VolunteerTicket from './VolunteerTicket';
 import ParticipantTicket from './ParticipantTicket';
-import AboutUs from './Aboutus'
+import AboutUs from './Aboutus';
 import QrCode from './QrCode';
+import Scanner from './Scanner';
+import ForgotPassword from './ForgotPassword'; // NEW
+import ResetPassword from './ResetPassword';   // NEW
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} /> {/* NEW */}
+        <Route path="/reset-password" element={<ResetPassword />} />   {/* NEW */}
         <Route path="/events" element={<Events />} />
         <Route path="/participants" element={<Participants />} />
         <Route path="/organisers" element={<Organisers />} />
@@ -32,6 +37,7 @@ function App() {
         <Route path="/volunteer-ticket" element={<VolunteerTicket/>} />
         <Route path="/about-us" element={<AboutUs/>} />
         <Route path="/qr" element={<QrCode/>} />
+        <Route path="/scanner" element={<Scanner/>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
