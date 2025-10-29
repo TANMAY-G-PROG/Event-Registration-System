@@ -97,7 +97,7 @@ export default function VolunteerTicket() {
   };
 
   const handleBack = () => {
-    window.location.href = '/volunteers.html';
+    window.location.href = '/volunteers';
   };
 
   const handleScanQR = () => {

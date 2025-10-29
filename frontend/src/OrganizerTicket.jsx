@@ -82,7 +82,7 @@ export default function OrganizerTicket() {
   };
 
   const handleBack = () => {
-    window.location.href = '/organisers.html';
+    window.location.href = '/organisers';
   };
 
   const handleShowQR = () => {
