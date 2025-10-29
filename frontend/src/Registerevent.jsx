@@ -21,6 +21,7 @@ export default function Registerevent() {
   const [error, setError] = useState("")
   const [filter, setFilter] = useState("all")
   const [flash, setFlash] = useState({ type: "", message: "" })
+  const [showPayment, setShowPayment] = useState(null) // Track which event is showing payment
   const timerRef = useRef(null)
 
   function showFlash(type, message) {
@@ -89,14 +90,22 @@ export default function Registerevent() {
     return allEvents.filter((e) => e.status === filter)
   }, [allEvents, filter])
 
-  async function handleRegister(eventId) {
+  async function handleRegister(eventId, hasFee) {
+    if (hasFee) {
+      // For paid events, show payment option instead of registering immediately
+      setShowPayment(eventId)
+      showFlash("success", "Please complete payment to confirm registration")
+      return
+    }
+
+    // For free events, register immediately
     try {
       const response = await fetch(`http://localhost:3000/api/events/${eventId}/join`, {
         method: "POST",
-        credentials: "include", // CRITICAL: Send cookies
+        credentials: "include",
         headers: { 
           "Content-Type": "application/json" 
-        },
+        }
       })
       
       const data = await response.json().catch(() => ({}))
@@ -112,11 +121,49 @@ export default function Registerevent() {
       }
       
       showFlash("success", data?.message || "Successfully registered for the event!")
-      // Reload events to reflect updated registration status
       await loadEvents()
     } catch (err) {
       console.error("Registration error:", err)
       showFlash("error", "Registration failed. Please try again.")
+    }
+  }
+
+  async function handlePayNow(eventId) {
+    try {
+      // First register the user for the event
+      const response = await fetch(`http://localhost:3000/api/events/${eventId}/join`, {
+        method: "POST",
+        credentials: "include",
+        headers: { 
+          "Content-Type": "application/json" 
+        }
+      })
+      
+      const data = await response.json().catch(() => ({}))
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          showFlash("error", "Please sign in to register for events")
+          setTimeout(() => navigate('/'), 2000)
+          return
+        }
+        showFlash("error", data?.error || data?.message || "Registration failed")
+        return
+      }
+      
+      // TODO: Implement payment gateway integration here
+      showFlash("success", "Redirecting to payment gateway...")
+      
+      // Placeholder for payment gateway redirect
+      // When you implement the payment gateway, replace this with actual payment URL
+      setTimeout(() => {
+        showFlash("error", "Payment gateway integration pending.")
+        setShowPayment(null)
+      }, 1500)
+      
+    } catch (err) {
+      console.error("Payment error:", err)
+      showFlash("error", "Payment initiation failed. Please try again.")
     }
   }
 
@@ -203,6 +250,7 @@ export default function Registerevent() {
                   : "Date TBA"
                 const fee = event?.regFee || 0
                 const feeText = fee > 0 ? `₹${fee}` : "Free"
+                const hasFee = fee > 0
 
                 return (
                   <article 
@@ -222,16 +270,33 @@ export default function Registerevent() {
                       </div>
 
                       {event.status === "upcoming" && (
-                        <button
-                          type="button"
-                          className="registerevent-register-btn"
-                          aria-label={`Register for ${event.ename}`}
-                          onClick={() => handleRegister(event.eid)}
-                        >
-                          <span className="registerevent-btn-border" />
-                          <span className="registerevent-btn-fill" />
-                          <span className="registerevent-btn-label">Register</span>
-                        </button>
+                        <div className="registerevent-register-actions">
+                          {showPayment === event.eid ? (
+                            /* Show Pay Now button after clicking Register */
+                            <button
+                              type="button"
+                              className="registerevent-pay-btn"
+                              aria-label={`Pay now for ${event.ename}`}
+                              onClick={() => handlePayNow(event.eid)}
+                            >
+                              <span className="registerevent-btn-border" />
+                              <span className="registerevent-btn-fill" />
+                              <span className="registerevent-pay-label">Pay Now</span>
+                            </button>
+                          ) : (
+                            /* Show Register button initially */
+                            <button
+                              type="button"
+                              className="registerevent-register-btn"
+                              aria-label={`Register for ${event.ename}`}
+                              onClick={() => handleRegister(event.eid, hasFee)}
+                            >
+                              <span className="registerevent-btn-border" />
+                              <span className="registerevent-btn-fill" />
+                              <span className="registerevent-btn-label">Register</span>
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
 
