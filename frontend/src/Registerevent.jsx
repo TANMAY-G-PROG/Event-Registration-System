@@ -92,9 +92,8 @@ export default function Registerevent() {
 
   async function handleRegister(eventId, hasFee) {
     if (hasFee) {
-      // For paid events, show payment option instead of registering immediately
-      setShowPayment(eventId)
-      showFlash("success", "Please complete payment to confirm registration")
+      // For paid events, initiate payment flow (do not register until payment verified)
+      await initiatePayment(eventId)
       return
     }
 
@@ -151,19 +150,107 @@ export default function Registerevent() {
         return
       }
       
-      // TODO: Implement payment gateway integration here
-      showFlash("success", "Redirecting to payment gateway...")
-      
-      // Placeholder for payment gateway redirect
-      // When you implement the payment gateway, replace this with actual payment URL
-      setTimeout(() => {
-        showFlash("error", "Payment gateway integration pending.")
-        setShowPayment(null)
-      }, 1500)
+      // Payment flow now handled by initiatePayment; keep backward-compat path
+      await initiatePayment(eventId)
       
     } catch (err) {
       console.error("Payment error:", err)
       showFlash("error", "Payment initiation failed. Please try again.")
+    }
+  }
+
+  // Load Razorpay checkout script
+  function loadRazorpayScript() {
+    return new Promise((resolve, reject) => {
+      if (window.Razorpay) return resolve(true)
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.onload = () => resolve(true)
+      script.onerror = () => reject(new Error('Failed to load Razorpay script'))
+      document.body.appendChild(script)
+    })
+  }
+
+  async function initiatePayment(eventId) {
+    try {
+      showFlash('success', 'Preparing payment...')
+
+      const resp = await fetch('http://localhost:3000/api/create-order', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId })
+      })
+
+      const data = await resp.json().catch(() => ({}))
+      if (!resp.ok) {
+        if (resp.status === 401) {
+          showFlash('error', 'Please sign in to continue')
+          setTimeout(() => navigate('/'), 2000)
+          return
+        }
+        showFlash('error', data?.error || data?.message || 'Could not create payment order')
+        return
+      }
+
+      await loadRazorpayScript()
+
+      const { order, key_id } = data
+      if (!order || !order.id) {
+        showFlash('error', 'Invalid order returned from server')
+        return
+      }
+
+      const options = {
+        key: key_id,
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        name: 'E-Pass Events',
+        description: `Registration for event ${eventId}`,
+        order_id: order.id,
+        handler: async function (response) {
+          // Verify payment on server
+          try {
+            const verifyResp = await fetch('http://localhost:3000/api/verify-payment', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                eventId
+              })
+            })
+
+            const verifyData = await verifyResp.json().catch(() => ({}))
+            if (!verifyResp.ok) {
+              showFlash('error', verifyData?.error || 'Payment verification failed')
+              return
+            }
+
+            showFlash('success', verifyData?.message || 'Payment successful and registered!')
+            setShowPayment(null)
+            await loadEvents()
+          } catch (err) {
+            console.error('Verification error:', err)
+            showFlash('error', 'Payment verification failed. Contact support.')
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            showFlash('error', 'Payment cancelled')
+            setShowPayment(null)
+          }
+        }
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.open()
+
+    } catch (err) {
+      console.error('initiatePayment error:', err)
+      showFlash('error', 'Failed to start payment flow')
     }
   }
 

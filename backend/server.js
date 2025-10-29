@@ -1208,3 +1208,124 @@ app.listen(PORT, () => {
     console.log(`📡 CORS enabled for http://localhost:5173`);
     console.log(`🔐 Session debugging ENABLED\n`);
 });
+
+// Razorpay setup
+const Razorpay = require('razorpay');
+const razorpayInstance = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || '',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || ''
+});
+
+// Create Razorpay order for a paid event
+app.post('/api/create-order', requireAuth, async (req, res) => {
+    try {
+        const { eventId } = req.body;
+        if (!eventId) return res.status(400).json({ error: 'Event ID is required' });
+
+        // Fetch event and fee
+        const { data: rows, error } = await supabase
+            .from('event')
+            .select('eid, ename, regfee')
+            .eq('eid', eventId)
+            .limit(1);
+
+        if (error) {
+            console.error('Error fetching event for order:', error);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!rows || rows.length === 0) return res.status(404).json({ error: 'Event not found' });
+
+        const event = rows[0];
+        const fee = event.regfee || 0;
+        if (fee <= 0) return res.status(400).json({ error: 'This event does not require payment' });
+
+        const amountInPaise = Math.round(Number(fee) * 100);
+
+        const options = {
+            amount: amountInPaise,
+            currency: 'INR',
+            receipt: `${req.session.userUSN}-${eventId}-${Date.now()}`,
+            payment_capture: 1,
+            notes: {
+                eventId: String(eventId),
+                userUSN: req.session.userUSN
+            }
+        };
+
+        const order = await razorpayInstance.orders.create(options);
+
+        if (!order) {
+            console.error('Failed to create Razorpay order');
+            return res.status(500).json({ error: 'Failed to create order' });
+        }
+
+        res.json({
+            success: true,
+            order,
+            key_id: process.env.RAZORPAY_KEY_ID || ''
+        });
+    } catch (err) {
+        console.error('Error creating Razorpay order:', err);
+        res.status(500).json({ error: 'Error creating order' });
+    }
+});
+
+// Verify Razorpay payment signature and register participant on success
+app.post('/api/verify-payment', requireAuth, async (req, res) => {
+    try {
+        const { razorpay_payment_id, razorpay_order_id, razorpay_signature, eventId } = req.body;
+
+        if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !eventId) {
+            return res.status(400).json({ error: 'Missing required payment verification fields' });
+        }
+
+        const generated_signature = crypto
+            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
+            .update(razorpay_order_id + '|' + razorpay_payment_id)
+            .digest('hex');
+
+        if (generated_signature !== razorpay_signature) {
+            console.warn('Razorpay signature mismatch', { generated_signature, razorpay_signature });
+            return res.status(400).json({ error: 'Invalid payment signature' });
+        }
+
+        // At this point payment is verified. Register participant if not already.
+        const userUSN = req.session.userUSN;
+
+        const { data: existing, error: existingError } = await supabase
+            .from('participant')
+            .select('*')
+            .eq('partusn', userUSN)
+            .eq('parteid', eventId)
+            .limit(1);
+
+        if (existingError) {
+            console.error('Error checking existing participant during payment verify:', existingError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (existing && existing.length > 0) {
+            return res.json({ success: true, message: 'Payment verified and already registered' });
+        }
+
+        const { error: insertError } = await supabase
+            .from('participant')
+            .insert([{
+                partusn: userUSN,
+                parteid: eventId,
+                partstatus: false
+            }]);
+
+        if (insertError) {
+            console.error('Error inserting participant after payment:', insertError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        console.log(`✅ Payment verified and participant registered: ${userUSN} for event ${eventId}`);
+        res.json({ success: true, message: 'Payment verified and registration complete' });
+    } catch (err) {
+        console.error('Error verifying payment:', err);
+        res.status(500).json({ error: 'Error verifying payment' });
+    }
+});
