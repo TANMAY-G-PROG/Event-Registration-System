@@ -7,9 +7,9 @@ import fontkit from '@pdf-lib/fontkit';
 // --- (FIX) ADD THESE IMPORTS ---
 // This path assumes your 'assets' folder is at 'src/assets'
 // Adjust the path ('../assets/') if your Participants.jsx file is in a different subfolder
-import certificateTemplateUrl from '../assets/certificate-template.pdf';
-import alluraFontUrl from '../assets/Allura-Regular.ttf';
-import playfairFontUrl from '../assets/PlayfairDisplay-MediumItalic.ttf';
+import certificateTemplateUrl from './assets/certificate-template.pdf';
+import alluraFontUrl from './assets/Allura-Regular.ttf';
+import playfairFontUrl from './assets/PlayfairDisplay-MediumItalic.ttf';
 
 // Get the base URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -446,3 +446,4 @@ const Participants = () => {
 };
 
 export default Participants;
+
