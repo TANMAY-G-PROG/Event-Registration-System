@@ -5,11 +5,22 @@ const supabase = require('./lib/supabase');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+const Razorpay = require('razorpay');
+const ExcelJS = require('exceljs');
+
+// Initialize Razorpay instance
+const razorpayInstance = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+});
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// STEP 1: CORS MUST BE FIRST - Before any other middleware
+
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true,
@@ -18,10 +29,10 @@ app.use(cors({
   exposedHeaders: ['set-cookie']
 }));
 
-// STEP 2: Parse JSON bodies
+
 app.use(express.json());
 
-// STEP 3: Session configuration - CRITICAL
+
 app.use(session({
     secret: 'your-event-management-secret-key-change-this-in-production',
     resave: false,
@@ -38,7 +49,7 @@ app.use(session({
 
 // STEP 4: Debug middleware to log all requests
 app.use((req, res, next) => {
-    console.log(`\n🔍 ${req.method} ${req.url}`);
+    console.log(`\n📝 ${req.method} ${req.url}`);
     console.log('📋 Session ID:', req.sessionID);
     console.log('👤 User USN:', req.session.userUSN || 'Not logged in');
     console.log('🍪 Cookies:', req.headers.cookie || 'No cookies');
@@ -56,6 +67,31 @@ async function testSupabaseConnection() {
     }
 }
 testSupabaseConnection();
+
+// ADDED: Configure Gmail transporter
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD
+    }
+});
+
+// ADDED: Verify email configuration on startup
+transporter.verify((error, success) => {
+    if (error) {
+        console.error('❌ Email configuration error:', error);
+    } else {
+        console.log('✅ Email server is ready');
+    }
+});
+
+// Verify Razorpay configuration
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    console.error('❌ Razorpay credentials not found in environment variables');
+} else {
+    console.log('✅ Razorpay initialized successfully');
+}
 
 // Middleware to check if user is authenticated
 function requireAuth(req, res, next) {
@@ -422,7 +458,7 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
     }
 });
 
-// Create/Organize a new event
+// Create/Organize a new event - UPDATED VERSION
 app.post('/api/events/create', requireAuth, async (req, res) => {
     try {
         const { 
@@ -435,7 +471,11 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             maxVolunteers, 
             registrationFee,
             clubId,
-            OrgCid 
+            OrgCid,
+            // NEW: Team event fields
+            isTeamEvent,
+            minTeamSize,
+            maxTeamSize
         } = req.body;
         
         const organizedClubId = clubId || OrgCid;
@@ -448,6 +488,30 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
         const currentDate = new Date();
         if (eventDateObj <= currentDate) {
             return res.status(400).json({ error: 'Event date must be in the future' });
+        }
+
+        // Validate team event fields if it's a team event
+        if (isTeamEvent) {
+            if (!minTeamSize || !maxTeamSize) {
+                return res.status(400).json({ 
+                    error: 'Minimum and maximum team size are required for team events' 
+                });
+            }
+            
+            const minSize = parseInt(minTeamSize);
+            const maxSize = parseInt(maxTeamSize);
+            
+            if (minSize < 2) {
+                return res.status(400).json({ 
+                    error: 'Minimum team size must be at least 2' 
+                });
+            }
+            
+            if (maxSize < minSize) {
+                return res.status(400).json({ 
+                    error: 'Maximum team size must be greater than or equal to minimum team size' 
+                });
+            }
         }
         
         if (organizedClubId) {
@@ -468,20 +532,30 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             }
         }
         
+        // Prepare event data
+        // CRITICAL: For team events, maxpart represents max TEAMS, not individuals
+        const eventData = {
+            ename: eventName,
+            eventdesc: eventDescription,
+            eventdate: eventDate,
+            eventtime: eventTime,
+            eventloc: eventLocation,
+            maxpart: maxParticipants || null, // Now represents max teams for team events
+            maxvoln: maxVolunteers || null,
+            regfee: registrationFee || 0,
+            orgusn: req.session.userUSN,
+            orgcid: organizedClubId || null,
+            // NEW: Team event fields
+            is_team: isTeamEvent || false,
+            min_team_size: isTeamEvent ? (parseInt(minTeamSize) || null) : null,
+            max_team_size: isTeamEvent ? (parseInt(maxTeamSize) || null) : null
+        };
+
+        console.log('Creating event with data:', eventData);
+        
         const { data, error } = await supabase
             .from('event')
-            .insert([{
-                ename: eventName,
-                eventdesc: eventDescription,
-                eventdate: eventDate,
-                eventtime: eventTime,
-                eventloc: eventLocation,
-                maxpart: maxParticipants || null,
-                maxvoln: maxVolunteers || null,
-                regfee: registrationFee || 0,
-                orgusn: req.session.userUSN,
-                orgcid: organizedClubId || null
-            }])
+            .insert([eventData])
             .select('eid');
         
         if (error) {
@@ -491,9 +565,10 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
         
         res.status(201).json({ 
             success: true,
-            message: 'Event created successfully!', 
+            message: isTeamEvent ? 'Team event created successfully!' : 'Event created successfully!', 
             eventId: data[0]?.eid,
-            organizerUSN: req.session.userUSN
+            organizerUSN: req.session.userUSN,
+            isTeamEvent: isTeamEvent || false
         });
     } catch (err) {
         console.error('Error creating event:', err);
@@ -523,9 +598,10 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Already joined this event' });
         }
         
+        // Check event details including regfee
         const { data: event, error: eventError } = await supabase
             .from('event')
-            .select('maxpart')
+            .select('maxpart, regfee')
             .eq('eid', eventId)
             .limit(1);
         
@@ -536,6 +612,16 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
         
         if (!event || event.length === 0) {
             return res.status(404).json({ error: 'Event not found' });
+        }
+
+        const regFee = event[0].regfee || 0;
+        
+        // If event has a fee, don't allow direct registration
+        if (regFee > 0) {
+            return res.status(400).json({ 
+                error: 'This is a paid event. Please complete payment to register.',
+                requiresPayment: true 
+            });
         }
 
         const maxPart = event[0].maxpart || 0;
@@ -560,7 +646,8 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
             .insert([{
                 partusn: userUSN,
                 parteid: eventId,
-                partstatus: false
+                partstatus: false,
+                payment_status: 'free'
             }]);
         
         if (insertError) {
@@ -757,7 +844,9 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
         res.json(transformedEvent);
     } catch (err) {
         console.error('Error fetching event details:', err);
-        res.status(500).json({ error: 'Error fetching event details: ' + err.message });
+        res.status(500).json({
+
+error: 'Error fetching event details: ' + err.message });
     }
 });
 
@@ -837,7 +926,130 @@ app.get('/api/students', requireAuth, async (req, res) => {
     }
 });
 
-// Scan QR code to update participant status
+// ==================== NEW ATTENDANCE ENDPOINTS ====================
+
+// Mark participant attendance (NEW - CORRECTED)
+app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
+    try {
+        const { eventId, usn } = req.body;
+        
+        // Verify the USN matches the logged-in user
+        if (usn !== req.session.userUSN) {
+            return res.status(403).json({ error: 'Unauthorized: USN mismatch' });
+        }
+        
+        if (!usn || !eventId) {
+            return res.status(400).json({ error: 'USN and Event ID are required' });
+        }
+
+        // Check if participant is registered for this event
+        const { data: existing, error: existingError } = await supabase
+            .from('participant')
+            .select('*')
+            .eq('partusn', usn)
+            .eq('parteid', eventId)
+            .limit(1);
+
+        if (existingError) {
+            console.error('Error checking participant:', existingError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!existing || existing.length === 0) {
+            return res.status(404).json({ error: 'You are not registered for this event' });
+        }
+
+        if (existing[0].partstatus === true) {
+            return res.status(400).json({ error: 'Attendance already marked' });
+        }
+
+        // Mark attendance
+        const { error: updateError } = await supabase
+            .from('participant')
+            .update({ partstatus: true })
+            .eq('partusn', usn)
+            .eq('parteid', eventId);
+        
+        if (updateError) {
+            console.error('Error updating participant status:', updateError);
+            return res.status(500).json({ error: 'Failed to mark attendance' });
+        }
+
+        console.log(`✅ Participant attendance marked: ${usn} for event ${eventId}`);
+        res.json({ 
+            success: true, 
+            message: 'Participant attendance marked successfully',
+            usn: usn,
+            eventId: eventId
+        });
+    } catch (err) {
+        console.error('Error marking participant attendance:', err);
+        res.status(500).json({ error: 'Error marking attendance: ' + err.message });
+    }
+});
+
+// Mark volunteer attendance (NEW - CORRECTED)
+app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
+    try {
+        const { eventId, usn } = req.body;
+        
+        // Verify the USN matches the logged-in user
+        if (usn !== req.session.userUSN) {
+            return res.status(403).json({ error: 'Unauthorized: USN mismatch' });
+        }
+        
+        if (!usn || !eventId) {
+            return res.status(400).json({ error: 'USN and Event ID are required' });
+        }
+
+        // Check if volunteer is registered for this event
+        const { data: existing, error: existingError } = await supabase
+            .from('volunteer')
+            .select('*')
+            .eq('volnusn', usn)
+            .eq('volneid', eventId)
+            .limit(1);
+
+        if (existingError) {
+            console.error('Error checking volunteer:', existingError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!existing || existing.length === 0) {
+            return res.status(404).json({ error: 'You are not registered as a volunteer for this event' });
+        }
+
+        if (existing[0].volnstatus === true) {
+            return res.status(400).json({ error: 'Attendance already marked' });
+        }
+
+        // Mark attendance
+        const { error: updateError } = await supabase
+            .from('volunteer')
+            .update({ volnstatus: true })
+            .eq('volnusn', usn)
+            .eq('volneid', eventId);
+        
+        if (updateError) {
+            console.error('Error updating volunteer status:', updateError);
+            return res.status(500).json({ error: 'Failed to mark attendance' });
+        }
+
+        console.log(`✅ Volunteer attendance marked: ${usn} for event ${eventId}`);
+        res.json({ 
+            success: true, 
+            message: 'Volunteer attendance marked successfully',
+            usn: usn,
+            eventId: eventId
+        });
+    } catch (err) {
+        console.error('Error marking volunteer attendance:', err);
+        res.status(500).json({ error: 'Error marking attendance: ' + err.message });
+    }
+});
+
+// OLD scan-qr endpoint (DEPRECATED - kept for backward compatibility)
+// You can remove this if you want, as the new endpoints replace it
 app.get('/api/scan-qr', async (req, res) => {
     try {
         const { usn, eid } = req.query;
@@ -881,6 +1093,1202 @@ app.get('/api/scan-qr', async (req, res) => {
     } catch (err) {
         console.error('Error updating participant status:', err);
         res.status(500).json({ error: 'Error updating participant status: ' + err.message });
+    }
+});
+
+
+// ==================================================
+// ADDED FORGOT/RESET PASSWORD ROUTES
+// ==================================================
+
+// Forgot Password - Send reset email
+app.post('/api/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+        // Check if user exists
+        const { data: user, error: userError } = await supabase
+            .from('student')
+            .select('usn, sname, emailid')
+            .eq('emailid', email)
+            .limit(1);
+        
+        if (userError) {
+            console.error('Error finding user:', userError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        // Always return success (don't reveal if email exists for security)
+        if (!user || user.length === 0) {
+            console.log('Password reset requested for non-existent email:', email);
+            return res.json({
+                success: true,
+                message: 'If an account exists with this email, you will receive a password reset link.'
+            });
+        }
+        // Generate secure reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+        // Save token to database
+        const { error: updateError } = await supabase
+            .from('student')
+            .update({
+                reset_token: resetToken,
+                reset_token_expiry: resetTokenExpiry.toISOString()
+            })
+            .eq('emailid', email);
+        
+        if (updateError) {
+            console.error('Error saving reset token:', updateError);
+            return res.status(500).json({ error: 'Failed to generate reset link' });
+        }
+        // Create reset link
+        const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+        // Send email
+        const mailOptions = {
+            from: `"E-Pass Event System" <${process.env.GMAIL_USER}>`,
+            to: email,
+            subject: 'Password Reset Request - E-Pass',
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: linear-gradient(to right, #1A2980, #26D0CE); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                        .button { display: inline-block; padding: 15px 30px; background: linear-gradient(to right, #1A2980, #26D0CE); color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+                        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+                        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🔒 Password Reset Request</h1>
+                        </div>
+                        <div class="content">
+                            <p>Hello <strong>${user[0].sname}</strong>,</p>
+                            <p>We received a request to reset the password for your account associated with <strong>${email}</strong>.</p>
+                            <p>Click the button below to reset your password:</p>
+                            <center>
+                                <a href="${resetLink}" class="button">Reset Password</a>
+                            </center>
+                            <p>Or copy and paste this link into your browser:</p>
+                            <p style="background: #fff; padding: 10px; border: 1px solid #ddd; word-break: break-all;">
+                                ${resetLink}
+                            </p>
+                            <div class="warning">
+                                <strong>⚠️ Important:</strong>
+                                <ul>
+                                    <li>This link will expire in <strong>1 hour</strong></li>
+                                    <li>If you didn't request this reset, please ignore this email</li>
+                                    <li>Your password won't change until you create a new one</li>
+                                </ul>
+                            </div>
+                            <p>Your USN: <strong>${user[0].usn}</strong></p>
+                        </div>
+                        <div class="footer">
+                            <p>E-Pass Event Management System</p>
+                            <p>This is an automated email. Please do not reply.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `
+        };
+        await transporter.sendMail(mailOptions);
+        console.log('✅ Password reset email sent to:', email);
+        res.json({
+            success: true,
+            message: 'If an account exists with this email, you will receive a password reset link.'
+        });
+    } catch (err) {
+        console.error('Error in forgot password:', err);
+        res.status(500).json({ error: 'Failed to process password reset request' });
+    }
+});
+
+// Reset Password - Update password with token
+app.post('/api/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        
+        if (!token || !newPassword) {
+            return res.status(400).json({ error: 'Token and new password are required' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+        }
+        // Find user with valid token
+        const { data: user, error: userError } = await supabase
+            .from('student')
+            .select('usn, sname, emailid, reset_token_expiry')
+            .eq('reset_token', token)
+            .limit(1);
+        
+        if (userError) {
+            console.error('Error finding user with token:', userError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        if (!user || user.length === 0) {
+            return res.status(400).json({ error: 'Invalid or expired reset link' });
+        }
+        // Check if token is expired
+        const tokenExpiry = new Date(user[0].reset_token_expiry);
+        if (tokenExpiry < new Date()) {
+            return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
+        }
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        // Update password and clear reset token
+        const { error: updateError } = await supabase
+            .from('student')
+            .update({
+                password: hashedPassword,
+                reset_token: null,
+                reset_token_expiry: null
+            })
+            .eq('reset_token', token);
+        
+        if (updateError) {
+            console.error('Error updating password:', updateError);
+            return res.status(500).json({ error: 'Failed to reset password' });
+        }
+        console.log('✅ Password reset successful for:', user[0].usn);
+        res.json({
+            success: true,
+            message: 'Password reset successfully! You can now sign in with your new password.',
+            userName: user[0].sname
+        });
+    } catch (err) {
+        console.error('Error in reset password:', err);
+        res.status(500).json({ error: 'Failed to reset password' });
+    }
+});
+
+
+// Create Razorpay order for a paid event
+app.post('/api/create-order', requireAuth, async (req, res) => {
+    try {
+        const { eventId } = req.body;
+        if (!eventId) return res.status(400).json({ error: 'Event ID is required' });
+
+        // Fetch event and fee
+        const { data: rows, error } = await supabase
+            .from('event')
+            .select('eid, ename, regfee')
+            .eq('eid', eventId)
+            .limit(1);
+
+        if (error) {
+            console.error('Error fetching event for order:', error);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!rows || rows.length === 0) return res.status(404).json({ error: 'Event not found' });
+
+        const event = rows[0];
+        const fee = event.regfee || 0;
+        if (fee <= 0) return res.status(400).json({ error: 'This event does not require payment' });
+
+        const amountInPaise = Math.round(Number(fee) * 100);
+
+        const options = {
+            amount: amountInPaise,
+            currency: 'INR',
+            receipt: `${req.session.userUSN}-${eventId}-${Date.now()}`,
+            payment_capture: 1,
+            notes: {
+                eventId: String(eventId),
+                userUSN: req.session.userUSN
+            }
+        };
+
+        const order = await razorpayInstance.orders.create(options);
+
+        if (!order) {
+            console.error('Failed to create Razorpay order');
+            return res.status(500).json({ error: 'Failed to create order' });
+        }
+
+        res.json({
+            success: true,
+            order,
+            key_id: process.env.RAZORPAY_KEY_ID || ''
+        });
+    } catch (err) {
+        console.error('Error creating Razorpay order:', err);
+        res.status(500).json({ error: 'Error creating order' });
+    }
+});
+
+// Verify Razorpay payment signature and register participant on success
+app.post('/api/verify-payment', requireAuth, async (req, res) => {
+    try {
+        const { razorpay_payment_id, razorpay_order_id, razorpay_signature, eventId } = req.body;
+
+        if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !eventId) {
+            return res.status(400).json({ error: 'Missing required payment verification fields' });
+        }
+
+        const generated_signature = crypto
+            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
+            .update(razorpay_order_id + '|' + razorpay_payment_id)
+            .digest('hex');
+
+        if (generated_signature !== razorpay_signature) {
+            console.warn('Razorpay signature mismatch', { generated_signature, razorpay_signature });
+            
+            // Log failed payment
+            await supabase.from('payment').insert([{
+                razorpay_order_id,
+                razorpay_payment_id,
+                razorpay_signature,
+                usn: req.session.userUSN,
+                event_id: eventId,
+                amount: 0,
+                status: 'failed'
+            }]);
+            
+            return res.status(400).json({ error: 'Invalid payment signature' });
+        }
+
+        const userUSN = req.session.userUSN;
+
+        // Get event fee
+        const { data: eventData } = await supabase
+            .from('event')
+            .select('regfee')
+            .eq('eid', eventId)
+            .limit(1);
+
+        const amount = eventData?.[0]?.regfee || 0;
+
+        // Save successful payment record
+        await supabase.from('payment').insert([{
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature,
+            usn: userUSN,
+            event_id: eventId,
+            amount,
+            status: 'success'
+        }]);
+
+        // Check if already registered
+        const { data: existing, error: existingError } = await supabase
+            .from('participant')
+            .select('*')
+            .eq('partusn', userUSN)
+            .eq('parteid', eventId)
+            .limit(1);
+
+        if (existingError) {
+            console.error('Error checking existing participant during payment verify:', existingError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (existing && existing.length > 0) {
+            // Update payment status
+            await supabase
+                .from('participant')
+                .update({ payment_status: 'completed' })
+                .eq('partusn', userUSN)
+                .eq('parteid', eventId);
+                
+            return res.json({ success: true, message: 'Payment verified and already registered' });
+        }
+
+        // Register participant with completed payment
+        const { error: insertError } = await supabase
+            .from('participant')
+            .insert([{
+                partusn: userUSN,
+                parteid: eventId,
+                partstatus: false,
+                payment_status: 'completed'
+            }]);
+
+        if (insertError) {
+            console.error('Error inserting participant after payment:', insertError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        console.log(`✅ Payment verified and participant registered: ${userUSN} for event ${eventId}`);
+        res.json({ success: true, message: 'Payment verified and registration complete!' });
+    } catch (err) {
+        console.error('Error verifying payment:', err);
+        res.status(500).json({ error: 'Error verifying payment' });
+    }
+});
+
+// ==================== TEAM EVENTS ENDPOINTS ====================
+
+// Create a team for an event
+app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        const userUSN = req.session.userUSN;
+        const { teamName, memberUSNs } = req.body;
+
+        if (!teamName || !Array.isArray(memberUSNs)) {
+            return res.status(400).json({ error: 'Team name and member USNs are required' });
+        }
+
+        // Check if event exists and is a team event
+        const { data: event, error: eventError } = await supabase
+            .from('event')
+            .select('eid, ename, is_team, min_team_size, max_team_size, regfee')
+            .eq('eid', eventId)
+            .limit(1);
+
+        if (eventError || !event || event.length === 0) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        if (!event[0].is_team) {
+            return res.status(400).json({ error: 'This is not a team event' });
+        }
+
+        const minSize = event[0].min_team_size;
+        const maxSize = event[0].max_team_size;
+
+        // Validate team size (including leader)
+        const totalMembers = memberUSNs.length + 1; // +1 for leader
+        if (maxSize && totalMembers > maxSize) {
+            return res.status(400).json({ 
+                error: `Team size cannot exceed ${maxSize} members (including leader)` 
+            });
+        }
+
+        // FIXED: Check if leader already has a team with join_status = true for this event
+        const { data: existingTeam } = await supabase
+            .from('team_members')
+            .select('team_id, join_status, team:team_id(event_id, leader_usn)')
+            .eq('student_usn', userUSN);
+
+        if (existingTeam && existingTeam.length > 0) {
+            // Check if user has ACTUALLY JOINED a team (join_status = true) for this event
+            const joinedTeam = existingTeam.find(tm => 
+                tm.join_status === true && 
+                tm.team?.event_id === parseInt(eventId)
+            );
+            
+            if (joinedTeam) {
+                return res.status(400).json({ 
+                    error: 'You have already joined a team for this event. Leave that team first to create a new one.' 
+                });
+            }
+        }
+
+        // Validate all member USNs exist in student table
+        if (memberUSNs.length > 0) {
+            const { data: students, error: studentError } = await supabase
+                .from('student')
+                .select('usn, sname')
+                .in('usn', memberUSNs);
+
+            if (studentError || !students || students.length !== memberUSNs.length) {
+                return res.status(400).json({ 
+                    error: 'One or more member USNs are invalid' 
+                });
+            }
+
+            // FIXED: Check if any member has ACTUALLY JOINED (join_status = true) another team for this event
+            const { data: memberTeamCheck } = await supabase
+                .from('team_members')
+                .select('student_usn, join_status, team:team_id(event_id)')
+                .in('student_usn', memberUSNs)
+                .eq('join_status', true); // Only check joined members
+
+            if (memberTeamCheck && memberTeamCheck.length > 0) {
+                const conflicts = memberTeamCheck.filter(m => 
+                    m.team?.event_id === parseInt(eventId)
+                );
+                if (conflicts.length > 0) {
+                    return res.status(400).json({ 
+                        error: `Member ${conflicts[0].student_usn} has already joined another team for this event` 
+                    });
+                }
+            }
+        }
+
+        // Create team
+        const { data: teamData, error: teamError } = await supabase
+            .from('team')
+            .insert([{
+                team_name: teamName,
+                leader_usn: userUSN,
+                event_id: eventId,
+                registration_complete: false
+            }])
+            .select('id');
+
+        if (teamError || !teamData || teamData.length === 0) {
+            console.error('Error creating team:', teamError);
+            return res.status(500).json({ error: 'Failed to create team' });
+        }
+
+        const teamId = teamData[0].id;
+
+        // Add leader as team member with join_status = true
+        const teamMembersToInsert = [{
+            team_id: teamId,
+            student_usn: userUSN,
+            join_status: true
+        }];
+
+        // Add other members with join_status = false (pending invites)
+        memberUSNs.forEach(usn => {
+            teamMembersToInsert.push({
+                team_id: teamId,
+                student_usn: usn,
+                join_status: false
+            });
+        });
+
+        const { error: membersError } = await supabase
+            .from('team_members')
+            .insert(teamMembersToInsert);
+
+        if (membersError) {
+            console.error('Error adding team members:', membersError);
+            // Rollback: delete the team
+            await supabase.from('team').delete().eq('id', teamId);
+            return res.status(500).json({ error: 'Failed to add team members' });
+        }
+
+        console.log(`✅ Team created: ${teamName} (ID: ${teamId}) by ${userUSN}`);
+
+        res.json({
+            success: true,
+            message: 'Team created successfully! Invitations sent to members.',
+            teamId,
+            minSize,
+            currentSize: 1, // Only leader has joined
+            canRegister: minSize <= 1
+        });
+    } catch (err) {
+        console.error('Error creating team:', err);
+        res.status(500).json({ error: 'Error creating team' });
+    }
+});
+
+// Join a team
+app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        const userUSN = req.session.userUSN;
+        const { leaderUSN } = req.body;
+
+        if (!leaderUSN) {
+            return res.status(400).json({ error: 'Team leader USN is required' });
+        }
+
+        // Check if user is already in any team for this event
+        const { data: existingMembership } = await supabase
+            .from('team_members')
+            .select('team_id, team:team_id(event_id, registration_complete)')
+            .eq('student_usn', userUSN);
+
+        if (existingMembership && existingMembership.length > 0) {
+            const inEventTeam = existingMembership.find(m => 
+                m.team?.event_id === parseInt(eventId)
+            );
+            if (inEventTeam) {
+                if (inEventTeam.team.registration_complete) {
+                    return res.status(400).json({ 
+                        error: 'Your team is already registered for this event' 
+                    });
+                }
+                return res.status(400).json({ 
+                    error: 'You are already part of a team for this event' 
+                });
+            }
+        }
+
+        // Find the team by leader USN and event ID
+        const { data: team, error: teamError } = await supabase
+            .from('team')
+            .select('id, team_name, registration_complete, max_team_size:event_id(max_team_size)')
+            .eq('leader_usn', leaderUSN)
+            .eq('event_id', eventId)
+            .limit(1);
+
+        if (teamError || !team || team.length === 0) {
+            return res.status(404).json({ 
+                error: 'Team not found. Please check the team leader USN.' 
+            });
+        }
+
+        const teamId = team[0].id;
+
+        if (team[0].registration_complete) {
+            return res.status(400).json({ 
+                error: 'This team has already completed registration' 
+            });
+        }
+
+        // Check if user is in the team members list
+        const { data: membership, error: membershipError } = await supabase
+            .from('team_members')
+            .select('join_status')
+            .eq('team_id', teamId)
+            .eq('student_usn', userUSN)
+            .limit(1);
+
+        if (membershipError || !membership || membership.length === 0) {
+            return res.status(403).json({ 
+                error: 'You are not invited to this team' 
+            });
+        }
+
+        if (membership[0].join_status) {
+            return res.status(400).json({ 
+                error: 'You have already joined this team' 
+            });
+        }
+
+        // Update join status
+        const { error: updateError } = await supabase
+            .from('team_members')
+            .update({ join_status: true })
+            .eq('team_id', teamId)
+            .eq('student_usn', userUSN);
+
+        if (updateError) {
+            console.error('Error updating join status:', updateError);
+            return res.status(500).json({ error: 'Failed to join team' });
+        }
+
+        res.json({
+            success: true,
+            message: `Successfully joined team "${team[0].team_name}"!`,
+            teamId
+        });
+    } catch (err) {
+        console.error('Error joining team:', err);
+        res.status(500).json({ error: 'Error joining team' });
+    }
+});
+
+// Get team status for current user and event - FIXED
+app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        const userUSN = req.session.userUSN;
+
+        // Check if event is a team event
+        const { data: event } = await supabase
+            .from('event')
+            .select('is_team, min_team_size, max_team_size, regfee')
+            .eq('eid', eventId)
+            .limit(1);
+
+        if (!event || event.length === 0) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        if (!event[0].is_team) {
+            return res.json({ 
+                isTeamEvent: false 
+            });
+        }
+
+        // FIXED: Check if user is a team leader for this event
+        const { data: leaderTeam } = await supabase
+            .from('team')
+            .select('id, team_name, registration_complete')
+            .eq('leader_usn', userUSN)
+            .eq('event_id', eventId)
+            .limit(1);
+
+        if (leaderTeam && leaderTeam.length > 0) {
+            const teamId = leaderTeam[0].id;
+
+            // Get team members and their join status
+            const { data: members } = await supabase
+                .from('team_members')
+                .select('student_usn, join_status, student:student_usn(sname)')
+                .eq('team_id', teamId);
+
+            const joinedCount = members?.filter(m => m.join_status).length || 0;
+            const canRegister = joinedCount >= event[0].min_team_size;
+
+            return res.json({
+                isTeamEvent: true,
+                isLeader: true,
+                hasJoinedTeam: true,
+                teamId,
+                teamName: leaderTeam[0].team_name,
+                members: members || [],
+                joinedCount,
+                minSize: event[0].min_team_size,
+                maxSize: event[0].max_team_size,
+                canRegister,
+                registrationComplete: leaderTeam[0].registration_complete,
+                regFee: event[0].regfee
+            });
+        }
+
+        // FIXED: Check if user has ACTUALLY JOINED (join_status = true) any team for this event
+        const { data: memberTeam } = await supabase
+            .from('team_members')
+            .select(`
+                team_id,
+                join_status,
+                team:team_id(
+                    id,
+                    team_name,
+                    leader_usn,
+                    registration_complete,
+                    event_id,
+                    leader:leader_usn(sname)
+                )
+            `)
+            .eq('student_usn', userUSN)
+            .eq('join_status', true); // CRITICAL: Only consider actually joined teams
+
+        if (memberTeam && memberTeam.length > 0) {
+            const teamInEvent = memberTeam.find(m => 
+                m.team?.event_id === parseInt(eventId)
+            );
+
+            if (teamInEvent) {
+                // User has JOINED a team for this event
+                const { data: teamDetails } = await supabase
+                    .from('team_members')
+                    .select('student_usn, join_status, student:student_usn(sname)')
+                    .eq('team_id', teamInEvent.team.id);
+
+                return res.json({
+                    isTeamEvent: true,
+                    isLeader: false,
+                    isMember: true,
+                    hasJoinedTeam: true,
+                    teamId: teamInEvent.team.id,
+                    teamName: teamInEvent.team.team_name,
+                    leaderUSN: teamInEvent.team.leader_usn,
+                    leaderName: teamInEvent.team.leader?.sname,
+                    registrationComplete: teamInEvent.team.registration_complete,
+                    minSize: event[0].min_team_size,
+                    maxSize: event[0].max_team_size,
+                    members: teamDetails || [],
+                    joinedCount: teamDetails?.filter(m => m.join_status).length || 0
+                });
+            }
+        }
+
+        // User has NO JOINED team - can create or view invites
+        res.json({
+            isTeamEvent: true,
+            isLeader: false,
+            isMember: false,
+            hasJoinedTeam: false,
+            minSize: event[0].min_team_size,
+            maxSize: event[0].max_team_size,
+            regFee: event[0].regfee
+        });
+    } catch (err) {
+        console.error('Error getting team status:', err);
+        res.status(500).json({ error: 'Error getting team status' });
+    }
+});
+
+// Register team for event (only for team leader)
+app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        const userUSN = req.session.userUSN;
+
+        // Check if user is team leader for this event
+        const { data: team, error: teamError } = await supabase
+            .from('team')
+            .select('id, registration_complete, event:event_id(regfee, min_team_size)')
+            .eq('leader_usn', userUSN)
+            .eq('event_id', eventId)
+            .limit(1);
+
+        if (teamError || !team || team.length === 0) {
+            return res.status(404).json({ 
+                error: 'Team not found or you are not the team leader' 
+            });
+        }
+
+        if (team[0].registration_complete) {
+            return res.status(400).json({ 
+                error: 'Team is already registered for this event' 
+            });
+        }
+
+        const teamId = team[0].id;
+        const regFee = team[0].event?.regfee || 0;
+        const minSize = team[0].event?.min_team_size || 2;
+
+        // Count joined members
+        const { data: members } = await supabase
+            .from('team_members')
+            .select('student_usn, join_status')
+            .eq('team_id', teamId)
+            .eq('join_status', true);
+
+        const joinedCount = members?.length || 0;
+
+        if (joinedCount < minSize) {
+            return res.status(400).json({ 
+                error: `Minimum ${minSize} members must join before registration. Currently ${joinedCount} members have joined.` 
+            });
+        }
+
+        // If event has fee, check if payment is needed
+        if (regFee > 0) {
+            return res.json({
+                success: true,
+                requiresPayment: true,
+                message: 'Payment required for team registration',
+                teamId,
+                regFee
+            });
+        }
+
+        // For free events, complete registration
+        const { error: updateError } = await supabase
+            .from('team')
+            .update({ registration_complete: true })
+            .eq('id', teamId);
+
+        if (updateError) {
+            console.error('Error completing team registration:', updateError);
+            return res.status(500).json({ error: 'Failed to complete registration' });
+        }
+
+        // Add all team members to participant table
+        const participantsToInsert = members.map(m => ({
+            partusn: m.student_usn,
+            parteid: eventId,
+            partstatus: false,
+            payment_status: 'free',
+            team_id: teamId
+        }));
+
+        const { error: participantError } = await supabase
+            .from('participant')
+            .insert(participantsToInsert);
+
+        if (participantError) {
+            console.error('Error adding participants:', participantError);
+            return res.status(500).json({ error: 'Failed to add team members as participants' });
+        }
+
+        res.json({
+            success: true,
+            message: 'Team registered successfully!',
+            teamId
+        });
+    } catch (err) {
+        console.error('Error registering team:', err);
+        res.status(500).json({ error: 'Error registering team' });
+    }
+});
+
+// Add team members to existing team
+app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
+    try {
+        const teamId = req.params.teamId;
+        const userUSN = req.session.userUSN;
+        const { memberUSNs } = req.body;
+
+        if (!Array.isArray(memberUSNs) || memberUSNs.length === 0) {
+            return res.status(400).json({ error: 'Member USNs are required' });
+        }
+
+        // Verify user is team leader
+        const { data: team } = await supabase
+            .from('team')
+            .select('leader_usn, event_id, registration_complete, event:event_id(max_team_size)')
+            .eq('id', teamId)
+            .limit(1);
+
+        if (!team || team.length === 0) {
+            return res.status(404).json({ error: 'Team not found' });
+        }
+
+        if (team[0].leader_usn !== userUSN) {
+            return res.status(403).json({ error: 'Only team leader can add members' });
+        }
+
+        if (team[0].registration_complete) {
+            return res.status(400).json({ 
+                error: 'Cannot add members to a registered team' 
+            });
+        }
+
+        // Check current team size
+        const { count: currentSize } = await supabase
+            .from('team_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('team_id', teamId);
+
+        const maxSize = team[0].event?.max_team_size;
+        if (maxSize && (currentSize + memberUSNs.length) > maxSize) {
+            return res.status(400).json({ 
+                error: `Cannot exceed maximum team size of ${maxSize}` 
+            });
+        }
+
+        // Validate USNs
+        const { data: students } = await supabase
+            .from('student')
+            .select('usn')
+            .in('usn', memberUSNs);
+
+        if (!students || students.length !== memberUSNs.length) {
+            return res.status(400).json({ 
+                error: 'One or more member USNs are invalid' 
+            });
+        }
+
+        // Check if members are already in another team for this event
+        const { data: conflictCheck } = await supabase
+            .from('team_members')
+            .select('student_usn, team:team_id(event_id)')
+            .in('student_usn', memberUSNs);
+
+        if (conflictCheck && conflictCheck.length > 0) {
+            const conflicts = conflictCheck.filter(m => 
+                m.team?.event_id === team[0].event_id
+            );
+            if (conflicts.length > 0) {
+                return res.status(400).json({ 
+                    error: `Member ${conflicts[0].student_usn} is already in another team` 
+                });
+            }
+        }
+
+        // Add members
+        const membersToInsert = memberUSNs.map(usn => ({
+            team_id: teamId,
+            student_usn: usn,
+            join_status: false
+        }));
+
+        const { error: insertError } = await supabase
+            .from('team_members')
+            .insert(membersToInsert);
+
+        if (insertError) {
+            console.error('Error adding members:', insertError);
+            return res.status(500).json({ error: 'Failed to add members' });
+        }
+
+        res.json({
+            success: true,
+            message: 'Members added successfully!'
+        });
+    } catch (err) {
+        console.error('Error adding members:', err);
+        res.status(500).json({ error: 'Error adding members' });
+    }
+});
+
+// Get team invites for current user for a specific event - ENHANCED
+app.get('/api/events/:eventId/my-invites', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        const userUSN = req.session.userUSN;
+
+        // FIXED: Find all teams for this event where user is invited (join_status = false)
+        const { data: invites, error } = await supabase
+            .from('team_members')
+            .select(`
+                team_id,
+                join_status,
+                team:team_id (
+                    id,
+                    team_name,
+                    leader_usn,
+                    event_id,
+                    registration_complete,
+                    leader:leader_usn(sname)
+                )
+            `)
+            .eq('student_usn', userUSN)
+            .eq('join_status', false); // Only pending invites
+
+        if (error) {
+            console.error('Error fetching invites:', error);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        // Filter for this specific event
+        const eventInvites = (invites || [])
+            .filter(invite => invite.team?.event_id === parseInt(eventId))
+            .map(invite => ({
+                teamId: invite.team.id,
+                teamName: invite.team.team_name,
+                leaderUSN: invite.team.leader_usn,
+                leaderName: invite.team.leader?.sname || 'Unknown',
+                joinStatus: invite.join_status,
+                registrationComplete: invite.team.registration_complete
+            }));
+
+        res.json({
+            success: true,
+            invites: eventInvites
+        });
+    } catch (err) {
+        console.error('Error fetching invites:', err);
+        res.status(500).json({ error: 'Error fetching invites' });
+    }
+});
+
+// Confirm join team (accept invite) - ENHANCED
+app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
+    try {
+        const teamId = req.params.teamId;
+        const userUSN = req.session.userUSN;
+
+        console.log(`Confirming join for user ${userUSN} to team ${teamId}`);
+
+        // Verify user is a member of this team
+        const { data: membership, error: membershipError } = await supabase
+            .from('team_members')
+            .select('join_status, team:team_id(event_id, registration_complete, team_name)')
+            .eq('team_id', teamId)
+            .eq('student_usn', userUSN)
+            .limit(1);
+
+        if (membershipError) {
+            console.error('Error checking membership:', membershipError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!membership || membership.length === 0) {
+            return res.status(404).json({ 
+                error: 'You are not invited to this team' 
+            });
+        }
+
+        if (membership[0].join_status) {
+            return res.status(400).json({ 
+                error: 'You have already joined this team' 
+            });
+        }
+
+        if (membership[0].team.registration_complete) {
+            return res.status(400).json({ 
+                error: 'This team has already completed registration' 
+            });
+        }
+
+        // FIXED: Check if user has already joined another team for this event
+        const { data: otherTeams } = await supabase
+            .from('team_members')
+            .select('team_id, team:team_id(event_id)')
+            .eq('student_usn', userUSN)
+            .eq('join_status', true);
+
+        if (otherTeams && otherTeams.length > 0) {
+            const conflictTeam = otherTeams.find(t => 
+                t.team?.event_id === membership[0].team.event_id
+            );
+            if (conflictTeam) {
+                return res.status(400).json({ 
+                    error: 'You have already joined another team for this event' 
+                });
+            }
+        }
+
+        // Update join status to true
+        const { error: updateError } = await supabase
+            .from('team_members')
+            .update({ join_status: true })
+            .eq('team_id', teamId)
+            .eq('student_usn', userUSN);
+
+        if (updateError) {
+            console.error('Error updating join status:', updateError);
+            return res.status(500).json({ error: 'Failed to join team' });
+        }
+
+        console.log(`✅ User ${userUSN} successfully joined team ${teamId}`);
+
+        res.json({
+            success: true,
+            message: `Successfully joined team "${membership[0].team.team_name}"!`,
+            teamId
+        });
+    } catch (err) {
+        console.error('Error confirming join:', err);
+        res.status(500).json({ error: 'Error confirming join' });
+    }
+});
+
+// ==================== EXCEL GENERATION (UPDATED) ====================
+app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        const userUSN = req.session.userUSN;
+
+        // ---- Verify organizer ----
+        const { data: event, error: eventError } = await supabase
+            .from('event')
+            .select(`
+                eid, ename, eventdate, eventtime, eventloc, orgusn,
+                student:orgusn(sname, usn)
+            `)
+            .eq('eid', eventId)
+            .limit(1);
+
+        if (eventError || !event?.[0]) return res.status(404).json({ error: 'Event not found' });
+        if (event[0].orgusn !== userUSN) return res.status(403).json({ error: 'Not authorized' });
+
+        const eventData = event[0];
+
+        // ---- Participants (with nested student → payment) ----
+        const { data: participants, error: participantError } = await supabase
+            .from('participant')
+            .select(`
+                partusn,
+                partstatus,
+                payment_status,
+                team_id,
+                student:partusn (
+                    sname, sem, mobno, emailid,
+                    payment!payment_usn_fkey (razorpay_payment_id, amount)
+                ),
+                team:team_id (team_name)
+            `)
+            .eq('parteid', eventId);
+
+        if (participantError) {
+            console.error('Error fetching participants:', participantError);
+            return res.status(500).json({ error: 'Database error (participants)' });
+        }
+
+        // ---- Volunteers ----
+        const { data: volunteers, error: volunteerError } = await supabase
+            .from('volunteer')
+            .select(`
+                volnusn,
+                volnstatus,
+                student:volnusn (sname)
+            `)
+            .eq('volneid', eventId);
+
+        if (volunteerError) {
+            console.error('Error fetching volunteers:', volunteerError);
+            return res.status(500).json({ error: 'Database error (volunteers)' });
+        }
+
+        // ---- Build Excel ----
+        const workbook = new ExcelJS.Workbook();
+        const ws = workbook.addWorksheet('Event Details');
+
+        ws.columns = [
+            { width: 15 }, { width: 25 }, { width: 10 }, { width: 15 }, { width: 30 },
+            { width: 15 }, { width: 15 }, { width: 20 }, { width: 25 }, { width: 15 }
+        ];
+
+        // Event Header
+        const hdr = ws.addRow(['EVENT DETAILS']);
+        hdr.font = { size: 16, bold: true };
+        hdr.alignment = { horizontal: 'center' };
+        ws.mergeCells('A1:J1');
+
+        ws.addRow([]);
+        ws.addRow(['Event Name:', eventData.ename]);
+        ws.addRow(['Event Date:', eventData.eventdate]);
+        ws.addRow(['Event Time:', eventData.eventtime]);
+        ws.addRow(['Event Location:', eventData.eventloc]);
+        ws.addRow(['Organiser USN:', eventData.student.usn]);
+        ws.addRow(['Organiser Name:', eventData.student.sname]);
+
+        for (let i = 3; i <= 8; i++) {
+            ws.getRow(i).font = { bold: true };
+            ws.getRow(i).getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+        }
+
+        // Participants Section
+        ws.addRow([]);
+        const partHdr = ws.addRow(['PARTICIPANTS']);
+        partHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+        partHdr.alignment = { horizontal: 'center' };
+        ws.mergeCells(`A${partHdr.number}:J${partHdr.number}`);
+        partHdr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+
+        const partCols = ws.addRow([
+            'USN', 'Name', 'Semester', 'Mobile No', 'Email',
+            'Participation Status', 'Payment Status', 'Team Name',
+            'Razorpay Payment ID', 'Payment Amount'
+        ]);
+        partCols.font = { bold: true };
+        partCols.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
+
+        (participants || []).forEach(p => {
+            const payment = Array.isArray(p.student?.payment) ? p.student.payment[0] : p.student?.payment;
+            ws.addRow([
+                p.partusn || 'N/A',
+                p.student?.sname || 'N/A',
+                p.student?.sem || 'N/A',
+                p.student?.mobno || 'N/A',
+                p.student?.emailid || 'N/A',
+                p.partstatus ? 'Present' : 'Absent',
+                p.payment_status || 'N/A',
+                p.team?.team_name || 'N/A',
+                payment?.razorpay_payment_id || 'N/A',
+                payment?.amount ?? '0'
+            ]);
+        });
+
+        // Volunteers Section
+        ws.addRow([]);
+        const volHdr = ws.addRow(['VOLUNTEERS']);
+        volHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+        volHdr.alignment = { horizontal: 'center' };
+        ws.mergeCells(`A${volHdr.number}:C${volHdr.number}`);
+        volHdr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF70AD47' } };
+
+        const volCols = ws.addRow(['USN', 'Name', 'Volunteer Status']);
+        volCols.font = { bold: true };
+        volCols.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
+
+        (volunteers || []).forEach(v => {
+            ws.addRow([
+                v.volnusn || 'N/A',
+                v.student?.sname || 'N/A',
+                v.volnstatus ? 'Present' : 'Absent'
+            ]);
+        });
+
+        // Borders
+        ws.eachRow(row => {
+            row.eachCell(cell => {
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+        });
+
+        // Send file
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=Event_${eventData.ename.replace(/\s+/g, '_')}_Details.xlsx`
+        );
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+        console.log(`✅ Excel generated for event ${eventId} by ${userUSN}`);
+    } catch (err) {
+        console.error('Excel generation error:', err);
+        res.status(500).json({ error: 'Error generating Excel file' });
     }
 });
 
