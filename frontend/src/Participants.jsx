@@ -135,10 +135,10 @@ const Participants = () => {
 
       // Fetch the PDF template from GitHub or your deployed static assets
       // Option 1: If hosting on same domain (Render static files)
-      const templateUrl = `${window.location.origin}/certificate-template.pdf`;
+      // const templateUrl = `${window.location.origin}/certificate-template.pdf`;
       
       // Option 2: If hosting on GitHub (uncomment and use this instead)
-      // const templateUrl = 'https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/public/certificate-template.pdf';
+      const templateUrl = 'https://raw.githubusercontent.com/SuchitKS/Event-Registration-System/main/frontend/public/certificate-template.pdf';
       
       const existingPdfBytes = await fetch(templateUrl).then(res => {
         if (!res.ok) {
@@ -162,10 +162,10 @@ const Participants = () => {
       let nameFont;
       try {
         // Option 1: Same domain
-        const fontUrl = `${window.location.origin}/Allura-Regular.ttf`;
+        // const fontUrl = `${window.location.origin}/Allura-Regular.ttf`;
         
         // Option 2: GitHub (uncomment if needed)
-        // const fontUrl = 'https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/public/Allura-Regular.ttf';
+        const fontUrl = 'https://raw.githubusercontent.com/SuchitKS/Event-Registration-System/main/frontend/public/Allura-Regular.ttf';
         
         const fontBytes = await fetch(fontUrl).then(res => {
           if (!res.ok) {
@@ -187,10 +187,10 @@ const Participants = () => {
       let descFont;
       try {
         // Option 1: Same domain
-        const descFontUrl = `${window.location.origin}/PlayfairDisplay-MediumItalic.ttf`;
+        // const descFontUrl = `${window.location.origin}/PlayfairDisplay-MediumItalic.ttf`;
         
         // Option 2: GitHub (uncomment if needed)
-        // const descFontUrl = 'https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/public/PlayfairDisplay-MediumItalic.ttf';
+        const descFontUrl = 'https://raw.githubusercontent.com/SuchitKS/Event-Registration-System/main/frontend/public/PlayfairDisplay-MediumItalic.ttf';
         
         const descFontBytes = await fetch(descFontUrl).then(res => {
           if (!res.ok) {
