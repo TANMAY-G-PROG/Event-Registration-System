@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ProfileCard from './ProfileCard';
 import './AboutUs.css';
 import member1 from './assets/member1.jpg';
@@ -14,6 +14,7 @@ const AboutUs = () => {
       handle: "username1",
       status: "Available",
       avatarUrl: member1,
+      linkedin: "https://www.instagram.com/suchitkadidal/",
     },
     {
       name: "Suchit",
@@ -21,6 +22,7 @@ const AboutUs = () => {
       handle: "username2",
       status: "Available",
       avatarUrl: member2,
+      linkedin: "https://www.instagram.com/suchitkadidal/",
     },
     {
       name: "Yashwanth",
@@ -28,6 +30,7 @@ const AboutUs = () => {
       handle: "username3",
       status: "Available",
       avatarUrl: member3,
+      linkedin: "https://www.instagram.com/suchitkadidal/",
     },
     {
       name: "Member Name 4",
@@ -35,26 +38,42 @@ const AboutUs = () => {
       handle: "username4",
       status: "Available",
       avatarUrl: member4,
+      linkedin: "https://www.instagram.com/suchitkadidal/",
     }
   ];
 
   const socialLinks = [
-    { name: "LinkedIn", icon: "fab fa-linkedin", url: "#" },
-    { name: "GitHub", icon: "fab fa-github", url: "#" },
-    { name: "Twitter", icon: "fab fa-twitter", url: "#" },
-    { name: "Email", icon: "fas fa-envelope", url: "#" }
+    { name: "Email Us", icon: "fas fa-envelope", url: "mailto:your-email@example.com" }
   ];
 
-  const handleContactClick = (memberName) => {
-    console.log(`Contact clicked for ${memberName}`);
+  const handleContactClick = (linkedin) => {
+    if (linkedin) {
+      window.open(linkedin, "_blank");
+    } else {
+      console.log("LinkedIn link not available");
+    }
   };
+
+  // ADD THIS: Scroll to hash fragment (e.g., #connect-section) when page loads
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      const element = document.querySelector(hash);
+      if (element) {
+        // Small delay to ensure DOM is fully rendered
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, []); // Empty dependency array → runs once on mount
 
   return (
     <div className="aboutus-container">
       {/* Hero Section */}
       <section className="aboutus-hero">
         <div className="hero-content">
-          <h1 className="hero-title">About ePass</h1>
+          <h1 className="hero-title">About ePASS</h1>
           <div className="hero-underline"></div>
           <p className="hero-description">
             XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -81,15 +100,15 @@ const AboutUs = () => {
                 showUserInfo={true}
                 enableTilt={true}
                 enableMobileTilt={false}
-                onContactClick={() => handleContactClick(member.name)}
+                onContactClick={() => handleContactClick(member.linkedin)}
               />
             </div>
           ))}
         </div>
       </section>
 
-      {/* Connect Section */}
-      <section className="connect-section">
+      {/* Connect Section - IMPORTANT: Has correct ID */}
+      <section className="connect-section" id="connect-section">
         <h2 className="connect-title">Connect With Us</h2>
         <div className="social-links">
           {socialLinks.map((link, index) => (

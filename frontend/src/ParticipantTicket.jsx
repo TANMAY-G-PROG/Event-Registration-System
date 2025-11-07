@@ -68,7 +68,7 @@ export default function ParticipantTicket() {
   };
 
   const handleBack = () => {
-    window.location.href = '/participants.html';
+    window.location.href = '/participants';
   };
 
   const handleScanQR = () => {

@@ -1,225 +1,315 @@
-/* Scoped styles for volunteer-events-wrapper */
+/* ==============================================================
+   VolunteerEvents – Fully Responsive, Golden Theme, Premium Button
+   ============================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+/* --- FONT AWESOME IMPORT ADDED --- */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
+
+
+/* --- NEW CODE ADDED --- */
+@property --angle-1 {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: -75deg;
+}
+
+@property --angle-2 {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: -45deg;
+}
+
+:root {
+  --anim--hover-time: 400ms;
+  --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
+}
+/* --- END OF NEW CODE --- */
+
+
 .volunteer-events-wrapper {
-  min-height: 100vh;
+  /* --- FIX 1: Make wrapper a fixed overlay --- */
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* --- End Fix --- */
+
   display: flex;
   justify-content: center;
   align-items: center;
   background: black;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Inter', 'Montserrat', sans-serif;
   padding: 0;
-  position: relative;
+  overflow: hidden; /* Hide wrapper overflow */
 }
 
+/* ---------- CONTAINER WITH GOLDEN STRIPES ---------- */
 .volunteer-events-wrapper .ve-container {
-  padding: 0;
+  position: relative;
+  width: 100%;
+  max-width: 1500px;
+  
+  /* --- FIX 2: Use min-height and allow scrolling --- */
+  min-height: 100vh;
+  height: 100%; /* Make it fill the wrapper */
+  overflow-y: auto; /* Allow the container itself to scroll */
+  /* --- End Fix --- */
+
   display: grid;
   place-items: center;
+  padding: 2rem;
   gap: 1rem;
-  border: 1px solid transparent;
+
+  border-left: 2px solid transparent;
+  border-right: 2px solid transparent;
   border-image: linear-gradient(transparent, #ffe0a6, transparent) 1;
-  border-width: 0 2px 0px 2px;
   background: radial-gradient(
-      100% 61.73% at 100% 50%,
-      rgba(255, 224, 166, 0.05) 0%,
-      transparent 100%
-    ),
-    radial-gradient(
-      91.09% 56.23% at 0% 50%,
-      rgba(255, 224, 166, 0.05) 0%,
-      transparent 100%
-    );
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-  max-width: 1500px;
+          100% 61.73% at 100% 50%,
+          rgba(255, 224, 166, 0.05) 0%,
+          transparent 100%
+        ),
+        radial-gradient(
+          91.09% 56.23% at 0% 50%,
+          rgba(255, 224, 166, 0.05) 0%,
+          transparent 100%
+        );
+  
+  /* --- FIX 3: Add scrollbar styling to container --- */
+  scrollbar-width: thin;
+  scrollbar-color: #ffe0a6 rgba(255,224,166,.1);
 }
+.volunteer-events-wrapper .ve-container::-webkit-scrollbar { width: 8px; }
+.volunteer-events-wrapper .ve-container::-webkit-scrollbar-track {
+  background: rgba(255,255,255,.1);
+  border-radius: 10px;
+}
+.volunteer-events-wrapper .ve-container::-webkit-scrollbar-thumb {
+  background: #ffe0a6;
+  border-radius: 10px;
+}
+/* --- End Fix --- */
+
 
 .volunteer-events-wrapper .ve-container::before,
 .volunteer-events-wrapper .ve-container::after {
   content: "";
   position: absolute;
-  border: 1px solid transparent;
-  border-image: linear-gradient(transparent, #ffe0a6, transparent) 1;
-  border-width: 0 2px 0px 2px;
-  z-index: -1;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  border: inherit;
+  border-image: inherit;
+  pointer-events: none;
 }
+.volunteer-events-wrapper .ve-container::before { left: -1rem; opacity: .15; }
+.volunteer-events-wrapper .ve-container::after  { right: -1rem; opacity: .05; }
 
-.volunteer-events-wrapper .ve-container::before {
-  inset: -1rem;
-  opacity: 15%;
-}
-
-.volunteer-events-wrapper .ve-container::after {
-  inset: 1rem;
-  opacity: 5%;
-}
-
+/* ---------- CONTENT BOX ---------- */
 .volunteer-events-wrapper .ve-content-box {
   background: transparent;
-  padding: 0;
   width: 100%;
-  position: relative;
-  z-index: 10;
+  max-width: 900px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 1rem;
+  /* --- FIX 4: Ensure content box is centered --- */
+  margin: auto 0; /* Center vertically within the container */
+  padding: 4rem 0; /* Add padding for top/bottom */
+  /* --- End Fix --- */
 }
 
+/* ---------- ANIMATED TEXTURE ---------- */
 .volunteer-events-wrapper .ve-texture {
   position: absolute;
+  inset: 0;
   background-image: linear-gradient(0deg, #ffffff 1px, transparent 1px);
   background-size: 1px 5px;
-  inset: 0;
   mix-blend-mode: soft-light;
-  -webkit-mask-image: radial-gradient(
-      30% 45% at 100% 50%,
-      white 0%,
-      transparent 100%
-    ),
-    radial-gradient(30% 45% at 0% 50%, white 0%, transparent 100%);
+  -webkit-mask-image: radial-gradient(30% 45% at 100% 50%, white 0%, transparent 100%),
+                      radial-gradient(30% 45% at 0% 50%, white 0%, transparent 100%);
   mask-image: radial-gradient(30% 45% at 100% 50%, white 0%, transparent 100%),
-    radial-gradient(30% 45% at 0% 50%, white 0%, transparent 100%);
+              radial-gradient(30% 45% at 0% 50%, white 0%, transparent 100%);
   pointer-events: none;
   animation: ve-movingLines 1s linear infinite;
 }
-
 @keyframes ve-movingLines {
-  0% {
-    background-position: 0 0;
-  }
-  100% {
-    background-position: 0 5px;
-  }
+  from { background-position: 0 0; }
+  to   { background-position: 0 5px; }
 }
 
+/* ---------- HEADER (UNCHANGED) ---------- */
 .volunteer-events-wrapper .ve-header {
-  width: 100%;
   text-align: center;
   font-size: 2rem;
   font-weight: 700;
-  padding: 6px;
-  letter-spacing: 0.5rem;
+  letter-spacing: .5rem;
   text-transform: uppercase;
-  background: linear-gradient(rgb(170, 170, 170), rgb(78, 78, 78));
-  color: transparent;
+  background: linear-gradient(#aaa, #4e4e4e);
   -webkit-background-clip: text;
   background-clip: text;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 1rem;
+  color: transparent;
+  margin-bottom: .5rem;
 }
 
+/* ---------- SCROLLABLE EVENTS LIST ---------- */
 .volunteer-events-wrapper .ve-events-list {
-  height: 100%;
+  flex: 1;
+  /* --- FIX 5: Remove max-height, let it flow --- */
+  /* max-height: calc(100vh - 180px); */ /* REMOVED */
   overflow-y: auto;
-  padding: 0.5rem;
-  scrollbar-width: thin;
-  scrollbar-color: #ffe0a6 rgba(255, 224, 166, 0.1);
+  padding: .5rem;
+  /* --- End Fix --- */
+
+  /* Remove scrollbar styles from here, moved to .ve-container */
 }
 
-.volunteer-events-wrapper .ve-events-list::-webkit-scrollbar {
-  width: 8px;
-}
 
-.volunteer-events-wrapper .ve-events-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-}
-
-.volunteer-events-wrapper .ve-events-list::-webkit-scrollbar-thumb {
-  background: #ffe0a6;
-  border-radius: 10px;
-}
-
+/* ---------- EVENT CARD (PREMIUM TEXT) ---------- */
 .volunteer-events-wrapper .ve-event-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255,255,255,.05);
   border-radius: 8px;
   padding: 1rem;
-  margin-bottom: 1rem;
-  transition: transform 0.2s, box-shadow 0.2s;
+  margin-bottom: .75rem;
+  transition: transform .2s, box-shadow .2s;
+  border: 1px solid rgba(255, 224, 166, 0.1);
 }
-
 .volunteer-events-wrapper .ve-event-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 8px rgba(0,0,0,.2), 0 0 12px rgba(255, 224, 166, 0.15);
 }
 
-.volunteer-events-wrapper .ve-event-info {
-  flex: 1;
-  margin-right: 1rem;
-}
-
-.volunteer-events-wrapper .ve-event-info p {
-  margin: 0.3rem 0;
-  font-size: 0.95rem;
-  color: #d1d1d1;
-}
-
-.volunteer-events-wrapper .ve-event-info p strong {
-  font-weight: 700;
-  color: #e2e2e2;
-}
-
+/* Event Name – Premium White + Golden Glow */
 .volunteer-events-wrapper .ve-event-name {
-  font-weight: bold;
-  color: white;
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  font-size: 1.2rem;
+  margin-bottom: 0.6rem;
+  letter-spacing: 0.5px;
+  text-shadow: 
+    0 0 8px rgba(255, 224, 166, 0.3),
+    0 1px 2px rgba(0,0,0,0.3);
 }
 
+/* Labels: Date, Time, Location, Volunteers */
+.volunteer-events-wrapper .ve-event-info p {
+  margin: 0.45rem 0;
+  font-size: 0.92rem;
+  color: #ffe0a6;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.3px;
+  opacity: 0.95;
+}
+
+/* Values – Clean, Bright White */
+.volunteer-events-wrapper .ve-event-info p strong {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1.02rem;
+  margin-left: 0.5rem;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+/* ---------- ACTIONS ---------- */
 .volunteer-events-wrapper .ve-event-actions {
   display: flex;
   align-items: center;
+  width: 100%;
+  justify-content: flex-end;
 }
 
-.volunteer-events-wrapper .ve-button {
-  width: auto;
-  min-width: 100px;
-  height: 40px;
-  border: none;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: grid;
-  place-content: center;
-  gap: 10px;
-  background: var(--button-color);
-  color: white;
-  transition: 0.3s;
-  padding: 0 16px;
-  box-shadow:
-    inset 0px 3px 6px -4px rgba(255, 255, 255, 0.6),
-    inset 0px -3px 6px -2px rgba(0, 0, 0, 0.8);
-}
-
-.volunteer-events-wrapper .ve-button:hover {
-  background: rgba(255, 255, 255, 0.25);
-  box-shadow:
-    inset 0px 3px 6px rgba(255, 255, 255, 0.6),
-    inset 0px -3px 6px rgba(0, 0, 0, 0.8),
-    0px 0px 8px rgba(255, 255, 255, 0.05);
-}
-
+/* ==================== PREMIUM VOLUNTEER BUTTON (UNCHANGED) ==================== */
 .volunteer-events-wrapper .ve-volunteer-btn {
-  background-color: #667eea;
+  position: relative;
+  background: linear-gradient(135deg, #ffe0a6 0%, #ffbc4d 50%, #ffa500 100%);
+  color: #1a1a1a;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 50px;
+  padding: 0 20px;
+  height: 44px;
+  min-width: 120px;
+  font-size: 14px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 
+    0 4px 15px rgba(255, 224, 166, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  z-index: 1;
+}
+
+.volunteer-events-wrapper .ve-volunteer-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, #fff 0%, transparent 70%);
+  border-radius: 50px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: -1;
 }
 
 .volunteer-events-wrapper .ve-volunteer-btn:hover {
-  background-color: #764ba2;
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 
+    0 8px 25px rgba(255, 224, 166, 0.6),
+    0 4px 10px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  background: linear-gradient(135deg, #fff3d1 0%, #ffd27a 50%, #ffb84d 100%);
 }
 
+.volunteer-events-wrapper .ve-volunteer-btn:hover::before {
+  opacity: 0.3;
+}
+
+.volunteer-events-wrapper .ve-volunteer-btn:active {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 
+    0 4px 12px rgba(255, 224, 166, 0.5),
+    0 2px 5px rgba(0, 0, 0, 0.25);
+}
+
+/* Ripple Effect */
+.volunteer-events-wrapper .ve-volunteer-btn .ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: ripple-animation 0.6s ease-out;
+  z-index: 0;
+}
+@keyframes ripple-animation {
+  to {
+    width: 300px;
+    height: 300px;
+    opacity: 0;
+  }
+}
+
+/* No Volunteers – Premium Golden Badge */
 .volunteer-events-wrapper .ve-no-volunteers {
-  color: #ff4d4d;
-  font-weight: bold;
-  margin: 0.5rem 0;
+  color: #ffa500;
+  font-weight: 700;
   font-size: 0.9rem;
+  text-align: center;
+  width: 100%;
+  padding: 9px 0;
+  background: rgba(255, 165, 0, 0.1);
+  border-radius: 22px;
+  border: 1px dashed #ffa500;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
 }
 
+/* ---------- MESSAGE TOAST ---------- */
 .volunteer-events-wrapper .ve-message {
   position: fixed;
   top: 20px;
@@ -229,93 +319,240 @@
   color: white;
   font-weight: normal;
   z-index: 1000;
-  animation: ve-slideIn 0.3s ease-in-out;
+  animation: ve-slideIn .3s ease-in-out;
 }
-
-.volunteer-events-wrapper .ve-message.success {
-  background-color: rgb(114, 221, 158);
-}
-
-.volunteer-events-wrapper .ve-message.error {
-  background-color: rgb(225, 108, 95);
-}
-
+.volunteer-events-wrapper .ve-message.success { background: rgb(114,221,158); }
+.volunteer-events-wrapper .ve-message.error   { background: rgb(225,108,95); }
 @keyframes ve-slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
 
+/* ---------- NAV BUTTONS (top-left) - UPDATED ---------- */
 .volunteer-events-wrapper .ve-nav-container {
   position: fixed;
   top: 20px;
-  right: 20px;
+  left: 20px; /* MOVED from right to left */
   z-index: 100;
   display: flex;
   gap: 10px;
 }
 
-.volunteer-events-wrapper .ve-nav-btn {
-  background-color: #fff;
-  color: #333;
-  padding: 0.5rem 1rem;
-  border-radius: 5px;
-  border: none;
+/* --- OLD .ve-nav-btn STYLES REMOVED AND REPLACED --- */
+
+/* --- NEW GLASSY BUTTON STYLES --- */
+.volunteer-events-wrapper .ve-back-btn {
+  /* Basic Styling */
+  --border-width: clamp(1px, 0.0625em, 4px);
+  all: unset;
   cursor: pointer;
-  font-size: 0.9rem;
+  position: relative;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  pointer-events: auto;
+  z-index: 3;
+  background: linear-gradient(
+    -75deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.05)
+  );
+  border-radius: 999vw;
+  box-shadow:
+    inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05),
+    inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5),
+    0 0.25em 0.125em -0.125em rgba(0, 0, 0, 0.2),
+    0 0 0.1em 0.25em inset rgba(255, 255, 255, 0.2),
+    0 0 0 0 rgba(255, 255, 255, 1);
+  backdrop-filter: blur(clamp(1px, 0.125em, 4px));
+  -webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px));
+  transition: all var(--anim--hover-time) var(--anim--hover-ease);
+
+  /* Adaptations for this button */
   display: flex;
   align-items: center;
-  gap: 5px;
-  transition: background-color 0.3s;
-  font-family: 'Montserrat', sans-serif;
+  gap: 8px;
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  font-size: 14px; /* Controls 'em' units */
+  color: white; /* Make text white */
+  text-shadow: 0em 0.25em 0.05em rgba(0, 0, 0, 0.1);
+  padding-inline: 1.5em;
+  padding-block: 0.875em;
+  text-decoration: none;
 }
 
-.volunteer-events-wrapper .ve-nav-btn:hover {
-  background-color: #e2e2e2;
+/* Inner shine effect */
+.volunteer-events-wrapper .ve-back-btn::before {
+  content: "";
+  display: block;
+  position: absolute;
+  z-index: 3;
+  width: calc(100% - var(--border-width));
+  height: calc(100% - var(--border-width));
+  top: calc(0% + var(--border-width) / 2);
+  left: calc(0% + var(--border-width) / 2);
+  box-sizing: border-box;
+  border-radius: 999vw;
+  overflow: clip;
+  background: linear-gradient(
+    var(--angle-2),
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.5) 40% 50%,
+    rgba(255, 255, 255, 0) 55%
+  );
+  mix-blend-mode: screen;
+  pointer-events: none;
+  background-size: 200% 200%;
+  background-position: 0% 50%;
+  background-repeat: no-repeat;
+  transition:
+    background-position calc(var(--anim--hover-time) * 1.25)
+      var(--anim--hover-ease),
+    --angle-2 calc(var(--anim--hover-time) * 1.25) var(--anim--hover-ease);
 }
 
-@media (max-width: 768px) {
-  .volunteer-events-wrapper .ve-container {
-    width: 95vw;
-    height: 85vh;
-    padding: 1.5rem 2rem;
+/* Animated outline */
+.volunteer-events-wrapper .ve-back-btn::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border-radius: 999vw;
+  width: calc(100% + var(--border-width));
+  height: calc(100% + var(--border-width));
+  top: calc(0% - var(--border-width) / 2);
+  left: calc(0% - var(--border-width) / 2);
+  padding: var(--border-width);
+  box-sizing: border-box;
+  background: conic-gradient(
+      from var(--angle-1) at 50% 50%,
+      rgba(0, 0, 0, 0.5),
+      rgba(0, 0, 0, 0) 5% 40%,
+      rgba(0, 0, 0, 0.5) 50%,
+      rgba(0, 0, 0, 0) 60% 95%,
+      rgba(0, 0, 0, 0.5)
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5));
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  transition:
+    all var(--anim--hover-time) var(--anim--hover-ease),
+    --angle-1 500ms ease;
+  box-shadow: inset 0 0 0 calc(var(--border-width) / 2) rgba(255, 255, 255, 0.5);
+}
+
+/* Hover states */
+.volunteer-events-wrapper .ve-back-btn:hover {
+  transform: scale(0.975);
+  backdrop-filter: blur(0.01em);
+  -webkit-backdrop-filter: blur(0.01em);
+  box-shadow:
+    inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05),
+    inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5),
+    0 0.15em 0.05em -0.1em rgba(0, 0, 0, 0.25),
+    0 0 0.05em 0.1em inset rgba(255, 255, 255, 0.5),
+    0 0 0 0 rgba(255, 255, 255, 1);
+  text-shadow: 0.025em 0.025em 0.025em rgba(0, 0, 0, 0.12);
+}
+
+.volunteer-events-wrapper .ve-back-btn:hover::before {
+  background-position: 25% 50%;
+}
+
+.volunteer-events-wrapper .ve-back-btn:hover::after {
+  --angle-1: -125deg;
+}
+
+/* Active (click) states */
+.volunteer-events-wrapper .ve-back-btn:active {
+  transform: scale(0.96);
+}
+
+.volunteer-events-wrapper .ve-back-btn:active::before {
+  background-position: 50% 15%;
+  --angle-2: -15deg;
+}
+
+.volunteer-events-wrapper .ve-back-btn:active::after {
+  --angle-1: -75deg;
+}
+
+/* Icon style */
+.volunteer-events-wrapper .ve-back-btn i {
+  font-size: 16px;
+  position: relative;
+  z-index: 2;
+}
+
+/* Touch device fallbacks */
+@media (hover: none) and (pointer: coarse) {
+  .volunteer-events-wrapper .ve-back-btn::before,
+  .volunteer-events-wrapper .ve-back-btn:active::before {
+    --angle-2: -45deg;
   }
+  
+  .volunteer-events-wrapper .ve-back-btn::after,
+  .volunteer-events-wrapper .ve-back-btn:hover::after,
+  .volunteer-events-wrapper .ve-back-btn:active::after {
+    --angle-1: -75deg;
+  }
+}
+/* --- END OF NEW BUTTON STYLES --- */
+
+
+/* ==============================================================
+   RESPONSIVE: TABLET & MOBILE
+   ============================================================== */
+@media (max-width: 768px) {
+  .volunteer-events-wrapper .ve-container { padding: 1.5rem; }
+  .volunteer-events-wrapper .ve-header { font-size: 1.5rem; letter-spacing: .3rem; }
 
   .volunteer-events-wrapper .ve-event-item {
     flex-direction: column;
     align-items: flex-start;
   }
+  .volunteer-events-wrapper .ve-event-info { margin-right: 0; margin-bottom: .75rem; }
+  .volunteer-events-wrapper .ve-event-actions { width: 100%; justify-content: stretch; }
+  .volunteer-events-wrapper .ve-volunteer-btn { width: 100%; }
 
-  .volunteer-events-wrapper .ve-event-info {
-    margin-right: 0;
-    margin-bottom: 1rem;
+  .volunteer-events-wrapper .ve-nav-container { top: 10px; left: 10px; } /* MOVED */
+  .volunteer-events-wrapper .ve-back-btn { 
+    font-size: 13px;
+    padding-inline: 1.5em;
+    padding-block: 0.875em;
   }
+  .volunteer-events-wrapper .ve-back-btn i {
+    font-size: 14px;
+  }
+}
 
-  .volunteer-events-wrapper .ve-event-actions {
-    width: 100%;
+@media (max-width: 480px) {
+  .volunteer-events-wrapper .ve-container { padding: 1rem; }
+  .volunteer-events-wrapper .ve-content-box { 
+    max-width: 100%; 
+    padding: 2rem 0; /* Adjust padding for mobile */
   }
+  .volunteer-events-wrapper .ve-header { font-size: 1.3rem; letter-spacing: .2rem; }
+  .volunteer-events-wrapper .ve-event-item { padding: .75rem; }
+  .volunteer-events-wrapper .ve-event-name { font-size: 1.1rem; }
+  .volunteer-events-wrapper .ve-event-info p { font-size: .88rem; }
+  .volunteer-events-wrapper .ve-event-info p strong { font-size: .98rem; }
 
-  .volunteer-events-wrapper .ve-button {
-    width: 100%;
+  .volunteer-events-wrapper .ve-nav-container { top: 8px; left: 8px; gap: 6px; } /* MOVED */
+  .volunteer-events-wrapper .ve-back-btn { 
+    font-size: 12px;
+    gap: 6px;
   }
+  .volunteer-events-wrapper .ve-back-btn i {
+    font-size: 13px;
+  }
+}
 
-  .volunteer-events-wrapper .ve-nav-container {
-    top: 10px;
-    right: 10px;
-  }
-
-  .volunteer-events-wrapper .ve-nav-btn {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
-  }
-  
-  .volunteer-events-wrapper .ve-header {
-    font-size: 1.5rem;
-    letter-spacing: 0.3rem;
-  }
+@media (max-width: 360px) {
+  .volunteer-events-wrapper .ve-header { font-size: 1.1rem; }
+  .volunteer-events-wrapper .ve-event-name { font-size: 1.05rem; }
+  .volunteer-events-wrapper .ve-event-info p { font-size: .84rem; }
+  .volunteer-events-wrapper .ve-volunteer-btn { font-size: 13px; }
 }

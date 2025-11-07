@@ -300,6 +300,14 @@
   color: #374151;
 }
 
+/* Register button container */
+.registerevent-register-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 /* Register button with animated outline */
 .registerevent-register-btn {
   position: relative;
@@ -310,6 +318,7 @@
   cursor: pointer;
   transition: all 200ms ease;
   box-shadow: inset 0 -6px 10px rgba(143, 223, 255, 0.12);
+  white-space: nowrap;
 }
 
 .registerevent-register-btn:hover {
@@ -358,6 +367,580 @@
   background-clip: text;
   color: transparent;
   animation: registerevent-gradient-x 8s linear infinite;
+}
+
+/* Pay Now button (same style as register button) */
+.registerevent-pay-btn {
+  position: relative;
+  border: none;
+  background: transparent;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 200ms ease;
+  box-shadow: inset 0 -6px 10px rgba(143, 223, 255, 0.12);
+  white-space: nowrap;
+}
+
+.registerevent-pay-btn:hover {
+  box-shadow: inset 0 -5px 10px rgba(143, 223, 255, 0.24);
+  transform: translateY(-1px);
+}
+
+.registerevent-pay-btn:focus-visible {
+  outline: 2px solid var(--re-primary);
+  outline-offset: 2px;
+}
+
+.registerevent-pay-label {
+  position: relative;
+  z-index: 2;
+  font-weight: 600;
+  font-size: 14px;
+  background: linear-gradient(90deg, #ffaa40, #ffffff, #ffaa40);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: registerevent-gradient-x 8s linear infinite;
+}
+
+/* ===================================
+   TEAM EVENT STYLES - ADD TO registerevent.css
+   =================================== */
+
+/* Team badge */
+.registerevent-badge-team {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.registerevent-badge-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* Team controls container */
+.registerevent-team-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.registerevent-team-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.registerevent-team-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--re-foreground);
+}
+
+.registerevent-team-status {
+  font-size: 13px;
+  color: var(--re-muted);
+}
+
+.registerevent-team-waiting {
+  font-size: 13px;
+  color: var(--re-accent);
+  font-weight: 500;
+  padding: 8px 12px;
+  background: color-mix(in oklab, var(--re-accent) 10%, transparent);
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* Team members list */
+.registerevent-team-members-list {
+  background: color-mix(in oklab, var(--re-background) 50%, white 2%);
+  border: 1px solid color-mix(in oklab, white 8%, transparent);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.registerevent-team-members-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--re-foreground);
+  margin-bottom: 8px;
+}
+
+.registerevent-team-member-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid color-mix(in oklab, white 6%, transparent);
+  font-size: 13px;
+}
+
+.registerevent-team-member-item:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.registerevent-status-joined {
+  color: var(--re-success);
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.registerevent-status-pending {
+  color: var(--re-muted);
+  font-weight: 500;
+  font-size: 12px;
+}
+
+/* Team actions (Create/Join buttons) */
+.registerevent-team-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.registerevent-team-action-btn {
+  position: relative;
+  border: none;
+  background: transparent;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 200ms ease;
+  box-shadow: inset 0 -6px 10px rgba(143, 223, 255, 0.12);
+  white-space: nowrap;
+  flex: 1;
+  min-width: 140px;
+}
+
+.registerevent-team-action-btn:hover {
+  box-shadow: inset 0 -5px 10px rgba(143, 223, 255, 0.24);
+  transform: translateY(-1px);
+}
+
+.registerevent-team-action-btn:focus-visible {
+  outline: 2px solid var(--re-primary);
+  outline-offset: 2px;
+}
+
+/* Team badge for joined status */
+.registerevent-team-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Modal styles */
+.registerevent-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: registerevent-fadeIn 0.2s ease;
+}
+
+@keyframes registerevent-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.registerevent-modal {
+  background: color-mix(in oklab, var(--re-background) 85%, white 8%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in oklab, white 15%, transparent);
+  border-radius: 16px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: registerevent-slideUp 0.3s ease;
+}
+
+@keyframes registerevent-slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.registerevent-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid color-mix(in oklab, white 10%, transparent);
+}
+
+.registerevent-modal-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--re-foreground);
+  letter-spacing: -0.01em;
+}
+
+.registerevent-modal-close {
+  appearance: none;
+  background: color-mix(in oklab, var(--re-background) 70%, white 6%);
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+  color: var(--re-foreground);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  transition: all 180ms ease;
+}
+
+.registerevent-modal-close:hover {
+  background: color-mix(in oklab, var(--re-background) 60%, white 8%);
+  transform: rotate(90deg);
+}
+
+.registerevent-modal-body {
+  padding: 24px;
+}
+
+/* Team form */
+.registerevent-team-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.registerevent-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.registerevent-form-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--re-foreground);
+  margin-bottom: 4px;
+}
+
+.registerevent-form-input {
+  appearance: none;
+  background: color-mix(in oklab, var(--re-background) 70%, white 4%);
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+  color: var(--re-foreground);
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 180ms ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.registerevent-form-input:focus {
+  outline: none;
+  border-color: var(--re-primary);
+  background: color-mix(in oklab, var(--re-background) 65%, white 6%);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--re-primary) 15%, transparent);
+}
+
+.registerevent-form-input::placeholder {
+  color: var(--re-muted);
+}
+
+/* Member input row */
+.registerevent-member-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.registerevent-member-input-row .registerevent-form-input {
+  flex: 1;
+}
+
+.registerevent-remove-btn {
+  appearance: none;
+  background: color-mix(in oklab, var(--re-error) 15%, transparent);
+  border: 1px solid color-mix(in oklab, var(--re-error) 30%, transparent);
+  color: var(--re-error);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  transition: all 180ms ease;
+  flex-shrink: 0;
+}
+
+.registerevent-remove-btn:hover {
+  background: color-mix(in oklab, var(--re-error) 25%, transparent);
+  transform: scale(1.05);
+}
+
+.registerevent-add-member-btn {
+  appearance: none;
+  background: color-mix(in oklab, var(--re-primary) 12%, transparent);
+  border: 1px dashed color-mix(in oklab, var(--re-primary) 40%, transparent);
+  color: var(--re-primary);
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 180ms ease;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.registerevent-add-member-btn:hover {
+  background: color-mix(in oklab, var(--re-primary) 18%, transparent);
+  border-color: var(--re-primary);
+  transform: translateY(-1px);
+}
+
+.registerevent-modal-submit-btn {
+  appearance: none;
+  background: linear-gradient(135deg, var(--re-primary) 0%, var(--re-accent) 100%);
+  border: none;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 200ms ease;
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3);
+  margin-top: 8px;
+}
+
+.registerevent-modal-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
+}
+
+.registerevent-modal-submit-btn:active {
+  transform: translateY(0);
+}
+
+/* Form hint text */
+.registerevent-form-hint {
+  font-size: 12px;
+  color: var(--re-muted);
+  margin-top: 4px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+/* Team loading state */
+.registerevent-team-loading {
+  font-size: 13px;
+  color: var(--re-muted);
+  font-style: italic;
+}
+
+/* Responsive adjustments for team events */
+@media (max-width: 768px) {
+  .registerevent-team-actions {
+    flex-direction: column;
+  }
+
+  .registerevent-team-action-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .registerevent-team-controls {
+    max-width: 100%;
+  }
+
+  .registerevent-modal {
+    max-height: 90vh;
+    margin: 10px;
+  }
+
+  .registerevent-modal-header {
+    padding: 16px 20px;
+  }
+
+  .registerevent-modal-body {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .registerevent-team-members-list {
+    padding: 10px;
+  }
+
+  .registerevent-team-member-item {
+    font-size: 12px;
+    padding: 6px 0;
+  }
+
+  .registerevent-modal-title {
+    font-size: 20px;
+  }
+}
+
+/* ===================================
+   INVITES MODAL STYLES - ADD TO END OF registerevent.css
+   =================================== */
+
+/* Invites list container */
+.registerevent-invites-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.registerevent-invites-description {
+  font-size: 14px;
+  color: var(--re-muted);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.registerevent-no-invites {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.registerevent-no-invites p {
+  font-size: 14px;
+  color: var(--re-muted);
+  margin: 0;
+}
+
+/* Invite card */
+.registerevent-invite-card {
+  background: color-mix(in oklab, var(--re-background) 70%, white 4%);
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  transition: all 180ms ease;
+}
+
+.registerevent-invite-card:hover {
+  background: color-mix(in oklab, var(--re-background) 65%, white 6%);
+  border-color: color-mix(in oklab, white 18%, transparent);
+}
+
+.registerevent-invite-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.registerevent-invite-team-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--re-foreground);
+  letter-spacing: -0.01em;
+}
+
+.registerevent-invite-leader {
+  font-size: 13px;
+  color: var(--re-muted);
+}
+
+.registerevent-invite-status-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--re-muted);
+  background: color-mix(in oklab, var(--re-background) 60%, white 6%);
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-top: 4px;
+  width: fit-content;
+}
+
+.registerevent-invite-joined-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--re-success);
+  background: color-mix(in oklab, var(--re-success) 15%, transparent);
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--re-success) 30%, transparent);
+}
+
+/* Confirm join button */
+.registerevent-invite-confirm-btn {
+  appearance: none;
+  background: linear-gradient(135deg, var(--re-primary) 0%, var(--re-accent) 100%);
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 200ms ease;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+  white-space: nowrap;
+}
+
+.registerevent-invite-confirm-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.35);
+}
+
+.registerevent-invite-confirm-btn:active {
+  transform: translateY(0);
+}
+
+/* Responsive for invites */
+@media (max-width: 768px) {
+  .registerevent-invite-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .registerevent-invite-confirm-btn {
+    width: 100%;
+  }
 }
 
 @keyframes registerevent-gradient-x {
@@ -500,9 +1083,15 @@
     align-items: stretch;
   }
 
-  .registerevent-register-btn {
+  .registerevent-register-actions {
     width: 100%;
+  }
+
+  .registerevent-register-btn,
+  .registerevent-pay-btn {
+    flex: 1;
     text-align: center;
+    min-width: 0;
   }
 
   .registerevent-list {
@@ -521,5 +1110,14 @@
 
   .registerevent-card {
     padding: 16px;
+  }
+
+  .registerevent-register-actions {
+    flex-direction: column;
+  }
+
+  .registerevent-register-btn,
+  .registerevent-pay-btn {
+    width: 100%;
   }
 }

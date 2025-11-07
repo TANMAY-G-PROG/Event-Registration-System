@@ -150,13 +150,13 @@ const Participants = () => {
       const firstPage = pages[0];
       const { width, height } = firstPage.getSize();
 
-      // Try to embed Romeo font for participant name, fallback to TimesRomanBold if it fails
+      // Try to embed Allura-Regular font for participant name
       let nameFont;
       try {
-        const fontUrl = '/RommetooOne-Regular.ttf';
+        const fontUrl = '/Allura-Regular.ttf'; // CHANGED
         const fontBytes = await fetch(fontUrl).then(res => {
           if (!res.ok) {
-            throw new Error('Romeo font file not found.');
+            throw new Error('Allura-Regular.ttf font file not found.'); // CHANGED
           }
           return res.arrayBuffer();
         });
@@ -170,17 +170,33 @@ const Participants = () => {
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
       const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
+      // Load Playfair Display font for description
+      let descFont;
+      try {
+        const descFontUrl = '/PlayfairDisplay-MediumItalic.ttf';
+        const descFontBytes = await fetch(descFontUrl).then(res => {
+          if (!res.ok) {
+            throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found.');
+          }
+          return res.arrayBuffer();
+        });
+        descFont = await pdfDoc.embedFont(descFontBytes);
+      } catch (fontError) {
+        console.warn('Could not load custom description font, using Courier as fallback:', fontError);
+        descFont = font;
+      }
+
       // Colors for text
-      const nameColor = rgb(202 / 255, 209 / 255, 164 / 255);
+      const nameColor = rgb(0xF7 / 255, 0xD9 / 255, 0x91 / 255); // #F7D991
       const whiteColor = rgb(1, 1, 1);
 
-      // Add participant name (centered) with Romeo font
+      // Add participant name (centered) with Allura-Regular font
       const nameText = userInfo.userName;
       const nameSize = 38;
       const nameWidth = nameFont.widthOfTextAtSize(nameText, nameSize);
       firstPage.drawText(nameText, {
         x: (width - nameWidth) / 2, // Center horizontally
-        y: 350, // Adjust based on your template (from bottom)
+        y: 250, // Adjust based on your template (from bottom)
         size: nameSize,
         font: nameFont,
         color: nameColor,
@@ -189,37 +205,49 @@ const Participants = () => {
       // Add USN
       const usnSize = 19;
       firstPage.drawText(userInfo.userUSN, {
-        x: 327, // Adjust X position based on your template
-        y: 110, // Adjust Y position based on your template
+        x: 170, // Adjust X position based on your template
+        y: 160, // Adjust Y position based on your template
         size: usnSize,
         font: font,
         color: whiteColor,
       });
 
+      // **ADD EVENT DATE**
+      const formattedDate = formatDate(event.eventDate);
+      const dateSize = 16;
+      const dateWidth = boldFont.widthOfTextAtSize(formattedDate, dateSize);
+      firstPage.drawText(formattedDate, {
+        x: 510, // Center the date horizontally
+        y: 160, // Position below USN (adjust as needed)
+        size: dateSize,
+        font: boldFont,
+        color: whiteColor,
+      });
+
       // Add Event Description (with word wrapping)
       const eventDesc = event.eventdesc || event.ename;
-      const descSize = 15;
+      const descSize = 10;
       const maxWidth = 450; // Maximum width for text
       
       // Simple word wrapping
       const words = eventDesc.split(' ');
       let line = '';
-      let yPosition = 260; // Starting Y position
+      let yPosition = 225; // Starting Y position
       
       words.forEach((word, index) => {
         const testLine = line + word + ' ';
-        const testWidth = font.widthOfTextAtSize(testLine, descSize);
+        const testWidth = descFont.widthOfTextAtSize(testLine, descSize);
         
         if (testWidth > maxWidth && line !== '') {
-          firstPage.drawText(line, {
-            x: 165, // Adjust X position
+          firstPage.drawText(line.trim(), {
+            x: 190, // Adjust X position
             y: yPosition,
             size: descSize,
-            font: font,
+            font: descFont,
             color: whiteColor,
           });
           line = word + ' ';
-          yPosition -= 20; // Move to next line
+          yPosition -= 15;
         } else {
           line = testLine;
         }
@@ -227,11 +255,11 @@ const Participants = () => {
       
       // Draw remaining text
       if (line !== '') {
-        firstPage.drawText(line, {
-          x: 150, // Adjust X position
+        firstPage.drawText(line.trim(), {
+          x: 190, // Adjust X position
           y: yPosition,
           size: descSize,
-          font: font,
+          font: descFont,
           color: whiteColor,
         });
       }
@@ -244,7 +272,7 @@ const Participants = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Certificate_${event.ename.replace(/\s+/g, '_')}_${userInfo.userUSN}.pdf`;
+      link.download = `Certificate_${event.ename.replace(/\s+/g, '_')}_${userInfo.userUSN}_${formattedDate.replace(/ /g, '_')}.pdf`;
       link.click();
       window.URL.revokeObjectURL(url);
 
@@ -290,27 +318,8 @@ const Participants = () => {
     navigate('/register-event');
   };
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('http://localhost:3000/api/signout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        navigate('/');
-      } else {
-        alert('Error logging out. Please try again.');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      alert('Error logging out. Please try again.');
-    }
+  const handleBack = () => {
+    navigate('/events');
   };
 
   const renderEventsList = (eventsList, eventType) => {
@@ -369,9 +378,9 @@ const Participants = () => {
   return (
     <div className="participants-page">
       <div className="logout-container">
-        <button id="logoutBtn" className="logout-btn" onClick={handleLogout}>
-          <i className="fas fa-sign-out-alt"></i>
-          Logout
+        <button id="backBtn" className="logout-btn" onClick={handleBack}>
+          <i className="fas fa-arrow-left"></i>
+          Back
         </button>
       </div>
 

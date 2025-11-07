@@ -56,7 +56,20 @@ const LightRays = ({
   const meshRef = useRef(null);
   const cleanupFunctionRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const observerRef = useRef(null);
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -94,8 +107,11 @@ const LightRays = ({
 
       if (!containerRef.current) return;
 
+      // Lower DPR for mobile devices to improve performance
+      const maxDpr = isMobile ? 1.5 : 2;
+
       const renderer = new Renderer({
-        dpr: Math.min(window.devicePixelRatio, 2),
+        dpr: Math.min(window.devicePixelRatio, maxDpr),
         alpha: true
       });
       rendererRef.current = renderer;
@@ -244,7 +260,7 @@ void main() {
       const updatePlacement = () => {
         if (!containerRef.current || !renderer) return;
 
-        renderer.dpr = Math.min(window.devicePixelRatio, 2);
+        renderer.dpr = Math.min(window.devicePixelRatio, maxDpr);
 
         const { clientWidth: wCSS, clientHeight: hCSS } = containerRef.current;
         renderer.setSize(wCSS, hCSS);
@@ -329,6 +345,7 @@ void main() {
     };
   }, [
     isVisible,
+    isMobile,
     raysOrigin,
     raysColor,
     raysSpeed,
@@ -388,9 +405,23 @@ void main() {
       mouseRef.current = { x, y };
     };
 
+    const handleTouchMove = e => {
+      if (!containerRef.current || !rendererRef.current || e.touches.length === 0) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = (touch.clientX - rect.left) / rect.width;
+      const y = (touch.clientY - rect.top) / rect.height;
+      mouseRef.current = { x, y };
+    };
+
     if (followMouse) {
       window.addEventListener('mousemove', handleMouseMove);
-      return () => window.removeEventListener('mousemove', handleMouseMove);
+      window.addEventListener('touchmove', handleTouchMove, { passive: true });
+      
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('touchmove', handleTouchMove);
+      };
     }
   }, [followMouse]);
 
@@ -399,6 +430,19 @@ void main() {
 
 export default function Events() {
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Check authentication on mount
   useEffect(() => {
@@ -409,14 +453,13 @@ export default function Events() {
     try {
       const response = await fetch('http://localhost:3000/api/me', {
         method: 'GET',
-        credentials: 'include', // CRITICAL FIX
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         }
       });
 
       if (!response.ok) {
-        // Not authenticated, redirect to login
         navigate('/');
       }
     } catch (error) {
@@ -429,7 +472,7 @@ export default function Events() {
     try {
       const response = await fetch('http://localhost:3000/api/signout', {
         method: 'POST',
-        credentials: 'include', // CRITICAL FIX
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         }
@@ -459,15 +502,15 @@ export default function Events() {
         <LightRays
           raysOrigin="top-center"
           raysColor="#667eea"
-          raysSpeed={1.2}
-          lightSpread={0.6}
-          rayLength={1.5}
+          raysSpeed={isMobile ? 1.0 : 1.2}
+          lightSpread={isMobile ? 0.5 : 0.6}
+          rayLength={isMobile ? 2.0 : 1.5}
           followMouse={true}
-          mouseInfluence={0.15}
+          mouseInfluence={isMobile ? 0.2 : 0.15}
           noiseAmount={0.05}
           distortion={0.03}
-          fadeDistance={0.8}
-          saturation={1.2}
+          fadeDistance={isMobile ? 0.9 : 0.8}
+          saturation={isMobile ? 1.4 : 1.2}
         />
       </div>
 

@@ -11,6 +11,7 @@ const Organisers = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [generatingExcel, setGeneratingExcel] = useState({});
 
   useEffect(() => {
     fetchOrganizerEvents();
@@ -70,7 +71,7 @@ const Organisers = () => {
     try {
       const response = await fetch('http://localhost:3000/api/my-organized-events', {
         method: 'GET',
-        credentials: 'include', // CRITICAL: Send cookies with request
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         }
@@ -78,7 +79,6 @@ const Organisers = () => {
 
       if (!response.ok) {
         if (response.status === 401) {
-          // User not authenticated, redirect to login
           navigate('/');
           return;
         }
@@ -97,8 +97,53 @@ const Organisers = () => {
     }
   };
 
-  const getButtonText = (eventType) => {
-    return 'View Event';
+  const handleGenerateDetails = async (eventId, eventName) => {
+    try {
+      setGeneratingExcel(prev => ({ ...prev, [eventId]: true }));
+
+      const response = await fetch(`http://localhost:3000/api/events/${eventId}/generate-details`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          alert('Session expired. Please login again.');
+          navigate('/');
+          return;
+        }
+        if (response.status === 403) {
+          alert('You are not authorized to generate details for this event.');
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Event_${eventName.replace(/\s+/g, '_')}_Details.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      console.log('✅ Excel file downloaded successfully');
+    } catch (err) {
+      console.error('Error generating Excel file:', err);
+      alert('Error generating Excel file. Please try again.');
+    } finally {
+      setGeneratingExcel(prev => ({ ...prev, [eventId]: false }));
+    }
   };
 
   const handleEventButtonClick = (eventId, eventType) => {
@@ -109,27 +154,8 @@ const Organisers = () => {
     navigate('/create-event');
   };
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('http://localhost:3000/api/signout', {
-        method: 'POST',
-        credentials: 'include', // CRITICAL: Send cookies
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        navigate('/');
-      } else {
-        alert('Error logging out. Please try again.');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      alert('Error logging out. Please try again.');
-    }
+  const handleBack = () => {
+    navigate('/events');
   };
 
   const renderEventsList = (eventsList, eventType) => {
@@ -171,11 +197,20 @@ const Organisers = () => {
           {event.clubName && <p>Club: {event.clubName}</p>}
         </div>
         <div className="event-actions">
+          {eventType !== 'completed' && (
+            <button
+              className="event-btn"
+              onClick={() => handleEventButtonClick(event.eid, eventType)}
+            >
+              View Event
+            </button>
+          )}
           <button
             className="event-btn"
-            onClick={() => handleEventButtonClick(event.eid, eventType)}
+            onClick={() => handleGenerateDetails(event.eid, event.ename)}
+            disabled={generatingExcel[event.eid]}
           >
-            {getButtonText(eventType)}
+            {generatingExcel[event.eid] ? 'Generating...' : 'Generate Details'}
           </button>
         </div>
       </div>
@@ -185,9 +220,9 @@ const Organisers = () => {
   return (
     <div className="organisers-page">
       <div className="logout-container">
-        <button id="logoutBtn" className="logout-btn" onClick={handleLogout}>
-          <i className="fas fa-sign-out-alt"></i>
-          Logout
+        <button id="backBtn" className="logout-btn" onClick={handleBack}>
+          <i className="fas fa-arrow-left"></i>
+          Back
         </button>
       </div>
 

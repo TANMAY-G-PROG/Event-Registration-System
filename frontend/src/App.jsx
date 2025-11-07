@@ -1,4 +1,3 @@
-// Updated App.jsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './Login';
@@ -12,15 +11,19 @@ import VolunteerEvents from './Volunteer_events';
 import OrganizerTicket from './OrganizerTicket';
 import VolunteerTicket from './VolunteerTicket';
 import ParticipantTicket from './ParticipantTicket';
-import AboutUs from './Aboutus'
+import AboutUs from './Aboutus';
 import QrCode from './QrCode';
 import Scanner from './Scanner';
+import ForgotPassword from './ForgotPassword'; 
+import ResetPassword from './ResetPassword';   
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} /> 
+        <Route path="/reset-password" element={<ResetPassword />} />   
         <Route path="/events" element={<Events />} />
         <Route path="/participants" element={<Participants />} />
         <Route path="/organisers" element={<Organisers />} />

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import './volunteers.css';
 import { useNavigate } from 'react-router-dom';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 
 const Volunteers = () => {
   const navigate = useNavigate();
@@ -11,10 +13,34 @@ const Volunteers = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userInfo, setUserInfo] = useState({ userName: '', userUSN: '' });
 
   useEffect(() => {
+    fetchUserInfo();
     fetchVolunteerEvents();
   }, []);
+
+  const fetchUserInfo = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/me', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserInfo({
+          userName: data.userName,
+          userUSN: data.userUSN
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching user info:', err);
+    }
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -41,13 +67,22 @@ const Volunteers = () => {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
 
+    // First, remove duplicates based on eid
+    const uniqueEvents = events.reduce((acc, current) => {
+      const exists = acc.find(event => event.eid === current.eid);
+      if (!exists) {
+        acc.push(current);
+      }
+      return acc;
+    }, []);
+
     const categorized = {
       ongoing: [],
       completed: [],
       upcoming: []
     };
 
-    events.forEach(event => {
+    uniqueEvents.forEach(event => {
       const eventDate = new Date(event.eventDate);
       eventDate.setHours(0, 0, 0, 0);
 
@@ -70,7 +105,7 @@ const Volunteers = () => {
     try {
       const response = await fetch('http://localhost:3000/api/my-volunteer-events', {
         method: 'GET',
-        credentials: 'include', // CRITICAL: Send cookies with request
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         }
@@ -78,7 +113,6 @@ const Volunteers = () => {
 
       if (!response.ok) {
         if (response.status === 401) {
-          // User not authenticated, redirect to login
           navigate('/');
           return;
         }
@@ -97,39 +131,206 @@ const Volunteers = () => {
     }
   };
 
-  const getButtonText = (eventType) => {
-    return 'View Details';
+  const generateCertificate = async (event) => {
+    try {
+      // Check if volunteer actually volunteered for the event (status must be true)
+      if (!event.VolnStatus) {
+        alert('Certificate is only available for confirmed volunteer participation.');
+        return;
+      }
+
+      // Fetch the PDF template
+      const templateUrl = '/certificate-template.pdf';
+      const existingPdfBytes = await fetch(templateUrl).then(res => {
+        if (!res.ok) {
+          throw new Error('Certificate template not found. Please ensure certificate-template.pdf is in the public folder.');
+        }
+        return res.arrayBuffer();
+      });
+
+      // Load the PDF template
+      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      
+      // Register fontkit to enable custom fonts
+      pdfDoc.registerFontkit(fontkit);
+      
+      // Get the first page
+      const pages = pdfDoc.getPages();
+      const firstPage = pages[0];
+      const { width, height } = firstPage.getSize();
+
+      // Try to embed Allura-Regular font for volunteer name
+      let nameFont;
+      try {
+        const fontUrl = '/Allura-Regular.ttf'; // CHANGED
+        const fontBytes = await fetch(fontUrl).then(res => {
+          if (!res.ok) {
+            throw new Error('Allura-Regular.ttf font file not found.'); // CHANGED
+          }
+          return res.arrayBuffer();
+        });
+        nameFont = await pdfDoc.embedFont(fontBytes);
+      } catch (fontError) {
+        console.warn('Could not load custom font, using TimesRomanBold as fallback:', fontError);
+        nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+      }
+      
+      // Regular font for other text
+      const font = await pdfDoc.embedFont(StandardFonts.Courier);
+      const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
+
+      // Load Playfair Display font for description
+      let descFont;
+      try {
+        const descFontUrl = '/PlayfairDisplay-MediumItalic.ttf';
+        const descFontBytes = await fetch(descFontUrl).then(res => {
+          if (!res.ok) {
+            throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found.');
+          }
+          return res.arrayBuffer();
+        });
+        descFont = await pdfDoc.embedFont(descFontBytes);
+      } catch (fontError) {
+        console.warn('Could not load custom description font, using Courier as fallback:', fontError);
+        descFont = font;
+      }
+
+      // Colors for text
+      const nameColor = rgb(0xF7 / 255, 0xD9 / 255, 0x91 / 255); // #F7D991
+      const whiteColor = rgb(1, 1, 1);
+
+      // Add volunteer name (centered) with Allura-Regular font
+      const nameText = userInfo.userName;
+      const nameSize = 38;
+      const nameWidth = nameFont.widthOfTextAtSize(nameText, nameSize);
+      firstPage.drawText(nameText, {
+        x: (width - nameWidth) / 2, // Center horizontally
+        y: 250, // Adjust based on your template (from bottom)
+        size: nameSize,
+        font: nameFont,
+        color: nameColor,
+      });
+
+      // Add USN
+      const usnSize = 19;
+      firstPage.drawText(userInfo.userUSN, {
+        x: 170, // Adjust X position based on your template
+        y: 160, // Adjust Y position based on your template
+        size: usnSize,
+        font: font,
+        color: whiteColor,
+      });
+
+      // Add Event Date
+      const formattedDate = formatDate(event.eventDate);
+      const dateSize = 16;
+      const dateWidth = boldFont.widthOfTextAtSize(formattedDate, dateSize);
+      firstPage.drawText(formattedDate, {
+        x: 510, // Center the date horizontally
+        y: 160, // Position below USN (adjust as needed)
+        size: dateSize,
+        font: boldFont,
+        color: whiteColor,
+      });
+
+      // Add Event Description (with word wrapping)
+      const eventDesc = event.eventdesc || event.ename;
+      const descSize = 10;
+      const maxWidth = 450; // Maximum width for text
+      
+      // Simple word wrapping
+      const words = eventDesc.split(' ');
+      let line = '';
+      let yPosition = 225; // Starting Y position
+      
+      words.forEach((word, index) => {
+        const testLine = line + word + ' ';
+        const testWidth = descFont.widthOfTextAtSize(testLine, descSize);
+        
+        if (testWidth > maxWidth && line !== '') {
+          firstPage.drawText(line.trim(), {
+            x: 190, // Adjust X position
+            y: yPosition,
+            size: descSize,
+            font: descFont,
+            color: whiteColor,
+          });
+          line = word + ' ';
+          yPosition -= 15;
+        } else {
+          line = testLine;
+        }
+      });
+      
+      // Draw remaining text
+      if (line !== '') {
+        firstPage.drawText(line.trim(), {
+          x: 190, // Adjust X position
+          y: yPosition,
+          size: descSize,
+          font: descFont,
+          color: whiteColor,
+        });
+      }
+
+      // Serialize the PDF to bytes
+      const pdfBytes = await pdfDoc.save();
+
+      // Create a blob and download
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Volunteer_Certificate_${event.ename.replace(/\s+/g, '_')}_${userInfo.userUSN}_${formattedDate.replace(/ /g, '_')}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error('Error generating certificate:', error);
+      alert(`Error generating certificate: ${error.message}`);
+    }
   };
 
-  const handleEventButtonClick = (eventId, eventType) => {
-    navigate(`/volunteer-ticket?eventId=${eventId}`);
+  const getVolunteerStatus = (status) => {
+    switch (status) {
+      case 0:
+      case false:
+        return 'Registered';
+      case 1:
+      case true:
+        return 'Confirmed';
+      default:
+        return 'Unknown';
+    }
+  };
+
+  const getButtonText = (eventType) => {
+    switch (eventType) {
+      case 'completed':
+        return 'View Certificate';
+      case 'ongoing':
+      case 'upcoming':
+      default:
+        return 'View Details';
+    }
+  };
+
+  const handleEventButtonClick = (event, eventType) => {
+    if (eventType === 'completed') {
+      // Generate and download certificate for completed events
+      generateCertificate(event);
+    } else {
+      // Navigate to ticket page for other events
+      navigate(`/volunteer-ticket?eventId=${event.eid}`);
+    }
   };
 
   const handleVolunteerClick = () => {
     navigate('/volunteer-event');
   };
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('http://localhost:3000/api/signout', {
-        method: 'POST',
-        credentials: 'include', // CRITICAL: Send cookies
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        navigate('/');
-      } else {
-        alert('Error logging out. Please try again.');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      alert('Error logging out. Please try again.');
-    }
+  const handleBack = () => {
+    navigate('/events');
   };
 
   const renderEventsList = (eventsList, eventType) => {
@@ -164,11 +365,12 @@ const Volunteers = () => {
           <p>Date: {formatDate(event.eventDate)}</p>
           <p>Time: {formatTime(event.eventTime)}</p>
           <p>Location: {event.eventLoc || 'N/A'}</p>
+          <p>Status: {getVolunteerStatus(event.VolStatus)}</p>
         </div>
         <div className="event-actions">
           <button
             className="event-btn"
-            onClick={() => handleEventButtonClick(event.eid, eventType)}
+            onClick={() => handleEventButtonClick(event, eventType)}
           >
             {getButtonText(eventType)}
           </button>
@@ -180,9 +382,9 @@ const Volunteers = () => {
   return (
     <div className="volunteers-page">
       <div className="logout-container">
-        <button id="logoutBtn" className="logout-btn" onClick={handleLogout}>
-          <i className="fas fa-sign-out-alt"></i>
-          Logout
+        <button id="backBtn" className="logout-btn" onClick={handleBack}>
+          <i className="fas fa-arrow-left"></i>
+          Back
         </button>
       </div>
 

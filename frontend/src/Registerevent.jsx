@@ -21,12 +21,28 @@ export default function Registerevent() {
   const [error, setError] = useState("")
   const [filter, setFilter] = useState("all")
   const [flash, setFlash] = useState({ type: "", message: "" })
+  const [modalFlash, setModalFlash] = useState({ type: "", message: "" }) // NEW: Modal-specific flash
+  const [teamStates, setTeamStates] = useState({})
+  const [showTeamModal, setShowTeamModal] = useState(null)
+  const [teamFormData, setTeamFormData] = useState({
+    teamName: '',
+    memberUSNs: ['']
+  })
+  const [teamInvites, setTeamInvites] = useState([])
   const timerRef = useRef(null)
+  const modalTimerRef = useRef(null) // NEW: Separate timer for modal
 
   function showFlash(type, message) {
     if (timerRef.current) clearTimeout(timerRef.current)
     setFlash({ type, message })
     timerRef.current = setTimeout(() => setFlash({ type: "", message: "" }), 4000)
+  }
+
+  // NEW: Modal flash message handler
+  function showModalFlash(type, message) {
+    if (modalTimerRef.current) clearTimeout(modalTimerRef.current)
+    setModalFlash({ type, message })
+    modalTimerRef.current = setTimeout(() => setModalFlash({ type: "", message: "" }), 4000)
   }
 
   async function loadEvents() {
@@ -35,14 +51,13 @@ export default function Registerevent() {
       setError("")
       const response = await fetch("http://localhost:3000/api/events", { 
         method: "GET",
-        credentials: "include", // CRITICAL: Send cookies with request
+        credentials: "include",
         headers: {
           "Content-Type": "application/json"
         }
       })
       
       if (response.status === 401) {
-        // User not authenticated, redirect to login
         navigate('/')
         return
       }
@@ -65,14 +80,46 @@ export default function Registerevent() {
     }
   }
 
+  async function loadTeamStatus(eventId) {
+    try {
+      const response = await fetch(`http://localhost:3000/api/events/${eventId}/team-status`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) {
+        console.error('Failed to load team status for event', eventId)
+        return
+      }
+
+      const data = await response.json()
+      console.log('Team status for event', eventId, ':', data)
+      setTeamStates(prev => ({
+        ...prev,
+        [eventId]: data
+      }))
+    } catch (err) {
+      console.error('Error loading team status:', err)
+    }
+  }
+
   useEffect(() => {
     loadEvents()
     
-    // Cleanup timer on unmount
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
+      if (modalTimerRef.current) clearTimeout(modalTimerRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    const upcomingEvents = eventsData.upcoming || []
+    console.log('Loading team status for upcoming events:', upcomingEvents.length)
+    upcomingEvents.forEach(event => {
+      loadTeamStatus(event.eid)
+    })
+  }, [eventsData.upcoming])
 
   const allEvents = useMemo(() => {
     return [
@@ -89,14 +136,19 @@ export default function Registerevent() {
     return allEvents.filter((e) => e.status === filter)
   }, [allEvents, filter])
 
-  async function handleRegister(eventId) {
+  async function handleRegister(eventId, hasFee) {
+    if (hasFee) {
+      await initiatePayment(eventId)
+      return
+    }
+
     try {
       const response = await fetch(`http://localhost:3000/api/events/${eventId}/join`, {
         method: "POST",
-        credentials: "include", // CRITICAL: Send cookies
+        credentials: "include",
         headers: { 
           "Content-Type": "application/json" 
-        },
+        }
       })
       
       const data = await response.json().catch(() => ({}))
@@ -112,7 +164,6 @@ export default function Registerevent() {
       }
       
       showFlash("success", data?.message || "Successfully registered for the event!")
-      // Reload events to reflect updated registration status
       await loadEvents()
     } catch (err) {
       console.error("Registration error:", err)
@@ -120,19 +171,414 @@ export default function Registerevent() {
     }
   }
 
+  async function handleCreateTeam(eventId) {
+    try {
+      const { teamName, memberUSNs } = teamFormData
+      
+      if (!teamName.trim()) {
+        showModalFlash('error', 'Please enter a team name')
+        showFlash('error', 'Please enter a team name')
+        return
+      }
+
+      const validUSNs = memberUSNs.filter(usn => usn.trim() !== '')
+
+      const response = await fetch(`http://localhost:3000/api/events/${eventId}/create-team`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamName: teamName.trim(),
+          memberUSNs: validUSNs
+        })
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        const errorMsg = data?.error || 'Failed to create team'
+        showModalFlash('error', errorMsg)
+        showFlash('error', errorMsg)
+        return
+      }
+
+      const successMsg = data?.message || 'Team created successfully!'
+      showModalFlash('success', successMsg)
+      showFlash('success', successMsg)
+      
+      setTimeout(() => {
+        setShowTeamModal(null)
+        setTeamFormData({ teamName: '', memberUSNs: [''] })
+        loadTeamStatus(eventId)
+      }, 1500)
+    } catch (err) {
+      console.error('Error creating team:', err)
+      const errorMsg = 'Error creating team'
+      showModalFlash('error', errorMsg)
+      showFlash('error', errorMsg)
+    }
+  }
+
+  async function handleViewInvites(eventId) {
+    try {
+      const response = await fetch(`http://localhost:3000/api/events/${eventId}/my-invites`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        const errorMsg = data?.error || 'Failed to load invites'
+        showFlash('error', errorMsg)
+        return
+      }
+
+      if (!data.invites || data.invites.length === 0) {
+        showFlash('error', 'You have no team invites for this event')
+        return
+      }
+
+      setTeamInvites(data.invites)
+      setShowTeamModal({ eventId, mode: 'invites' })
+    } catch (err) {
+      console.error('Error loading invites:', err)
+      showFlash('error', 'Error loading invites')
+    }
+  }
+
+  async function handleConfirmJoin(teamId, eventId) {
+    try {
+      const response = await fetch(`http://localhost:3000/api/teams/${teamId}/confirm-join`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        const errorMsg = data?.error || 'Failed to join team'
+        showModalFlash('error', errorMsg)
+        showFlash('error', errorMsg)
+        return
+      }
+
+      const successMsg = data?.message || 'Successfully joined team!'
+      showModalFlash('success', successMsg)
+      showFlash('success', successMsg)
+      
+      setTimeout(() => {
+        setShowTeamModal(null)
+        setTeamInvites([])
+        loadTeamStatus(eventId)
+      }, 1500)
+    } catch (err) {
+      console.error('Error confirming join:', err)
+      const errorMsg = 'Error confirming join'
+      showModalFlash('error', errorMsg)
+      showFlash('error', errorMsg)
+    }
+  }  
+
+  async function handleRegisterTeam(eventId, hasFee) {
+    try {
+      const response = await fetch(`http://localhost:3000/api/events/${eventId}/register-team`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        showFlash('error', data?.error || 'Failed to register team')
+        return
+      }
+
+      if (data.requiresPayment) {
+        showFlash('success', 'Payment required for team registration')
+        return
+      }
+
+      showFlash('success', data?.message || 'Team registered successfully!')
+      await loadTeamStatus(eventId)
+      await loadEvents()
+    } catch (err) {
+      console.error('Error registering team:', err)
+      showFlash('error', 'Error registering team')
+    }
+  }
+
+  function addMemberField() {
+    setTeamFormData(prev => ({
+      ...prev,
+      memberUSNs: [...prev.memberUSNs, '']
+    }))
+  }
+
+  function removeMemberField(index) {
+    setTeamFormData(prev => ({
+      ...prev,
+      memberUSNs: prev.memberUSNs.filter((_, i) => i !== index)
+    }))
+  }
+
+  function updateMemberUSN(index, value) {
+    setTeamFormData(prev => ({
+      ...prev,
+      memberUSNs: prev.memberUSNs.map((usn, i) => i === index ? value : usn)
+    }))
+  }
+
+  function loadRazorpayScript() {
+    return new Promise((resolve, reject) => {
+      if (window.Razorpay) return resolve(true)
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.onload = () => resolve(true)
+      script.onerror = () => reject(new Error('Failed to load Razorpay script'))
+      document.body.appendChild(script)
+    })
+  }
+
+  async function initiatePayment(eventId) {
+    try {
+      showFlash('success', 'Preparing payment...')
+
+      const resp = await fetch('http://localhost:3000/api/create-order', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId })
+      })
+
+      const data = await resp.json().catch(() => ({}))
+      if (!resp.ok) {
+        if (resp.status === 401) {
+          showFlash('error', 'Please sign in to continue')
+          setTimeout(() => navigate('/'), 2000)
+          return
+        }
+        showFlash('error', data?.error || data?.message || 'Could not create payment order')
+        return
+      }
+
+      await loadRazorpayScript()
+
+      const { order, key_id } = data
+      if (!order || !order.id) {
+        showFlash('error', 'Invalid order returned from server')
+        return
+      }
+
+      const options = {
+        key: key_id,
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        name: 'E-Pass Events',
+        description: `Registration for event ${eventId}`,
+        order_id: order.id,
+        handler: async function (response) {
+          try {
+            const verifyResp = await fetch('http://localhost:3000/api/verify-payment', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                eventId
+              })
+            })
+
+            const verifyData = await verifyResp.json().catch(() => ({}))
+            if (!verifyResp.ok) {
+              showFlash('error', verifyData?.error || 'Payment verification failed')
+              return
+            }
+
+            showFlash('success', verifyData?.message || 'Payment successful and registered!')
+            await loadEvents()
+          } catch (err) {
+            console.error('Verification error:', err)
+            showFlash('error', 'Payment verification failed. Contact support.')
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            showFlash('error', 'Payment cancelled')
+          }
+        }
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.open()
+
+    } catch (err) {
+      console.error('initiatePayment error:', err)
+      showFlash('error', 'Failed to start payment flow')
+    }
+  }
+
   function handleGoBack() {
     navigate('/events')
   }
 
+  function renderTeamControls(event) {
+    const teamState = teamStates[event.eid]
+    
+    console.log(`Rendering controls for event ${event.eid}:`, {
+      hasTeamState: !!teamState,
+      isTeamEvent: teamState?.isTeamEvent,
+      hasJoinedTeam: teamState?.hasJoinedTeam,
+      isLeader: teamState?.isLeader
+    })
+    
+    if (!teamState) {
+      return (
+        <div className="registerevent-team-loading">
+          Loading...
+        </div>
+      )
+    }
+
+    if (!teamState.isTeamEvent) {
+      return (
+        <div className="registerevent-register-actions">
+          <button
+            type="button"
+            className="registerevent-register-btn"
+            aria-label={`Register for ${event.ename}`}
+            onClick={() => handleRegister(event.eid, (event.regFee || 0) > 0)}
+          >
+            <span className="registerevent-btn-border" />
+            <span className="registerevent-btn-fill" />
+            <span className="registerevent-btn-label">Register</span>
+          </button>
+        </div>
+      )
+    }
+
+    if (teamState.registrationComplete) {
+      return (
+        <div className="registerevent-team-badge registerevent-badge-success">
+          ✓ Team Registered
+        </div>
+      )
+    }
+
+    if (teamState.hasJoinedTeam) {
+      if (teamState.isLeader) {
+        return (
+          <div className="registerevent-team-controls">
+            <div className="registerevent-team-info">
+              <div className="registerevent-team-name">Team: {teamState.teamName}</div>
+              <div className="registerevent-team-status">
+                {teamState.joinedCount} / {teamState.minSize} members joined
+                {teamState.maxSize && ` (Max: ${teamState.maxSize})`}
+              </div>
+              {event.maxPart && (
+                <div className="registerevent-team-status" style={{fontSize: '12px', color: 'var(--re-muted)', marginTop: '4px'}}>
+                  Event Limit: {event.maxPart} teams
+                </div>
+              )}
+            </div>
+            
+            {teamState.canRegister ? (
+              <button
+                type="button"
+                className="registerevent-register-btn"
+                onClick={() => handleRegisterTeam(event.eid, teamState.regFee > 0)}
+              >
+                <span className="registerevent-btn-border" />
+                <span className="registerevent-btn-fill" />
+                <span className="registerevent-btn-label">Register Team</span>
+              </button>
+            ) : (
+              <div className="registerevent-team-waiting">
+                Waiting for {teamState.minSize - teamState.joinedCount} more member(s)
+              </div>
+            )}
+            
+            {teamState.members && teamState.members.length > 0 && (
+              <div className="registerevent-team-members-list">
+                <div className="registerevent-team-members-title">Team Members:</div>
+                {teamState.members.map((member, idx) => (
+                  <div key={idx} className="registerevent-team-member-item">
+                    <span>{member.student?.sname || member.student_usn}</span>
+                    <span className={member.join_status ? "registerevent-status-joined" : "registerevent-status-pending"}>
+                      {member.join_status ? "✓ Joined" : "⏳ Pending"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      } else {
+        return (
+          <div className="registerevent-team-controls">
+            <div className="registerevent-team-info">
+              <div className="registerevent-team-name">Team: {teamState.teamName}</div>
+              <div className="registerevent-team-status">
+                Leader: {teamState.leaderName || teamState.leaderUSN}
+              </div>
+              <div className="registerevent-team-status">
+                {teamState.joinedCount} / {teamState.minSize} members joined
+              </div>
+            </div>
+            
+            {teamState.members && teamState.members.length > 0 && (
+              <div className="registerevent-team-members-list">
+                <div className="registerevent-team-members-title">Team Members:</div>
+                {teamState.members.map((member, idx) => (
+                  <div key={idx} className="registerevent-team-member-item">
+                    <span>{member.student?.sname || member.student_usn}</span>
+                    <span className={member.join_status ? "registerevent-status-joined" : "registerevent-status-pending"}>
+                      {member.join_status ? "✓ Joined" : "⏳ Pending"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      }
+    }
+
+    return (
+      <div className="registerevent-team-actions">
+        <button
+          type="button"
+          className="registerevent-team-action-btn"
+          onClick={() => setShowTeamModal({ eventId: event.eid, mode: 'create' })}
+        >
+          <span className="registerevent-btn-border" />
+          <span className="registerevent-btn-fill" />
+          <span className="registerevent-btn-label">Create Team</span>
+        </button>
+        <button
+          type="button"
+          className="registerevent-team-action-btn"
+          onClick={() => handleViewInvites(event.eid)}
+        >
+          <span className="registerevent-btn-border" />
+          <span className="registerevent-btn-fill" />
+          <span className="registerevent-btn-label">View Invites</span>
+        </button>
+      </div>
+    )
+  }
+
   return (
     <main className="registerevent-page">
-      {/* CSS-only geometric background */}
       <div className="registerevent-hero-bg" aria-hidden="true" />
 
-      {/* Foreground container */}
       <div className="registerevent-container">
         <div className="registerevent-surface">
-          {/* Flash message */}
           {flash.message && (
             <div
               className={`registerevent-flash ${
@@ -145,7 +591,6 @@ export default function Registerevent() {
             </div>
           )}
 
-          {/* Header with filters */}
           <div className="registerevent-header">
             <div className="registerevent-header-text">
               <h1 className="registerevent-title">All Events</h1>
@@ -168,7 +613,6 @@ export default function Registerevent() {
             </div>
           </div>
 
-          {/* Loading state */}
           {loading && (
             <div className="registerevent-state">
               <div className="registerevent-spinner" />
@@ -176,7 +620,6 @@ export default function Registerevent() {
             </div>
           )}
 
-          {/* Error state */}
           {!loading && error && (
             <div className="registerevent-state">
               <p className="registerevent-error">Failed to load events</p>
@@ -186,14 +629,12 @@ export default function Registerevent() {
             </div>
           )}
 
-          {/* No events state */}
           {!loading && !error && filteredEvents.length === 0 && (
             <div className="registerevent-state">
               <p className="registerevent-muted">No events found</p>
             </div>
           )}
 
-          {/* Events list */}
           {!loading && !error && filteredEvents.length > 0 && (
             <div className="registerevent-list">
               {filteredEvents.map((event) => {
@@ -210,7 +651,6 @@ export default function Registerevent() {
                     className="registerevent-card" 
                     aria-labelledby={`event-${event.eid}-title`}
                   >
-                    {/* Card header */}
                     <div className="registerevent-card-top">
                       <div className="registerevent-card-title-wrap">
                         <h2 id={`event-${event.eid}-title`} className="registerevent-card-title">
@@ -219,28 +659,20 @@ export default function Registerevent() {
                         <span className={`registerevent-badge registerevent-badge-${event.status}`}>
                           {event.status}
                         </span>
+                        {event.is_team && (
+                          <span className="registerevent-badge registerevent-badge-team">
+                            Team Event
+                          </span>
+                        )}
                       </div>
 
-                      {event.status === "upcoming" && (
-                        <button
-                          type="button"
-                          className="registerevent-register-btn"
-                          aria-label={`Register for ${event.ename}`}
-                          onClick={() => handleRegister(event.eid)}
-                        >
-                          <span className="registerevent-btn-border" />
-                          <span className="registerevent-btn-fill" />
-                          <span className="registerevent-btn-label">Register</span>
-                        </button>
-                      )}
+                      {event.status === "upcoming" && renderTeamControls(event)}
                     </div>
 
-                    {/* Event description */}
                     {event.eventdesc && (
                       <p className="registerevent-card-desc">{event.eventdesc}</p>
                     )}
 
-                    {/* Event details section */}
                     <h3 className="registerevent-section-title">Event Details</h3>
                     <div className="registerevent-details">
                       <div className="registerevent-detail-row">
@@ -266,8 +698,19 @@ export default function Registerevent() {
                         <p className="registerevent-detail-label">Registration Fee</p>
                         <p className="registerevent-detail-value">{feeText}</p>
                       </div>
+
+                      {event.is_team && (
+                        <>
+                          <div className="registerevent-detail-row">
+                            <p className="registerevent-detail-label">Team Size</p>
+                            <p className="registerevent-detail-value">
+                              {event.min_team_size} - {event.max_team_size} members
+                            </p>
+                          </div>
+                        </>
+                      )}
                       
-                      {event.maxPart && (
+                      {!event.is_team && event.maxPart && (
                         <div className="registerevent-detail-row">
                           <p className="registerevent-detail-label">Max Participants</p>
                           <p className="registerevent-detail-value">{event.maxPart}</p>
@@ -282,7 +725,6 @@ export default function Registerevent() {
                       )}
                     </div>
 
-                    {/* About section */}
                     <h3 className="registerevent-section-title">About the Event</h3>
                     <div className="registerevent-about">
                       {event.eventdesc ||
@@ -294,7 +736,6 @@ export default function Registerevent() {
             </div>
           )}
 
-          {/* Back button */}
           <div className="registerevent-back">
             <button
               type="button"
@@ -306,6 +747,139 @@ export default function Registerevent() {
           </div>
         </div>
       </div>
+
+      {showTeamModal && (
+        <div className="registerevent-modal-overlay" onClick={() => setShowTeamModal(null)}>
+          <div className="registerevent-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="registerevent-modal-header">
+              <h2 className="registerevent-modal-title">
+                {showTeamModal.mode === 'create' ? 'Create Team' : 'Team Invites'}
+              </h2>
+              <button 
+                className="registerevent-modal-close"
+                onClick={() => setShowTeamModal(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="registerevent-modal-body">
+              {modalFlash.message && (
+                <div
+                  className={`registerevent-flash ${
+                    modalFlash.type === "success" ? "registerevent-flash-success" : "registerevent-flash-error"
+                  }`}
+                  role={modalFlash.type === "error" ? "alert" : "status"}
+                  aria-live={modalFlash.type === "error" ? "assertive" : "polite"}
+                  style={{ marginBottom: '16px' }}
+                >
+                  {modalFlash.message}
+                </div>
+              )}
+
+              {showTeamModal.mode === 'create' ? (
+                <div className="registerevent-team-form">
+                  <div className="registerevent-form-group">
+                    <label className="registerevent-form-label">Team Name</label>
+                    <input
+                      type="text"
+                      className="registerevent-form-input"
+                      value={teamFormData.teamName}
+                      onChange={(e) => setTeamFormData(prev => ({ ...prev, teamName: e.target.value }))}
+                      placeholder="Enter team name"
+                    />
+                  </div>
+
+                  <div className="registerevent-form-group">
+                    <label className="registerevent-form-label">Team Members (USNs)</label>
+                    <p className="registerevent-form-hint">Add your team members' USNs. You are automatically the team leader.</p>
+                    {teamFormData.memberUSNs.map((usn, index) => (
+                      <div key={index} className="registerevent-member-input-row">
+                        <input
+                          type="text"
+                          className="registerevent-form-input"
+                          value={usn}
+                          onChange={(e) => updateMemberUSN(index, e.target.value)}
+                          placeholder="Enter USN"
+                        />
+                        {teamFormData.memberUSNs.length > 1 && (
+                          <button
+                            type="button"
+                            className="registerevent-remove-btn"
+                            onClick={() => removeMemberField(index)}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="registerevent-add-member-btn"
+                      onClick={addMemberField}
+                    >
+                      + Add Member
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="registerevent-modal-submit-btn"
+                    onClick={() => handleCreateTeam(showTeamModal.eventId)}
+                  >
+                    Create Team
+                  </button>
+                </div>
+              ) : (
+                <div className="registerevent-invites-list">
+                  {teamInvites.length === 0 ? (
+                    <div className="registerevent-no-invites">
+                      <p>You have no team invites for this event.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="registerevent-invites-description">
+                        You have been invited to join the following teams. Click "Confirm Join" to accept an invite.
+                      </p>
+                      {teamInvites.map((invite, index) => (
+                        <div key={index} className="registerevent-invite-card">
+                          <div className="registerevent-invite-info">
+                            <div className="registerevent-invite-team-name">
+                              {invite.teamName}
+                            </div>
+                            <div className="registerevent-invite-leader">
+                              Leader: {invite.leaderName} ({invite.leaderUSN})
+                            </div>
+                            {invite.registrationComplete && (
+                              <div className="registerevent-invite-status-badge">
+                                Already Registered
+                              </div>
+                            )}
+                          </div>
+                          {!invite.registrationComplete && !invite.joinStatus && (
+                            <button
+                              type="button"
+                              className="registerevent-invite-confirm-btn"
+                              onClick={() => handleConfirmJoin(invite.teamId, showTeamModal.eventId)}
+                            >
+                              Confirm Join
+                            </button>
+                          )}
+                          {invite.joinStatus && (
+                            <div className="registerevent-invite-joined-badge">
+                              ✓ Joined
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

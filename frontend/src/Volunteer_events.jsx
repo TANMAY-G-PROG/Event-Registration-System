@@ -6,6 +6,7 @@ export default function VolunteerEvents() {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [message, setMessage] = useState({ text: '', isError: false });
+  const [isLoading, setIsLoading] = useState(true);
 
   // Format date helper
   const formatDate = (dateString) => {
@@ -39,18 +40,17 @@ export default function VolunteerEvents() {
   // Fetch events
   const fetchEvents = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch('http://localhost:3000/api/events', {
         method: 'GET',
-        credentials: 'include', // CRITICAL: Send cookies with request
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
 
       if (!response.ok) {
         if (response.status === 401) {
           showMessage('Please sign in to view events.', true);
-          setTimeout(() => {
-            navigate('/');
-          }, 2000);
+          setTimeout(() => navigate('/'), 2000);
           return;
         }
         throw new Error('Network response was not ok');
@@ -62,31 +62,81 @@ export default function VolunteerEvents() {
         ...data.events.upcoming
       ];
 
-      // Fetch volunteer counts for each event
-      const eventsWithCounts = await Promise.all(
-        allEvents.map(async (event) => {
+      // Remove duplicates based on eid
+      const uniqueEvents = allEvents.reduce((acc, current) => {
+        const exists = acc.find(event => event.eid === current.eid);
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      // Set events immediately with volunteerCount as null (loading state)
+      const eventsWithLoadingCounts = uniqueEvents.map(event => ({
+        ...event,
+        volunteerCount: null
+      }));
+      setEvents(eventsWithLoadingCounts);
+      setIsLoading(false);
+
+      // Fetch volunteer counts in parallel and update as they come in
+      uniqueEvents.forEach(async (event, index) => {
+        try {
           const countResponse = await fetch(`http://localhost:3000/api/events/${event.eid}/volunteer-count`, {
-            credentials: 'include', // CRITICAL: Send cookies
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' }
           });
           const countData = await countResponse.json();
-          return { ...event, volunteerCount: countData.count };
-        })
-      );
+          
+          // Update the specific event's count
+          setEvents(prevEvents => 
+            prevEvents.map(e => 
+              e.eid === event.eid 
+                ? { ...e, volunteerCount: countData.count }
+                : e
+            )
+          );
+        } catch (error) {
+          console.error(`Error fetching count for event ${event.eid}:`, error);
+          // Set count to 0 on error
+          setEvents(prevEvents => 
+            prevEvents.map(e => 
+              e.eid === event.eid 
+                ? { ...e, volunteerCount: 0 }
+                : e
+            )
+          );
+        }
+      });
 
-      setEvents(eventsWithCounts);
     } catch (error) {
       console.error('Error fetching events:', error);
       showMessage('Could not load events.', true);
+      setIsLoading(false);
     }
   };
 
-  // Handle volunteer action
-  const handleVolunteer = async (eventId) => {
+  // Handle volunteer action with ripple
+  const handleVolunteer = async (eventId, e) => {
+    const btn = e.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = e.clientX - rect.left - size / 2;
+    const y = e.clientY - rect.top - size / 2;
+
+    const ripple = document.createElement('span');
+    ripple.classList.add('ripple');
+    ripple.style.width = ripple.style.height = `${size}px`;
+    ripple.style.left = `${x}px`;
+    ripple.style.top = `${y}px`;
+    btn.appendChild(ripple);
+
+    setTimeout(() => ripple.remove(), 600);
+
     try {
       const response = await fetch(`http://localhost:3000/api/events/${eventId}/volunteer`, {
         method: 'POST',
-        credentials: 'include', // CRITICAL: Send cookies
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
 
@@ -98,9 +148,7 @@ export default function VolunteerEvents() {
       } else {
         if (response.status === 401) {
           showMessage('Please sign in to volunteer.', true);
-          setTimeout(() => {
-            navigate('/');
-          }, 2000);
+          setTimeout(() => navigate('/'), 2000);
         } else {
           showMessage(`Failed to volunteer: ${data.error}`, true);
         }
@@ -108,28 +156,6 @@ export default function VolunteerEvents() {
     } catch (error) {
       console.error('Error volunteering:', error);
       showMessage('Error volunteering for the event.', true);
-    }
-  };
-
-  // Handle logout
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('http://localhost:3000/api/signout', {
-        method: 'POST',
-        credentials: 'include', // CRITICAL: Send cookies
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        navigate('/');
-      } else {
-        showMessage('Error logging out. Please try again.', true);
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      showMessage('Error logging out. Please try again.', true);
     }
   };
 
@@ -145,6 +171,9 @@ export default function VolunteerEvents() {
 
   return (
     <div className="volunteer-events-wrapper">
+      {/* Animated Texture Background */}
+      <div className="ve-texture"></div>
+
       {/* Message notification */}
       {message.text && (
         <div className={`ve-message ${message.isError ? 'error' : 'success'}`}>
@@ -154,22 +183,26 @@ export default function VolunteerEvents() {
 
       {/* Navigation buttons */}
       <div className="ve-nav-container">
-        <button onClick={handleBack} className="ve-nav-btn">
-          ← Back
-        </button>
-        <button onClick={handleLogout} className="ve-nav-btn">
-          ⎋ Logout
+        <button onClick={handleBack} className="ve-back-btn">
+          <i className="fas fa-arrow-left"></i>
+          Back
         </button>
       </div>
 
-      {/* Main container with animated border */}
+      {/* Main container with golden side stripes */}
       <div className="ve-container">
         <div className="ve-content-box">
           <h2 className="ve-header">Volunteer for Events</h2>
 
           {/* Events list */}
           <div className="ve-events-list">
-            {events.length === 0 ? (
+            {isLoading ? (
+              <div className="ve-event-item">
+                <div className="ve-event-info">
+                  <p><strong>Loading events...</strong></p>
+                </div>
+              </div>
+            ) : events.length === 0 ? (
               <div className="ve-event-item">
                 <div className="ve-event-info">
                   <p><strong>No events available for volunteering</strong></p>
@@ -177,7 +210,10 @@ export default function VolunteerEvents() {
               </div>
             ) : (
               events.map((event) => {
-                const remainingVolunteers = event.maxVoln - (event.volunteerCount || 0);
+                const volunteerCount = event.volunteerCount ?? 0;
+                const remainingVolunteers = event.maxVoln - volunteerCount;
+                const isCountLoading = event.volunteerCount === null;
+                
                 return (
                   <div key={event.eid} className="ve-event-item">
                     <div className="ve-event-info">
@@ -187,20 +223,28 @@ export default function VolunteerEvents() {
                       <p><strong>Location:</strong> {event.eventLoc || 'N/A'}</p>
                       <p>
                         <strong>Volunteers Needed:</strong>{' '}
-                        {remainingVolunteers > 0 ? remainingVolunteers : 0}/{event.maxVoln || 'N/A'}
+                        {isCountLoading ? (
+                          'Loading...'
+                        ) : (
+                          `${remainingVolunteers > 0 ? remainingVolunteers : 0}/${event.maxVoln || 'N/A'}`
+                        )}
                       </p>
                     </div>
 
                     <div className="ve-event-actions">
-                      {remainingVolunteers > 0 ? (
+                      {isCountLoading ? (
+                        <button className="ve-button ve-volunteer-btn" disabled>
+                          Loading...
+                        </button>
+                      ) : remainingVolunteers > 0 ? (
                         <button
-                          onClick={() => handleVolunteer(event.eid)}
+                          onClick={(e) => handleVolunteer(event.eid, e)}
                           className="ve-button ve-volunteer-btn"
                         >
                           Volunteer
                         </button>
                       ) : (
-                        <p className="ve-no-volunteers">No more volunteers</p>
+                        <p className="ve-no-volunteers">No more volunteers needed</p>
                       )}
                     </div>
                   </div>

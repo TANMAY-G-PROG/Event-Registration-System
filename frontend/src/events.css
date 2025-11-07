@@ -1,6 +1,25 @@
 @import url('https://fonts.googleapis.com/css?family=Roboto+Slab:100,300,400,700');
 @import url('https://fonts.googleapis.com/css?family=Raleway:300,400,500,600,700,800,900');
 
+/* --- NEW CODE ADDED --- */
+@property --angle-1 {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: -75deg;
+}
+
+@property --angle-2 {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: -45deg;
+}
+
+:root {
+  --anim--hover-time: 400ms;
+  --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
+}
+/* --- END OF NEW CODE --- */
+
 /* Events Wrapper with LightRays Background */
 .events-wrapper {
   box-sizing: border-box;
@@ -36,43 +55,171 @@
 .events-wrapper .logout-container {
   position: fixed;
   top: 20px;
-  left: 20px;
+  right: 20px; /* Changed from left to right */
   z-index: 1000;
 }
 
+/* --- OLD .logout-btn STYLES REMOVED AND REPLACED WITH NEW STYLES --- */
 .events-wrapper .logout-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 25px;
-  font-family: 'Roboto Slab', serif;
-  font-size: 14px;
-  font-weight: 500;
+  /* Basic Styling */
+  --border-width: clamp(1px, 0.0625em, 4px);
+  all: unset;
   cursor: pointer;
+  position: relative;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  pointer-events: auto;
+  z-index: 3;
+  background: linear-gradient(
+    -75deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.05)
+  );
+  border-radius: 999vw;
+  box-shadow:
+    inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05),
+    inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5),
+    0 0.25em 0.125em -0.125em rgba(0, 0, 0, 0.2),
+    0 0 0.1em 0.25em inset rgba(255, 255, 255, 0.2),
+    0 0 0 0 rgba(255, 255, 255, 1);
+  backdrop-filter: blur(clamp(1px, 0.125em, 4px));
+  -webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px));
+  transition: all var(--anim--hover-time) var(--anim--hover-ease);
+
+  /* Adaptations for existing button */
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-  transition: all 0.3s ease;
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  font-size: 14px; /* Controls 'em' units */
+  color: white; /* Changed from dark grey */
+  text-shadow: 0em 0.25em 0.05em rgba(0, 0, 0, 0.1);
+  padding-inline: 1.5em; /* 1.5 * 14px = 21px */
+  padding-block: 0.875em; /* 0.875 * 14px = 12.25px */
   text-decoration: none;
-  pointer-events: auto;
 }
 
+/* Inner shine effect */
+.events-wrapper .logout-btn::before {
+  content: "";
+  display: block;
+  position: absolute;
+  z-index: 3; /* Above text */
+  width: calc(100% - var(--border-width));
+  height: calc(100% - var(--border-width));
+  top: calc(0% + var(--border-width) / 2);
+  left: calc(0% + var(--border-width) / 2);
+  box-sizing: border-box;
+  border-radius: 999vw;
+  overflow: clip;
+  background: linear-gradient(
+    var(--angle-2),
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.5) 40% 50%,
+    rgba(255, 255, 255, 0) 55%
+  );
+  mix-blend-mode: screen;
+  pointer-events: none;
+  background-size: 200% 200%;
+  background-position: 0% 50%;
+  background-repeat: no-repeat;
+  transition:
+    background-position calc(var(--anim--hover-time) * 1.25)
+      var(--anim--hover-ease),
+    --angle-2 calc(var(--anim--hover-time) * 1.25) var(--anim--hover-ease);
+}
+
+/* Animated outline */
+.events-wrapper .logout-btn::after {
+  content: "";
+  position: absolute;
+  z-index: 1; /* Below button */
+  inset: 0;
+  border-radius: 999vw;
+  width: calc(100% + var(--border-width));
+  height: calc(100% + var(--border-width));
+  top: calc(0% - var(--border-width) / 2);
+  left: calc(0% - var(--border-width) / 2);
+  padding: var(--border-width);
+  box-sizing: border-box;
+  background: conic-gradient(
+      from var(--angle-1) at 50% 50%,
+      rgba(0, 0, 0, 0.5),
+      rgba(0, 0, 0, 0) 5% 40%,
+      rgba(0, 0, 0, 0.5) 50%,
+      rgba(0, 0, 0, 0) 60% 95%,
+      rgba(0, 0, 0, 0.5)
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5));
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  transition:
+    all var(--anim--hover-time) var(--anim--hover-ease),
+    --angle-1 500ms ease;
+  box-shadow: inset 0 0 0 calc(var(--border-width) / 2) rgba(255, 255, 255, 0.5);
+}
+
+/* Hover states */
 .events-wrapper .logout-btn:hover {
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-  transform: translateY(-2px);
+  transform: scale(0.975);
+  backdrop-filter: blur(0.01em);
+  -webkit-backdrop-filter: blur(0.01em);
+  box-shadow:
+    inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05),
+    inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5),
+    0 0.15em 0.05em -0.1em rgba(0, 0, 0, 0.25),
+    0 0 0.05em 0.1em inset rgba(255, 255, 255, 0.5),
+    0 0 0 0 rgba(255, 255, 255, 1);
+  text-shadow: 0.025em 0.025em 0.025em rgba(0, 0, 0, 0.12);
 }
 
+.events-wrapper .logout-btn:hover::before {
+  background-position: 25% 50%;
+}
+
+.events-wrapper .logout-btn:hover::after {
+  --angle-1: -125deg;
+}
+
+/* Active (click) states */
 .events-wrapper .logout-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+  transform: scale(0.96);
 }
 
+.events-wrapper .logout-btn:active::before {
+  background-position: 50% 15%;
+  --angle-2: -15deg;
+}
+
+.events-wrapper .logout-btn:active::after {
+  --angle-1: -75deg;
+}
+
+/* Icon style */
 .events-wrapper .logout-btn i {
   font-size: 16px;
+  position: relative;
+  z-index: 2; /* Keep icon/text below shine */
 }
+
+/* Touch device fallbacks */
+@media (hover: none) and (pointer: coarse) {
+  .events-wrapper .logout-btn::before,
+  .events-wrapper .logout-btn:active::before {
+    --angle-2: -45deg;
+  }
+  
+  .events-wrapper .logout-btn::after,
+  .events-wrapper .logout-btn:hover::after,
+  .events-wrapper .logout-btn:active::after {
+    --angle-1: -75deg;
+  }
+}
+/* --- END OF NEW BUTTON STYLES --- */
+
 
 .events-wrapper .cards {
   display: flex;
@@ -96,6 +243,7 @@
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0, 1);
   backdrop-filter: blur(10px);
   pointer-events: auto;
+  cursor: pointer;
 }
 
 .events-wrapper .card:hover {
@@ -198,7 +346,7 @@
   z-index: 2;
 }
 
-/* Light Rays Container (from LightRays component) */
+/* Light Rays Container */
 .events-wrapper .light-rays-container {
   width: 100%;
   height: 100%;
@@ -208,16 +356,37 @@
   overflow: hidden;
 }
 
-/* Responsive Design */
+/* Tablet Responsive Design */
+@media (max-width: 1024px) {
+  .events-wrapper .cards {
+    gap: 25px;
+    padding: 35px 18px;
+  }
+
+  .events-wrapper .card {
+    width: 290px;
+  }
+}
+
+/* Mobile Responsive Design */
 @media (max-width: 768px) {
+  .events-wrapper {
+    padding-top: 70px;
+  }
+
   .events-wrapper .logout-container {
     top: 15px;
-    left: 15px;
+    /* left: 15px; */ /* Removed */
+    right: 15px;
+    display: flex;
+    justify-content: flex-end; /* Changed from flex-start */
   }
   
   .events-wrapper .logout-btn {
-    padding: 10px 16px;
+    /* Responsive adjustments */
     font-size: 13px;
+    padding-inline: 1.5em;
+    padding-block: 0.875em;
   }
   
   .events-wrapper .logout-btn i {
@@ -225,11 +394,149 @@
   }
 
   .events-wrapper .cards {
-    gap: 20px;
-    padding: 30px 15px;
+    gap: 25px;
+    padding: 20px 15px 40px;
+    flex-direction: column;
+    align-items: center;
   }
 
   .events-wrapper .card {
-    width: 280px;
+    width: min(340px, calc(100vw - 40px));
+    max-width: 400px;
+  }
+
+  .events-wrapper .card__img,
+  .events-wrapper .card__img--hover {
+    height: 200px;
+  }
+
+  .events-wrapper .card__title {
+    font-size: 1.15rem;
+  }
+
+  .events-wrapper .card__icon {
+    font-size: 22px;
+    padding: 15px 0 0;
+  }
+
+  /* Enhanced touch interaction for mobile */
+  .events-wrapper .card:active {
+    transform: scale(0.98);
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Small Mobile Devices */
+@media (max-width: 480px) {
+  .events-wrapper {
+    padding-top: 65px;
+  }
+
+  .events-wrapper .logout-container {
+    top: 12px;
+    /* left: 12px; */ /* Removed */
+    right: 12px;
+  }
+  
+  .events-wrapper .logout-btn {
+    /* Responsive adjustments */
+    font-size: 12px;
+    gap: 6px;
+  }
+  
+  .events-wrapper .logout-btn i {
+    font-size: 13px;
+  }
+
+  .events-wrapper .cards {
+    gap: 20px;
+    padding: 15px 12px 35px;
+  }
+
+  .events-wrapper .card {
+    width: min(310px, calc(100vw - 30px));
+  }
+
+  .events-wrapper .card__img,
+  .events-wrapper .card__img--hover {
+    height: 180px;
+  }
+
+  .events-wrapper .card__info {
+    padding: 18px 20px 20px 20px;
+  }
+
+  .events-wrapper .card__title {
+    font-size: 1.05rem;
+  }
+
+  .events-wrapper .card__icon {
+    font-size: 20px;
+    padding: 12px 0 0;
+  }
+}
+
+/* Extra Small Devices */
+@media (max-width: 360px) {
+  .events-wrapper .card {
+    width: calc(100vw - 24px);
+  }
+
+  .events-wrapper .card__img,
+  .events-wrapper .card__img--hover {
+    height: 160px;
+  }
+
+  .events-wrapper .card__title {
+    font-size: 1rem;
+  }
+}
+
+/* Landscape Mobile Orientation */
+@media (max-height: 600px) and (orientation: landscape) {
+  .events-wrapper {
+    padding-top: 60px;
+    min-height: auto;
+  }
+
+  .events-wrapper .cards {
+    padding: 15px;
+    gap: 20px;
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .events-wrapper .card {
+    width: min(280px, calc(33vw - 20px));
+  }
+
+  .events-wrapper .card__img,
+  .events-wrapper .card__img--hover {
+    height: 140px;
+  }
+
+  .events-wrapper .card__info {
+    padding: 15px 18px;
+  }
+
+  .events-wrapper .card__title {
+    font-size: 0.95rem;
+  }
+
+  .events-wrapper .card__icon {
+    padding: 10px 0 0;
+    font-size: 18px;
+  }
+}
+
+/* High Resolution Mobile Displays */
+@media only screen and (min-resolution: 2dppx) and (max-width: 768px) {
+  .events-wrapper .card {
+    box-shadow: 0px 12px 25px rgba(0, 0, 0, 0.35);
+  }
+
+  .events-wrapper .card:hover,
+  .events-wrapper .card:active {
+    box-shadow: 0px 20px 40px rgba(102, 126, 234, 0.45);
   }
 }

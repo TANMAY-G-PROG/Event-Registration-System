@@ -278,20 +278,6 @@ export default function Login() {
         <div className="form-container sign-in">
           <div onKeyPress={handleKeyPress}>
             <h1>Sign In</h1>
-            <div className="social-icons">
-              <a href="#" className="icon">
-                <i className="fa-brands fa-google-plus-g"></i>
-              </a>
-              <a href="#" className="icon">
-                <i className="fa-brands fa-facebook-f"></i>
-              </a>
-              <a href="#" className="icon">
-                <i className="fa-brands fa-github"></i>
-              </a>
-              <a href="#" className="icon">
-                <i className="fa-brands fa-linkedin-in"></i>
-              </a>
-            </div>
             <input
               type="text"
               name="usn"
@@ -308,7 +294,17 @@ export default function Login() {
               value={signInData.password}
               onChange={handleSignInChange}
             />
-            <a href="#">Forgot Your Password?</a>
+            {/* UPDATED: Made Forgot Password clickable */}
+            <a 
+              href="#" 
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/forgot-password');
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              Forgot Your Password?
+            </a>
             <button type="button" onClick={handleSignIn}>
               Sign In
             </button>
