@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import ProfileCard from './ProfileCard';
-import './AboutUs.css';
+import './Aboutus.css';
 import member1 from './assets/member1.jpg';
 import member2 from './assets/member2.jpg';
 import member3 from './assets/member3.jpg';
@@ -129,5 +129,6 @@ const AboutUs = () => {
     </div>
   );
 };
+
 
 export default AboutUs;
