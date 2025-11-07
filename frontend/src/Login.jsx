@@ -1,5 +1,8 @@
+// src/Login.jsx
+// (I have marked the 4 changed lines with // <--- CHANGED)
+
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // <--- 1. Import useLocation
 import './style.css';
 
 // Get the base URL from environment variables
@@ -7,6 +10,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation(); // <--- 2. Get the location object
   const [isActive, setIsActive] = useState(false);
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
 
@@ -51,8 +55,14 @@ export default function Login() {
       if (response.ok) {
         const data = await response.json();
         showMessage(`Already logged in as ${data.userName}. Redirecting...`);
+        
+        // --- THIS IS THE FIX ---
+        // Check if we were redirected from another page (like /participants)
+        // If so, go there. If not, default to /events.
+        const fromPage = location.state?.from?.pathname || '/events'; // <--- 3. Find target page
+
         setTimeout(() => {
-          navigate('/events');
+          navigate(fromPage, { replace: true }); // <--- 4. Go to the correct page
         }, 1500);
       }
     } catch (error) {
@@ -87,8 +97,12 @@ export default function Login() {
 
       if (data.success) {
         showMessage(`Welcome back, ${data.userName}!`);
+        
+        // Also fix it here for manual sign-in
+        const fromPage = location.state?.from?.pathname || '/events';
+        
         setTimeout(() => {
-          navigate('/events');
+          navigate(fromPage, { replace: true });
         }, 1500);
       } else {
         showMessage(data.error, true);
@@ -157,8 +171,12 @@ export default function Login() {
           email: '',
           password: ''
         });
+        
+        // Also fix it here for sign-up
+        const fromPage = location.state?.from?.pathname || '/events';
+
         setTimeout(() => {
-          navigate('/events');
+          navigate(fromPage, { replace: true });
         }, 2000);
       } else {
         showMessage(data.error, true);
