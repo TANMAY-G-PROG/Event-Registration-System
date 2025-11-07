@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // <--- 1. IMPORT useNavigate
 import './ticket.css';
 
 // Get the base URL from environment variables
@@ -8,6 +9,7 @@ export default function ParticipantTicket() {
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate(); // <--- 2. INITIALIZE useNavigate
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -24,7 +26,6 @@ export default function ParticipantTicket() {
 
   const fetchEventData = async (eventId) => {
     try {
-      // EDITED: Using API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/my-participant-events`, {
         credentials: 'include',
       });
@@ -76,7 +77,8 @@ export default function ParticipantTicket() {
   };
 
   const handleScanQR = () => {
-    window.location.href = '/scanner';
+    // window.location.href = '/scanner'; // <--- 3. REMOVE THIS LINE
+    navigate('/scanner'); // <--- 3. ADD THIS LINE
   };
 
   const formatDate = (dateString) => {
