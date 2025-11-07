@@ -1,397 +1,409 @@
 @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;700&family=VT323&display=swap');
 
 /* ==============================================================
-   GLOBAL STYLES
-   ============================================================== */
+   GLOBAL STYLES
+   ============================================================== */
 .event-form-container {
-  font-family: 'Libre Franklin', sans-serif;
-  cursor: crosshair;
-  min-height: 100vh;
-  height: 100vh;
-  width: 100vw;
-  background: black;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  margin: 0;
-  box-sizing: border-box;
-  position: fixed;
-  top: 0;
-  left: 0;
-  overflow: auto;
+  font-family: 'Libre Franklin', sans-serif;
+  cursor: crosshair;
+  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  background: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow: auto;
 }
 
 .event-form-wrap {
-  position: relative;
-  margin: 0 auto;
-  max-width: 1150px;
-  width: 90%;
-  box-shadow: 7px 13px 49px -5px rgba(0, 165, 120, 0.47);
-  overflow: hidden;
+  position: relative;
+  margin: 0 auto;
+  max-width: 1150px;
+  width: 90%;
+  box-shadow: 7px 13px 49px -5px rgba(0, 165, 120, 0.47);
+  overflow: hidden;
 }
 
 .event-form-registration {
-  animation: event-form-open 0.3s;
-  animation-iteration-count: 1;
-  background: radial-gradient(circle farthest-corner, black 40%, transparent 0) no-repeat, white;
-  background-position: -480px -250px;
+  animation: event-form-open 0.3s;
+  animation-iteration-count: 1;
+  background: radial-gradient(circle farthest-corner, black 40%, transparent 0) no-repeat, white;
+  background-position: -480px -250px;
 }
 
 .event-form-registration .event-form-button {
-  background: #000;
+  background: #000;
 }
 
 .event-form-card-side {
-  width: 50%;
-  min-height: 650px;
-  box-sizing: border-box;
+  width: 50%;
+  min-height: 650px;
+  box-sizing: border-box;
 }
 
 .event-form-right {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 30px;
-  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 30px;
+  box-sizing: border-box;
 }
 
 .event-form-form {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 380px;
 }
 
 .event-form-card {
-  display: flex;
+  display: flex;
 }
 
 /* ==============================================================
-   DESKTOP HEADER - ORIGINAL
-   ============================================================== */
+   DESKTOP HEADER - ORIGINAL
+   ============================================================== */
 .event-form-left {
-  background: radial-gradient(circle farthest-corner, #00a578 40%, transparent 0) no-repeat;
-  background-position: 140px 170px;
+  background: radial-gradient(circle farthest-corner, #00a578 40%, transparent 0) no-repeat;
+  background-position: 140px 170px;
 }
 
 .event-form-logo-text {
-  font-family: 'VT323', monospace;
-  font-size: 130px;
-  color: #00a578;
-  mix-blend-mode: difference;
-  margin: 220px 0 0 90px;
-  line-height: 82%;
+  font-family: 'VT323', monospace;
+  font-size: 130px;
+  color: #00a578;
+  mix-blend-mode: difference;
+  margin: 220px 0 0 90px;
+  line-height: 82%;
 }
 
 /* Hide mobile header on desktop */
 .event-form-mobile-header {
-  display: none;
+  display: none;
 }
 
 /* ==============================================================
-   INPUTS, BUTTONS, CHECKBOX
-   ============================================================== */
+   INPUTS, BUTTONS, CHECKBOX
+   ============================================================== */
 .event-form-input,
 .event-form-textarea {
-  border: none;
-  border-bottom: 1px solid black;
-  margin-bottom: 22px;
-  padding: 8px 5px;
-  font-family: 'Libre Franklin', sans-serif;
-  box-sizing: border-box;
-  font-size: 15px;
-}
-
-.event-form-input::placeholder,
-.event-form-textarea::placeholder {
-  color: #666;
-  opacity: 1;
+  border: none;
+  border-bottom: 1px solid black;
+  margin-bottom: 22px;
+  padding: 8px 5px;
+  font-family: 'Libre Franklin', sans-serif;
+  box-sizing: border-box;
+  font-size: 15px;
 }
 
 .event-form-textarea {
-  resize: vertical;
-  font-size: 14px;
+  resize: vertical;
+  font-size: 14px;
 }
 
 .event-form-input:focus,
 .event-form-textarea:focus {
-  outline-color: black;
+  outline-color: black;
 }
 
 .event-form-button {
-  background: #00a578;
-  color: white;
-  border: none;
-  padding: 12px;
-  cursor: alias;
-  box-shadow: 0 3px 0 1px rgba(0, 165, 120, 0.47);
-  font-family: 'Libre Franklin', sans-serif;
-  font-size: 17px;
-  font-weight: bold;
-  box-sizing: border-box;
-  margin-top: 10px;
+  background: #00a578;
+  color: white;
+  border: none;
+  padding: 12px;
+  cursor: alias;
+  box-shadow: 0 3px 0 1px rgba(0, 165, 120, 0.47);
+  font-family: 'Libre Franklin', sans-serif;
+  font-size: 17px;
+  font-weight: bold;
+  box-sizing: border-box;
+  margin-top: 10px;
 }
 
 .event-form-button:hover {
-  box-shadow: none;
-  transform: translateY(3px);
-  transition: all 0.1s linear;
+  box-shadow: none;
+  transform: translateY(3px);
+  transition: all 0.1s linear;
 }
 
 .event-form-button:focus {
-  outline-color: #fb5b87;
+  outline-color: #fb5b87;
 }
 
 .event-form-title {
-  font-size: 34px;
-  margin-bottom: 20px;
-  font-family: 'Libre Franklin', sans-serif;
+  font-size: 34px;
+  margin-bottom: 20px;
+  font-family: 'Libre Franklin', sans-serif;
 }
 
 .event-form-checkbox-group {
-  margin-bottom: 22px;
-  display: flex;
-  align-items: center;
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
 }
 
 .event-form-checkbox-label {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  user-select: none;
-  font-family: 'Libre Franklin', sans-serif;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  font-family: 'Libre Franklin', sans-serif;
 }
 
 .event-form-checkbox {
-  width: 20px;
-  height: 20px;
-  margin-right: 10px;
-  cursor: pointer;
-  accent-color: #00a578;
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  cursor: pointer;
+  accent-color: #00a578;
 }
 
 .event-form-checkbox-text {
-  font-size: 16px;
-  font-weight: 600;
-  color: black;
+  font-size: 16px;
+  font-weight: 600;
+  color: black;
 }
 
 .event-form-checkbox:checked + .event-form-checkbox-text {
-  color: #00a578;
+  color: #00a578;
 }
 
 @keyframes event-form-open {
-  0% { background: black; }
-  100% { }
+  0% { background: black; }
+  100% { }
 }
 
 /* Message Popup */
 .event-form-message {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 15px 20px;
-  border-radius: 5px;
-  color: white;
-  font-weight: normal;
-  z-index: 1000;
-  animation: event-form-slideIn 0.3s ease-in-out;
-  font-family: 'Libre Franklin', sans-serif;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 5px;
+  color: white;
+  font-weight: normal;
+  z-index: 1000;
+  animation: event-form-slideIn 0.3s ease-in-out;
+  font-family: 'Libre Franklin', sans-serif;
 }
 
 .event-form-message-success { background-color: rgb(114, 221, 158); }
 .event-form-message-error { background-color: rgb(225, 108, 95); }
 
 @keyframes event-form-slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 /* ==============================================================
-   MOBILE: CLEAN & MINIMAL HEADER
-   ============================================================== */
+   MOBILE: CLEAN & MINIMAL HEADER
+   ============================================================== */
 @media screen and (max-width: 900px) {
-  .event-form-container { padding: 0; overflow: hidden; }
+  .event-form-container { padding: 0; overflow: hidden; }
 
-  .event-form-wrap {
-    width: 100vw; height: 100vh; max-width: none; margin: 0;
-    border-radius: 0; box-shadow: none;
-    display: flex; flex-direction: column; overflow: hidden;
+  .event-form-wrap {
+    width: 100vw; height: 100vh; max-width: none; margin: 0;
+    border-radius: 0; box-shadow: none;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  .event-form-card { flex-direction: column; height: 100%; }
+
+  /* Hide desktop header */
+  .event-form-desktop-header { display: none !important; }
+
+  /* Show mobile header */
+  .event-form-mobile-header {
+    display: flex; width: 100%; min-height: 180px; height: 180px;
+    align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    position: relative; overflow: hidden;
+    border-bottom: 3px solid rgba(0, 165, 120, 0.4);
+  }
+
+  /* Subtle background pulse */
+  .event-form-mobile-header::before {
+    content: '';
+    position: absolute; top: 50%; left: 50%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(0, 165, 120, 0.12) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    animation: event-form-aurora 9s ease-in-out infinite;
+    z-index: 0; opacity: 0.5;
+  }
+
+  /* Tiny floating dot */
+  .event-form-mobile-header::after {
+    content: '';
+    position: absolute; width: 5px; height: 5px;
+    background: #00a578; border-radius: 50%;
+    box-shadow: 0 0 6px #00a578;
+    animation: event-form-particle 11s linear infinite;
+    z-index: 1;
+  }
+
+  .event-form-left-header {
+    position: relative; z-index: 2; text-align: center; padding: 0 1rem;
+  }
+
+  .event-form-glow-text {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2px; font-family: 'Libre Franklin', sans-serif;
+    font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase;
+    line-height: 1;
+  }
+
+  /* NO GLOW, NO FLICKER */
+  .event-form-neon,
+  .event-form-neon-alt {
+    font-size: 36px; color: #ffffff; text-shadow: none;
+    position: relative;
+  }
+
+  .event-form-neon-alt {
+    font-size: 32px; color: #00ffc3;
+  }
+
+  /* Soft shine sweep only */
+  .event-form-glow-text::before {
+    content: '';
+    position: absolute; top: -15px; left: -100%;
+    width: 50px; height: 100px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+    transform: skewX(-20deg);
+    animation: event-form-shine 5s ease-in-out infinite;
+    z-index: 3;
+V }
+
+  /* No underline */
+  .event-form-underline { display: none !important; }
+
+  /* Form */
+  .event-form-card-side.event-form-right {
+    flex: 1; width: 100%; min-height: auto;
+    padding: 2.5rem 1.8rem 1.5rem; background: white;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+
+  .event-form-title {
+    font-size: clamp(28px, 6.5vw, 34px); margin-bottom: 2rem;
+    font-weight: 700; text-align: center; color: #000;
+  }
+
+  .event-form-form { max-width: 100%; gap: 1.4rem; padding-bottom: 100px; }
+
+
+  /* =================================== */
+  /* === START: MOBILE PLACEHOLDER FIX === */
+  /* =================================== */
+
+  .event-form-input,
+  .event-form-textarea {
+    font-size: 16px; padding: 14px 8px;
+    border: none; border-bottom: 2px solid #e0e0e0;
+    transition: border-color .3s;
+    
+    /* FIX 1: Solid background is CRITICAL for mobile re-render bug */
+    background: #ffffff !important; 
+    
+    border-radius: 0; 
+    color: #000; /* This is the user's *typed* text */
+    -webkit-appearance: none; /* Disables native iOS styling */
+  }
+
+  /* FIX 2: Forcefully style browser autofill state */
+  /* This stops Chrome/Safari from using white text on a white background */
+  .event-form-input:-webkit-autofill,
+  .event-form-textarea:-webkit-autofill,
+  .event-form-input:-webkit-autofill:hover,
+  .event-form-textarea:-webkit-autofill:hover,
+  .event-form-input:-webkit-autofill:focus,
+  .event-form-textarea:-webkit-autofill:focus,
+  .event-form-input:-webkit-autofill:active,
+  .event-form-textarea:-webkit-autofill:active {
+    -webkit-text-fill-color: #000 !important; /* Color of text *in* the autofill */
+    -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important; /* Forces white bg */
+    transition: background-color 5000s ease-in-out 0s; /* Prevents bg color change */
   }
 
-  .event-form-card { flex-direction: column; height: 100%; }
+  /* FIX 3: Explicitly set placeholder color */
+  /* This ensures the placeholder text itself is not white */
+  .event-form-input::placeholder,
+  .event-form-textarea::placeholder {
+    color: #a0a0a0; /* A visible medium-grey */
+    opacity: 1; /* Ensures visibility in all browsers */
+  }
+  
+  .event-form-input::-webkit-input-placeholder,
+s .event-form-textarea::-webkit-input-placeholder {
+    color: #a0a0a0;
+  }
+  
+  .event-form-input:-ms-input-placeholder,
+  .event-form-textarea:-ms-input-Pplaceholder {
+    color: #a0a0a0;
+  }
 
-  /* Hide desktop header */
-  .event-form-desktop-header { display: none !important; }
+  /* ================================= */
+Note: This is an *extremely* stubborn browser bug. If this *still* doesn't work, I would recommend testing on a real device, as the "inspect" tool simulation is not always 100% accurate.
+  /* === END: MOBILE PLACEHOLDER FIX === */
+  /* ================================= */
 
-  /* Show mobile header */
-  .event-form-mobile-header {
-    display: flex !important; 
-    width: 100%; 
-    min-height: 160px; 
-    height: 160px;
-    flex-shrink: 0;
-    align-items: center; 
-    justify-content: center;
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-    position: relative; 
-    overflow: hidden;
-    border-bottom: 3px solid rgba(0, 165, 120, 0.4);
-  }
 
-  /* Subtle background pulse */
-  .event-form-mobile-header::before {
-    content: '';
-    position: absolute; top: 50%; left: 50%;
-    width: 300px; height: 300px;
-    background: radial-gradient(circle, rgba(0, 165, 120, 0.12) 0%, transparent 70%);
-    transform: translate(-50%, -50%);
-    animation: event-form-aurora 9s ease-in-out infinite;
-    z-index: 0; opacity: 0.5;
-  }
+  .event-form-input:focus,
+  .event-form-textarea:focus { border-bottom-color: #00a578; }
 
-  /* Tiny floating dot */
-  .event-form-mobile-header::after {
-    content: '';
-    position: absolute; width: 5px; height: 5px;
-    background: #00a578; border-radius: 50%;
-    box-shadow: 0 0 6px #00a578;
-    animation: event-form-particle 11s linear infinite;
-    z-index: 1;
-  }
+  .event-form-textarea { min-height: 90px; }
 
-  .event-form-left-header {
-    position: relative; z-index: 2; text-align: center; padding: 0 1rem;
-  }
+  .event-form-button {
+    position: fixed; bottom: 20px; left: 50%;
+    transform: translateX(-50%); width: calc(100% - 36px);
+    background: #00a578; color: white; padding: 16px;
+    font-size: 18px; font-weight: bold;
+    box-shadow: 0 4px 0 0 rgba(0,165,120,.6); z-index: 1000;
+  }
 
-  .event-form-glow-text {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 2px; font-family: 'Libre Franklin', sans-serif;
-    font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase;
-    line-height: 1;
-  }
-
-  /* NO GLOW, NO FLICKER */
-  .event-form-neon,
-  .event-form-neon-alt {
-    font-size: 36px; color: #ffffff; text-shadow: none;
-    position: relative;
-  }
-
-  .event-form-neon-alt {
-    font-size: 32px; color: #00ffc3;
-  }
-
-  /* Soft shine sweep only */
-  .event-form-glow-text::before {
-    content: '';
-    position: absolute; top: -15px; left: -100%;
-    width: 50px; height: 100px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
-    transform: skewX(-20deg);
-    animation: event-form-shine 5s ease-in-out infinite;
-    z-index: 3;
-  }
-
-  /* No underline */
-  .event-form-underline { display: none !important; }
-
-  /* Form */
-  .event-form-card-side.event-form-right {
-    flex: 1; width: 100%; min-height: auto;
-    padding: 2.5rem 1.8rem 1.5rem; background: white;
-    overflow-y: auto; -webkit-overflow-scrolling: touch;
-  }
-
-  .event-form-title {
-    font-size: clamp(28px, 6.5vw, 34px); margin-bottom: 2rem;
-    font-weight: 700; text-align: center; color: #000;
-    display: block;
-  }
-
-  .event-form-form { 
-    max-width: 100%; 
-    padding-bottom: 100px;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .event-form-input,
-  .event-form-textarea {
-    font-size: 16px !important; 
-    padding: 14px 8px !important;
-    border: none !important; 
-    border-bottom: 2px solid #e0e0e0 !important;
-    transition: border-color .3s; 
-    background: transparent !important;
-    border-radius: 0; 
-    color: #000 !important;
-    margin-bottom: 1.4rem !important;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .event-form-input::placeholder,
-  .event-form-textarea::placeholder {
-    color: #888 !important;
-    opacity: 1 !important;
-    font-size: 16px !important;
-  }
-
-  .event-form-checkbox-group {
-    margin-bottom: 1.4rem !important;
-    display: flex;
-    align-items: center;
-  }
-
-  .event-form-input:focus,
-  .event-form-textarea:focus { border-bottom-color: #00a578; }
-
-  .event-form-textarea { min-height: 90px; resize: vertical; }
-
-  .event-form-button {
-    position: fixed; bottom: 20px; left: 50%;
-    transform: translateX(-50%); width: calc(100% - 36px);
-    background: #00a578; color: white; padding: 16px;
-    font-size: 18px; font-weight: bold;
-    box-shadow: 0 4px 0 0 rgba(0,165,120,.6); z-index: 1000;
-  }
-
-  .event-form-button:hover,
-  .event-form-button:active {
-    transform: translateX(-50%) translateY(3px);
-    box-shadow: none;
-  }
+  .event-form-button:hover,
+  .event-form-button:active {
+    transform: translateX(-50%) translateY(3px);
+    box-shadow: none;
+  }
 }
 
 @media screen and (max-width: 480px) {
-  .event-form-mobile-header { min-height: 160px; height: 160px; }
-  .event-form-neon { font-size: 30px; }
-  .event-form-neon-alt { font-size: 28px; }
-  .event-form-card-side.event-form-right { padding: 2rem 1.4rem 1.4rem; }
-  .event-form-button { bottom: 16px; width: calc(100% - 32px); }
+  .event-form-mobile-header { min-height: 160px; height: 160px; }
+  .event-form-neon { font-size: 30px; }
+  .event-form-neon-alt { font-size: 28px; }
+  .event-form-card-side.event-form-right { padding: 2rem 1.4rem 1.4rem; }
+  .event-form-button { bottom: 16px; width: calc(100% - 32px); }
 }
 
 /* ==============================================================
-   ANIMATIONS – only shine, aurora, particle
-   ============================================================== */
+   ANIMATIONS – only shine, aurora, particle
+   ============================================================== */
 @keyframes event-form-aurora {
-  0%,100% { transform: translate(-50%,-50%) scale(.9); opacity:.45; }
-  50%     { transform: translate(-48%,-52%) scale(1.1); opacity:.65; }
+  0%,100% { transform: translate(-50%,-50%) scale(.9); opacity:.45; }
+  50%     { transform: translate(-48%,-52%) scale(1.1); opacity:.65; }
 }
 
 @keyframes event-form-particle {
-  0%   { transform: translate(-120px,-80px); opacity:0; }
-  15%  { opacity:1; }
-  85%  { opacity:1; }
-  100% { transform: translate(calc(100vw + 80px),80px); opacity:0; }
+  0%   { transform: translate(-120px,-80px); opacity:0; }
+  15%  { opacity:1; }
+  85%  { opacity:1; }
+  100% { transform: translate(calc(100vw + 80px),80px); opacity:0; }
 }
 
 @keyframes event-form-shine {
-  0%   { left:-100%; opacity:0; }
-  20%  { opacity:.35; }
-  40%  { left:100%; opacity:0; }
-  100% { left:100%; opacity:0; }
+  0%   { left:-100%; opacity:0; }
+  20%  { opacity:.35; }
+  40%  { left:100%; opacity:0; }
+  100% { left:100%; opacity:0; }
 }
