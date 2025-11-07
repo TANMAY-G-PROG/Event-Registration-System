@@ -125,6 +125,38 @@ const Participants = () => {
     }
   };
 
+  const fetchFileAsArrayBuffer = async (url, fileType) => {
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/octet-stream, */*'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${fileType}: ${response.status} ${response.statusText}`);
+      }
+
+      // Check if we actually got binary data
+      const contentType = response.headers.get('content-type');
+      console.log(`${fileType} content-type:`, contentType);
+
+      const arrayBuffer = await response.arrayBuffer();
+      
+      // Verify we got actual data
+      if (arrayBuffer.byteLength === 0) {
+        throw new Error(`${fileType} is empty`);
+      }
+
+      console.log(`${fileType} loaded successfully:`, arrayBuffer.byteLength, 'bytes');
+      return arrayBuffer;
+    } catch (error) {
+      console.error(`Error fetching ${fileType}:`, error);
+      throw error;
+    }
+  };
+
   const generateCertificate = async (event) => {
     try {
       // Check if participant attended the event
@@ -133,19 +165,36 @@ const Participants = () => {
         return;
       }
 
-      // Fetch the PDF template from GitHub or your deployed static assets
-      // Option 1: If hosting on same domain (Render static files)
-      // const templateUrl = `${window.location.origin}/certificate-template.pdf`;
-      
-      // Option 2: If hosting on GitHub (uncomment and use this instead)
-      const templateUrl = 'https://raw.githubusercontent.com/SuchitKS/Event-Registration-System/main/frontend/public/certificate-template.pdf';
-      
-      const existingPdfBytes = await fetch(templateUrl).then(res => {
-        if (!res.ok) {
-          throw new Error('Certificate template not found. Please ensure certificate-template.pdf is accessible.');
+      console.log('Starting certificate generation...');
+
+      // Try multiple URL formats for the PDF template
+      const templateUrls = [
+        // Try local first (for Render deployment)
+        `${window.location.origin}/certificate-template.pdf`,
+        // GitHub raw URL
+        'https://raw.githubusercontent.com/SuchitKS/Event-Registration-System/main/frontend/public/certificate-template.pdf',
+        // GitHub alternative CDN
+        'https://github.com/SuchitKS/Event-Registration-System/raw/main/frontend/public/certificate-template.pdf'
+      ];
+
+      let existingPdfBytes = null;
+      let lastError = null;
+
+      for (const templateUrl of templateUrls) {
+        try {
+          console.log('Trying template URL:', templateUrl);
+          existingPdfBytes = await fetchFileAsArrayBuffer(templateUrl, 'PDF template');
+          console.log('Successfully loaded PDF template from:', templateUrl);
+          break;
+        } catch (err) {
+          console.warn('Failed to load from:', templateUrl, err);
+          lastError = err;
         }
-        return res.arrayBuffer();
-      });
+      }
+
+      if (!existingPdfBytes) {
+        throw new Error(`Could not load PDF template. Last error: ${lastError?.message}`);
+      }
 
       // Load the PDF template
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
@@ -161,19 +210,27 @@ const Participants = () => {
       // Try to embed Allura-Regular font for participant name
       let nameFont;
       try {
-        // Option 1: Same domain
-        // const fontUrl = `${window.location.origin}/Allura-Regular.ttf`;
-        
-        // Option 2: GitHub (uncomment if needed)
-        const fontUrl = 'https://raw.githubusercontent.com/SuchitKS/Event-Registration-System/main/frontend/public/Allura-Regular.ttf';
-        
-        const fontBytes = await fetch(fontUrl).then(res => {
-          if (!res.ok) {
-            throw new Error('Allura-Regular.ttf font file not found.');
+        const fontUrls = [
+          `${window.location.origin}/Allura-Regular.ttf`,
+          'https://raw.githubusercontent.com/SuchitKS/Event-Registration-System/main/frontend/public/Allura-Regular.ttf',
+          'https://github.com/SuchitKS/Event-Registration-System/raw/main/frontend/public/Allura-Regular.ttf'
+        ];
+
+        let fontBytes = null;
+        for (const fontUrl of fontUrls) {
+          try {
+            fontBytes = await fetchFileAsArrayBuffer(fontUrl, 'Allura font');
+            break;
+          } catch (err) {
+            console.warn('Failed to load font from:', fontUrl);
           }
-          return res.arrayBuffer();
-        });
-        nameFont = await pdfDoc.embedFont(fontBytes);
+        }
+
+        if (fontBytes) {
+          nameFont = await pdfDoc.embedFont(fontBytes);
+        } else {
+          throw new Error('Could not load font from any source');
+        }
       } catch (fontError) {
         console.warn('Could not load custom font, using TimesRomanBold as fallback:', fontError);
         nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
@@ -186,19 +243,27 @@ const Participants = () => {
       // Load Playfair Display font for description
       let descFont;
       try {
-        // Option 1: Same domain
-        // const descFontUrl = `${window.location.origin}/PlayfairDisplay-MediumItalic.ttf`;
-        
-        // Option 2: GitHub (uncomment if needed)
-        const descFontUrl = 'https://raw.githubusercontent.com/SuchitKS/Event-Registration-System/main/frontend/public/PlayfairDisplay-MediumItalic.ttf';
-        
-        const descFontBytes = await fetch(descFontUrl).then(res => {
-          if (!res.ok) {
-            throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found.');
+        const descFontUrls = [
+          `${window.location.origin}/PlayfairDisplay-MediumItalic.ttf`,
+          'https://raw.githubusercontent.com/SuchitKS/Event-Registration-System/main/frontend/public/PlayfairDisplay-MediumItalic.ttf',
+          'https://github.com/SuchitKS/Event-Registration-System/raw/main/frontend/public/PlayfairDisplay-MediumItalic.ttf'
+        ];
+
+        let descFontBytes = null;
+        for (const descFontUrl of descFontUrls) {
+          try {
+            descFontBytes = await fetchFileAsArrayBuffer(descFontUrl, 'Playfair font');
+            break;
+          } catch (err) {
+            console.warn('Failed to load description font from:', descFontUrl);
           }
-          return res.arrayBuffer();
-        });
-        descFont = await pdfDoc.embedFont(descFontBytes);
+        }
+
+        if (descFontBytes) {
+          descFont = await pdfDoc.embedFont(descFontBytes);
+        } else {
+          throw new Error('Could not load description font from any source');
+        }
       } catch (fontError) {
         console.warn('Could not load custom description font, using Courier as fallback:', fontError);
         descFont = font;
@@ -283,6 +348,7 @@ const Participants = () => {
       }
 
       // Serialize the PDF to bytes
+      console.log('Saving PDF...');
       const pdfBytes = await pdfDoc.save();
 
       // Create a blob and download
@@ -294,9 +360,11 @@ const Participants = () => {
       link.click();
       window.URL.revokeObjectURL(url);
 
+      console.log('Certificate generated successfully!');
+
     } catch (error) {
       console.error('Error generating certificate:', error);
-      alert(`Error generating certificate: ${error.message}`);
+      alert(`Error generating certificate: ${error.message}\n\nPlease check the console for more details.`);
     }
   };
 
