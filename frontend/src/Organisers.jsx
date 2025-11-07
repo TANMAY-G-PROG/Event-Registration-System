@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './organisers.css';
 
+// Get the base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const Organisers = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState({
@@ -69,7 +72,8 @@ const Organisers = () => {
 
   const fetchOrganizerEvents = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/my-organized-events', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/my-organized-events`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -101,7 +105,8 @@ const Organisers = () => {
     try {
       setGeneratingExcel(prev => ({ ...prev, [eventId]: true }));
 
-      const response = await fetch(`http://localhost:3000/api/events/${eventId}/generate-details`, {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/generate-details`, {
         method: 'GET',
         credentials: 'include',
         headers: {
