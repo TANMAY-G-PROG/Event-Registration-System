@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
 import './events.css';
 
+// Get the base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const DEFAULT_COLOR = '#ffffff';
 
 const hexToRgb = hex => {
@@ -451,7 +454,8 @@ export default function Events() {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/me', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/me`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -470,7 +474,8 @@ export default function Events() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/signout', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/signout`, {
         method: 'POST',
         credentials: 'include',
         headers: {
