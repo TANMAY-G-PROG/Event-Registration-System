@@ -4,6 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
+// --- (FIX) ADD THESE IMPORTS ---
+// This path assumes your 'assets' folder is at 'src/assets'
+// Adjust the path ('../assets/') if your Participants.jsx file is in a different subfolder
+import certificateTemplateUrl from '../assets/certificate-template.pdf';
+import alluraFontUrl from '../assets/Allura-Regular.ttf';
+import playfairFontUrl from '../assets/PlayfairDisplay-MediumItalic.ttf';
+
 // Get the base URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -133,13 +140,13 @@ const Participants = () => {
         return;
       }
 
-      const templateUrl = `${window.location.origin}/certificate-template.pdf`;
-
-      const existingPdfBytes = await fetch(templateUrl, {
-        cache: 'force-cache'
-      }).then(res => {
+      // --- (FIX) Use the imported variable from Vite ---
+      const templateUrl = certificateTemplateUrl;
+      
+      const existingPdfBytes = await fetch(templateUrl).then(res => {
         if (!res.ok) {
-          throw new Error(`Certificate template not found at ${templateUrl}. Status: ${res.status}`);
+          // Updated error message to be more specific
+          throw new Error('Certificate template not found. Please ensure certificate-template.pdf is in the src/assets folder.');
         }
         return res.arrayBuffer();
       });
@@ -155,15 +162,15 @@ const Participants = () => {
       const firstPage = pages[0];
       const { width, height } = firstPage.getSize();
 
+      // Try to embed Allura-Regular font for participant name
       let nameFont;
       try {
-        const fontUrl = `${window.location.origin}/Allura-Regular.ttf`;
-
-        const fontBytes = await fetch(fontUrl, {
-          cache: 'force-cache'
-        }).then(res => {
+        // --- (FIX) Use the imported variable from Vite ---
+        const fontUrl = alluraFontUrl;
+        
+        const fontBytes = await fetch(fontUrl).then(res => {
           if (!res.ok) {
-            throw new Error(`Allura-Regular.ttf font file not found at ${fontUrl}. Status: ${res.status}`);
+            throw new Error('Allura-Regular.ttf font file not found in src/assets.');
           }
           return res.arrayBuffer();
         });
@@ -177,15 +184,15 @@ const Participants = () => {
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
       const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
+      // Load Playfair Display font for description
       let descFont;
       try {
-        const descFontUrl = `${window.location.origin}/PlayfairDisplay-MediumItalic.ttf`;
-
-        const descFontBytes = await fetch(descFontUrl, {
-          cache: 'force-cache'
-        }).then(res => {
+        // --- (FIX) Use the imported variable from Vite ---
+        const descFontUrl = playfairFontUrl;
+        
+        const descFontBytes = await fetch(descFontUrl).then(res => {
           if (!res.ok) {
-            throw new Error(`PlayfairDisplay-MediumItalic.ttf font file not found at ${descFontUrl}. Status: ${res.status}`);
+            throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found in src/assets.');
           }
           return res.arrayBuffer();
         });
