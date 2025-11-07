@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './event_form.css';
 
+// Get the base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const EventForm = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -88,7 +91,8 @@ const EventForm = () => {
     }
 
     try {
-      const res = await fetch('http://localhost:3000/api/events/create', {
+      // EDITED: Using API_BASE_URL
+      const res = await fetch(`${API_BASE_URL}/api/events/create`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
