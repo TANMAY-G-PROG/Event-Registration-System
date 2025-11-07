@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
+// Get the base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const Participants = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState({
@@ -22,7 +25,8 @@ const Participants = () => {
 
   const fetchUserInfo = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/me', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/me`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -94,7 +98,8 @@ const Participants = () => {
 
   const fetchParticipantEvents = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/my-participant-events', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/my-participant-events`, {
         method: 'GET',
         credentials: 'include',
         headers: {
