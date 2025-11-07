@@ -159,7 +159,7 @@
 }
 
 .event-form-checkbox {
-  width: 20px;
+s   width: 20px;
   height: 20px;
   margin-right: 10px;
   cursor: pointer;
@@ -211,7 +211,7 @@
 
   .event-form-wrap {
     width: 100vw; height: 100vh; max-width: none; margin: 0;
-    border-radius: 0; box-shadow: none;
+s   border-radius: 0; box-shadow: none;
     display: flex; flex-direction: column; overflow: hidden;
   }
 
@@ -265,7 +265,7 @@
   .event-form-neon,
   .event-form-neon-alt {
     font-size: 36px; color: #ffffff; text-shadow: none;
-    position: relative;
+s   position: relative;
   }
 
   .event-form-neon-alt {
@@ -281,7 +281,7 @@
     transform: skewX(-20deg);
     animation: event-form-shine 5s ease-in-out infinite;
     z-index: 3;
-V }
+  }
 
   /* No underline */
   .event-form-underline { display: none !important; }
@@ -342,8 +342,8 @@ V }
     opacity: 1; /* Ensures visibility in all browsers */
   }
   
-  .event-form-input::-webkit-input-placeholder,
-s .event-form-textarea::-webkit-input-placeholder {
+i .event-form-input::-webkit-input-placeholder,
+  .event-form-textarea::-webkit-input-placeholder {
     color: #a0a0a0;
   }
   
@@ -391,7 +391,7 @@ Note: This is an *extremely* stubborn browser bug. If this *still* doesn't work,
    ============================================================== */
 @keyframes event-form-aurora {
   0%,100% { transform: translate(-50%,-50%) scale(.9); opacity:.45; }
-  50%     { transform: translate(-48%,-52%) scale(1.1); opacity:.65; }
+A   50%     { transform: translate(-48%,-52%) scale(1.1); opacity:.65; }
 }
 
 @keyframes event-form-particle {
@@ -402,7 +402,7 @@ Note: This is an *extremely* stubborn browser bug. If this *still* doesn't work,
 }
 
 @keyframes event-form-shine {
-  0%   { left:-100%; opacity:0; }
+s   0%   { left:-100%; opacity:0; }
   20%  { opacity:.35; }
   40%  { left:100%; opacity:0; }
   100% { left:100%; opacity:0; }
