@@ -144,11 +144,12 @@ const Volunteers = () => {
         return;
       }
 
-      // Fetch the PDF template
-      const templateUrl = '/certificate-template.pdf';
-      const existingPdfBytes = await fetch(templateUrl).then(res => {
+      const templateUrl = `${window.location.origin}/certificate-template.pdf`;
+      const existingPdfBytes = await fetch(templateUrl, {
+        cache: 'force-cache'
+      }).then(res => {
         if (!res.ok) {
-          throw new Error('Certificate template not found. Please ensure certificate-template.pdf is in the public folder.');
+          throw new Error(`Certificate template not found at ${templateUrl}. Status: ${res.status}`);
         }
         return res.arrayBuffer();
       });
@@ -164,13 +165,14 @@ const Volunteers = () => {
       const firstPage = pages[0];
       const { width, height } = firstPage.getSize();
 
-      // Try to embed Allura-Regular font for volunteer name
       let nameFont;
       try {
-        const fontUrl = '/Allura-Regular.ttf'; // CHANGED
-        const fontBytes = await fetch(fontUrl).then(res => {
+        const fontUrl = `${window.location.origin}/Allura-Regular.ttf`;
+        const fontBytes = await fetch(fontUrl, {
+          cache: 'force-cache'
+        }).then(res => {
           if (!res.ok) {
-            throw new Error('Allura-Regular.ttf font file not found.'); // CHANGED
+            throw new Error(`Allura-Regular.ttf font file not found at ${fontUrl}. Status: ${res.status}`);
           }
           return res.arrayBuffer();
         });
@@ -184,13 +186,14 @@ const Volunteers = () => {
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
       const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
-      // Load Playfair Display font for description
       let descFont;
       try {
-        const descFontUrl = '/PlayfairDisplay-MediumItalic.ttf';
-        const descFontBytes = await fetch(descFontUrl).then(res => {
+        const descFontUrl = `${window.location.origin}/PlayfairDisplay-MediumItalic.ttf`;
+        const descFontBytes = await fetch(descFontUrl, {
+          cache: 'force-cache'
+        }).then(res => {
           if (!res.ok) {
-            throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found.');
+            throw new Error(`PlayfairDisplay-MediumItalic.ttf font file not found at ${descFontUrl}. Status: ${res.status}`);
           }
           return res.arrayBuffer();
         });

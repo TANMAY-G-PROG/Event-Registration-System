@@ -133,14 +133,13 @@ const Participants = () => {
         return;
       }
 
-      // --- FIX: Load from your own server's public folder ---
-      // This path is relative to the root of your domain.
-      // Since 'certificate-template.pdf' is in 'frontend/public', this is correct.
-      const templateUrl = '/certificate-template.pdf';
-      
-      const existingPdfBytes = await fetch(templateUrl).then(res => {
+      const templateUrl = `${window.location.origin}/certificate-template.pdf`;
+
+      const existingPdfBytes = await fetch(templateUrl, {
+        cache: 'force-cache'
+      }).then(res => {
         if (!res.ok) {
-          throw new Error('Certificate template not found. Please ensure certificate-template.pdf is in the /public folder.');
+          throw new Error(`Certificate template not found at ${templateUrl}. Status: ${res.status}`);
         }
         return res.arrayBuffer();
       });
@@ -156,15 +155,15 @@ const Participants = () => {
       const firstPage = pages[0];
       const { width, height } = firstPage.getSize();
 
-      // Try to embed Allura-Regular font for participant name
       let nameFont;
       try {
-        // --- FIX: Load from your own server's public folder ---
-        const fontUrl = '/Allura-Regular.ttf';
-        
-        const fontBytes = await fetch(fontUrl).then(res => {
+        const fontUrl = `${window.location.origin}/Allura-Regular.ttf`;
+
+        const fontBytes = await fetch(fontUrl, {
+          cache: 'force-cache'
+        }).then(res => {
           if (!res.ok) {
-            throw new Error('Allura-Regular.ttf font file not found in /public.');
+            throw new Error(`Allura-Regular.ttf font file not found at ${fontUrl}. Status: ${res.status}`);
           }
           return res.arrayBuffer();
         });
@@ -178,15 +177,15 @@ const Participants = () => {
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
       const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
-      // Load Playfair Display font for description
       let descFont;
       try {
-        // --- FIX: Load from your own server's public folder ---
-        const descFontUrl = '/PlayfairDisplay-MediumItalic.ttf';
-        
-        const descFontBytes = await fetch(descFontUrl).then(res => {
+        const descFontUrl = `${window.location.origin}/PlayfairDisplay-MediumItalic.ttf`;
+
+        const descFontBytes = await fetch(descFontUrl, {
+          cache: 'force-cache'
+        }).then(res => {
           if (!res.ok) {
-            throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found in /public.');
+            throw new Error(`PlayfairDisplay-MediumItalic.ttf font file not found at ${descFontUrl}. Status: ${res.status}`);
           }
           return res.arrayBuffer();
         });
