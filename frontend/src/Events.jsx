@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
 import './events.css';
 
-// Get the base URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const DEFAULT_COLOR = '#ffffff';
@@ -62,7 +61,6 @@ const LightRays = ({
   const [isMobile, setIsMobile] = useState(false);
   const observerRef = useRef(null);
 
-  // Detect mobile device
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
@@ -110,7 +108,6 @@ const LightRays = ({
 
       if (!containerRef.current) return;
 
-      // Lower DPR for mobile devices to improve performance
       const maxDpr = isMobile ? 1.5 : 2;
 
       const renderer = new Renderer({
@@ -434,8 +431,9 @@ void main() {
 export default function Events() {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Detect mobile device
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
@@ -447,14 +445,14 @@ export default function Events() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Check authentication on mount
   useEffect(() => {
     checkAuth();
   }, []);
 
   const checkAuth = async () => {
     try {
-      // EDITED: Using API_BASE_URL
+      setIsCheckingAuth(true);
+      
       const response = await fetch(`${API_BASE_URL}/api/me`, {
         method: 'GET',
         credentials: 'include',
@@ -463,18 +461,27 @@ export default function Events() {
         }
       });
 
-      if (!response.ok) {
-        navigate('/');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.authenticated) {
+          setIsAuthenticated(true);
+        } else {
+          navigate('/', { replace: true });
+        }
+      } else {
+        console.error('Authentication failed');
+        navigate('/', { replace: true });
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      navigate('/');
+      navigate('/', { replace: true });
+    } finally {
+      setIsCheckingAuth(false);
     }
   };
 
   const handleLogout = async () => {
     try {
-      // EDITED: Using API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/signout`, {
         method: 'POST',
         credentials: 'include',
@@ -486,7 +493,7 @@ export default function Events() {
       const data = await response.json();
 
       if (data.success) {
-        navigate('/');
+        navigate('/', { replace: true });
       } else {
         alert('Error logging out. Please try again.');
       }
@@ -495,6 +502,28 @@ export default function Events() {
       alert('Error logging out. Please try again.');
     }
   };
+
+  // Show loading state while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="events-wrapper" style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh' 
+      }}>
+        <div style={{ textAlign: 'center', color: 'white' }}>
+          <h2>Loading...</h2>
+          <p>Verifying your session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Only render if authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="events-wrapper">
