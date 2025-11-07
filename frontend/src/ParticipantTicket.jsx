@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import './ticket.css';
 
+// Get the base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function ParticipantTicket() {
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,7 +24,8 @@ export default function ParticipantTicket() {
 
   const fetchEventData = async (eventId) => {
     try {
-      const response = await fetch('http://localhost:3000/api/my-participant-events', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/my-participant-events`, {
         credentials: 'include',
       });
 
