@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './style.css';
 
+// Get the base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function Login() {
   const navigate = useNavigate();
   const [isActive, setIsActive] = useState(false);
@@ -36,7 +39,8 @@ export default function Login() {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/me', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/me`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -69,7 +73,8 @@ export default function Login() {
     }
 
     try {
-      const response = await fetch('http://localhost:3000/api/signin', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/signin`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -124,7 +129,8 @@ export default function Login() {
     }
 
     try {
-      const response = await fetch('http://localhost:3000/api/signup', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/signup`, {
         method: 'POST',
         credentials: 'include',
         headers: {
