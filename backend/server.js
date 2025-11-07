@@ -20,9 +20,20 @@ const razorpayInstance = new Razorpay({
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// --- PRODUCTION/DEVELOPMENT SETTINGS ---
+// This helps us know if we are on Render (production) or local
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
+// --- NEW (Render Deployment): Trust the proxy ---
+// This is required for secure cookies to work behind Render's proxy
+if (IS_PRODUCTION) {
+    app.set('trust proxy', 1);
+}
+
+// --- EDITED (Render Deployment): Dynamic CORS Origin ---
+// Read the frontend URL from environment variables
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL, // Uses the URL from your .env
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -33,16 +44,19 @@ app.use(cors({
 app.use(express.json());
 
 
+// --- EDITED (Render Deployment): Secure Session ---
 app.use(session({
-    secret: 'your-event-management-secret-key-change-this-in-production',
+    // NEW: Use a secret from environment variables
+    secret: process.env.SESSION_SECRET, 
     resave: false,
     saveUninitialized: false,
-    name: 'sessionId', // Custom cookie name
+    name: 'sessionId',
     cookie: {
-        secure: false, // Set to true if using HTTPS
+        // NEW: Set cookies to 'secure' and 'none' in production
+        secure: IS_PRODUCTION, // true in production
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: 'lax', // IMPORTANT for cross-origin
+        sameSite: IS_PRODUCTION ? 'none' : 'lax', // 'none' for cross-site, 'lax' for local
         path: '/'
     }
 }));
@@ -1731,7 +1745,7 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
                 maxSize: event[0].max_team_size,
                 canRegister,
                 registrationComplete: leaderTeam[0].registration_complete,
-                regFee: event[0].regfee
+                regFee: event[0].regFee
             });
         }
 
@@ -1791,7 +1805,7 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
             hasJoinedTeam: false,
             minSize: event[0].min_team_size,
             maxSize: event[0].max_team_size,
-            regFee: event[0].regfee
+            regFee: event[0].regFee
         });
     } catch (err) {
         console.error('Error getting team status:', err);
@@ -2292,9 +2306,11 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
     }
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`\n🚀 Server running at http://localhost:${PORT}`);
-    console.log(`📡 CORS enabled for http://localhost:5173`);
+// --- EDITED (Render Deployment): More robust server start ---
+app.listen(PORT, '0.0.0.0', () => {
+    // NEW: Dynamic logging
+    console.log(`\n🚀 Server running on port ${PORT}`);
+    console.log(`📡 CORS enabled for ${process.env.FRONTEND_URL}`);
     console.log(`🔍 Session debugging ENABLED\n`);
+    console.log(`🌱 Environment: ${IS_PRODUCTION ? 'production' : 'development'}`);
 });
