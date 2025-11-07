@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 
+// Get the base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function Scanner() {
   // 'loading', 'scanning', 'success', 'error'
   const [pageState, setPageState] = useState('loading'); 
@@ -34,7 +37,8 @@ export default function Scanner() {
   const fetchUserData = async () => {
     // We start in 'loading' state by default, so no setPageState here.
     try {
-      const response = await fetch('/api/me', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/me`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -216,8 +220,8 @@ export default function Scanner() {
 
     try {
       const endpoint = userRole === 'volunteer' 
-        ? `/api/mark-volunteer-attendance`
-        : `/api/mark-participant-attendance`;
+        ? `${API_BASE_URL}/api/mark-volunteer-attendance` // EDITED
+        : `${API_BASE_URL}/api/mark-participant-attendance`; // EDITED
 
       console.log(`📡 Calling endpoint: ${endpoint}`);
 
