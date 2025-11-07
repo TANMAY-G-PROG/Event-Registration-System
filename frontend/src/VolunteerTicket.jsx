@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ticket.css';
 
+// Get the base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function VolunteerTicket() {
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +27,8 @@ export default function VolunteerTicket() {
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/me', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/me`, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -50,7 +54,8 @@ export default function VolunteerTicket() {
       }
       setUserUSN(usn);
 
-      const response = await fetch('http://localhost:3000/api/my-volunteer-events', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/my-volunteer-events`, {
         credentials: 'include',
       });
 
