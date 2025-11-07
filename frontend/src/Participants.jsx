@@ -149,9 +149,9 @@ const Participants = () => {
       });
 
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
-
+      
       pdfDoc.registerFontkit(fontkit);
-
+      
       const pages = pdfDoc.getPages();
       const firstPage = pages[0];
       const { width, height } = firstPage.getSize();
@@ -170,7 +170,7 @@ const Participants = () => {
         console.warn('Could not load custom font, using TimesRomanBold as fallback:', fontError);
         nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
       }
-
+      
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
       const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
@@ -224,35 +224,111 @@ const Participants = () => {
       });
 
       const eventDesc = event.eventdesc || event.ename;
-      const descSize = 14;
+      const descSize = 22;
+      const maxDescWidth = 500;
       const descWidth = descFont.widthOfTextAtSize(eventDesc, descSize);
-      firstPage.drawText(eventDesc, {
-        x: (width - descWidth) / 2,
-        y: 120,
-        size: descSize,
+      
+      let finalDescText = eventDesc;
+      let finalDescSize = descSize;
+      
+      if (descWidth > maxDescWidth) {
+        finalDescSize = (maxDescWidth / descWidth) * descSize;
+      }
+      
+      const finalDescWidth = descFont.widthOfTextAtSize(finalDescText, finalDescSize);
+      firstPage.drawText(finalDescText, {
+        x: (width - finalDescWidth) / 2,
+        y: 205,
+        size: finalDescSize,
         font: descFont,
         color: whiteColor,
       });
 
       const pdfBytes = await pdfDoc.save();
-
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `${userInfo.userName}-certificate.pdf`;
+      link.href = url;
+      link.download = `${event.ename}_Certificate.pdf`;
       link.click();
+      
+      URL.revokeObjectURL(url);
+      
+      alert('Certificate generated successfully!');
     } catch (err) {
       console.error('Error generating certificate:', err);
-      alert(`Error generating certificate: ${err.message}`);
+      alert('Failed to generate certificate. Please try again.');
     }
   };
 
-  // Component JSX (table, button, etc.) goes here
+  if (loading) {
+    return <div className="loading">Loading your events...</div>;
+  }
+
+  if (error) {
+    return <div className="error">Error: {error}</div>;
+  }
+
+  const renderEventCard = (event, category) => (
+    <div key={event.eid} className="event-card">
+      <h3>{event.ename}</h3>
+      <p><strong>Date:</strong> {formatDate(event.eventDate)}</p>
+      <p><strong>Time:</strong> {formatTime(event.eventStartTime)}</p>
+      <p><strong>Venue:</strong> {event.venue}</p>
+      {event.eventdesc && <p><strong>Description:</strong> {event.eventdesc}</p>}
+      
+      {category === 'completed' && event.PartStatus && (
+        <button 
+          className="certificate-btn"
+          onClick={() => generateCertificate(event)}
+        >
+          Download Certificate
+        </button>
+      )}
+      
+      {category === 'completed' && !event.PartStatus && (
+        <p className="attendance-note">No certificate available (not attended)</p>
+      )}
+    </div>
+  );
 
   return (
-    <div className="participants-page">
-      {/* Render tables, events, and certificate buttons */}
-      {/* Wire the certificate button to generateCertificate(event) */}
+    <div className="participants-container">
+      <h1>My Events</h1>
+      
+      {events.ongoing.length > 0 && (
+        <div className="event-section">
+          <h2>Ongoing Events</h2>
+          <div className="events-grid">
+            {events.ongoing.map(event => renderEventCard(event, 'ongoing'))}
+          </div>
+        </div>
+      )}
+      
+      {events.upcoming.length > 0 && (
+        <div className="event-section">
+          <h2>Upcoming Events</h2>
+          <div className="events-grid">
+            {events.upcoming.map(event => renderEventCard(event, 'upcoming'))}
+          </div>
+        </div>
+      )}
+      
+      {events.completed.length > 0 && (
+        <div className="event-section">
+          <h2>Completed Events</h2>
+          <div className="events-grid">
+            {events.completed.map(event => renderEventCard(event, 'completed'))}
+          </div>
+        </div>
+      )}
+      
+      {events.ongoing.length === 0 && events.upcoming.length === 0 && events.completed.length === 0 && (
+        <div className="no-events">
+          <p>You haven't registered for any events yet.</p>
+        </div>
+      )}
     </div>
   );
 };
