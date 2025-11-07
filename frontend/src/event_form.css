@@ -1,201 +1,366 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import './event_form.css';
+@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;700&family=VT323&display=swap');
 
-// Get the base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+/* ==============================================================
+   GLOBAL STYLES
+   ============================================================== */
+.event-form-container {
+  font-family: 'Libre Franklin', sans-serif;
+  cursor: crosshair;
+  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  background: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow: auto;
+}
 
-const EventForm = () => {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    eventName: '',
-    eventDescription: '',
-    eventDate: '',
-    eventTime: '',
-    eventLocation: '',
-    maxParticipants: '',
-    maxVolunteers: '',
-    OrgCid: '',
-    registrationFee: '',
-    isTeamEvent: false,
-    minTeamSize: '',
-    maxTeamSize: ''
-  });
+.event-form-wrap {
+  position: relative;
+  margin: 0 auto;
+  max-width: 1150px;
+  width: 90%;
+  box-shadow: 7px 13px 49px -5px rgba(0, 165, 120, 0.47);
+  overflow: hidden;
+}
 
-  const [message, setMessage] = useState({ text: '', isError: false, show: false });
+.event-form-registration {
+  animation: event-form-open 0.3s;
+  animation-iteration-count: 1;
+  background: radial-gradient(circle farthest-corner, black 40%, transparent 0) no-repeat, white;
+  background-position: -480px -250px;
+}
 
-  const showMessage = (text, isError = false) => {
-    setMessage({ text, isError, show: true });
-    setTimeout(() => {
-      setMessage({ text: '', isError: false, show: false });
-    }, 5000);
-  };
+.event-form-registration .event-form-button {
+  background: #000;
+}
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
+.event-form-card-side {
+  width: 50%;
+  min-height: 650px;
+  box-sizing: border-box;
+}
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+.event-form-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 30px;
+  box-sizing: border-box;
+}
 
-    const data = {
-      eventName: formData.eventName,
-      eventDescription: formData.eventDescription,
-      eventDate: formData.eventDate,
-      eventTime: formData.eventTime,
-      eventLocation: formData.eventLocation,
-      maxParticipants: parseInt(formData.maxParticipants) || null,
-      maxVolunteers: parseInt(formData.maxVolunteers) || null,
-      OrgCid: parseInt(formData.OrgCid) || null,
-      registrationFee: parseFloat(formData.registrationFee) || 0,
-      isTeamEvent: formData.isTeamEvent,
-      minTeamSize: formData.isTeamEvent ? (parseInt(formData.minTeamSize) || null) : null,
-      maxTeamSize: formData.isTeamEvent ? (parseInt(formData.maxTeamSize) || null) : null
-    };
+.event-form-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 380px;
+}
 
-    // Validation
-    if (!data.eventName || !data.eventDescription || !data.eventDate || !data.eventTime || !data.eventLocation || !data.OrgCid) {
-      showMessage('Please fill in all required fields.', true);
-      return;
-    }
+.event-form-card {
+  display: flex;
+}
 
-    if (data.OrgCid <= 0) {
-      showMessage('Club ID must be a positive number.', true);
-      return;
-    }
+/* ==============================================================
+   DESKTOP HEADER - ORIGINAL
+   ============================================================== */
+.event-form-left {
+  background: radial-gradient(circle farthest-corner, #00a578 40%, transparent 0) no-repeat;
+  background-position: 140px 170px;
+}
 
-    const eventDate = new Date(data.eventDate);
-    const currentDate = new Date();
-    if (eventDate <= currentDate) {
-      showMessage('Event date must be in the future.', true);
-      return;
-    }
+.event-form-logo-text {
+  font-family: 'VT323', monospace;
+  font-size: 130px;
+  color: #00a578;
+  mix-blend-mode: difference;
+  margin: 220px 0 0 90px;
+  line-height: 82%;
+}
 
-    if (data.isTeamEvent) {
-      if (!data.minTeamSize || !data.maxTeamSize) {
-        showMessage('Please specify minimum and maximum team size for team events.', true);
-        return;
-      }
-      if (data.minTeamSize < 2) {
-        showMessage('Minimum team size must be at least 2.', true);
-        return;
-      }
-      if (data.maxTeamSize < data.minTeamSize) {
-        showMessage('Maximum team size must be >= minimum team size.', true);
-        return;
-      }
-    }
+/* Hide mobile header on desktop */
+.event-form-mobile-header {
+  display: none;
+}
 
-    try {
-      // EDITED: Using API_BASE_URL
-      const res = await fetch(`${API_BASE_URL}/api/events/create`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+/* ==============================================================
+   INPUTS, BUTTONS, CHECKBOX
+   ============================================================== */
+.event-form-input,
+.event-form-textarea {
+  border: none;
+  border-bottom: 1px solid black;
+  margin-bottom: 22px;
+  padding: 8px 5px;
+  font-family: 'Libre Franklin', sans-serif;
+  box-sizing: border-box;
+  font-size: 15px;
+}
 
-      const result = await res.json();
+.event-form-textarea {
+  resize: vertical;
+  font-size: 14px;
+}
 
-      if (res.ok) {
-        showMessage('Event created successfully!');
-        setFormData({
-          eventName: '', eventDescription: '', eventDate: '', eventTime: '',
-          eventLocation: '', maxParticipants: '', maxVolunteers: '', OrgCid: '',
-          registrationFee: '', isTeamEvent: false, minTeamSize: '', maxTeamSize: ''
-        });
-        setTimeout(() => navigate('/organisers'), 2000);
-      } else {
-        if (res.status === 401) {
-          showMessage('Please sign in to create an event.', true);
-          setTimeout(() => navigate('/'), 2000);
-        } else {
-          showMessage(`Failed to create event: ${result.error}`, true);
-        }
-      }
-    } catch (err) {
-      showMessage(`Error: ${err.message}`, true);
-    }
-  };
+.event-form-input:focus,
+.event-form-textarea:focus {
+  outline-color: black;
+}
 
-  return (
-    <div className="event-form-container">
-      {message.show && (
-        <div className={`event-form-message ${message.isError ? 'event-form-message-error' : 'event-form-message-success'}`}>
-          {message.text}
-        </div>
-      )}
-      
-      <div className="event-form-wrap event-form-registration">
-        <div className="event-form-card">
+.event-form-button {
+  background: #00a578;
+  color: white;
+  border: none;
+  padding: 12px;
+  cursor: alias;
+  box-shadow: 0 3px 0 1px rgba(0, 165, 120, 0.47);
+  font-family: 'Libre Franklin', sans-serif;
+  font-size: 17px;
+  font-weight: bold;
+  box-sizing: border-box;
+  margin-top: 10px;
+}
 
-          {/* DESKTOP HEADER - UNTOUCHED */}
-          <div className="event-form-card-side event-form-left event-form-desktop-header">
-            <div className="event-form-logo-text" data-text="Hey Organisers">
-              Hey Organisers
-            </div>
-          </div>
+.event-form-button:hover {
+  box-shadow: none;
+  transform: translateY(3px);
+  transition: all 0.1s linear;
+}
 
-          {/* MOBILE NEON HEADER - HIDDEN ON DESKTOP */}
-          <div className="event-form-card-side event-form-left event-form-mobile-header">
-            <div className="event-form-left-header">
-              <div className="event-form-glow-text">
-                <span className="event-form-neon">Hey</span>
-                <span className="event-form-neon event-form-neon-alt">Organisers</span>
-              </div>
-              <div className="event-form-underline"></div>
-            </div>
-          </div>
+.event-form-button:focus {
+  outline-color: #fb5b87;
+}
 
-          {/* FORM */}
-          <div className="event-form-card-side event-form-right">
-            <h2 className="event-form-title">Organize an Event</h2>
-            <form className="event-form-form" onSubmit={handleSubmit}>
-              <input className="event-form-input" type="text" name="eventName" placeholder="Event Name" value={formData.eventName} onChange={handleChange} required />
-              <textarea className="event-form-textarea" name="eventDescription" placeholder="Description" value={formData.eventDescription} onChange={handleChange} rows="3" required />
-              <input className="event-form-input" type="date" name="eventDate" value={formData.eventDate} onChange={handleChange} required />
-              <input className="event-form-input" type="time" name="eventTime" value={formData.eventTime} onChange={handleChange} required />
-              <input className="event-form-input" type="text" name="eventLocation" placeholder="Location" value={formData.eventLocation} onChange={handleChange} required />
+.event-form-title {
+  font-size: 34px;
+  margin-bottom: 20px;
+  font-family: 'Libre Franklin', sans-serif;
+}
 
-              <div className="event-form-checkbox-group">
-                <label className="event-form-checkbox-label">
-                  <input type="checkbox" name="isTeamEvent" checked={formData.isTeamEvent} onChange={handleChange} className="event-form-checkbox" />
-                  <span className="event-form-checkbox-text">Team Event</span>
-                </label>
-              </div>
+.event-form-checkbox-group {
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+}
 
-              <input
-                className="event-form-input"
-                type="number"
-                name="maxParticipants"
-                placeholder={formData.isTeamEvent ? "Max Teams" : "Max Participants"}
-                value={formData.maxParticipants}
-                onChange={handleChange}
-                min="1"
-              />
+.event-form-checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  font-family: 'Libre Franklin', sans-serif;
+}
 
-              {formData.isTeamEvent && (
-                <>
-                  <input className="event-form-input" type="number" name="minTeamSize" placeholder="Minimum Team Size" value={formData.minTeamSize} onChange={handleChange} min="2" required />
-                  <input className="event-form-input" type="number" name="maxTeamSize" placeholder="Maximum Team Size" value={formData.maxTeamSize} onChange={handleChange} min="2" required />
-                </>
-              )}
+.event-form-checkbox {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  cursor: pointer;
+  accent-color: #00a578;
+}
 
-              <input className="event-form-input" type="number" name="maxVolunteers" placeholder="Max Volunteers" value={formData.maxVolunteers} onChange={handleChange} min="1" />
-              <input className="event-form-input" type="number" name="OrgCid" placeholder="Club ID" value={formData.OrgCid} onChange={handleChange} min="1" required />
-              <input className="event-form-input" type="number" name="registrationFee" placeholder="Registration Fee" value={formData.registrationFee} onChange={handleChange} step="0.01" min="0" required />
-              
-              <button className="event-form-button" type="submit">Create Event</button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+.event-form-checkbox-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: black;
+}
 
-export default EventForm;
+.event-form-checkbox:checked + .event-form-checkbox-text {
+  color: #00a578;
+}
+
+@keyframes event-form-open {
+  0% { background: black; }
+  100% { }
+}
+
+/* Message Popup */
+.event-form-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 5px;
+  color: white;
+  font-weight: normal;
+  z-index: 1000;
+  animation: event-form-slideIn 0.3s ease-in-out;
+  font-family: 'Libre Franklin', sans-serif;
+}
+
+.event-form-message-success { background-color: rgb(114, 221, 158); }
+.event-form-message-error { background-color: rgb(225, 108, 95); }
+
+@keyframes event-form-slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ==============================================================
+   MOBILE: CLEAN & MINIMAL HEADER
+   ============================================================== */
+@media screen and (max-width: 900px) {
+  .event-form-container { padding: 0; overflow: hidden; }
+
+  .event-form-wrap {
+    width: 100vw; height: 100vh; max-width: none; margin: 0;
+    border-radius: 0; box-shadow: none;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  .event-form-card { flex-direction: column; height: 100%; }
+
+  /* Hide desktop header */
+  .event-form-desktop-header { display: none !important; }
+
+  /* Show mobile header */
+  .event-form-mobile-header {
+    display: flex; width: 100%; min-height: 180px; height: 180px;
+    align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    position: relative; overflow: hidden;
+    border-bottom: 3px solid rgba(0, 165, 120, 0.4);
+  }
+
+  /* Subtle background pulse */
+  .event-form-mobile-header::before {
+    content: '';
+    position: absolute; top: 50%; left: 50%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(0, 165, 120, 0.12) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    animation: event-form-aurora 9s ease-in-out infinite;
+    z-index: 0; opacity: 0.5;
+  }
+
+  /* Tiny floating dot */
+  .event-form-mobile-header::after {
+    content: '';
+    position: absolute; width: 5px; height: 5px;
+    background: #00a578; border-radius: 50%;
+    box-shadow: 0 0 6px #00a578;
+    animation: event-form-particle 11s linear infinite;
+    z-index: 1;
+  }
+
+  .event-form-left-header {
+    position: relative; z-index: 2; text-align: center; padding: 0 1rem;
+  }
+
+  .event-form-glow-text {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2px; font-family: 'Libre Franklin', sans-serif;
+    font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase;
+    line-height: 1;
+  }
+
+  /* NO GLOW, NO FLICKER */
+  .event-form-neon,
+  .event-form-neon-alt {
+    font-size: 36px; color: #ffffff; text-shadow: none;
+    position: relative;
+  }
+
+  .event-form-neon-alt {
+    font-size: 32px; color: #00ffc3;
+  }
+
+  /* Soft shine sweep only */
+  .event-form-glow-text::before {
+    content: '';
+    position: absolute; top: -15px; left: -100%;
+    width: 50px; height: 100px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+    transform: skewX(-20deg);
+    animation: event-form-shine 5s ease-in-out infinite;
+    z-index: 3;
+  }
+
+  /* No underline */
+  .event-form-underline { display: none !important; }
+
+  /* Form */
+  .event-form-card-side.event-form-right {
+    flex: 1; width: 100%; min-height: auto;
+    padding: 2.5rem 1.8rem 1.5rem; background: white;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+
+  .event-form-title {
+    font-size: clamp(28px, 6.5vw, 34px); margin-bottom: 2rem;
+    font-weight: 700; text-align: center; color: #000;
+    display: block;
+  }
+
+  .event-form-form { max-width: 100%; gap: 1.4rem; padding-bottom: 100px; }
+
+  .event-form-input,
+  .event-form-textarea {
+    font-size: 16px; padding: 14px 8px;
+    border: none; border-bottom: 2px solid #e0e0e0;
+    transition: border-color .3s; background: transparent;
+    border-radius: 0; color: #000;
+  }
+
+  .event-form-input::placeholder,
+  .event-form-textarea::placeholder {
+    color: #999;
+    opacity: 1;
+  }
+
+  .event-form-input:focus,
+  .event-form-textarea:focus { border-bottom-color: #00a578; }
+
+  .event-form-textarea { min-height: 90px; }
+
+  .event-form-button {
+    position: fixed; bottom: 20px; left: 50%;
+    transform: translateX(-50%); width: calc(100% - 36px);
+    background: #00a578; color: white; padding: 16px;
+    font-size: 18px; font-weight: bold;
+    box-shadow: 0 4px 0 0 rgba(0,165,120,.6); z-index: 1000;
+  }
+
+  .event-form-button:hover,
+  .event-form-button:active {
+    transform: translateX(-50%) translateY(3px);
+    box-shadow: none;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .event-form-mobile-header { min-height: 160px; height: 160px; }
+  .event-form-neon { font-size: 30px; }
+  .event-form-neon-alt { font-size: 28px; }
+  .event-form-card-side.event-form-right { padding: 2rem 1.4rem 1.4rem; }
+  .event-form-button { bottom: 16px; width: calc(100% - 32px); }
+}
+
+/* ==============================================================
+   ANIMATIONS – only shine, aurora, particle
+   ============================================================== */
+@keyframes event-form-aurora {
+  0%,100% { transform: translate(-50%,-50%) scale(.9); opacity:.45; }
+  50%     { transform: translate(-48%,-52%) scale(1.1); opacity:.65; }
+}
+
+@keyframes event-form-particle {
+  0%   { transform: translate(-120px,-80px); opacity:0; }
+  15%  { opacity:1; }
+  85%  { opacity:1; }
+  100% { transform: translate(calc(100vw + 80px),80px); opacity:0; }
+}
+
+@keyframes event-form-shine {
+  0%   { left:-100%; opacity:0; }
+  20%  { opacity:.35; }
+  40%  { left:100%; opacity:0; }
+  100% { left:100%; opacity:0; }
+}
