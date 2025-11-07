@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './volunteer_events.css';
 
+// Get the base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function VolunteerEvents() {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
@@ -41,7 +44,8 @@ export default function VolunteerEvents() {
   const fetchEvents = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:3000/api/events', {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/events`, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -82,7 +86,8 @@ export default function VolunteerEvents() {
       // Fetch volunteer counts in parallel and update as they come in
       uniqueEvents.forEach(async (event, index) => {
         try {
-          const countResponse = await fetch(`http://localhost:3000/api/events/${event.eid}/volunteer-count`, {
+          // EDITED: Using API_BASE_URL
+          const countResponse = await fetch(`${API_BASE_URL}/api/events/${event.eid}/volunteer-count`, {
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' }
           });
@@ -134,7 +139,8 @@ export default function VolunteerEvents() {
     setTimeout(() => ripple.remove(), 600);
 
     try {
-      const response = await fetch(`http://localhost:3000/api/events/${eventId}/volunteer`, {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/volunteer`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
