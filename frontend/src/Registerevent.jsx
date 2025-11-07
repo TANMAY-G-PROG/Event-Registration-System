@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import "./registerevent.css"
 
+// Get the base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 function formatTime12h(timeString) {
   if (!timeString) return "Time TBA"
   const [hours, minutes] = String(timeString).split(":")
@@ -49,7 +52,8 @@ export default function Registerevent() {
     try {
       setLoading(true)
       setError("")
-      const response = await fetch("http://localhost:3000/api/events", { 
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/events`, { 
         method: "GET",
         credentials: "include",
         headers: {
@@ -82,7 +86,8 @@ export default function Registerevent() {
 
   async function loadTeamStatus(eventId) {
     try {
-      const response = await fetch(`http://localhost:3000/api/events/${eventId}/team-status`, {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/team-status`, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -143,7 +148,8 @@ export default function Registerevent() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/api/events/${eventId}/join`, {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/join`, {
         method: "POST",
         credentials: "include",
         headers: { 
@@ -183,7 +189,8 @@ export default function Registerevent() {
 
       const validUSNs = memberUSNs.filter(usn => usn.trim() !== '')
 
-      const response = await fetch(`http://localhost:3000/api/events/${eventId}/create-team`, {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/create-team`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -221,7 +228,8 @@ export default function Registerevent() {
 
   async function handleViewInvites(eventId) {
     try {
-      const response = await fetch(`http://localhost:3000/api/events/${eventId}/my-invites`, {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/my-invites`, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -250,7 +258,8 @@ export default function Registerevent() {
 
   async function handleConfirmJoin(teamId, eventId) {
     try {
-      const response = await fetch(`http://localhost:3000/api/teams/${teamId}/confirm-join`, {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/teams/${teamId}/confirm-join`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -284,7 +293,8 @@ export default function Registerevent() {
 
   async function handleRegisterTeam(eventId, hasFee) {
     try {
-      const response = await fetch(`http://localhost:3000/api/events/${eventId}/register-team`, {
+      // EDITED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/register-team`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -347,7 +357,8 @@ export default function Registerevent() {
     try {
       showFlash('success', 'Preparing payment...')
 
-      const resp = await fetch('http://localhost:3000/api/create-order', {
+      // EDITED: Using API_BASE_URL
+      const resp = await fetch(`${API_BASE_URL}/api/create-order`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -382,7 +393,8 @@ export default function Registerevent() {
         order_id: order.id,
         handler: async function (response) {
           try {
-            const verifyResp = await fetch('http://localhost:3000/api/verify-payment', {
+            // EDITED: Using API_BASE_URL
+            const verifyResp = await fetch(`${API_BASE_URL}/api/verify-payment`, {
               method: 'POST',
               credentials: 'include',
               headers: { 'Content-Type': 'application/json' },
