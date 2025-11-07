@@ -16,52 +16,71 @@ const razorpayInstance = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- PRODUCTION/DEVELOPMENT SETTINGS ---
-// This helps us know if we are on Render (production) or local
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-// --- NEW (Render Deployment): Trust the proxy ---
-// This is required for secure cookies to work behind Render's proxy
+// --- CRITICAL FIX: Trust the proxy BEFORE any middleware ---
 if (IS_PRODUCTION) {
     app.set('trust proxy', 1);
 }
 
-// --- EDITED (Render Deployment): Dynamic CORS Origin ---
-// Read the frontend URL from environment variables
+// --- CRITICAL FIX: Enhanced CORS Configuration ---
 app.use(cors({
-  origin: process.env.FRONTEND_URL, // Uses the URL from your .env
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Be permissive in production, log the origin
+      console.log('⚠️ Request from origin:', origin);
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['set-cookie']
+  exposedHeaders: ['set-cookie'],
+  maxAge: 86400 // 24 hours
 }));
 
+// Handle preflight requests
+app.options('*', cors());
 
 app.use(express.json());
 
+// --- CRITICAL FIX: Session Store with MemoryStore (for production, use Redis) ---
+const MemoryStore = require('memorystore')(session);
 
-// --- EDITED (Render Deployment): Secure Session ---
 app.use(session({
-    // NEW: Use a secret from environment variables
-    secret: process.env.SESSION_SECRET, 
+    store: new MemoryStore({
+        checkPeriod: 86400000 // prune expired entries every 24h
+    }),
+    secret: process.env.SESSION_SECRET || 'your-secret-key-here-change-in-production',
     resave: false,
     saveUninitialized: false,
-    name: 'sessionId',
+    name: 'epass.sid', // Custom name
     cookie: {
-        // NEW: Set cookies to 'secure' and 'none' in production
-        secure: IS_PRODUCTION, // true in production
+        secure: IS_PRODUCTION, // true in production (HTTPS)
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: IS_PRODUCTION ? 'none' : 'lax', // 'none' for cross-site, 'lax' for local
-        path: '/'
-    }
+        sameSite: IS_PRODUCTION ? 'none' : 'lax', // 'none' for cross-site
+        path: '/',
+        domain: IS_PRODUCTION ? undefined : undefined // Let browser set it
+    },
+    rolling: true // Reset cookie expiration on every request
 }));
 
-// STEP 4: Debug middleware to log all requests
+// Debug middleware
 app.use((req, res, next) => {
     console.log(`\n📝 ${req.method} ${req.url}`);
     console.log('📋 Session ID:', req.sessionID);
@@ -82,18 +101,17 @@ async function testSupabaseConnection() {
 }
 testSupabaseConnection();
 
-// ADDED: Configure Gmail transporter
+// Configure Gmail transporter
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
-  secure: false, // false for TLS over port 587
+  secure: false,
   auth: {
     user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD // Must be an App Password
+    pass: process.env.GMAIL_APP_PASSWORD
   }
 });
 
-// ADDED: Verify email configuration on startup
 transporter.verify((error, success) => {
     if (error) {
         console.error('❌ Email configuration error:', error);
@@ -109,15 +127,18 @@ if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
     console.log('✅ Razorpay initialized successfully');
 }
 
-// Middleware to check if user is authenticated
+// --- CRITICAL FIX: Enhanced auth middleware ---
 function requireAuth(req, res, next) {
     console.log('🔒 Auth check - Session USN:', req.session.userUSN);
+    console.log('🔒 Session ID:', req.sessionID);
+    console.log('🔒 Session:', JSON.stringify(req.session));
+    
     if (req.session.userUSN) {
         console.log('✅ User authenticated:', req.session.userUSN);
         next();
     } else {
         console.log('❌ User NOT authenticated - sending 401');
-        res.status(401).json({ error: 'Please sign in first' });
+        res.status(401).json({ error: 'Please sign in first', authenticated: false });
     }
 }
 
@@ -186,7 +207,8 @@ app.post('/api/signup', async (req, res) => {
                 success: true,
                 message: 'Student registered successfully!', 
                 userUSN: usn,
-                userName: name
+                userName: name,
+                authenticated: true
             });
         });
     } catch (err) {
@@ -244,7 +266,8 @@ app.post('/api/signin', async (req, res) => {
                 success: true, 
                 message: 'Signed in successfully',
                 userUSN: student.usn,
-                userName: student.sname
+                userName: student.sname,
+                authenticated: true
             });
         });
     } catch (err) {
@@ -253,7 +276,7 @@ app.post('/api/signin', async (req, res) => {
     }
 });
 
-// Get current user info
+// --- CRITICAL FIX: Enhanced /api/me endpoint ---
 app.get('/api/me', requireAuth, async (req, res) => {
     try {
         const { data: rows, error } = await supabase
@@ -264,15 +287,16 @@ app.get('/api/me', requireAuth, async (req, res) => {
         
         if (error) {
             console.error('Error fetching user info:', error);
-            return res.status(500).json({ error: 'Database error' });
+            return res.status(500).json({ error: 'Database error', authenticated: false });
         }
         
         if (!rows || rows.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: 'User not found', authenticated: false });
         }
         
         const student = rows[0];
         res.json({
+            authenticated: true,
             userUSN: student.usn,
             userName: student.sname,
             semester: student.sem,
@@ -281,7 +305,7 @@ app.get('/api/me', requireAuth, async (req, res) => {
         });
     } catch (err) {
         console.error('Error fetching user info:', err);
-        res.status(500).json({ error: 'Error fetching user info' });
+        res.status(500).json({ error: 'Error fetching user info', authenticated: false });
     }
 });
 
@@ -293,6 +317,7 @@ app.post('/api/signout', (req, res) => {
             console.error('❌ Session destroy error:', err);
             return res.status(500).json({ error: 'Could not sign out' });
         }
+        res.clearCookie('epass.sid');
         console.log('✅ User signed out:', userUSN);
         res.json({ success: true, message: 'Signed out successfully' });
     });
