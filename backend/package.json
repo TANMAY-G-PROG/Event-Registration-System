@@ -19,7 +19,7 @@
     "express": "^5.1.0",
     "memorystore": "^1.6.7",
     "express-session": "^1.18.1",
-    "nodemailer": "^7.0.10",
+    "@sendgrid/mail": "^7.7.0"
     "razorpay": "^2.9.6"
   }
 }
