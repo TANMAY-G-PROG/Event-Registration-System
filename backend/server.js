@@ -85,17 +85,15 @@ testSupabaseConnection();
 // ADDED: Configure Gmail transporter
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
+  port: 465,  // CHANGED from 587 to 465
+  secure: true,  // CHANGED from false to true (use SSL)
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD
   },
   tls: {
-    rejectUnauthorized: false // Add this for Render
-  },
-  logger: true, // Enable logging
-  debug: true   // Enable debug output
+    rejectUnauthorized: false
+  }
 });
 
 // ADDED: Verify email configuration on startup
