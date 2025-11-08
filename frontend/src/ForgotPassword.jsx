@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './style.css';
 
+// Use environment variable for API URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -31,17 +34,18 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/api/forgot-password', {
+      const response = await fetch(`${API_BASE_URL}/api/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Important for cookies
         body: JSON.stringify({ email })
       });
 
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
         showMessage(data.message || 'Password reset link sent! Check your email.');
         setEmail('');
         
@@ -54,7 +58,7 @@ export default function ForgotPassword() {
       }
     } catch (error) {
       console.error('Forgot password error:', error);
-      showMessage('Network error. Please try again.', true);
+      showMessage('Network error. Please check your connection and try again.', true);
     } finally {
       setLoading(false);
     }
@@ -97,6 +101,7 @@ export default function ForgotPassword() {
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
               style={{ width: '100%' }}
+              autoComplete="email"
             />
             
             <button 
@@ -110,6 +115,7 @@ export default function ForgotPassword() {
             <button 
               type="button"
               onClick={() => navigate('/')}
+              disabled={loading}
               style={{
                 background: 'transparent',
                 color: '#1A2980',
