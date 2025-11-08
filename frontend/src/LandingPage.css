@@ -219,7 +219,7 @@
   border-radius: 5rem;
 }
 
-strong {
+.btn strong {
   z-index: 2;
   font-family: "Avalors Personal Use";
   font-size: 12px;
@@ -359,3 +359,4 @@ strong {
   }
 
 }
+
