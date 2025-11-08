@@ -96,27 +96,19 @@ export default function Login() {
 
       });
 
-
+      
 
       if (response.ok) {
 
         const data = await response.json();
 
-        // Only redirect if we're actually on the login page (path is '/')
+        showMessage(`Already logged in as ${data.userName}. Redirecting...`);
 
-        // Don't redirect if user is on other pages and they reload
+        setTimeout(() => {
 
-        if (window.location.pathname === '/' || window.location.pathname === '') {
+          navigate('/events');
 
-          showMessage(`Already logged in as ${data.userName}. Redirecting...`);
-
-          setTimeout(() => {
-
-            navigate('/events');
-
-          }, 1500);
-
-        }
+        }, 1500);
 
       }
 
