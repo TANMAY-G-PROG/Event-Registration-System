@@ -86,11 +86,16 @@ testSupabaseConnection();
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
-  secure: false, // false for TLS over port 587
+  secure: false,
   auth: {
     user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD // Must be an App Password
-  }
+    pass: process.env.GMAIL_APP_PASSWORD
+  },
+  tls: {
+    rejectUnauthorized: false // Add this for Render
+  },
+  logger: true, // Enable logging
+  debug: true   // Enable debug output
 });
 
 // ADDED: Verify email configuration on startup
