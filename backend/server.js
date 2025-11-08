@@ -5,7 +5,8 @@ const supabase = require('./lib/supabase');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
-const nodemailer = require('nodemailer');
+// --- 1. REMOVED nodemailer ---
+const sgMail = require('@sendgrid/mail'); // --- 2. ADDED @sendgrid/mail ---
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const ExcelJS = require('exceljs');
@@ -21,17 +22,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- PRODUCTION/DEVELOPMENT SETTINGS ---
-// This helps us know if we are on Render (production) or local
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // --- NEW (Render Deployment): Trust the proxy ---
-// This is required for secure cookies to work behind Render's proxy
 if (IS_PRODUCTION) {
     app.set('trust proxy', 1);
 }
 
 // --- EDITED (Render Deployment): Dynamic CORS Origin ---
-// Read the frontend URL from environment variables
 app.use(cors({
   origin: process.env.FRONTEND_URL, // Uses the URL from your .env
   credentials: true,
@@ -46,13 +44,11 @@ app.use(express.json());
 
 // --- EDITED (Render Deployment): Secure Session ---
 app.use(session({
-    // NEW: Use a secret from environment variables
     secret: process.env.SESSION_SECRET, 
     resave: false,
     saveUninitialized: false,
     name: 'sessionId',
     cookie: {
-        // NEW: Set cookies to 'secure' and 'none' in production
         secure: IS_PRODUCTION, // true in production
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
@@ -82,26 +78,13 @@ async function testSupabaseConnection() {
 }
 testSupabaseConnection();
 
-// ADDED: Configure Gmail transporter
-// Around line 60 - REPLACE your current transporter
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD
-  },
-  logger: true,
-  debug: true
-});
-
-// ADDED: Verify email configuration on startup
-transporter.verify((error, success) => {
-    if (error) {
-        console.error('❌ Email configuration error:', error);
-    } else {
-        console.log('✅ Email server is ready');
-    }
-});
+// --- 3. REPLACED nodemailer config with SendGrid config ---
+if (process.env.SENDGRID_API_KEY) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    console.log('✅ SendGrid email configured.');
+} else {
+    console.error('❌ SENDGRID_API_KEY not found. Email will not work.');
+}
 
 // Verify Razorpay configuration
 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
@@ -550,14 +533,13 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
         }
         
         // Prepare event data
-        // CRITICAL: For team events, maxpart represents max TEAMS, not individuals
         const eventData = {
             ename: eventName,
             eventdesc: eventDescription,
             eventdate: eventDate,
             eventtime: eventTime,
             eventloc: eventLocation,
-            maxpart: maxParticipants || null, // Now represents max teams for team events
+            maxpart: maxParticipants || null,
             maxvoln: maxVolunteers || null,
             regfee: registrationFee || 0,
             orgusn: req.session.userUSN,
@@ -862,8 +844,8 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
     } catch (err) {
         console.error('Error fetching event details:', err);
         res.status(500).json({
-
-error: 'Error fetching event details: ' + err.message });
+            error: 'Error fetching event details: ' + err.message 
+        });
     }
 });
 
@@ -1066,7 +1048,6 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
 });
 
 // OLD scan-qr endpoint (DEPRECATED - kept for backward compatibility)
-// You can remove this if you want, as the new endpoints replace it
 app.get('/api/scan-qr', async (req, res) => {
     try {
         const { usn, eid } = req.query;
@@ -1115,7 +1096,7 @@ app.get('/api/scan-qr', async (req, res) => {
 
 
 // ==================================================
-// ADDED FORGOT/RESET PASSWORD ROUTES
+// --- 4. REPLACED FORGOT/RESET PASSWORD ROUTES ---
 // ==================================================
 
 // Forgot Password - Send reset email
@@ -1126,6 +1107,7 @@ app.post('/api/forgot-password', async (req, res) => {
         if (!email) {
             return res.status(400).json({ error: 'Email is required' });
         }
+
         // Check if user exists
         const { data: user, error: userError } = await supabase
             .from('student')
@@ -1137,6 +1119,7 @@ app.post('/api/forgot-password', async (req, res) => {
             console.error('Error finding user:', userError);
             return res.status(500).json({ error: 'Database error' });
         }
+
         // Always return success (don't reveal if email exists for security)
         if (!user || user.length === 0) {
             console.log('Password reset requested for non-existent email:', email);
@@ -1145,9 +1128,11 @@ app.post('/api/forgot-password', async (req, res) => {
                 message: 'If an account exists with this email, you will receive a password reset link.'
             });
         }
+
         // Generate secure reset token
         const resetToken = crypto.randomBytes(32).toString('hex');
         const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
         // Save token to database
         const { error: updateError } = await supabase
             .from('student')
@@ -1161,11 +1146,19 @@ app.post('/api/forgot-password', async (req, res) => {
             console.error('Error saving reset token:', updateError);
             return res.status(500).json({ error: 'Failed to generate reset link' });
         }
+
         // Create reset link
         const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-        // Send email
+        const fromEmail = process.env.SENDGRID_FROM_EMAIL; // Use SendGrid 'from' email
+
+        if (!fromEmail) {
+            console.error('❌ SENDGRID_FROM_EMAIL is not set. Cannot send email.');
+            return res.status(500).json({ error: 'Email server not configured.' });
+        }
+        
+        // Send email using SendGrid
         const mailOptions = {
-            from: `"E-Pass Event System" <${process.env.GMAIL_USER}>`,
+            from: `"E-Pass Event System" <${fromEmail}>`, // Must be your verified SendGrid sender
             to: email,
             subject: 'Password Reset Request - E-Pass',
             html: `
@@ -1217,14 +1210,20 @@ app.post('/api/forgot-password', async (req, res) => {
                 </html>
             `
         };
-        await transporter.sendMail(mailOptions);
-        console.log('✅ Password reset email sent to:', email);
+
+        await sgMail.send(mailOptions);
+        
+        console.log('✅ Password reset email sent via SendGrid to:', email);
         res.json({
             success: true,
             message: 'If an account exists with this email, you will receive a password reset link.'
         });
+
     } catch (err) {
-        console.error('Error in forgot password:', err);
+        console.error('Error in forgot password (SendGrid):', err);
+        if (err.response) {
+             console.error('SendGrid error body:', err.response.body)
+        }
         res.status(500).json({ error: 'Failed to process password reset request' });
     }
 });
