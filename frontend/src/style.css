@@ -393,6 +393,33 @@
   background-color: #e0e0e0;
 }
 
+/* Added styles for password toggle */
+.login-page .password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Adjust input padding when inside the wrapper */
+.login-page .password-wrapper input {
+  padding-right: 45px; /* Make space for the icon */
+}
+
+.login-page .password-toggle-icon {
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #777;
+  transition: color 0.2s ease;
+}
+
+.login-page .password-toggle-icon:hover {
+  color: #333;
+}
+/* End of added styles */
+
+
 .login-page .form-container {
   position: absolute;
   top: 0;
@@ -796,6 +823,14 @@
   .login-page .container input {
     padding: 10px 12px;
     font-size: 13px;
+  }
+   
+  /* Adjust password icon position for smaller inputs */
+  .login-page .password-wrapper input {
+    padding-right: 40px; 
+  }
+  .login-page .password-toggle-icon {
+    right: 12px;
   }
 
   .login-page .container button {
