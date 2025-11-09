@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import "./registerevent.css"
 
+// Get the base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
 function formatTime12h(timeString) {
   if (!timeString) return "Time TBA"
   const [hours, minutes] = String(timeString).split(":")
@@ -21,7 +24,7 @@ export default function Registerevent() {
   const [error, setError] = useState("")
   const [filter, setFilter] = useState("all")
   const [flash, setFlash] = useState({ type: "", message: "" })
-  const [modalFlash, setModalFlash] = useState({ type: "", message: "" }) // NEW: Modal-specific flash
+  const [modalFlash, setModalFlash] = useState({ type: "", message: "" })
   const [teamStates, setTeamStates] = useState({})
   const [showTeamModal, setShowTeamModal] = useState(null)
   const [teamFormData, setTeamFormData] = useState({
@@ -29,9 +32,17 @@ export default function Registerevent() {
     memberUSNs: ['']
   })
   const [teamInvites, setTeamInvites] = useState([])
-  const [registeredEvents, setRegisteredEvents] = useState(new Set());
+  const [registeredEvents, setRegisteredEvents] = useState(new Set())
   const timerRef = useRef(null)
-  const modalTimerRef = useRef(null) // NEW: Separate timer for modal
+  const modalTimerRef = useRef(null)
+
+  // Debug log for API URL
+  useEffect(() => {
+    console.log('🔍 API_BASE_URL:', API_BASE_URL);
+    if (!API_BASE_URL) {
+      console.warn('⚠️ VITE_API_BASE_URL is not defined in environment variables');
+    }
+  }, [])
 
   function showFlash(type, message) {
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -39,7 +50,6 @@ export default function Registerevent() {
     timerRef.current = setTimeout(() => setFlash({ type: "", message: "" }), 4000)
   }
 
-  // NEW: Modal flash message handler
   function showModalFlash(type, message) {
     if (modalTimerRef.current) clearTimeout(modalTimerRef.current)
     setModalFlash({ type, message })
@@ -50,7 +60,11 @@ export default function Registerevent() {
     try {
       setLoading(true)
       setError("")
-      const response = await fetch("/api/events", { 
+      
+      const url = `${API_BASE_URL}/api/events`
+      console.log('🌐 Fetching events from:', url)
+      
+      const response = await fetch(url, { 
         method: "GET",
         credentials: "include",
         headers: {
@@ -58,16 +72,22 @@ export default function Registerevent() {
         }
       })
       
+      console.log('📡 Response status:', response.status)
+      
       if (response.status === 401) {
         navigate('/')
         return
       }
       
       if (!response.ok) {
+        const text = await response.text()
+        console.error('❌ Response error:', text)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       
       const data = await response.json()
+      console.log('✅ Events loaded successfully:', data)
+      
       setEventsData({
         upcoming: data?.events?.upcoming || [],
         ongoing: data?.events?.ongoing || [],
@@ -83,7 +103,10 @@ export default function Registerevent() {
 
   async function loadTeamStatus(eventId) {
     try {
-      const response = await fetch(`/api/events/${eventId}/team-status`, {
+      const url = `${API_BASE_URL}/api/events/${eventId}/team-status`
+      console.log('🔍 Loading team status from:', url)
+      
+      const response = await fetch(url, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -124,14 +147,20 @@ export default function Registerevent() {
 
   useEffect(() => {
     async function loadMyRegistrations() {
-      const res = await fetch('/api/my-participant-events', { credentials: 'include' });
-      const data = await res.json();
-      const eventIds = new Set(data.participantEvents.map(ev => ev.eid));
-      setRegisteredEvents(eventIds);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/my-participant-events`, { 
+          credentials: 'include' 
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        const eventIds = new Set(data.participantEvents.map(ev => ev.eid))
+        setRegisteredEvents(eventIds)
+      } catch (err) {
+        console.error('Error loading registrations:', err)
+      }
     }
-    loadMyRegistrations();
-  }, []);
-
+    loadMyRegistrations()
+  }, [])
 
   const allEvents = useMemo(() => {
     return [
@@ -155,7 +184,7 @@ export default function Registerevent() {
     }
 
     try {
-      const response = await fetch(`/api/events/${eventId}/join`, {
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/join`, {
         method: "POST",
         credentials: "include",
         headers: { 
@@ -176,7 +205,7 @@ export default function Registerevent() {
       }
       
       showFlash("success", data?.message || "Successfully registered for the event!")
-      setRegisteredEvents(prev => new Set(prev).add(eventId));
+      setRegisteredEvents(prev => new Set(prev).add(eventId))
       await loadEvents()
     } catch (err) {
       console.error("Registration error:", err)
@@ -196,7 +225,7 @@ export default function Registerevent() {
 
       const validUSNs = memberUSNs.filter(usn => usn.trim() !== '')
 
-      const response = await fetch(`/api/events/${eventId}/create-team`, {
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/create-team`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -234,7 +263,7 @@ export default function Registerevent() {
 
   async function handleViewInvites(eventId) {
     try {
-      const response = await fetch(`/api/events/${eventId}/my-invites`, {
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/my-invites`, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -263,7 +292,7 @@ export default function Registerevent() {
 
   async function handleConfirmJoin(teamId, eventId) {
     try {
-      const response = await fetch(`/api/teams/${teamId}/confirm-join`, {
+      const response = await fetch(`${API_BASE_URL}/api/teams/${teamId}/confirm-join`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -297,7 +326,7 @@ export default function Registerevent() {
 
   async function handleRegisterTeam(eventId, hasFee) {
     try {
-      const response = await fetch(`/api/events/${eventId}/register-team`, {
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/register-team`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -310,10 +339,9 @@ export default function Registerevent() {
         return
       }
 
-      // ✅ If team registration requires payment
       if (data.requiresPayment) {
         showFlash('success', 'Opening payment...')
-        await initiatePayment(eventId)   // use SAME payment flow
+        await initiatePayment(eventId)
         return
       }
 
@@ -325,7 +353,6 @@ export default function Registerevent() {
       showFlash('error', 'Error registering team')
     }
   }
-
 
   function addMemberField() {
     setTeamFormData(prev => ({
@@ -363,7 +390,7 @@ export default function Registerevent() {
     try {
       showFlash('success', 'Preparing payment...')
 
-      const resp = await fetch('/api/create-order', {
+      const resp = await fetch(`${API_BASE_URL}/api/create-order`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -398,7 +425,7 @@ export default function Registerevent() {
         order_id: order.id,
         handler: async function (response) {
           try {
-            const verifyResp = await fetch('/api/verify-payment', {
+            const verifyResp = await fetch(`${API_BASE_URL}/api/verify-payment`, {
               method: 'POST',
               credentials: 'include',
               headers: { 'Content-Type': 'application/json' },
@@ -417,14 +444,9 @@ export default function Registerevent() {
             }
 
             showFlash('success', verifyData?.message || 'Payment successful and registered!')
-            // ✅ Refresh UI state instantly (no reload needed)
-            setRegisteredEvents(prev => new Set(prev).add(eventId));
-
-            await loadEvents();
-            await loadTeamStatus(eventId); // safe call even for non-team events
-
-
+            setRegisteredEvents(prev => new Set(prev).add(eventId))
             await loadEvents()
+            await loadTeamStatus(eventId)
           } catch (err) {
             console.error('Verification error:', err)
             showFlash('error', 'Payment verification failed. Contact support.')
@@ -469,13 +491,12 @@ export default function Registerevent() {
     }
 
     if (!teamState.isTeamEvent) {
-
       if (registeredEvents.has(event.eid)) {
         return (
           <div className="registerevent-team-badge registerevent-badge-success">
             ✓ Registered
           </div>
-        );
+        )
       }
 
       return (
@@ -488,9 +509,8 @@ export default function Registerevent() {
           <span className="registerevent-btn-fill" />
           <span className="registerevent-btn-label">Register</span>
         </button>
-      );
+      )
     }
-
 
     if (teamState.registrationComplete) {
       return (
