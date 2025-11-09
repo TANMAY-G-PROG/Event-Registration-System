@@ -1342,7 +1342,6 @@ app.post('/api/create-order', requireAuth, async (req, res) => {
     }
 });
 
-// Verify Razorpay payment signature and register participant on success
 app.post('/api/verify-payment', requireAuth, async (req, res) => {
     try {
         const { razorpay_payment_id, razorpay_order_id, razorpay_signature, eventId } = req.body;
@@ -1395,6 +1394,50 @@ app.post('/api/verify-payment', requireAuth, async (req, res) => {
             status: 'success'
         }]);
 
+        // ✅ TEAM PAYMENT LOGIC
+        console.log("🔍 Checking if user is a team leader for paid team registration...")
+
+        const { data: team } = await supabase
+        .from('team')
+        .select('id')
+        .eq('leader_usn', userUSN)
+        .eq('event_id', eventId)
+        .eq('registration_complete', false)
+        .limit(1)
+
+        if (team && team.length > 0) {
+        const teamId = team[0].id
+        console.log(`✅ Team leader detected. Completing team registration for Team ID: ${teamId}`)
+
+        // Get joined members
+        const { data: members } = await supabase
+            .from('team_members')
+            .select('student_usn')
+            .eq('team_id', teamId)
+            .eq('join_status', true)
+
+        // Mark team registration complete
+        await supabase
+            .from('team')
+            .update({ registration_complete: true })
+            .eq('id', teamId)
+
+        // Insert all team participants
+        const teamParticipants = members.map(m => ({
+            partusn: m.student_usn,
+            parteid: eventId,
+            partstatus: false,
+            payment_status: 'completed',
+            team_id: teamId
+        }))
+
+        await supabase.from('participant').insert(teamParticipants)
+
+        console.log(`🎉 TEAM REGISTRATION COMPLETE: Team ${teamId} registered for event ${eventId}`)
+        return res.json({ success: true, message: 'Team payment verified and team registered!' })
+        }
+
+
         // Check if already registered
         const { data: existing, error: existingError } = await supabase
             .from('participant')
@@ -1441,6 +1484,8 @@ app.post('/api/verify-payment', requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Error verifying payment' });
     }
 });
+
+
 
 // ==================== TEAM EVENTS ENDPOINTS ====================
 
