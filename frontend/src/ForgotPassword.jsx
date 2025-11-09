@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './style.css';
 
-// Use environment variable for API URL
+// Use environment variable for API URL (from your new code)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 export default function ForgotPassword() {
@@ -34,17 +34,19 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
+      // Use the dynamic API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Important for cookies
+        credentials: 'include', // Added from your new code for cookies
         body: JSON.stringify({ email })
       });
 
       const data = await response.json();
 
+      // More robust check from your new code
       if (response.ok && data.success) {
         showMessage(data.message || 'Password reset link sent! Check your email.');
         setEmail('');
@@ -58,12 +60,15 @@ export default function ForgotPassword() {
       }
     } catch (error) {
       console.error('Forgot password error:', error);
+      // Improved error message from your new code
       showMessage('Network error. Please check your connection and try again.', true);
     } finally {
       setLoading(false);
     }
   };
 
+  // This JSX uses all your original CSS classes from './style.css'
+  // It avoids the inline styles from your deployed code, which is better.
   return (
     <div className="login-page">
       <link
@@ -77,20 +82,12 @@ export default function ForgotPassword() {
         </div>
       )}
 
-      <div className="container" style={{ width: '500px', minHeight: '400px' }}>
-        <div className="form-container" style={{ position: 'relative', width: '100%' }}>
-          <form onSubmit={handleSubmit} style={{
-            backgroundColor: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
-            padding: '40px',
-            height: '100%'
-          }}>
-            <i className="fa-solid fa-lock" style={{ fontSize: '48px', color: '#1A2980', marginBottom: '20px' }}></i>
-            <h1 style={{ marginBottom: '10px' }}>Forgot Password?</h1>
-            <p style={{ textAlign: 'center', marginBottom: '20px', color: '#666' }}>
+      <div className="container forgot-password-container">
+        <div className="form-container forgot-password-form">
+          <form onSubmit={handleSubmit}>
+            <i className="fa-solid fa-lock forgot-password-icon"></i>
+            <h1>Forgot Password?</h1>
+            <p className="forgot-password-description">
               Enter your email address and we'll send you a link to reset your password.
             </p>
             
@@ -100,14 +97,13 @@ export default function ForgotPassword() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-              style={{ width: '100%' }}
-              autoComplete="email"
+              autoComplete="email" // Added from your new code
             />
             
             <button 
               type="submit" 
               disabled={loading}
-              style={{ width: '100%', marginTop: '10px' }}
+              className="submit-button"
             >
               {loading ? 'Sending...' : 'Send Reset Link'}
             </button>
@@ -115,26 +111,13 @@ export default function ForgotPassword() {
             <button 
               type="button"
               onClick={() => navigate('/')}
-              disabled={loading}
-              style={{
-                background: 'transparent',
-                color: '#1A2980',
-                border: '1px solid #1A2980',
-                marginTop: '10px',
-                width: '100%'
-              }}
+              className="back-button"
+              disabled={loading} // Added from your new code
             >
               Back to Sign In
             </button>
             
-            <div style={{ 
-              marginTop: '20px', 
-              padding: '15px', 
-              backgroundColor: '#f0f9ff', 
-              borderLeft: '4px solid #1A2980',
-              borderRadius: '5px',
-              fontSize: '12px'
-            }}>
+            <div className="info-tip">
               <strong>💡 Tip:</strong> Use the email address you registered with (e.g., yourname@bmsce.ac.in)
             </div>
           </form>
