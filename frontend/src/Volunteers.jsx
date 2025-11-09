@@ -401,7 +401,7 @@ const Volunteers = () => {
         <button id="backBtn" className="logout-btn" onClick={handleBack}>
           <i className="fas fa-arrow-left"></i>
           Back
-        </E>
+        </button>
       </div>
 
       <section className="hero-section">
@@ -450,3 +450,4 @@ const Volunteers = () => {
 };
 
 export default Volunteers;
+
