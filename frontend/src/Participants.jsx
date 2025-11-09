@@ -4,14 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
-// --- (FIX) ADD THESE IMPORTS ---
-// This path assumes your 'assets' folder is at 'src/assets'
-// Adjust the path ('../assets/') if your Participants.jsx file is in a different subfolder
-import certificateTemplateUrl from './assets/certificate-template.pdf?url';
-import alluraFontUrl from './assets/Allura-Regular.ttf?url';
-import playfairFontUrl from './assets/PlayfairDisplay-MediumItalic.ttf?url';
-
-// Get the base URL from environment variables
+// Define the API base URL from Vite environment variables
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const Participants = () => {
@@ -32,6 +25,7 @@ const Participants = () => {
 
   const fetchUserInfo = async () => {
     try {
+      // UPDATED: Replaced localhost with API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/me`, {
         method: 'GET',
         credentials: 'include',
@@ -104,6 +98,7 @@ const Participants = () => {
 
   const fetchParticipantEvents = async () => {
     try {
+      // UPDATED: Replaced localhost with API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/my-participant-events`, {
         method: 'GET',
         credentials: 'include',
@@ -140,13 +135,11 @@ const Participants = () => {
         return;
       }
 
-      // --- (FIX) Use the imported variable from Vite ---
-      const templateUrl = certificateTemplateUrl;
-      
+      // Fetch the PDF template (This remains a root path, served by your frontend)
+      const templateUrl = '/certificate-template.pdf';
       const existingPdfBytes = await fetch(templateUrl).then(res => {
         if (!res.ok) {
-          // Updated error message to be more specific
-          throw new Error('Certificate template not found. Please ensure certificate-template.pdf is in the src/assets folder.');
+          throw new Error('Certificate template not found. Please ensure certificate-template.pdf is in the public folder.');
         }
         return res.arrayBuffer();
       });
@@ -165,16 +158,14 @@ const Participants = () => {
       // Try to embed Allura-Regular font for participant name
       let nameFont;
       try {
-        // --- (FIX) Use the imported variable from Vite ---
-        const fontUrl = alluraFontUrl;
-        
+        // This also remains a root path
+        const fontUrl = '/Allura-Regular.ttf'; // CHANGED
         const fontBytes = await fetch(fontUrl).then(res => {
           if (!res.ok) {
-            throw new Error('Allura-Regular.ttf font file not found in src/assets.');
+            throw new Error('Allura-Regular.ttf font file not found.'); // CHANGED
           }
           return res.arrayBuffer();
         });
-        console.log('Allura font loaded, byteLength:', fontBytes.byteLength);
         nameFont = await pdfDoc.embedFont(fontBytes);
       } catch (fontError) {
         console.warn('Could not load custom font, using TimesRomanBold as fallback:', fontError);
@@ -188,12 +179,11 @@ const Participants = () => {
       // Load Playfair Display font for description
       let descFont;
       try {
-        // --- (FIX) Use the imported variable from Vite ---
-        const descFontUrl = playfairFontUrl;
-        
+         // This also remains a root path
+        const descFontUrl = '/PlayfairDisplay-MediumItalic.ttf';
         const descFontBytes = await fetch(descFontUrl).then(res => {
           if (!res.ok) {
-            throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found in src/assets.');
+            throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found.');
           }
           return res.arrayBuffer();
         });
@@ -229,7 +219,7 @@ const Participants = () => {
         color: whiteColor,
       });
 
-      // Add event date
+      // **ADD EVENT DATE**
       const formattedDate = formatDate(event.eventDate);
       const dateSize = 16;
       const dateWidth = boldFont.widthOfTextAtSize(formattedDate, dateSize);
@@ -447,6 +437,3 @@ const Participants = () => {
 };
 
 export default Participants;
-
-
-
