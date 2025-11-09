@@ -44,17 +44,18 @@ app.use(express.json());
 
 // --- EDITED (Render Deployment): Secure Session ---
 app.use(session({
-    secret: process.env.SESSION_SECRET, 
-    resave: false,
-    saveUninitialized: false,
-    name: 'sessionId',
-    cookie: {
-        secure: IS_PRODUCTION, // true in production
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: IS_PRODUCTION ? 'none' : 'lax', // 'none' for cross-site, 'lax' for local
-        path: '/'
-    }
+    secret: process.env.SESSION_SECRET, 
+    resave: false,
+    saveUninitialized: false,
+    name: 'sessionId',
+    rolling: true, // <-- ADDED: Resets the 10-min timer on every request
+    cookie: {
+        secure: IS_PRODUCTION, // true in production
+        httpOnly: true,
+        maxAge: 10 * 60 * 1000, // <-- EDITED: 10 minutes
+        sameSite: IS_PRODUCTION ? 'none' : 'lax', // 'none' for cross-site, 'lax' for local
+        path: '/'
+    }
 }));
 
 // STEP 4: Debug middleware to log all requests
