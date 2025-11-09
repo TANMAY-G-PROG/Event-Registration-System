@@ -1,362 +1,731 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
 
-/* Scoped styles for login page only */
+/* Reset and base styles */
 .login-page {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Montserrat', sans-serif;
-    background: #00416A;
-    background: -webkit-linear-gradient(to right, #E4E5E6, #00416A);  
-    background: linear-gradient(to right, #E4E5E6, #00416A); 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    min-height: 100vh;
-    width: 100%;
-    position: absolute; 
-    top: 0;  
-    left: 0; 
-    right: 0; 
-    bottom: 0; 
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Montserrat', sans-serif;
+  background: linear-gradient(to right, #E4E5E6, #00416A);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  padding: 20px;
 }
 
 .login-page * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
-/* About Us and Contact Us Button Styles */
-
-.login-page .about-us-btn {
-    position: fixed;
-    top: -120px;
-    right:-570px;
-    z-index: 10001;
+/* Top Navigation Buttons Container */
+.login-page .top-nav-buttons {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 15px;
+  z-index: 10001;
 }
 
-.login-page .contact-us-btn {
-    position: fixed;
-    top: -166px;
-    right: -720px;
-    z-index: 10001;
+/* Navigation Button Styles */
+.login-page .nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border: none;
+  position: relative;
+  overflow: hidden;
+  border-radius: 50px;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  cursor: pointer;
+  color: #252525;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  font-size: 14px;
 }
 
-.login-page .button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 15px 30px;
-    border: 0;
-    position: relative;
-    overflow: hidden;
-    border-radius: 10rem;
-    transition: all 0.02s;
-    font-weight: bold;
-    cursor: pointer;
-    color: rgb(37, 37, 37);
-    z-index: 0;
-    box-shadow: 0 0px 7px -5px rgba(0, 0, 0, 0.5);
+.login-page .nav-button:hover {
+  background: rgb(193, 228, 248);
+  color: rgb(33, 0, 85);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
-.login-page .button:hover {
-    background: rgb(193, 228, 248);
-    color: rgb(33, 0, 85);
+.login-page .nav-button:active {
+  transform: translateY(0);
 }
 
-.login-page .button:active {
-    transform: scale(0.97);
+.login-page .hover-effect {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  pointer-events: none;
 }
 
-.login-page .hoverEffect {
-    position: absolute;
-    bottom: 0;
-    top: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1;
+.login-page .hover-effect div {
+  background: linear-gradient(
+    90deg,
+    rgba(222, 0, 75, 1) 0%,
+    rgba(191, 70, 255, 1) 49%,
+    rgba(0, 212, 255, 1) 100%
+  );
+  border-radius: 50%;
+  width: 150px;
+  height: 150px;
+  transition: 0.4s ease;
+  filter: blur(20px);
+  animation: rotate-effect 3s linear infinite;
+  opacity: 0.5;
 }
 
-.login-page .hoverEffect div {
-    background: rgb(222, 0, 75);
-    background: linear-gradient(
-        90deg,
-        rgba(222, 0, 75, 1) 0%,
-        rgba(191, 70, 255, 1) 49%,
-        rgba(0, 212, 255, 1) 100%
-    );
-    border-radius: 40rem;
-    width: 10rem;
-    height: 10rem;
-    transition: 0.4s;
-    filter: blur(20px);
-    animation: effect infinite 3s linear;
-    opacity: 0.5;
-}
-
-.login-page .button:hover .hoverEffect div {
-    width: 8rem;
-    height: 8rem;
+.login-page .nav-button:hover .hover-effect div {
+  width: 120px;
+  height: 120px;
 }
 
 .login-page .button-text {
-    position: relative;
-    z-index: 2;
+  position: relative;
+  z-index: 2;
 }
 
-@keyframes effect {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
+@keyframes rotate-effect {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
-.login-page .container{
-    background-color: #fff;
-    border-radius: 30px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);
-    position: relative;
-    overflow: hidden;
-    width: 768px;
-    max-width: 100%;
-    min-height: 480px;
+/* Main Container */
+.login-page .container {
+  background-color: #fff;
+  border-radius: 30px;
+  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+  width: 768px;
+  max-width: 100%;
+  min-height: 480px;
 }
 
-.login-page .container p{
-    font-size: 14px;
-    line-height: 20px;
-    letter-spacing: 0.3px;
-    margin: 20px 0;
+.login-page .container p {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.3px;
+  margin: 20px 0;
 }
 
-.login-page .container span{
-    font-size: 12px;
+.login-page .container span {
+  font-size: 12px;
 }
 
-.login-page .container a{
-    color: #333;
-    font-size: 13px;
-    text-decoration: none;
-    margin: 15px 0 10px;
+.login-page .container a {
+  color: #333;
+  font-size: 13px;
+  text-decoration: none;
+  margin: 15px 0 10px;
+  transition: color 0.3s ease;
+}
+
+.login-page .container a:hover {
+  color: #2da0a8;
+}
+
+.login-page .forgot-password-link {
+  cursor: pointer;
 }
 
 .login-page .container button {
-    background-image: linear-gradient(to right,
-                    #1A2980 0%,
-                    #26D0CE 51%,
-                    #1A2980 100%);
-    margin: 10px 0 0;          
-    padding: 15px 45px;        
-    font-size: 12px;            
-    text-transform: uppercase;  
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    color: #fff;
-    border: none;               
-    border-radius: 8px;
-    background-size: 200% auto; 
-    transition: 0.5s;
-    cursor: pointer;
+  background-image: linear-gradient(
+    to right,
+    #1A2980 0%,
+    #26D0CE 51%,
+    #1A2980 100%
+  );
+  margin: 10px 0 0;
+  padding: 15px 45px;
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  background-size: 200% auto;
+  transition: all 0.5s ease;
+  cursor: pointer;
 }
 
 .login-page .container button:hover {
-    background-position: right center;
-    text-decoration: none;
+  background-position: right center;
+  transform: scale(1.05);
 }
 
-.login-page .container button.hidden{
-    background-color: transparent;
-    border-color: #fff;
+.login-page .container button:active {
+  transform: scale(0.98);
 }
 
-.login-page .container form{
-    background-color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    padding: 0 40px;
-    height: 100%;
+.login-page .container button.hidden {
+  background: transparent;
+  border: 2px solid #fff;
 }
 
-/* Added for React div containers */
+.login-page .container button.hidden:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Form Styles */
 .login-page .form-container > div {
-    background-color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    padding: 0 40px;
-    height: 100%;
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 40px;
+  height: 100%;
 }
 
-.login-page .container input{
-    background-color: #eee;
-    border: none;
-    margin: 8px 0;
-    padding: 10px 15px;
-    font-size: 13px;
-    border-radius: 8px;
-    width: 100%;
-    outline: none;
+.login-page .form-container h1 {
+  margin-bottom: 20px;
+  font-size: 28px;
+  font-weight: 700;
 }
 
-.login-page .form-container{
-    position: absolute;
-    top: 0;
-    height: 100%;
-    transition: all 0.6s ease-in-out;
+.login-page .container input {
+  background-color: #eee;
+  border: none;
+  margin: 8px 0;
+  padding: 12px 15px;
+  font-size: 13px;
+  border-radius: 8px;
+  width: 100%;
+  outline: none;
+  transition: background-color 0.3s ease;
 }
 
-.login-page .sign-in{
-    left: 0;
-    width: 50%;
-    z-index: 2;
+.login-page .container input:focus {
+  background-color: #e0e0e0;
 }
 
-.login-page .container.active .sign-in{
-    transform: translateX(100%);
+.login-page .form-container {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transition: all 0.6s ease-in-out;
 }
 
-.login-page .sign-up{
-    left: 0;
-    width: 50%;
+.login-page .sign-in {
+  left: 0;
+  width: 50%;
+  z-index: 2;
+}
+
+.login-page .container.active .sign-in {
+  transform: translateX(100%);
+}
+
+.login-page .sign-up {
+  left: 0;
+  width: 50%;
+  opacity: 0;
+  z-index: 1;
+}
+
+.login-page .container.active .sign-up {
+  transform: translateX(100%);
+  opacity: 1;
+  z-index: 5;
+  animation: fade-in 0.6s;
+}
+
+@keyframes fade-in {
+  0%,
+  49.99% {
     opacity: 0;
     z-index: 1;
-}
-
-.login-page .container.active .sign-up{
-    transform: translateX(100%);
+  }
+  50%,
+  100% {
     opacity: 1;
     z-index: 5;
-    animation: move 0.6s;
+  }
 }
 
-@keyframes move{
-    0%, 49.99%{
-        opacity: 0;
-        z-index: 1;
-    }
-    50%, 100%{
-        opacity: 1;
-        z-index: 5;
-    }
+/* Toggle Container (Desktop) */
+.login-page .toggle-container {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  transition: all 0.6s ease-in-out;
+  border-radius: 150px 0 0 100px;
+  z-index: 1000;
 }
 
-.login-page .social-icons{
-    margin: 20px 0;
+.login-page .container.active .toggle-container {
+  transform: translateX(-100%);
+  border-radius: 0 150px 100px 0;
 }
 
-.login-page .social-icons a{
-    border: 1px solid #ccc;
-    border-radius: 20%;
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0 3px;
-    width: 40px;
-    height: 40px;
+.login-page .toggle {
+  background: linear-gradient(to right, #5c6bc0, #2da0a8);
+  height: 100%;
+  color: #fff;
+  position: relative;
+  left: -100%;
+  width: 200%;
+  transform: translateX(0);
+  transition: all 0.6s ease-in-out;
 }
 
-.login-page .toggle-container{
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 50%;
-    height: 100%;
-    overflow: hidden;
-    transition: all 0.6s ease-in-out;
-    border-radius: 150px 0 0 100px;
-    z-index: 1000;
+.login-page .container.active .toggle {
+  transform: translateX(50%);
 }
 
-.login-page .container.active .toggle-container{
-    transform: translateX(-100%);
-    border-radius: 0 150px 100px 0;
+.login-page .toggle-panel {
+  position: absolute;
+  width: 50%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 30px;
+  text-align: center;
+  top: 0;
+  transform: translateX(0);
+  transition: all 0.6s ease-in-out;
 }
 
-.login-page .toggle{
-    background-color: #2da0a8;
-    height: 100%;
-    background: linear-gradient(to right, #5c6bc0, #2da0a8);
-    color: #fff;
-    position: relative;
-    left: -100%;
-    height: 100%;
-    width: 200%;
-    transform: translateX(0);
-    transition: all 0.6s ease-in-out;
+.login-page .toggle-panel h1 {
+  font-size: 26px;
+  margin-bottom: 10px;
 }
 
-.login-page .container.active .toggle{
-    transform: translateX(50%);
+.login-page .toggle-left {
+  transform: translateX(-200%);
 }
 
-.login-page .toggle-panel{
-    position: absolute;
-    width: 50%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    padding: 0 30px;
-    text-align: center;
-    top: 0;
-    transform: translateX(0);
-    transition: all 0.6s ease-in-out;
+.login-page .container.active .toggle-left {
+  transform: translateX(0);
 }
 
-.login-page .toggle-left{
-    transform: translateX(-200%);
+.login-page .toggle-right {
+  right: 0;
+  transform: translateX(0);
 }
 
-.login-page .container.active .toggle-left{
-    transform: translateX(0);
+.login-page .container.active .toggle-right {
+  transform: translateX(200%);
 }
 
-.login-page .toggle-right{
-    right: 0;
-    transform: translateX(0);
+/* Mobile Toggle (Hidden on Desktop) */
+.login-page .mobile-toggle {
+  display: none;
 }
 
-.login-page .container.active .toggle-right{
-    transform: translateX(200%);
-}
-
-/* Message notification styles */
+/* Message Notifications */
 .login-page .message {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 20px;
-    border-radius: 5px;
-    color: white;
-    font-weight: normal;
-    z-index: 10000;
-    animation: slideIn 0.3s ease-in-out;
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 15px 25px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  z-index: 10000;
+  animation: slide-down 0.3s ease-out;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  max-width: 90%;
+  text-align: center;
 }
 
 .login-page .message.success {
-    background-color: rgb(114, 221, 158);
+  background-color: #72dd9e;
 }
 
 .login-page .message.error {
-    background-color: rgb(225, 108, 95);
+  background-color: #e16c5f;
 }
 
-@keyframes slideIn {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+@keyframes slide-down {
+  from {
+    transform: translateX(-50%) translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Tablet Styles */
+@media screen and (max-width: 768px) {
+  .login-page {
+    padding: 15px;
+  }
+
+  .login-page .top-nav-buttons {
+    top: 15px;
+    right: 15px;
+    gap: 10px;
+  }
+
+  .login-page .nav-button {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+
+  .login-page .container {
+    width: calc(100% - 20px);
+    max-width: 500px;
+    min-height: 550px;
+    margin: 0 10px;
+  }
+
+  .login-page .toggle-container {
+    border-radius: 100px 0 0 80px;
+  }
+
+  .login-page .container.active .toggle-container {
+    border-radius: 0 100px 80px 0;
+  }
+
+  .login-page .toggle-panel h1 {
+    font-size: 22px;
+  }
+
+  .login-page .toggle-panel p {
+    font-size: 13px;
+  }
+}
+
+/* Mobile Styles */
+@media screen and (max-width: 576px) {
+  .login-page {
+    padding: 15px;
+    padding-top: 80px;
+  }
+
+  .login-page .top-nav-buttons {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .login-page .nav-button {
+    padding: 8px 16px;
+    font-size: 12px;
+    flex: 1;
+    max-width: 150px;
+  }
+
+  /* Hide desktop toggle */
+  .login-page .toggle-container {
+    display: none;
+  }
+
+  /* Show mobile toggle */
+  .login-page .mobile-toggle {
+    display: flex;
+    width: 100%;
+    background: linear-gradient(to right, #5c6bc0, #2da0a8);
+    border-radius: 0 0 30px 30px;
+    overflow: hidden;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+  }
+
+  .login-page .mobile-tab {
+    flex: 1;
+    padding: 15px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .login-page .mobile-tab.active {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+  }
+
+  /* Adjust container for mobile */
+    .login-page .container {
+    min-height: 520px;
+    padding-bottom: 50px;
+    width: calc(100% - 30px);
+    margin: 0 15px;
+  }
+
+  /* Stack forms vertically */
+  .login-page .form-container {
+    width: 100% !important;
+    position: relative !important;
+    transform: none !important;
+  }
+
+  .login-page .sign-in {
+    display: block;
+    opacity: 1;
+    z-index: 2;
+  }
+
+  .login-page .sign-up {
+    display: none;
+    opacity: 0;
+    z-index: 1;
+  }
+
+  .login-page .container.active .sign-in {
+    display: none;
+    transform: none;
+  }
+
+  .login-page .container.active .sign-up {
+    display: block;
+    opacity: 1;
+    transform: none;
+    z-index: 2;
+  }
+
+  .login-page .form-container > div {
+    padding: 30px 25px;
+    min-height: 470px;
+  }
+
+  .login-page .form-container h1 {
+    font-size: 24px;
+    margin-bottom: 15px;
+  }
+
+  .login-page .container input {
+    padding: 11px 14px;
+    font-size: 14px;
+    margin: 6px 0;
+  }
+
+  .login-page .container button {
+    padding: 13px 35px;
+    font-size: 11px;
+    margin-top: 8px;
+  }
+
+  .login-page .container a {
+    font-size: 12px;
+    margin: 10px 0 8px;
+  }
+
+  .login-page .message {
+    top: 70px;
+    padding: 12px 20px;
+    font-size: 13px;
+  }
+}
+
+/* Small Mobile Devices */
+@media screen and (max-width: 380px) {
+  .login-page .nav-button {
+    padding: 7px 12px;
+    font-size: 11px;
+  }
+
+  .login-page .form-container h1 {
+    font-size: 22px;
+  }
+
+  .login-page .container input {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .login-page .container button {
+    padding: 12px 30px;
+    font-size: 10px;
+  }
+
+  .login-page .form-container > div {
+    padding: 25px 20px;
+  }
+}
+
+/* Landscape Mobile */
+@media screen and (max-height: 600px) and (orientation: landscape) {
+  .login-page {
+    padding-top: 70px;
+    padding-bottom: 20px;
+  }
+
+  .login-page .container {
+    min-height: auto;
+  }
+
+  .login-page .form-container > div {
+    padding: 20px 25px;
+    min-height: auto;
+  }
+
+  .login-page .form-container h1 {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+
+  .login-page .container input {
+    margin: 5px 0;
+    padding: 9px 12px;
+  }
+
+  .login-page .container button {
+    margin-top: 5px;
+    padding: 10px 30px;
+  }
+}
+
+/* Forgot Password Styles */
+.login-page .forgot-password-container {
+  width: 500px;
+  max-width: calc(100% - 30px);
+  min-height: 400px;
+  margin: 0 15px;
+}
+
+.login-page .forgot-password-form {
+  position: relative;
+  width: 100%;
+}
+
+.login-page .forgot-password-form form {
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 40px;
+  min-height: 400px;
+}
+
+.login-page .forgot-password-icon {
+  font-size: 48px;
+  color: #1A2980;
+  margin-bottom: 20px;
+}
+
+.login-page .forgot-password-form h1 {
+  margin-bottom: 10px;
+  font-size: 28px;
+}
+
+.login-page .forgot-password-description {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.login-page .forgot-password-form input {
+  width: 100%;
+}
+
+.login-page .submit-button,
+.login-page .back-button {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.login-page .back-button {
+  color: #1A2980!important;
+  border: 2px solid #1A2980 !important;
+  background-image: none !important;
+}
+
+.login-page .back-button:hover {
+  background: rgba(26, 41, 128, 0.1) !important;
+  transform: scale(1.02);
+}
+
+.login-page .info-tip {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f0f9ff;
+  border-left: 4px solid #1A2980;
+  border-radius: 5px;
+  font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Responsive styles for Forgot Password */
+@media screen and (max-width: 576px) {
+  .login-page .forgot-password-container {
+    width: calc(100% - 30px);
+    min-height: 450px;
+    margin: 0 15px;
+  }
+
+  .login-page .forgot-password-form form {
+    padding: 30px 25px;
+    min-height: 450px;
+  }
+
+  .login-page .forgot-password-icon {
+    font-size: 40px;
+    margin-bottom: 15px;
+  }
+
+  .login-page .forgot-password-form h1 {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+
+  .login-page .forgot-password-description {
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+
+  .login-page .info-tip {
+    font-size: 11px;
+    padding: 12px;
+  }
+}
+
+@media screen and (max-width: 380px) {
+  .login-page .forgot-password-form form {
+    padding: 25px 20px;
+  }
+
+  .login-page .forgot-password-icon {
+    font-size: 36px;
+  }
+
+  .login-page .forgot-password-form h1 {
+    font-size: 22px;
+  }
 }
