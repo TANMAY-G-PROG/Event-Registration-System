@@ -10,6 +10,10 @@ export default function Login() {
   const [isActive, setIsActive] = useState(false);
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
 
+  // States for password visibility
+  const [showSignInPassword, setShowSignInPassword] = useState(false);
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false);
+
   const [signInData, setSignInData] = useState({
     usn: '',
     password: ''
@@ -280,13 +284,20 @@ export default function Login() {
               value={signUpData.email}
               onChange={handleSignUpChange}
             />
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={signUpData.password}
-              onChange={handleSignUpChange}
-            />
+            {/* Updated Password Input for Sign Up */}
+            <div className="password-wrapper">
+              <input
+                type={showSignUpPassword ? 'text' : 'password'}
+                name="password"
+                placeholder="Password"
+                value={signUpData.password}
+                onChange={handleSignUpChange}
+              />
+              <i 
+                className={`fa-solid ${showSignUpPassword ? 'fa-eye-slash' : 'fa-eye'} password-toggle-icon`}
+                onClick={() => setShowSignUpPassword(prev => !prev)}
+              ></i>
+            </div>
             <button type="button" onClick={handleSignUp}>
               Sign Up
             </button>
@@ -304,14 +315,21 @@ export default function Login() {
               value={signInData.usn}
               onChange={handleSignInChange}
             />
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              id="password"
-              value={signInData.password}
-              onChange={handleSignInChange}
-            />
+            {/* Updated Password Input for Sign In */}
+            <div className="password-wrapper">
+              <input
+                type={showSignInPassword ? 'text' : 'password'}
+                name="password"
+                placeholder="Password"
+                id="password"
+                value={signInData.password}
+                onChange={handleSignInChange}
+              />
+              <i 
+                className={`fa-solid ${showSignInPassword ? 'fa-eye-slash' : 'fa-eye'} password-toggle-icon`}
+                onClick={() => setShowSignInPassword(prev => !prev)}
+              ></i>
+            </div>
             <a 
               href="#" 
               onClick={(e) => {
