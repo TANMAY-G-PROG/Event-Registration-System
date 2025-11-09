@@ -174,6 +174,7 @@ const Participants = () => {
           }
           return res.arrayBuffer();
         });
+        console.log('Allura font loaded, byteLength:', fontBytes.byteLength);
         nameFont = await pdfDoc.embedFont(fontBytes);
       } catch (fontError) {
         console.warn('Could not load custom font, using TimesRomanBold as fallback:', fontError);
@@ -446,5 +447,6 @@ const Participants = () => {
 };
 
 export default Participants;
+
 
 
