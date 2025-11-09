@@ -209,20 +209,29 @@ export default function Login() {
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
       />
 
-      {/* Kept original class names: "nav-button" and "hover-effect" */}
       <div className="top-nav-buttons">
-        <button className="nav-button about-us-btn" onClick={handleAboutUsClick}>
-          <span className="hover-effect">
-            <div></div>
-          </span>
-          <span className="button-text">About Us</span>
+        {/* Updated About Us Button */}
+        <button className="button" onClick={handleAboutUsClick}>
+          <div className="bubble-layer bubble-1"></div>
+          <div className="bubble-layer bubble-2"></div>
+          <div className="bubble-layer bubble-3"></div>
+          <div className="bubble-layer bubble-4"></div>
+          <div className="bubble-layer bubble-5"></div>
+          <div className="bubble-layer bubble-6"></div>
+          <div className="bubble-layer bubble-7"></div>
+          <span>About Us</span>
         </button>
 
-        <button className="nav-button contact-us-btn" onClick={handleContactUsClick}>
-          <span className="hover-effect">
-            <div></div>
-          </span>
-          <span className="button-text">Contact Us</span>
+        {/* Updated Contact Us Button */}
+        <button className="button" onClick={handleContactUsClick}>
+          <div className="bubble-layer bubble-1"></div>
+          <div className="bubble-layer bubble-2"></div>
+          <div className="bubble-layer bubble-3"></div>
+          <div className="bubble-layer bubble-4"></div>
+          <div className="bubble-layer bubble-5"></div>
+          <div className="bubble-layer bubble-6"></div>
+          <div className="bubble-layer bubble-7"></div>
+          <span>Contact Us</span>
         </button>
       </div>
 
@@ -236,7 +245,6 @@ export default function Login() {
         <div className="form-container sign-up">
           <div onKeyPress={handleKeyPress}>
             <h1>Create Account</h1>
-            {/* Kept original descriptive placeholders and input types */}
             <input
               type="text"
               name="name"
@@ -304,7 +312,6 @@ export default function Login() {
               value={signInData.password}
               onChange={handleSignInChange}
             />
-            {/* Kept original class-based link */}
             <a 
               href="#" 
               onClick={(e) => {
@@ -340,21 +347,30 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Kept the mobile-toggle section from your original file */}
-        <div className="mobile-toggle">
-          <button 
-            className={`mobile-tab ${!isActive ? 'active' : ''}`}
-            onClick={() => setIsActive(false)}
-          >
-            Sign In
-          </button>
-          <button 
-            className={`mobile-tab ${isActive ? 'active' : ''}`}
-            onClick={() => setIsActive(true)}
-          >
-            Sign Up
-          </button>
+        {/* Updated Mobile Toggle */}
+        <div className="glass-radio-group mobile-toggle">
+          <input 
+            type="radio" 
+            name="mobile-toggle" 
+            id="glass-signin" 
+            checked={!isActive}
+            onChange={() => setIsActive(false)}
+          />
+          <label htmlFor="glass-signin">Sign In</label>
+
+          <input 
+            type="radio" 
+            name="mobile-toggle" 
+            id="glass-signup" 
+            checked={isActive}
+            onChange={() => setIsActive(true)}
+          />
+          <label htmlFor="glass-signup">Sign Up</label>
+
+          <div className="glass-glider"></div>
         </div>
+        {/* End of Updated Mobile Toggle */}
+
       </div>
     </div>
   );
