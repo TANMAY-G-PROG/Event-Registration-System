@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
-// Get the base URL from environment variables
+// Define the API base URL from Vite environment variables
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const Volunteers = () => {
@@ -25,7 +25,7 @@ const Volunteers = () => {
 
   const fetchUserInfo = async () => {
     try {
-      // EDITED: Using API_BASE_URL
+      // UPDATED: Replaced localhost with API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/me`, {
         method: 'GET',
         credentials: 'include',
@@ -107,7 +107,7 @@ const Volunteers = () => {
 
   const fetchVolunteerEvents = async () => {
     try {
-      // EDITED: Using API_BASE_URL
+      // UPDATED: Replaced localhost with API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/my-volunteer-events`, {
         method: 'GET',
         credentials: 'include',
@@ -144,12 +144,11 @@ const Volunteers = () => {
         return;
       }
 
-      const templateUrl = `${window.location.origin}/certificate-template.pdf`;
-      const existingPdfBytes = await fetch(templateUrl, {
-        cache: 'force-cache'
-      }).then(res => {
+      // Fetch the PDF template (This remains a root path, served by your frontend)
+      const templateUrl = '/certificate-template.pdf';
+      const existingPdfBytes = await fetch(templateUrl).then(res => {
         if (!res.ok) {
-          throw new Error(`Certificate template not found at ${templateUrl}. Status: ${res.status}`);
+          throw new Error('Certificate template not found. Please ensure certificate-template.pdf is in the public folder.');
         }
         return res.arrayBuffer();
       });
@@ -165,14 +164,14 @@ const Volunteers = () => {
       const firstPage = pages[0];
       const { width, height } = firstPage.getSize();
 
+      // Try to embed Allura-Regular font for volunteer name
       let nameFont;
       try {
-        const fontUrl = `${window.location.origin}/Allura-Regular.ttf`;
-        const fontBytes = await fetch(fontUrl, {
-          cache: 'force-cache'
-        }).then(res => {
+        // This also remains a root path
+        const fontUrl = '/Allura-Regular.ttf'; // CHANGED
+        const fontBytes = await fetch(fontUrl).then(res => {
           if (!res.ok) {
-            throw new Error(`Allura-Regular.ttf font file not found at ${fontUrl}. Status: ${res.status}`);
+            throw new Error('Allura-Regular.ttf font file not found.'); // CHANGED
           }
           return res.arrayBuffer();
         });
@@ -186,14 +185,14 @@ const Volunteers = () => {
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
       const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
+      // Load Playfair Display font for description
       let descFont;
       try {
-        const descFontUrl = `${window.location.origin}/PlayfairDisplay-MediumItalic.ttf`;
-        const descFontBytes = await fetch(descFontUrl, {
-          cache: 'force-cache'
-        }).then(res => {
+        // This also remains a root path
+        const descFontUrl = '/PlayfairDisplay-MediumItalic.ttf';
+        const descFontBytes = await fetch(descFontUrl).then(res => {
           if (!res.ok) {
-            throw new Error(`PlayfairDisplay-MediumItalic.ttf font file not found at ${descFontUrl}. Status: ${res.status}`);
+            throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found.');
           }
           return res.arrayBuffer();
         });
