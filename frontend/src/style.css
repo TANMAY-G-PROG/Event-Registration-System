@@ -36,71 +36,119 @@
   z-index: 10001;
 }
 
-/* Navigation Button Styles */
-.login-page .nav-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 24px;
-  border: none;
+/* Navigation Button Styles - REPLACED */
+.login-page .button {
   position: relative;
-  overflow: hidden;
+  padding: 12px 24px; /* Adjusted from 14px 42px */
+  font-size: 14px; /* Adjusted from 18px */
+  font-weight: bold;
+  color: white;
+  border: none;
   border-radius: 50px;
-  transition: all 0.3s ease;
-  font-weight: 600;
   cursor: pointer;
-  color: #252525;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  font-size: 14px;
-}
-
-.login-page .nav-button:hover {
-  background: rgb(193, 228, 248);
-  color: rgb(33, 0, 85);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-}
-
-.login-page .nav-button:active {
-  transform: translateY(0);
-}
-
-.login-page .hover-effect {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
+  background: transparent;
+  display: inline-block;
   z-index: 1;
-  pointer-events: none;
+  transition: transform 0.2s ease;
 }
 
-.login-page .hover-effect div {
-  background: linear-gradient(
-    90deg,
-    rgba(222, 0, 75, 1) 0%,
-    rgba(191, 70, 255, 1) 49%,
-    rgba(0, 212, 255, 1) 100%
-  );
-  border-radius: 50%;
+.login-page .button span {
+  position: relative;
+  z-index: 15;
+}
+
+.login-page .button:active {
+  transform: scale(0.96);
+}
+
+.login-page .button::before {
+  content: "";
+  background: rgb(0 0 0);
+  border-radius: inherit;
+  height: calc(100% - 4px);
+  width: calc(100% - 4px);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 12;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: all 0.5s ease;
+}
+
+.login-page .button:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.login-page .bubble-layer {
+  position: absolute;
   width: 150px;
   height: 150px;
-  transition: 0.4s ease;
-  filter: blur(20px);
-  animation: rotate-effect 3s linear infinite;
-  opacity: 0.5;
+  border-radius: 50%;
+  filter: blur(10px);
+  z-index: 0;
 }
 
-.login-page .nav-button:hover .hover-effect div {
-  width: 120px;
-  height: 120px;
+.login-page .bubble-1 {
+  background: #5c6bc0; /* Kept medium blue */
+  top: -20%;
+  left: -10%;
+  animation: moveUpRight 12s ease-in-out infinite; /* Slowed down from 6s */
+}
+.login-page .bubble-2 {
+  background: #2da0a8; /* Changed from #f0f9ff to toggle cyan */
+  top: 0%;
+  left: 10%;
+  animation: moveDownLeft 10s ease-in-out infinite; /* Slowed down from 5s */
+  animation-delay: 1s;
+}
+.login-page .bubble-3 {
+  background: #1A2980; /* Changed from #E4E5E6 to button blue */
+  top: 20%;
+  left: 50%;
+  animation: moveRight 8s ease-in-out infinite; /* Slowed down from 4s */
+  animation-delay: 2s;
+}
+.login-page .bubble-4 {
+  background: #00416A; /* Kept background blue */
+  top: -20%;
+  left: 70%;
+  animation: moveUpLeft 14s ease-in-out infinite; /* Slowed down from 7s */
+  animation-delay: 3s;
+}
+.login-page .bubble-5 {
+  background: #26D0CE; /* Changed from #5c6bc0 to button cyan */
+  top: 30%;
+  left: -10%;
+  animation: moveDownRight 6s ease-in-out infinite; /* Slowed down from 3s */
+  animation-delay: 4s;
+}
+.login-page .bubble-6 {
+  background: #2da0a8; /* Changed from #f0f9ff to toggle cyan */
+  top: -10%;
+  left: 30%;
+  animation: moveLeft 16s ease-in-out infinite; /* Slowed down from 8s */
+  animation-delay: 0.5s;
+}
+.login-page .bubble-7 {
+  background: #1A2980; /* Changed from #E4E5E6 to button blue */
+  top: 40%;
+  left: 60%;
+  animation: moveUp 12s ease-in-out infinite; /* Slowed down from 6s */
+  animation-delay: 1.5s;
 }
 
-.login-page .button-text {
-  position: relative;
-  z-index: 2;
-}
+/* Removed old nav button styles */
+/*
+.login-page .nav-button { ... }
+.login-page .nav-button:hover { ... }
+.login-page .nav-button:active { ... }
+.login-page .hover-effect { ... }
+.login-page .hover-effect div { ... }
+.login-page .button-text { ... }
+*/
 
 @keyframes rotate-effect {
   0% {
@@ -110,6 +158,129 @@
     transform: rotate(360deg);
   }
 }
+
+/* New bubble keyframes */
+@keyframes moveUpRight {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(100%, -100%);
+  }
+  50% {
+    transform: translate(-50%, 50%);
+  }
+  75% {
+    transform: translate(50%, -50%);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+@keyframes moveDownLeft {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-100%, 100%);
+  }
+  50% {
+    transform: translate(50%, -50%);
+  }
+  75% {
+    transform: translate(-50%, 50%);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+@keyframes moveRight {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(100%, 0);
+  }
+  50% {
+    transform: translate(-100%, 50%);
+  }
+  75% {
+    transform: translate(50%, -50%);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+@keyframes moveUpLeft {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-100%, -100%);
+  }
+  50% {
+    transform: translate(50%, 50%);
+  }
+  75% {
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+@keyframes moveDownRight {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(100%, 100%);
+  }
+  50% {
+    transform: translate(-50%, -50%);
+  }
+  75% {
+    transform: translate(50%, 50%);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+@keyframes moveLeft {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-100%, 0);
+  }
+  50% {
+    transform: translate(100%, -50%);
+  }
+  75% {
+    transform: translate(-50%, 50%);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+@keyframes moveUp {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(0, -100%);
+  }
+  50% {
+    transform: translate(50%, 50%);
+  }
+  75% {
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+/* End new bubble keyframes */
+
 
 /* Main Container */
 .login-page .container {
@@ -389,7 +560,8 @@
     gap: 10px;
   }
 
-  .login-page .nav-button {
+  /* Adjusted new button for tablet */
+  .login-page .button {
     padding: 10px 20px;
     font-size: 13px;
   }
@@ -433,11 +605,12 @@
     gap: 10px;
   }
 
-  .login-page .nav-button {
+  /* Adjusted new button for mobile */
+  .login-page .button {
     padding: 8px 16px;
     font-size: 12px;
-    flex: 1;
-    max-width: 150px;
+    /* flex: 1; - REMOVED */
+    /* max-width: 150px; - REMOVED */
   }
 
   /* Hide desktop toggle */
@@ -445,37 +618,96 @@
     display: none;
   }
 
-  /* Show mobile toggle */
-  .login-page .mobile-toggle {
+  /* Show mobile toggle - REPLACED WITH GLASS STYLE */
+  .login-page .mobile-toggle { /* This is the .glass-radio-group */
+    --bg: rgba(255, 255, 255, 0.06);
+    --text: #e5e5e5;
+  
     display: flex;
-    width: 100%;
-    background: linear-gradient(to right, #5c6bc0, #2da0a8);
-    border-radius: 0 0 30px 30px;
-    overflow: hidden;
     position: absolute;
     bottom: 0;
     left: 0;
+    width: 100%;
+    
+    background: var(--bg);
+    border-radius: 0 0 30px 30px; /* Original radius to match container */
+    backdrop-filter: blur(12px);
+    box-shadow:
+      inset 1px 1px 4px rgba(255, 255, 255, 0.2),
+      inset -1px -1px 6px rgba(0, 0, 0, 0.3),
+      0 4px 12px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
     z-index: 100;
   }
 
-  .login-page .mobile-tab {
-    flex: 1;
-    padding: 15px;
-    background: transparent;
-    border: none;
-    color: rgba(255, 255, 255, 0.7);
-    font-weight: 600;
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+  .login-page .mobile-toggle input {
+    display: none;
   }
 
-  .login-page .mobile-tab.active {
-    background: rgba(255, 255, 255, 0.2);
+  .login-page .mobile-toggle label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+    font-size: 14px;
+    padding: 15px; /* From original .mobile-tab */
+    cursor: pointer;
+    font-weight: 600;
+    letter-spacing: 0.5px; /* From original .mobile-tab */
+    color: var(--text);
+    text-transform: uppercase; /* From original .mobile-tab */
+    position: relative;
+    z-index: 2;
+    transition: color 0.3s ease-in-out;
+  }
+
+  .login-page .mobile-toggle label:hover {
+    color: white;
+  }
+
+  .login-page .mobile-toggle input:checked + label {
     color: #fff;
   }
+
+  .login-page .glass-glider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: calc(100% / 2); /* Adjusted for 2 buttons */
+    /* No border-radius needed as it's inside the main container */
+    z-index: 1;
+    transition:
+      transform 0.5s cubic-bezier(0.37, 1.95, 0.66, 0.56),
+      background 0.4s ease-in-out,
+      box-shadow 0.4s ease-in-out;
+  }
+
+  /* Sign In - UPDATED COLOR (Removed shadow) */
+  .login-page #glass-signin:checked ~ .glass-glider {
+    transform: translateX(0%);
+    background: linear-gradient(
+      to right,
+      #1A2980 0%,
+      #26D0CE 51%,
+      #1A2980 100%
+    );
+    box-shadow: none; /* Removed gloss/glow effect */
+  }
+
+  /* Sign Up - UPDATED COLOR (Removed shadow) */
+  .login-page #glass-signup:checked ~ .glass-glider {
+    transform: translateX(100%);
+    background: linear-gradient(
+      to right,
+      #1A2980 0%,
+      #26D0CE 51%,
+      #1A2980 100%
+    );
+    box-shadow: none; /* Removed gloss/glow effect */
+  }
+  /* END OF REPLACEMENT */
+
 
   /* Adjust container for mobile */
     .login-page .container {
@@ -552,7 +784,7 @@
 
 /* Small Mobile Devices */
 @media screen and (max-width: 380px) {
-  .login-page .nav-button {
+  .login-page .button { /* Fixed selector from .nav-button */
     padding: 7px 12px;
     font-size: 11px;
   }
