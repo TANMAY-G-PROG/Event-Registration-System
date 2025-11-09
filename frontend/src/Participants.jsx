@@ -134,9 +134,16 @@ const Participants = () => {
         alert('Certificate is only available for attended events.');
         return;
       }
+      
+      // --- CACHE-BUSTING CHANGE ---
+      // Add a unique timestamp to force the browser to re-download the files
+      const t = new Date().getTime();
+      // --- END OF CHANGE ---
 
-      // Fetch the PDF template (This remains a root path, served by your frontend)
-      const templateUrl = '/certificate-template.pdf';
+      // Fetch the PDF template
+      // --- CACHE-BUSTING CHANGE ---
+      const templateUrl = `/certificate-template.pdf?v=${t}`;
+      // --- END OF CHANGE ---
       const existingPdfBytes = await fetch(templateUrl).then(res => {
         if (!res.ok) {
           throw new Error('Certificate template not found. Please ensure certificate-template.pdf is in the public folder.');
@@ -158,8 +165,9 @@ const Participants = () => {
       // Try to embed Allura-Regular font for participant name
       let nameFont;
       try {
-        // This also remains a root path
-        const fontUrl = '/Allura-Regular.ttf'; // CHANGED
+        // --- CACHE-BUSTING CHANGE ---
+        const fontUrl = `/Allura-Regular.ttf?v=${t}`; // CHANGED
+        // --- END OF CHANGE ---
         const fontBytes = await fetch(fontUrl).then(res => {
           if (!res.ok) {
             throw new Error('Allura-Regular.ttf font file not found.'); // CHANGED
@@ -179,8 +187,9 @@ const Participants = () => {
       // Load Playfair Display font for description
       let descFont;
       try {
-         // This also remains a root path
-        const descFontUrl = '/PlayfairDisplay-MediumItalic.ttf';
+        // --- CACHE-BUSTING CHANGE ---
+        const descFontUrl = `/PlayfairDisplay-MediumItalic.ttf?v=${t}`;
+        // --- END OF CHANGE ---
         const descFontBytes = await fetch(descFontUrl).then(res => {
           if (!res.ok) {
             throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found.');
