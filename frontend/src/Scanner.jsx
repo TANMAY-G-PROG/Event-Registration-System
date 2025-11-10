@@ -375,7 +375,7 @@ export default function Scanner() {
             </h2>
             <p className="success-message">
               Your attendance has been successfully recorded as a {userRole}.
-            </p> {/* <-- THIS IS THE FIX (was </D>) */}
+            </p> 
             <div className="button-group">
               <button onClick={goBack} className="btn btn-success-light">
                 ← Back to Event
@@ -724,3 +724,4 @@ export default function Scanner() {
     </div>
   );
 }
+
