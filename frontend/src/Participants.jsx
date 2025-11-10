@@ -18,14 +18,29 @@ const Participants = () => {
   const [error, setError] = useState(null);
   const [userInfo, setUserInfo] = useState({ userName: '', userUSN: '' });
 
+  // Tracks which event is currently being generated
+  const [generatingIds, setGeneratingIds] = useState(new Set());
+  // Stores the generated URL and filename for each event
+  const [downloadLinks, setDownloadLinks] = useState({});
+
   useEffect(() => {
     fetchUserInfo();
     fetchParticipantEvents();
   }, []);
 
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(downloadLinks).forEach(link => {
+        if (link && link.url) {
+          window.URL.revokeObjectURL(link.url);
+        }
+      });
+    };
+  }, [downloadLinks]);
+
   const fetchUserInfo = async () => {
     try {
-      // UPDATED: Replaced localhost with API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/me`, {
         method: 'GET',
         credentials: 'include',
@@ -98,7 +113,6 @@ const Participants = () => {
 
   const fetchParticipantEvents = async () => {
     try {
-      // UPDATED: Replaced localhost with API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/my-participant-events`, {
         method: 'GET',
         credentials: 'include',
@@ -128,22 +142,27 @@ const Participants = () => {
   };
 
   const generateCertificate = async (event) => {
+    // Cleanup & set loading state
+    if (downloadLinks[event.eid] && downloadLinks[event.eid].url) {
+      window.URL.revokeObjectURL(downloadLinks[event.eid].url);
+    }
+    setGeneratingIds(prev => new Set(prev).add(event.eid));
+    setDownloadLinks(prev => ({ ...prev, [event.eid]: null }));
+
     try {
       // Check if participant attended the event
       if (!event.PartStatus) {
         alert('Certificate is only available for attended events.');
+        setGeneratingIds(prev => {
+          const next = new Set(prev);
+          next.delete(event.eid);
+          return next;
+        });
         return;
       }
       
-      // --- CACHE-BUSTING CHANGE ---
-      // Add a unique timestamp to force the browser to re-download the files
       const t = new Date().getTime();
-      // --- END OF CHANGE ---
-
-      // Fetch the PDF template
-      // --- CACHE-BUSTING CHANGE ---
       const templateUrl = `/certificate-template.pdf?v=${t}`;
-      // --- END OF CHANGE ---
       const existingPdfBytes = await fetch(templateUrl).then(res => {
         if (!res.ok) {
           throw new Error('Certificate template not found. Please ensure certificate-template.pdf is in the public folder.');
@@ -151,26 +170,19 @@ const Participants = () => {
         return res.arrayBuffer();
       });
 
-      // Load the PDF template
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
-      
-      // Register fontkit to enable custom fonts
       pdfDoc.registerFontkit(fontkit);
       
-      // Get the first page
       const pages = pdfDoc.getPages();
       const firstPage = pages[0];
       const { width, height } = firstPage.getSize();
 
-      // Try to embed Allura-Regular font for participant name
       let nameFont;
       try {
-        // --- CACHE-BUSTING CHANGE ---
-        const fontUrl = `/Allura-Regular.ttf?v=${t}`; // CHANGED
-        // --- END OF CHANGE ---
+        const fontUrl = `/Allura-Regular.ttf?v=${t}`;
         const fontBytes = await fetch(fontUrl).then(res => {
           if (!res.ok) {
-            throw new Error('Allura-Regular.ttf font file not found.'); // CHANGED
+            throw new Error('Allura-Regular.ttf font file not found.');
           }
           return res.arrayBuffer();
         });
@@ -180,16 +192,12 @@ const Participants = () => {
         nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
       }
       
-      // Regular font for other text
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
       const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
-      // Load Playfair Display font for description
       let descFont;
       try {
-        // --- CACHE-BUSTING CHANGE ---
         const descFontUrl = `/PlayfairDisplay-MediumItalic.ttf?v=${t}`;
-        // --- END OF CHANGE ---
         const descFontBytes = await fetch(descFontUrl).then(res => {
           if (!res.ok) {
             throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found.');
@@ -202,11 +210,9 @@ const Participants = () => {
         descFont = font;
       }
 
-      // Colors for text
       const nameColor = rgb(0xF7 / 255, 0xD9 / 255, 0x91 / 255); // #F7D991
       const whiteColor = rgb(1, 1, 1);
 
-      // Add participant name (centered) with Allura-Regular font
       const nameText = userInfo.userName;
       const nameSize = 38;
       const nameWidth = nameFont.widthOfTextAtSize(nameText, nameSize);
@@ -218,7 +224,6 @@ const Participants = () => {
         color: nameColor,
       });
 
-      // Add USN
       const usnSize = 19;
       firstPage.drawText(userInfo.userUSN, {
         x: 170, // Adjust X position based on your template
@@ -228,7 +233,6 @@ const Participants = () => {
         color: whiteColor,
       });
 
-      // **ADD EVENT DATE**
       const formattedDate = formatDate(event.eventDate);
       const dateSize = 16;
       const dateWidth = boldFont.widthOfTextAtSize(formattedDate, dateSize);
@@ -240,15 +244,13 @@ const Participants = () => {
         color: whiteColor,
       });
 
-      // Add Event Description (with word wrapping)
       const eventDesc = event.eventdesc || event.ename;
       const descSize = 10;
-      const maxWidth = 450; // Maximum width for text
+      const maxWidth = 450;
       
-      // Simple word wrapping
       const words = eventDesc.split(' ');
       let line = '';
-      let yPosition = 225; // Starting Y position
+      let yPosition = 225;
       
       words.forEach((word, index) => {
         const testLine = line + word + ' ';
@@ -256,7 +258,7 @@ const Participants = () => {
         
         if (testWidth > maxWidth && line !== '') {
           firstPage.drawText(line.trim(), {
-            x: 190, // Adjust X position
+            x: 190,
             y: yPosition,
             size: descSize,
             font: descFont,
@@ -269,10 +271,9 @@ const Participants = () => {
         }
       });
       
-      // Draw remaining text
       if (line !== '') {
         firstPage.drawText(line.trim(), {
-          x: 190, // Adjust X position
+          x: 190,
           y: yPosition,
           size: descSize,
           font: descFont,
@@ -283,18 +284,26 @@ const Participants = () => {
       // Serialize the PDF to bytes
       const pdfBytes = await pdfDoc.save();
 
-      // Create a blob and download
+      // Set the state with download link
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Certificate_${event.ename.replace(/\s+/g, '_')}_${userInfo.userUSN}_${formattedDate.replace(/ /g, '_')}.pdf`;
-      link.click();
-      window.URL.revokeObjectURL(url);
+      const filename = `Certificate_${event.ename.replace(/\s+/g, '_')}_${userInfo.userUSN}_${formattedDate.replace(/ /g, '_')}.pdf`;
+
+      setDownloadLinks(prev => ({
+        ...prev,
+        [event.eid]: { url, filename }
+      }));
 
     } catch (error) {
       console.error('Error generating certificate:', error);
       alert(`Error generating certificate: ${error.message}`);
+    } finally {
+      // Always remove from "generating" state
+      setGeneratingIds(prev => {
+        const next = new Set(prev);
+        next.delete(event.eid);
+        return next;
+      });
     }
   };
 
@@ -322,7 +331,7 @@ const Participants = () => {
 
   const handleEventButtonClick = (event, eventType) => {
     if (eventType === 'completed') {
-      // Generate and download certificate for completed events
+      // Generate certificate (this function now handles state)
       generateCertificate(event);
     } else {
       // Navigate to ticket page for other events
@@ -380,12 +389,39 @@ const Participants = () => {
           <p>Status: {getParticipantStatus(event.PartStatus)}</p>
         </div>
         <div className="event-actions">
-          <button
-            className="event-btn"
-            onClick={() => handleEventButtonClick(event, eventType)}
-          >
-            {getButtonText(eventType)}
-          </button>
+          {eventType === 'completed' ? (
+            generatingIds.has(event.eid) ? (
+              // State 1: Generating...
+              <button className="event-btn" disabled>
+                Generating...
+              </button>
+            ) : downloadLinks[event.eid] ? (
+              // State 2: Download link is ready
+              <a
+                href={downloadLinks[event.eid].url}
+                download={downloadLinks[event.eid].filename}
+                className="event-btn"
+              >
+                Download Now
+              </a>
+            ) : (
+              // State 3: Default "View Certificate" button
+              <button
+                className="event-btn"
+                onClick={() => handleEventButtonClick(event, eventType)}
+              >
+                {getButtonText(eventType)}
+              </button>
+            )
+          ) : (
+            // This is the original button for "upcoming" and "ongoing"
+            <button
+              className="event-btn"
+              onClick={() => handleEventButtonClick(event, eventType)}
+            >
+              {getButtonText(eventType)}
+            </button>
+          )}
         </div>
       </div>
     ));
