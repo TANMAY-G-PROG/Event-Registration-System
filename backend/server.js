@@ -41,7 +41,10 @@ app.use(cors({
 
 app.use(express.json());
 
-
+// Health check route for UptimeRobot
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
 // --- EDITED (Render Deployment): Secure Session ---
 app.use(session({
     secret: process.env.SESSION_SECRET, 
