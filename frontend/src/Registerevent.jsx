@@ -36,6 +36,10 @@ export default function Registerevent() {
   const timerRef = useRef(null)
   const modalTimerRef = useRef(null)
 
+  const [showUpiModal, setShowUpiModal] = useState(null)
+  const [transactionId, setTransactionId] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   // Debug log for API URL
   useEffect(() => {
     console.log('🔍 API_BASE_URL:', API_BASE_URL);
@@ -128,8 +132,24 @@ export default function Registerevent() {
     }
   }
 
+  async function fetchMyRegistrations() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/my-participant-events`, { 
+        credentials: 'include' 
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      const eventIds = new Set(data.participantEvents.map(ev => ev.eid))
+      setRegisteredEvents(eventIds)
+      console.log('My registrations loaded:', eventIds)
+    } catch (err) {
+      console.error('Error loading registrations:', err)
+    }
+  }
+
   useEffect(() => {
     loadEvents()
+    fetchMyRegistrations()
     
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
@@ -145,26 +165,9 @@ export default function Registerevent() {
     })
   }, [eventsData.upcoming])
 
-  useEffect(() => {
-    async function loadMyRegistrations() {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/my-participant-events`, { 
-          credentials: 'include' 
-        })
-        if (!res.ok) return
-        const data = await res.json()
-        const eventIds = new Set(data.participantEvents.map(ev => ev.eid))
-        setRegisteredEvents(eventIds)
-      } catch (err) {
-        console.error('Error loading registrations:', err)
-      }
-    }
-    loadMyRegistrations()
-  }, [])
-
   const allEvents = useMemo(() => {
     return [
-      ...(eventsData.upcoming || []).map((e) => ({ ...e, status: "upcoming" })),
+      ...(eventsData.upcoming || []).map((e) => ({ ...e, status: "upcoming", upiId: e.upiId })), 
       ...(eventsData.ongoing || []).map((e) => ({ ...e, status: "ongoing" })),
       ...(eventsData.completed || []).map((e) => ({ ...e, status: "completed" })),
     ]
@@ -177,12 +180,23 @@ export default function Registerevent() {
     return allEvents.filter((e) => e.status === filter)
   }, [allEvents, filter])
 
-  async function handleRegister(eventId, hasFee) {
+  async function handleRegister(event) {
+    const hasFee = (event.regFee || 0) > 0
+    const eventId = event.eid
+
     if (hasFee) {
-      await initiatePayment(eventId)
+      if (!event.upiId) {
+        showFlash("error", "Organizer has not set up payments for this event.")
+        return
+      }
+      console.log('Showing UPI modal for event:', event)
+      setTransactionId("")
+      setModalFlash({ type: "", message: "" })
+      setShowUpiModal({ event, isTeam: false })
       return
     }
 
+    // Logic for FREE events
     try {
       const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/join`, {
         method: "POST",
@@ -219,7 +233,6 @@ export default function Registerevent() {
       
       if (!teamName.trim()) {
         showModalFlash('error', 'Please enter a team name')
-        showFlash('error', 'Please enter a team name')
         return
       }
 
@@ -240,13 +253,11 @@ export default function Registerevent() {
       if (!response.ok) {
         const errorMsg = data?.error || 'Failed to create team'
         showModalFlash('error', errorMsg)
-        showFlash('error', errorMsg)
         return
       }
 
       const successMsg = data?.message || 'Team created successfully!'
       showModalFlash('success', successMsg)
-      showFlash('success', successMsg)
       
       setTimeout(() => {
         setShowTeamModal(null)
@@ -257,7 +268,6 @@ export default function Registerevent() {
       console.error('Error creating team:', err)
       const errorMsg = 'Error creating team'
       showModalFlash('error', errorMsg)
-      showFlash('error', errorMsg)
     }
   }
 
@@ -278,11 +288,12 @@ export default function Registerevent() {
       }
 
       if (!data.invites || data.invites.length === 0) {
-        showFlash('error', 'You have no team invites for this event')
-        return
+        showFlash('info', 'You have no team invites for this event')
+        setTeamInvites([])
+      } else {
+        setTeamInvites(data.invites)
       }
-
-      setTeamInvites(data.invites)
+      
       setShowTeamModal({ eventId, mode: 'invites' })
     } catch (err) {
       console.error('Error loading invites:', err)
@@ -303,13 +314,11 @@ export default function Registerevent() {
       if (!response.ok) {
         const errorMsg = data?.error || 'Failed to join team'
         showModalFlash('error', errorMsg)
-        showFlash('error', errorMsg)
         return
       }
 
       const successMsg = data?.message || 'Successfully joined team!'
       showModalFlash('success', successMsg)
-      showFlash('success', successMsg)
       
       setTimeout(() => {
         setShowTeamModal(null)
@@ -320,11 +329,11 @@ export default function Registerevent() {
       console.error('Error confirming join:', err)
       const errorMsg = 'Error confirming join'
       showModalFlash('error', errorMsg)
-      showFlash('error', errorMsg)
     }
   }  
 
-  async function handleRegisterTeam(eventId, hasFee) {
+  async function handleRegisterTeam(event, teamState) {
+    const eventId = event.eid
     try {
       const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/register-team`, {
         method: 'POST',
@@ -340,14 +349,21 @@ export default function Registerevent() {
       }
 
       if (data.requiresPayment) {
-        showFlash('success', 'Opening payment...')
-        await initiatePayment(eventId)
+        if (!event.upiId) {
+          showFlash("error", "Organizer has not set up payments for this event.")
+          return
+        }
+        console.log('Showing UPI modal for TEAM event:', event)
+        setTransactionId("")
+        setModalFlash({ type: "", message: "" })
+        setShowUpiModal({ event, isTeam: true, teamId: teamState.teamId })
         return
       }
 
       showFlash('success', data?.message || 'Team registered successfully!')
       await loadTeamStatus(eventId)
       await loadEvents()
+      await fetchMyRegistrations()
     } catch (err) {
       console.error('Error registering team:', err)
       showFlash('error', 'Error registering team')
@@ -375,96 +391,59 @@ export default function Registerevent() {
     }))
   }
 
-  function loadRazorpayScript() {
-    return new Promise((resolve, reject) => {
-      if (window.Razorpay) return resolve(true)
-      const script = document.createElement('script')
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-      script.onload = () => resolve(true)
-      script.onerror = () => reject(new Error('Failed to load Razorpay script'))
-      document.body.appendChild(script)
+  async function handleSubmitUpiPayment() {
+    if (!transactionId.trim()) {
+      showModalFlash('error', 'Please enter a valid Transaction ID')
+      return
+    }
+
+    if (isSubmitting) return
+    setIsSubmitting(true)
+
+    const { event, isTeam } = showUpiModal
+    const eventId = event.eid
+
+    const url = isTeam
+      ? `${API_BASE_URL}/api/events/${eventId}/register-team-upi`
+      : `${API_BASE_URL}/api/events/${eventId}/register-upi`
+    
+    const body = JSON.stringify({
+      transaction_id: transactionId.trim()
     })
-  }
 
-  async function initiatePayment(eventId) {
     try {
-      showFlash('success', 'Preparing payment...')
-
-      const resp = await fetch(`${API_BASE_URL}/api/create-order`, {
+      const response = await fetch(url, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId })
+        body: body
       })
 
-      const data = await resp.json().catch(() => ({}))
-      if (!resp.ok) {
-        if (resp.status === 401) {
-          showFlash('error', 'Please sign in to continue')
-          setTimeout(() => navigate('/'), 2000)
-          return
-        }
-        showFlash('error', data?.error || data?.message || 'Could not create payment order')
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        const errorMsg = data?.error || 'Failed to submit payment'
+        showModalFlash('error', errorMsg)
         return
       }
 
-      await loadRazorpayScript()
+      const successMsg = data?.message || 'Registration submitted for verification!'
+      showModalFlash('success', successMsg)
 
-      const { order, key_id } = data
-      if (!order || !order.id) {
-        showFlash('error', 'Invalid order returned from server')
-        return
-      }
-
-      const options = {
-        key: key_id,
-        amount: order.amount,
-        currency: order.currency || 'INR',
-        name: 'E-Pass Events',
-        description: `Registration for event ${eventId}`,
-        order_id: order.id,
-        handler: async function (response) {
-          try {
-            const verifyResp = await fetch(`${API_BASE_URL}/api/verify-payment`, {
-              method: 'POST',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-                eventId
-              })
-            })
-
-            const verifyData = await verifyResp.json().catch(() => ({}))
-            if (!verifyResp.ok) {
-              showFlash('error', verifyData?.error || 'Payment verification failed')
-              return
-            }
-
-            showFlash('success', verifyData?.message || 'Payment successful and registered!')
-            setRegisteredEvents(prev => new Set(prev).add(eventId))
-            await loadEvents()
-            await loadTeamStatus(eventId)
-          } catch (err) {
-            console.error('Verification error:', err)
-            showFlash('error', 'Payment verification failed. Contact support.')
-          }
-        },
-        modal: {
-          ondismiss: function () {
-            showFlash('error', 'Payment cancelled')
-          }
-        }
-      }
-
-      const rzp = new window.Razorpay(options)
-      rzp.open()
+      setTimeout(async () => {
+        setShowUpiModal(null)
+        setTransactionId("")
+        showFlash('success', successMsg)
+        await loadEvents()
+        await loadTeamStatus(eventId)
+        await fetchMyRegistrations()
+      }, 1500)
 
     } catch (err) {
-      console.error('initiatePayment error:', err)
-      showFlash('error', 'Failed to start payment flow')
+      console.error('Error submitting UPI payment:', err)
+      showModalFlash('error', 'An error occurred. Please try again.')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -474,13 +453,6 @@ export default function Registerevent() {
 
   function renderTeamControls(event) {
     const teamState = teamStates[event.eid]
-    
-    console.log(`Rendering controls for event ${event.eid}:`, {
-      hasTeamState: !!teamState,
-      isTeamEvent: teamState?.isTeamEvent,
-      hasJoinedTeam: teamState?.hasJoinedTeam,
-      isLeader: teamState?.isLeader
-    })
     
     if (!teamState) {
       return (
@@ -503,11 +475,13 @@ export default function Registerevent() {
         <button
           type="button"
           className="registerevent-register-btn"
-          onClick={() => handleRegister(event.eid, (event.regFee || 0) > 0)}
+          onClick={() => handleRegister(event)}
         >
           <span className="registerevent-btn-border" />
           <span className="registerevent-btn-fill" />
-          <span className="registerevent-btn-label">Register</span>
+          <span className="registerevent-btn-label">
+            { (event.regFee || 0) > 0 ? `Pay & Register (₹${event.regFee})` : "Register (Free)" }
+          </span>
         </button>
       )
     }
@@ -515,7 +489,7 @@ export default function Registerevent() {
     if (teamState.registrationComplete) {
       return (
         <div className="registerevent-team-badge registerevent-badge-success">
-          ✓ Registered
+          ✓ Team Registered
         </div>
       )
     }
@@ -541,11 +515,13 @@ export default function Registerevent() {
               <button
                 type="button"
                 className="registerevent-register-btn"
-                onClick={() => handleRegisterTeam(event.eid, teamState.regFee > 0)}
+                onClick={() => handleRegisterTeam(event, teamState)}
               >
                 <span className="registerevent-btn-border" />
                 <span className="registerevent-btn-fill" />
-                <span className="registerevent-btn-label">Register Team</span>
+                <span className="registerevent-btn-label">
+                  { (teamState.regFee || 0) > 0 ? `Pay & Register Team (₹${teamState.regFee})` : "Register Team (Free)" }
+                </span>
               </button>
             ) : (
               <div className="registerevent-team-waiting">
@@ -604,7 +580,11 @@ export default function Registerevent() {
         <button
           type="button"
           className="registerevent-team-action-btn"
-          onClick={() => setShowTeamModal({ eventId: event.eid, mode: 'create' })}
+          onClick={() => {
+            setModalFlash({ type: "", message: "" })
+            setTeamFormData({ teamName: '', memberUSNs: [''] })
+            setShowTeamModal({ eventId: event.eid, mode: 'create' })
+          }}
         >
           <span className="registerevent-btn-border" />
           <span className="registerevent-btn-fill" />
@@ -613,7 +593,10 @@ export default function Registerevent() {
         <button
           type="button"
           className="registerevent-team-action-btn"
-          onClick={() => handleViewInvites(event.eid)}
+          onClick={() => {
+            setModalFlash({ type: "", message: "" })
+            handleViewInvites(event.eid)
+          }}
         >
           <span className="registerevent-btn-border" />
           <span className="registerevent-btn-fill" />
@@ -632,7 +615,7 @@ export default function Registerevent() {
           {flash.message && (
             <div
               className={`registerevent-flash ${
-                flash.type === "success" ? "registerevent-flash-success" : "registerevent-flash-error"
+                flash.type === "success" ? "registerevent-flash-success" : (flash.type === "info" ? "registerevent-flash-info" : "registerevent-flash-error")
               }`}
               role={flash.type === "error" ? "alert" : "status"}
               aria-live={flash.type === "error" ? "assertive" : "polite"}
@@ -681,7 +664,7 @@ export default function Registerevent() {
 
           {!loading && !error && filteredEvents.length === 0 && (
             <div className="registerevent-state">
-              <p className="registerevent-muted">No events found</p>
+              <p className="registerevent-muted">No events found for "{filter}"</p>
             </div>
           )}
 
@@ -852,7 +835,7 @@ export default function Registerevent() {
                           onChange={(e) => updateMemberUSN(index, e.target.value)}
                           placeholder="Enter USN"
                         />
-                        {teamFormData.memberUSNs.length > 1 && (
+                        {teamFormData.memberUSNs.length > 0 && index > 0 && (
                           <button
                             type="button"
                             className="registerevent-remove-btn"
@@ -884,7 +867,7 @@ export default function Registerevent() {
                 <div className="registerevent-invites-list">
                   {teamInvites.length === 0 ? (
                     <div className="registerevent-no-invites">
-                      <p>You have no team invites for this event.</p>
+                      <p>You have no pending team invites for this event.</p>
                     </div>
                   ) : (
                     <>
@@ -930,6 +913,89 @@ export default function Registerevent() {
           </div>
         </div>
       )}
+
+      {showUpiModal && (
+        <div className="registerevent-modal-overlay" onClick={() => !isSubmitting && setShowUpiModal(null)}>
+          <div className="registerevent-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="registerevent-modal-header">
+              <h2 className="registerevent-modal-title">
+                Manual UPI Payment
+              </h2>
+              <button 
+                className="registerevent-modal-close"
+                onClick={() => !isSubmitting && setShowUpiModal(null)}
+                disabled={isSubmitting}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="registerevent-modal-body">
+              {modalFlash.message && (
+                <div
+                  className={`registerevent-flash ${
+                    modalFlash.type === "success" ? "registerevent-flash-success" : "registerevent-flash-error"
+                  }`}
+                  role={modalFlash.type === "error" ? "alert" : "status"}
+                  aria-live={modalFlash.type === "error" ? "assertive" : "polite"}
+                  style={{ marginBottom: '16px' }}
+                >
+                  {modalFlash.message}
+                </div>
+              )}
+
+              <div className="registerevent-upi-instructions">
+                <p>To complete your registration for <strong>{showUpiModal.event.ename}</strong>, please follow these steps:</p>
+                <ol>
+                  <li>
+                    Click the button below to pay <strong>₹{showUpiModal.event.regFee}</strong> to the organizer.
+                  </li>
+                  <li>
+                    Or, manually pay to UPI ID: <strong>{showUpiModal.event.upiId}</strong>
+                  </li>
+                  <li>
+                    After payment, copy the <strong>Transaction ID</strong> (e.g., T123456789) from your UPI app.
+                  </li>
+                  <li>
+                    Paste the ID in the field below and click "Submit".
+                  </li>
+                </ol>
+
+                <a
+                  href={`upi://pay?pa=${showUpiModal.event.upiId}&pn=${encodeURIComponent(showUpiModal.event.ename)}&am=${showUpiModal.event.regFee}&cu=INR&tn=${encodeURIComponent(`EVT${showUpiModal.event.eid}`)}`}
+                  className="registerevent-upi-pay-btn"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Click to Pay ₹{showUpiModal.event.regFee}
+                </a>
+              </div>
+
+              <div className="registerevent-form-group" style={{marginTop: '20px'}}>
+                <label className="registerevent-form-label">Transaction ID</label>
+                <input
+                  type="text"
+                  className="registerevent-form-input"
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  placeholder="Enter Transaction ID from your UPI app"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <button
+                type="button"
+                className="registerevent-modal-submit-btn"
+                onClick={handleSubmitUpiPayment}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Submitting..." : "Submit Transaction ID"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </main>
   )
 }
