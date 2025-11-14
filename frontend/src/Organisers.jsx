@@ -15,6 +15,13 @@ const Organisers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [generatingExcel, setGeneratingExcel] = useState({});
+  
+  // Payment verification modal state
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedEventForPayments, setSelectedEventForPayments] = useState(null);
+  const [pendingPayments, setPendingPayments] = useState([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState({});
 
   useEffect(() => {
     fetchOrganizerEvents();
@@ -72,7 +79,6 @@ const Organisers = () => {
 
   const fetchOrganizerEvents = async () => {
     try {
-      // EDITED: Using API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/my-organized-events`, {
         method: 'GET',
         credentials: 'include',
@@ -105,7 +111,6 @@ const Organisers = () => {
     try {
       setGeneratingExcel(prev => ({ ...prev, [eventId]: true }));
 
-      // EDITED: Using API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/generate-details`, {
         method: 'GET',
         credentials: 'include',
@@ -127,10 +132,7 @@ const Organisers = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Convert response to blob
       const blob = await response.blob();
-      
-      // Create download link
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -138,7 +140,6 @@ const Organisers = () => {
       document.body.appendChild(a);
       a.click();
       
-      // Cleanup
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
@@ -148,6 +149,109 @@ const Organisers = () => {
       alert('Error generating Excel file. Please try again.');
     } finally {
       setGeneratingExcel(prev => ({ ...prev, [eventId]: false }));
+    }
+  };
+
+  const handleViewPendingPayments = async (event) => {
+    setSelectedEventForPayments(event);
+    setShowPaymentModal(true);
+    setLoadingPayments(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/events/${event.eid}/pending-payments`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch pending payments');
+      }
+
+      const data = await response.json();
+      setPendingPayments(data.pendingPayments || []);
+    } catch (err) {
+      console.error('Error fetching pending payments:', err);
+      alert('Error loading pending payments');
+      setPendingPayments([]);
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
+  const handleVerifyPayment = async (participantUSN, eventId) => {
+    if (!confirm('Are you sure you want to approve this payment?')) {
+      return;
+    }
+
+    setProcessingPayment(prev => ({ ...prev, [participantUSN]: 'verifying' }));
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payments/verify`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          participantUSN,
+          eventId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to verify payment');
+      }
+
+      const data = await response.json();
+      alert(data.message || 'Payment verified successfully!');
+      
+      // Refresh pending payments
+      setPendingPayments(prev => prev.filter(p => p.partusn !== participantUSN));
+    } catch (err) {
+      console.error('Error verifying payment:', err);
+      alert('Error verifying payment. Please try again.');
+    } finally {
+      setProcessingPayment(prev => ({ ...prev, [participantUSN]: null }));
+    }
+  };
+
+  const handleRejectPayment = async (participantUSN, eventId) => {
+    const reason = prompt('Please enter rejection reason (optional):');
+    if (reason === null) return; // User cancelled
+
+    setProcessingPayment(prev => ({ ...prev, [participantUSN]: 'rejecting' }));
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payments/reject`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          participantUSN,
+          eventId,
+          reason: reason || 'Payment rejected by organizer'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reject payment');
+      }
+
+      const data = await response.json();
+      alert(data.message || 'Payment rejected successfully!');
+      
+      // Refresh pending payments
+      setPendingPayments(prev => prev.filter(p => p.partusn !== participantUSN));
+    } catch (err) {
+      console.error('Error rejecting payment:', err);
+      alert('Error rejecting payment. Please try again.');
+    } finally {
+      setProcessingPayment(prev => ({ ...prev, [participantUSN]: null }));
     }
   };
 
@@ -208,6 +312,14 @@ const Organisers = () => {
               onClick={() => handleEventButtonClick(event.eid, eventType)}
             >
               View Event
+            </button>
+          )}
+          {event.regFee > 0 && eventType !== 'completed' && (
+            <button
+              className="event-btn event-btn-payment"
+              onClick={() => handleViewPendingPayments(event)}
+            >
+              💳 Verify Payments
             </button>
           )}
           <button
@@ -272,6 +384,118 @@ const Organisers = () => {
           </div>
         </div>
       </section>
+
+      {/* Payment Verification Modal */}
+      {showPaymentModal && (
+        <div className="payment-modal-overlay" onClick={() => setShowPaymentModal(false)}>
+          <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="payment-modal-header">
+              <h2>💳 Pending Payment Verifications</h2>
+              <p className="payment-modal-subtitle">
+                {selectedEventForPayments?.ename}
+              </p>
+              <button 
+                className="payment-modal-close"
+                onClick={() => setShowPaymentModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="payment-modal-body">
+              {loadingPayments ? (
+                <div className="payment-loading">
+                  <div className="spinner"></div>
+                  <p>Loading pending payments...</p>
+                </div>
+              ) : pendingPayments.length === 0 ? (
+                <div className="no-payments">
+                  <p>✅ No pending payments to verify</p>
+                </div>
+              ) : (
+                <div className="payments-list">
+                  {pendingPayments.map((payment, index) => (
+                    <div key={index} className="payment-card">
+                      <div className="payment-info">
+                        <div className="payment-header-row">
+                          <h3 className="payment-student-name">
+                            {payment.studentName || 'Unknown'}
+                          </h3>
+                          <span className="payment-amount">₹{payment.amount}</span>
+                        </div>
+                        
+                        <div className="payment-details">
+                          <div className="payment-detail-item">
+                            <span className="detail-label">USN:</span>
+                            <span className="detail-value">{payment.partusn}</span>
+                          </div>
+                          <div className="payment-detail-item">
+                            <span className="detail-label">Email:</span>
+                            <span className="detail-value">{payment.studentEmail || 'N/A'}</span>
+                          </div>
+                          <div className="payment-detail-item">
+                            <span className="detail-label">Mobile:</span>
+                            <span className="detail-value">{payment.studentMobile || 'N/A'}</span>
+                          </div>
+                          <div className="payment-detail-item">
+                            <span className="detail-label">Transaction ID:</span>
+                            <span className="detail-value transaction-id">
+                              {payment.transactionId || 'N/A'}
+                            </span>
+                          </div>
+                          {payment.teamName && (
+                            <div className="payment-detail-item">
+                              <span className="detail-label">Team:</span>
+                              <span className="detail-value">{payment.teamName}</span>
+                            </div>
+                          )}
+                          <div className="payment-detail-item">
+                            <span className="detail-label">Submitted:</span>
+                            <span className="detail-value">
+                              {payment.submittedAt ? new Date(payment.submittedAt).toLocaleString() : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="payment-actions">
+                        <button
+                          className="payment-btn payment-btn-approve"
+                          onClick={() => handleVerifyPayment(payment.partusn, selectedEventForPayments.eid)}
+                          disabled={processingPayment[payment.partusn]}
+                        >
+                          {processingPayment[payment.partusn] === 'verifying' ? (
+                            <>
+                              <span className="btn-spinner"></span>
+                              Approving...
+                            </>
+                          ) : (
+                            <>✓ Approve</>
+                          )}
+                        </button>
+                        <button
+                          className="payment-btn payment-btn-reject"
+                          onClick={() => handleRejectPayment(payment.partusn, selectedEventForPayments.eid)}
+                          disabled={processingPayment[payment.partusn]}
+                        >
+                          {processingPayment[payment.partusn] === 'rejecting' ? (
+                            <>
+                              <span className="btn-spinner"></span>
+                              Rejecting...
+                            </>
+                          ) : (
+                            <>✗ Reject</>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
