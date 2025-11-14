@@ -1120,4 +1120,71 @@
   .registerevent-pay-btn {
     width: 100%;
   }
+
+}
+
+/* ===================================
+   ADD THESE STYLES TO THE END OF registerevent.css
+   =================================== */
+
+/* Info flash message */
+.registerevent-flash-info {
+  background: color-mix(in oklab, var(--re-primary) 16%, transparent);
+  border-color: color-mix(in oklab, var(--re-primary) 36%, transparent);
+  color: #e0f2fe;
+}
+
+/* UPI Modal styles */
+.registerevent-upi-instructions {
+  font-size: 14px;
+  color: var(--re-muted);
+  line-height: 1.6;
+}
+
+.registerevent-upi-instructions p {
+  margin-bottom: 16px;
+}
+
+.registerevent-upi-instructions ol {
+  padding-left: 20px;
+  margin-bottom: 20px;
+}
+
+.registerevent-upi-instructions li {
+  margin-bottom: 10px;
+}
+
+.registerevent-upi-instructions strong {
+  color: var(--re-foreground);
+  font-weight: 600;
+}
+
+.registerevent-upi-pay-btn {
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  background: linear-gradient(135deg, var(--re-primary) 0%, var(--re-accent) 100%);
+  border: none;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 200ms ease;
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3);
+  box-sizing: border-box;
+}
+
+.registerevent-upi-pay-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
+}
+
+.registerevent-modal-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
