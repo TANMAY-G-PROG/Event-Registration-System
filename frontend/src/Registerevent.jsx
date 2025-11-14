@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
+import QRCode from "qrcode"
 import "./registerevent.css"
 
 // Get the base URL from environment variables
@@ -39,6 +40,7 @@ export default function Registerevent() {
   const [showUpiModal, setShowUpiModal] = useState(null)
   const [transactionId, setTransactionId] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState("")
 
   // Debug log for API URL
   useEffect(() => {
@@ -59,6 +61,53 @@ export default function Registerevent() {
     setModalFlash({ type, message })
     modalTimerRef.current = setTimeout(() => setModalFlash({ type: "", message: "" }), 4000)
   }
+
+  // Generate UPI payment URL
+  function generateUpiUrl(upiId, eventName, amount, eventId) {
+    const params = new URLSearchParams({
+      pa: upiId,
+      pn: eventName,
+      am: amount.toString(),
+      cu: "INR",
+      tn: `Event Registration - ${eventId}`
+    })
+    return `upi://pay?${params.toString()}`
+  }
+
+  // Generate QR Code from UPI URL
+  async function generateQRCode(upiUrl) {
+    try {
+      const qrDataUrl = await QRCode.toDataURL(upiUrl, {
+        width: 280,
+        margin: 2,
+        color: {
+          dark: '#0b0e14',
+          light: '#ffffff'
+        },
+        errorCorrectionLevel: 'M'
+      })
+      setQrCodeDataUrl(qrDataUrl)
+    } catch (err) {
+      console.error('Error generating QR code:', err)
+      showModalFlash('error', 'Failed to generate QR code')
+    }
+  }
+
+  // Generate QR when UPI modal opens
+  useEffect(() => {
+    if (showUpiModal) {
+      const { event } = showUpiModal
+      const upiUrl = generateUpiUrl(
+        event.upiId,
+        event.ename,
+        event.regFee,
+        event.eid
+      )
+      generateQRCode(upiUrl)
+    } else {
+      setQrCodeDataUrl("")
+    }
+  }, [showUpiModal])
 
   async function loadEvents() {
     try {
@@ -916,10 +965,10 @@ export default function Registerevent() {
 
       {showUpiModal && (
         <div className="registerevent-modal-overlay" onClick={() => !isSubmitting && setShowUpiModal(null)}>
-          <div className="registerevent-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="registerevent-modal registerevent-upi-modal" onClick={(e) => e.stopPropagation()}>
             <div className="registerevent-modal-header">
               <h2 className="registerevent-modal-title">
-                Manual UPI Payment
+                Complete Payment
               </h2>
               <button 
                 className="registerevent-modal-close"
@@ -944,53 +993,111 @@ export default function Registerevent() {
                 </div>
               )}
 
-              <div className="registerevent-upi-instructions">
-                <p>To complete your registration for <strong>{showUpiModal.event.ename}</strong>, please follow these steps:</p>
-                <ol>
-                  <li>
-                    Click the button below to pay <strong>₹{showUpiModal.event.regFee}</strong> to the organizer.
-                  </li>
-                  <li>
-                    Or, manually pay to UPI ID: <strong>{showUpiModal.event.upiId}</strong>
-                  </li>
-                  <li>
-                    After payment, copy the <strong>Transaction ID</strong> (e.g., T123456789) from your UPI app.
-                  </li>
-                  <li>
-                    Paste the ID in the field below and click "Submit".
-                  </li>
-                </ol>
+              <div className="registerevent-upi-container">
+                {/* QR Code Section */}
+                <div className="registerevent-qr-section">
+                  <h3 className="registerevent-qr-title">Scan to Pay</h3>
+                  {qrCodeDataUrl ? (
+                    <div className="registerevent-qr-wrapper">
+                      <img 
+                        src={qrCodeDataUrl} 
+                        alt="UPI Payment QR Code" 
+                        className="registerevent-qr-image"
+                      />
+                    </div>
+                  ) : (
+                    <div className="registerevent-qr-loading">
+                      <div className="registerevent-spinner" />
+                      <p>Generating QR Code...</p>
+                    </div>
+                  )}
+                  <p className="registerevent-qr-hint">
+                    Scan this QR code with any UPI app
+                  </p>
+                </div>
 
-                <a
-                  href={`upi://pay?pa=${showUpiModal.event.upiId}&pn=${encodeURIComponent(showUpiModal.event.ename)}&am=${showUpiModal.event.regFee}&cu=INR&tn=${encodeURIComponent(`EVT${showUpiModal.event.eid}`)}`}
-                  className="registerevent-upi-pay-btn"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Click to Pay ₹{showUpiModal.event.regFee}
-                </a>
+                {/* OR Divider */}
+                <div className="registerevent-divider">
+                  <span>OR</span>
+                </div>
+
+                {/* Click to Pay Section */}
+                <div className="registerevent-pay-section">
+                  <h3 className="registerevent-pay-title">Pay via UPI App</h3>
+                  <div className="registerevent-payment-details">
+                    <div className="registerevent-payment-row">
+                      <span className="registerevent-payment-label">Event:</span>
+                      <span className="registerevent-payment-value">{showUpiModal.event.ename}</span>
+                    </div>
+                    <div className="registerevent-payment-row">
+                      <span className="registerevent-payment-label">Amount:</span>
+                      <span className="registerevent-payment-value registerevent-payment-amount">
+                        ₹{showUpiModal.event.regFee}
+                      </span>
+                    </div>
+                    <div className="registerevent-payment-row">
+                      <span className="registerevent-payment-label">UPI ID:</span>
+                      <span className="registerevent-payment-value registerevent-upi-id">
+                        {showUpiModal.event.upiId}
+                      </span>
+                    </div>
+                  </div>
+
+                  <a
+                    href={generateUpiUrl(
+                      showUpiModal.event.upiId,
+                      showUpiModal.event.ename,
+                      showUpiModal.event.regFee,
+                      showUpiModal.event.eid
+                    )}
+                    className="registerevent-upi-pay-btn"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                      <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                    </svg>
+                    Open UPI App & Pay ₹{showUpiModal.event.regFee}
+                  </a>
+                </div>
               </div>
 
-              <div className="registerevent-form-group" style={{marginTop: '20px'}}>
-                <label className="registerevent-form-label">Transaction ID</label>
-                <input
-                  type="text"
-                  className="registerevent-form-input"
-                  value={transactionId}
-                  onChange={(e) => setTransactionId(e.target.value)}
-                  placeholder="Enter Transaction ID from your UPI app"
+              {/* Transaction ID Section */}
+              <div className="registerevent-transaction-section">
+                <h3 className="registerevent-transaction-title">After Payment</h3>
+                <p className="registerevent-transaction-hint">
+                  Once payment is complete, enter your <strong>Transaction ID</strong> (e.g., T123456789) from your UPI app below:
+                </p>
+                
+                <div className="registerevent-form-group" style={{marginTop: '16px'}}>
+                  <label className="registerevent-form-label">Transaction ID *</label>
+                  <input
+                    type="text"
+                    className="registerevent-form-input"
+                    value={transactionId}
+                    onChange={(e) => setTransactionId(e.target.value)}
+                    placeholder="Enter Transaction ID"
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  className="registerevent-modal-submit-btn"
+                  onClick={handleSubmitUpiPayment}
                   disabled={isSubmitting}
-                />
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="registerevent-btn-spinner" />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit & Complete Registration"
+                  )}
+                </button>
               </div>
-
-              <button
-                type="button"
-                className="registerevent-modal-submit-btn"
-                onClick={handleSubmitUpiPayment}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Submitting..." : "Submit Transaction ID"}
-              </button>
             </div>
           </div>
         </div>
