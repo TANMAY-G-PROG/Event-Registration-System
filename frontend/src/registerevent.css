@@ -97,6 +97,12 @@
   color: #fee2e2;
 }
 
+.registerevent-flash-info {
+  background: color-mix(in oklab, var(--re-primary) 16%, transparent);
+  border-color: color-mix(in oklab, var(--re-primary) 36%, transparent);
+  color: #e0f2fe;
+}
+
 /* Header */
 .registerevent-header {
   display: flex;
@@ -300,6 +306,16 @@
   color: #374151;
 }
 
+.registerevent-badge-team {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.registerevent-badge-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
 /* Register button container */
 .registerevent-register-actions {
   display: flex;
@@ -369,58 +385,19 @@
   animation: registerevent-gradient-x 8s linear infinite;
 }
 
-/* Pay Now button (same style as register button) */
-.registerevent-pay-btn {
-  position: relative;
-  border: none;
-  background: transparent;
-  padding: 10px 18px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: all 200ms ease;
-  box-shadow: inset 0 -6px 10px rgba(143, 223, 255, 0.12);
-  white-space: nowrap;
+@keyframes registerevent-gradient-x {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 140% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
-.registerevent-pay-btn:hover {
-  box-shadow: inset 0 -5px 10px rgba(143, 223, 255, 0.24);
-  transform: translateY(-1px);
-}
-
-.registerevent-pay-btn:focus-visible {
-  outline: 2px solid var(--re-primary);
-  outline-offset: 2px;
-}
-
-.registerevent-pay-label {
-  position: relative;
-  z-index: 2;
-  font-weight: 600;
-  font-size: 14px;
-  background: linear-gradient(90deg, #ffaa40, #ffffff, #ffaa40);
-  background-size: 300% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: registerevent-gradient-x 8s linear infinite;
-}
-
-/* ===================================
-   TEAM EVENT STYLES - ADD TO registerevent.css
-   =================================== */
-
-/* Team badge */
-.registerevent-badge-team {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.registerevent-badge-success {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-/* Team controls container */
+/* Team controls */
 .registerevent-team-controls {
   display: flex;
   flex-direction: column;
@@ -456,7 +433,6 @@
   text-align: center;
 }
 
-/* Team members list */
 .registerevent-team-members-list {
   background: color-mix(in oklab, var(--re-background) 50%, white 2%);
   border: 1px solid color-mix(in oklab, white 8%, transparent);
@@ -498,7 +474,6 @@
   font-size: 12px;
 }
 
-/* Team actions (Create/Join buttons) */
 .registerevent-team-actions {
   display: flex;
   gap: 10px;
@@ -529,7 +504,6 @@
   outline-offset: 2px;
 }
 
-/* Team badge for joined status */
 .registerevent-team-badge {
   display: inline-block;
   padding: 8px 16px;
@@ -537,6 +511,12 @@
   font-size: 13px;
   font-weight: 600;
   text-align: center;
+}
+
+.registerevent-team-loading {
+  font-size: 13px;
+  color: var(--re-muted);
+  font-style: italic;
 }
 
 /* Modal styles */
@@ -575,6 +555,11 @@
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   animation: registerevent-slideUp 0.3s ease;
+}
+
+/* Wider modal for UPI payment */
+.registerevent-upi-modal {
+  max-width: 600px;
 }
 
 @keyframes registerevent-slideUp {
@@ -626,8 +611,242 @@
   transform: rotate(90deg);
 }
 
+.registerevent-modal-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .registerevent-modal-body {
   padding: 24px;
+}
+
+/* UPI Payment Modal Styles */
+.registerevent-upi-container {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 32px;
+}
+
+/* QR Code Section */
+.registerevent-qr-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.registerevent-qr-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--re-foreground);
+  margin: 0 0 16px 0;
+  letter-spacing: -0.01em;
+}
+
+.registerevent-qr-wrapper {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-bottom: 12px;
+}
+
+.registerevent-qr-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 280px;
+}
+
+.registerevent-qr-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  background: color-mix(in oklab, var(--re-background) 70%, white 4%);
+  border-radius: 12px;
+  border: 2px dashed color-mix(in oklab, white 15%, transparent);
+}
+
+.registerevent-qr-loading .registerevent-spinner {
+  width: 28px;
+  height: 28px;
+}
+
+.registerevent-qr-loading p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--re-muted);
+}
+
+.registerevent-qr-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--re-muted);
+  line-height: 1.4;
+}
+
+/* Divider */
+.registerevent-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.registerevent-divider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in oklab, white 20%, transparent) 20%,
+    color-mix(in oklab, white 20%, transparent) 80%,
+    transparent
+  );
+  transform: translateX(-50%);
+}
+
+.registerevent-divider span {
+  background: color-mix(in oklab, var(--re-background) 85%, white 8%);
+  color: var(--re-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+  position: relative;
+  z-index: 1;
+}
+
+/* Pay Section */
+.registerevent-pay-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.registerevent-pay-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--re-foreground);
+  margin: 0 0 16px 0;
+  letter-spacing: -0.01em;
+}
+
+.registerevent-payment-details {
+  background: color-mix(in oklab, var(--re-background) 70%, white 4%);
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+  border-radius: 12px;
+  padding: 16px;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.registerevent-payment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid color-mix(in oklab, white 8%, transparent);
+}
+
+.registerevent-payment-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.registerevent-payment-row:first-child {
+  padding-top: 0;
+}
+
+.registerevent-payment-label {
+  font-size: 13px;
+  color: var(--re-muted);
+  font-weight: 500;
+}
+
+.registerevent-payment-value {
+  font-size: 13px;
+  color: var(--re-foreground);
+  font-weight: 600;
+  text-align: right;
+}
+
+.registerevent-payment-amount {
+  font-size: 18px;
+  color: var(--re-primary);
+}
+
+.registerevent-upi-id {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.registerevent-upi-pay-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  text-align: center;
+  background: linear-gradient(135deg, var(--re-primary) 0%, var(--re-accent) 100%);
+  border: none;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 200ms ease;
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3);
+}
+
+.registerevent-upi-pay-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
+}
+
+.registerevent-upi-pay-btn svg {
+  flex-shrink: 0;
+}
+
+/* Transaction Section */
+.registerevent-transaction-section {
+  border-top: 1px solid color-mix(in oklab, white 10%, transparent);
+  padding-top: 24px;
+}
+
+.registerevent-transaction-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--re-foreground);
+  margin: 0 0 12px 0;
+  letter-spacing: -0.01em;
+}
+
+.registerevent-transaction-hint {
+  font-size: 14px;
+  color: var(--re-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.registerevent-transaction-hint strong {
+  color: var(--re-foreground);
+  font-weight: 600;
 }
 
 /* Team form */
@@ -675,7 +894,11 @@
   color: var(--re-muted);
 }
 
-/* Member input row */
+.registerevent-form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .registerevent-member-input-row {
   display: flex;
   gap: 8px;
@@ -744,6 +967,10 @@
   transition: all 200ms ease;
   box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3);
   margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
 .registerevent-modal-submit-btn:hover {
@@ -755,7 +982,24 @@
   transform: translateY(0);
 }
 
-/* Form hint text */
+.registerevent-modal-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Button spinner */
+.registerevent-btn-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: registerevent-spin 0.6s linear infinite;
+}
+
 .registerevent-form-hint {
   font-size: 12px;
   color: var(--re-muted);
@@ -764,62 +1008,7 @@
   line-height: 1.4;
 }
 
-/* Team loading state */
-.registerevent-team-loading {
-  font-size: 13px;
-  color: var(--re-muted);
-  font-style: italic;
-}
-
-/* Responsive adjustments for team events */
-@media (max-width: 768px) {
-  .registerevent-team-actions {
-    flex-direction: column;
-  }
-
-  .registerevent-team-action-btn {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .registerevent-team-controls {
-    max-width: 100%;
-  }
-
-  .registerevent-modal {
-    max-height: 90vh;
-    margin: 10px;
-  }
-
-  .registerevent-modal-header {
-    padding: 16px 20px;
-  }
-
-  .registerevent-modal-body {
-    padding: 20px;
-  }
-}
-
-@media (max-width: 480px) {
-  .registerevent-team-members-list {
-    padding: 10px;
-  }
-
-  .registerevent-team-member-item {
-    font-size: 12px;
-    padding: 6px 0;
-  }
-
-  .registerevent-modal-title {
-    font-size: 20px;
-  }
-}
-
-/* ===================================
-   INVITES MODAL STYLES - ADD TO END OF registerevent.css
-   =================================== */
-
-/* Invites list container */
+/* Invites list */
 .registerevent-invites-list {
   display: flex;
   flex-direction: column;
@@ -844,7 +1033,6 @@
   margin: 0;
 }
 
-/* Invite card */
 .registerevent-invite-card {
   background: color-mix(in oklab, var(--re-background) 70%, white 4%);
   border: 1px solid color-mix(in oklab, white 12%, transparent);
@@ -906,7 +1094,6 @@
   border: 1px solid color-mix(in oklab, var(--re-success) 30%, transparent);
 }
 
-/* Confirm join button */
 .registerevent-invite-confirm-btn {
   appearance: none;
   background: linear-gradient(135deg, var(--re-primary) 0%, var(--re-accent) 100%);
@@ -929,30 +1116,6 @@
 
 .registerevent-invite-confirm-btn:active {
   transform: translateY(0);
-}
-
-/* Responsive for invites */
-@media (max-width: 768px) {
-  .registerevent-invite-card {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .registerevent-invite-confirm-btn {
-    width: 100%;
-  }
-}
-
-@keyframes registerevent-gradient-x {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 140% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
 }
 
 /* Section titles */
@@ -1087,8 +1250,7 @@
     width: 100%;
   }
 
-  .registerevent-register-btn,
-  .registerevent-pay-btn {
+  .registerevent-register-btn {
     flex: 1;
     text-align: center;
     min-width: 0;
@@ -1096,6 +1258,72 @@
 
   .registerevent-list {
     padding: 0 8px;
+  }
+
+  .registerevent-team-actions {
+    flex-direction: column;
+  }
+
+  .registerevent-team-action-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .registerevent-team-controls {
+    max-width: 100%;
+  }
+
+  .registerevent-modal {
+    max-height: 90vh;
+    margin: 10px;
+  }
+
+  .registerevent-upi-modal {
+    max-width: 100%;
+  }
+
+  .registerevent-modal-header {
+    padding: 16px 20px;
+  }
+
+  .registerevent-modal-body {
+    padding: 20px;
+  }
+
+  .registerevent-invite-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .registerevent-invite-confirm-btn {
+    width: 100%;
+  }
+
+  /* UPI Modal - Stack layout on mobile */
+  .registerevent-upi-container {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .registerevent-divider {
+    height: 1px;
+  }
+
+  .registerevent-divider::before {
+    top: 50%;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 1px;
+    transform: translateY(-50%);
+    background: linear-gradient(
+      to right,
+      transparent,
+      color-mix(in oklab, white 20%, transparent) 20%,
+      color-mix(in oklab, white 20%, transparent) 80%,
+      transparent
+    );
   }
 }
 
@@ -1116,75 +1344,37 @@
     flex-direction: column;
   }
 
-  .registerevent-register-btn,
-  .registerevent-pay-btn {
+  .registerevent-register-btn {
     width: 100%;
   }
 
-}
+  .registerevent-team-members-list {
+    padding: 10px;
+  }
 
-/* ===================================
-   ADD THESE STYLES TO THE END OF registerevent.css
-   =================================== */
+  .registerevent-team-member-item {
+    font-size: 12px;
+    padding: 6px 0;
+  }
 
-/* Info flash message */
-.registerevent-flash-info {
-  background: color-mix(in oklab, var(--re-primary) 16%, transparent);
-  border-color: color-mix(in oklab, var(--re-primary) 36%, transparent);
-  color: #e0f2fe;
-}
+  .registerevent-modal-title {
+    font-size: 20px;
+  }
 
-/* UPI Modal styles */
-.registerevent-upi-instructions {
-  font-size: 14px;
-  color: var(--re-muted);
-  line-height: 1.6;
-}
+  .registerevent-qr-wrapper {
+    padding: 12px;
+  }
 
-.registerevent-upi-instructions p {
-  margin-bottom: 16px;
-}
+  .registerevent-qr-image {
+    max-width: 240px;
+  }
 
-.registerevent-upi-instructions ol {
-  padding-left: 20px;
-  margin-bottom: 20px;
-}
+  .registerevent-payment-details {
+    padding: 12px;
+  }
 
-.registerevent-upi-instructions li {
-  margin-bottom: 10px;
-}
-
-.registerevent-upi-instructions strong {
-  color: var(--re-foreground);
-  font-weight: 600;
-}
-
-.registerevent-upi-pay-btn {
-  display: inline-block;
-  width: 100%;
-  text-align: center;
-  background: linear-gradient(135deg, var(--re-primary) 0%, var(--re-accent) 100%);
-  border: none;
-  color: white;
-  padding: 14px 24px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: none;
-  transition: all 200ms ease;
-  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3);
-  box-sizing: border-box;
-}
-
-.registerevent-upi-pay-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
-}
-
-.registerevent-modal-submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+  .registerevent-upi-pay-btn {
+    font-size: 14px;
+    padding: 12px 20px;
+  }
 }
