@@ -1,18 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom'; // Use useSearchParams
-import './ticket.css'; // Changed to ticket.css as per your other files
-
-// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import './ticket.css';
 
 export default function ParticipantTicket() {
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams(); // Use searchParams hook
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const eventId = searchParams.get('eventId'); // Get eventId from URL
+    const eventId = searchParams.get('eventId');
 
     if (!eventId) {
       setError('No event ID provided in the URL');
@@ -21,12 +19,12 @@ export default function ParticipantTicket() {
     }
 
     fetchEventData(eventId);
-  }, [searchParams]); // Rerun if searchParams change
+  }, [searchParams]);
 
   const fetchEventData = async (eventId) => {
     try {
-      // ✅ CHANGED: Fetched from the correct endpoint to get payment status
-      const response = await fetch(`/api/events/${eventId}`, {
+      // Fetch event details with participant-specific payment status
+      const response = await fetch(`/api/events/${eventId}/participant-status`, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -34,7 +32,8 @@ export default function ParticipantTicket() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          navigate('/'); // Redirect if not logged in
+          navigate('/');
+          return;
         }
         throw new Error('Failed to fetch event data');
       }
@@ -58,11 +57,15 @@ export default function ParticipantTicket() {
   };
 
   const handleBack = () => {
-    navigate('/participants'); // Use navigate
+    navigate('/participants');
   };
 
   const handleScanQR = () => {
-    // Pass the participant role to the scanner
+    // Only allow scanning if payment is verified (or event is free)
+    if (!canScan) {
+      alert('Your payment must be verified by the organizer before you can mark attendance.');
+      return;
+    }
     navigate('/scanner?role=participant');
   };
 
@@ -87,10 +90,32 @@ export default function ParticipantTicket() {
     return `${hours}:${minutes} ${ampm}`;
   };
 
-  // ⭐️ NEW: Determine payment status and message
+  // Determine payment status
   const isPaidEvent = eventData?.regFee > 0;
-  const isPaymentPending = eventData?.paymentStatus === 'pending_verification';
-  const canScan = !isPaidEvent || (isPaidEvent && !isPaymentPending);
+  const paymentStatus = eventData?.paymentStatus; // 'verified', 'pending_verification', or null
+  const isPaymentVerified = paymentStatus === 'verified';
+  const isPaymentPending = paymentStatus === 'pending_verification';
+  const isPaymentRejected = paymentStatus === 'rejected';
+  
+  // Can only scan if: (1) Free event, OR (2) Paid event with verified payment
+  const canScan = !isPaidEvent || (isPaidEvent && isPaymentVerified);
+
+  // Status badge text and class
+  const getPaymentBadge = () => {
+    if (!isPaidEvent) return null;
+    
+    if (isPaymentVerified) {
+      return { text: '✅ Payment Verified', className: 'verified' };
+    } else if (isPaymentPending) {
+      return { text: '⏳ Payment Pending Verification', className: 'pending' };
+    } else if (isPaymentRejected) {
+      return { text: '❌ Payment Rejected', className: 'rejected' };
+    } else {
+      return { text: '⚠️ Payment Required', className: 'required' };
+    }
+  };
+
+  const paymentBadge = getPaymentBadge();
 
   return (
     <div className="ticket-page-wrapper">
@@ -124,16 +149,16 @@ export default function ParticipantTicket() {
                 {eventData.ename || 'Untitled Event'}
               </h1>
               <p className="tk-event-id">Event ID: {eventData.eid}</p>
-              {/* ⭐️ NEW: Show payment status badge */}
-              {isPaidEvent && (
-                <p className={`tk-user-badge ${isPaymentPending ? 'pending' : 'verified'}`}>
-                  {isPaymentPending ? '💳 Payment Pending Verification' : '✅ Payment Verified'}
+              
+              {/* Payment Status Badge */}
+              {paymentBadge && (
+                <p className={`tk-user-badge ${paymentBadge.className}`}>
+                  {paymentBadge.text}
                 </p>
               )}
             </div>
 
             <div className="tk-ticket-content">
-              {/* ... (all your tk-info-section divs remain the same) ... */}
               <div className="tk-info-section">
                 <div className="tk-info-icon">📅</div>
                 <div className="tk-info-content">
@@ -199,21 +224,37 @@ export default function ParticipantTicket() {
             </div>
 
             <div className="tk-ticket-footer">
-              {/* ⭐️ NEW: Added disabled logic to the button */}
               <button
                 onClick={handleScanQR}
-                className="tk-qr-placeholder tk-qr-scanner"
+                className={`tk-qr-placeholder tk-qr-scanner ${!canScan ? 'disabled' : ''}`}
                 title={canScan ? "Open QR Scanner" : "Payment must be verified to mark attendance"}
-                disabled={!canScan} 
+                disabled={!canScan}
               >
                 📱
-                <div className="tk-qr-text">MARK ATTENDANCE</div>
+                <div className="tk-qr-text">
+                  {canScan ? 'MARK ATTENDANCE' : 'ATTENDANCE LOCKED'}
+                </div>
               </button>
-              {/* ⭐️ NEW: Show a message when button is disabled */}
+              
+              {/* Show appropriate message based on payment status */}
               {!canScan && (
-                 <p className="tk-payment-pending-message">
-                   Your payment is pending verification. Attendance can be marked once the organizer approves your payment.
-                 </p>
+                <div className="tk-payment-message">
+                  {isPaymentPending && (
+                    <p className="tk-payment-pending-message">
+                      ⏳ Your payment is pending verification. Attendance can be marked once the organizer approves your payment.
+                    </p>
+                  )}
+                  {isPaymentRejected && (
+                    <p className="tk-payment-rejected-message">
+                      ❌ Your payment was rejected. Please contact the organizer or re-register for this event.
+                    </p>
+                  )}
+                  {!paymentStatus && isPaidEvent && (
+                    <p className="tk-payment-required-message">
+                      ⚠️ Payment required. Please complete your payment to mark attendance.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </div>
