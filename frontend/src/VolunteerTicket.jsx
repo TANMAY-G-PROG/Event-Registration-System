@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom'; // Import useSearchParams
 import './ticket.css';
 
-// Get the base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function VolunteerTicket() {
   const [eventData, setEventData] = useState(null);
@@ -11,10 +10,10 @@ export default function VolunteerTicket() {
   const [error, setError] = useState(null);
   const [userUSN, setUserUSN] = useState(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams(); // Use searchParams hook
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const eventId = urlParams.get('eventId');
+    const eventId = searchParams.get('eventId'); // Get eventId from URL
 
     if (!eventId) {
       setError('No event ID provided in the URL');
@@ -23,12 +22,12 @@ export default function VolunteerTicket() {
     }
 
     fetchEventData(eventId);
-  }, []);
+  }, [searchParams]); // Rerun if searchParams change
 
   const fetchUserData = async () => {
     try {
-      // EDITED: Using API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/me`, {
+      // ✅ CHANGED: Using relative path
+      const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -54,12 +53,15 @@ export default function VolunteerTicket() {
       }
       setUserUSN(usn);
 
-      // EDITED: Using API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/my-volunteer-events`, {
+      // ✅ CHANGED: Using relative path
+      const response = await fetch('/api/my-volunteer-events', {
         credentials: 'include',
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          navigate('/'); // Redirect if not logged in
+        }
         throw new Error('Failed to fetch volunteer events');
       }
 
@@ -91,7 +93,7 @@ export default function VolunteerTicket() {
         setEventData(foundEvent);
         setLoading(false);
       } else {
-        setError(`Could not load event details. Event ID: ${eventId} not found.`);
+        setError(`Could not load event details. Event ID: ${eventId} not found or you are not a volunteer.`);
         setLoading(false);
       }
     } catch (err) {
@@ -102,7 +104,7 @@ export default function VolunteerTicket() {
   };
 
   const handleBack = () => {
-    window.location.href = '/volunteers';
+    navigate('/volunteers'); // Use navigate
   };
 
   const handleScanQR = () => {
@@ -167,6 +169,7 @@ export default function VolunteerTicket() {
             </div>
 
             <div className="tk-ticket-content">
+              {/* ... (all tk-info-section divs remain the same) ... */}
               <div className="tk-info-section">
                 <div className="tk-info-icon">📅</div>
                 <div className="tk-info-content">
@@ -238,7 +241,7 @@ export default function VolunteerTicket() {
                 title="Scan Event QR Code"
               >
                 📱
-                <div className="tk-qr-text">SCAN EVENT QR</div>
+                <div className="tk-qr-text">MARK ATTENDANCE</div>
               </button>
               <p style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
                 Scan the organizer's QR code to mark your attendance
