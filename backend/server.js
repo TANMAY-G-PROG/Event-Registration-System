@@ -824,7 +824,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             eventLoc: event.eventloc,
             maxPart: event.maxpart,
             maxVoln: event.maxvoln,
-            regFee: event.regfee,
+            regFee: event.regFee,
             clubName: event.club?.cname,
             organizerName: event.student?.sname,
             OrgUsn: event.orgusn
@@ -832,7 +832,8 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
 
         const { data: participantCheck } = await supabase
             .from('participant')
-            .select('partstatus')
+            // ✅ CHANGED THIS LINE: Added payment_status
+            .select('partstatus, payment_status') 
             .eq('partusn', req.session.userUSN)
             .eq('parteid', eventId)
             .limit(1);
@@ -845,6 +846,8 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             .limit(1);
 
         transformedEvent.isRegistered = participantCheck && participantCheck.length > 0;
+        // ✅ ADDED THIS LINE:
+        transformedEvent.paymentStatus = participantCheck?.[0]?.payment_status || null; 
         transformedEvent.isVolunteer = volunteerCheck && volunteerCheck.length > 0;
         transformedEvent.isOrganizer = event.orgusn === req.session.userUSN;
 
@@ -856,7 +859,6 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
         });
     }
 });
-
 // Get all clubs
 app.get('/api/clubs', requireAuth, async (req, res) => {
     try {
