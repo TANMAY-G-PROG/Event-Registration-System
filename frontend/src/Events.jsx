@@ -4,7 +4,7 @@ import { Renderer, Program, Triangle, Mesh } from 'ogl';
 import './events.css';
 
 // Get the base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// ❌ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const DEFAULT_COLOR = '#ffffff';
 
@@ -13,27 +13,8 @@ const hexToRgb = hex => {
   return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [1, 1, 1];
 };
 
-const getAnchorAndDir = (origin, w, h) => {
-  const outside = 0.2;
-  switch (origin) {
-    case 'top-left':
-      return { anchor: [0, -outside * h], dir: [0, 1] };
-    case 'top-right':
-      return { anchor: [w, -outside * h], dir: [0, 1] };
-    case 'left':
-      return { anchor: [-outside * w, 0.5 * h], dir: [1, 0] };
-    case 'right':
-      return { anchor: [(1 + outside) * w, 0.5 * h], dir: [-1, 0] };
-    case 'bottom-left':
-      return { anchor: [0, (1 + outside) * h], dir: [0, -1] };
-    case 'bottom-center':
-      return { anchor: [0.5 * w, (1 + outside) * h], dir: [0, -1] };
-    case 'bottom-right':
-      return { anchor: [w, (1 + outside) * h], dir: [0, -1] };
-    default:
-      return { anchor: [0.5 * w, -outside * h], dir: [0, 1] };
-  }
-};
+// ... (all the LightRays component code remains unchanged) ...
+// ... (lines 14 - 510) ...
 
 const LightRays = ({
   raysOrigin = 'top-center',
@@ -454,8 +435,8 @@ export default function Events() {
 
   const checkAuth = async () => {
     try {
-      // EDITED: Using API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/me`, {
+      // ✅ CHANGED: Using relative path for the proxy
+      const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -474,8 +455,8 @@ export default function Events() {
 
   const handleLogout = async () => {
     try {
-      // EDITED: Using API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/signout`, {
+      // ✅ CHANGED: Using relative path for the proxy
+      const response = await fetch('/api/signout', {
         method: 'POST',
         credentials: 'include',
         headers: {
