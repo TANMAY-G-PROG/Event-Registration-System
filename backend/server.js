@@ -51,9 +51,9 @@ app.use(session({
     rolling: true,
     cookie: {
         httpOnly: true,
-        maxAge: 10 * 60 * 1000,
+        maxAge: 60 * 60 * 1000, // ✅ CHANGED: 1 hour (10 minutes was too short)
         secure: IS_PRODUCTION ? true : false,  
-        sameSite: IS_PRODUCTION ? "none" : "lax",
+        sameSite: IS_PRODUCTION ? "lax" : "lax", // ✅ CHANGED: "lax" (was "none")
         path: '/'
     }
 }));
