@@ -9,23 +9,18 @@ export default function Login() {
   const navigate = useNavigate();
   const [isActive, setIsActive] = useState(false);
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
-
-  // States for password visibility
-  const [showSignInPassword, setShowSignInPassword] = useState(false);
-  const [showSignUpPassword, setShowSignUpPassword] = useState(false);
-
+  const [showPassword, setShowPassword] = useState({ signIn: false, signUp: false });
   const [signInData, setSignInData] = useState({
     usn: '',
-    password: ''
+    password: '',
   });
-
   const [signUpData, setSignUpData] = useState({
     name: '',
     usn: '',
     sem: '',
     mobno: '',
     email: '',
-    password: ''
+    password: '',
   });
 
   useEffect(() => {
@@ -35,7 +30,7 @@ export default function Login() {
   useEffect(() => {
     if (message.show) {
       const timer = setTimeout(() => {
-        setMessage(prev => ({ ...prev, show: false }));
+        setMessage((prev) => ({ ...prev, show: false }));
       }, 5000);
       return () => clearTimeout(timer);
     }
@@ -43,15 +38,14 @@ export default function Login() {
 
   const checkAuthStatus = async () => {
     try {
-      // Use environment variable
       const response = await fetch(`${API_BASE_URL}/api/me`, {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         showMessage(`Already logged in as ${data.userName}. Redirecting...`);
@@ -70,25 +64,20 @@ export default function Login() {
 
   const handleSignIn = async () => {
     const { usn, password } = signInData;
-
     if (!usn || !password) {
-      showMessage("Please fill in all fields", true);
+      showMessage('Please fill in all fields', true);
       return;
     }
-
     try {
-      // Use environment variable
       const response = await fetch(`${API_BASE_URL}/api/signin`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ usn, password })
+        body: JSON.stringify({ usn, password }),
       });
-
       const data = await response.json();
-
       if (data.success) {
         showMessage(`Welcome back, ${data.userName}!`);
         setTimeout(() => {
@@ -105,52 +94,42 @@ export default function Login() {
 
   const handleSignUp = async () => {
     const { name, usn, sem, mobno, email, password } = signUpData;
-
     if (!name || !usn || !sem || !mobno || !email || !password) {
-      showMessage("Please fill in all fields", true);
+      showMessage('Please fill in all fields', true);
       return;
     }
-
     if (!/^1BM\d{2}[A-Z]{2}\d{3}$/.test(usn)) {
-      showMessage("Invalid USN format. Example: 1BM23CS101", true);
+      showMessage('Invalid USN format. Example: 1BM23CS101', true);
       return;
     }
-
     if (!/\S+@\S+\.\S+/.test(email)) {
-      showMessage("Please enter a valid email address", true);
+      showMessage('Please enter a valid email address', true);
       return;
     }
-
     if (!/^\d{10}$/.test(mobno)) {
-      showMessage("Please enter a valid 10-digit mobile number", true);
+      showMessage('Please enter a valid 10-digit mobile number', true);
       return;
     }
-
     const semNum = parseInt(sem);
     if (semNum < 1 || semNum > 8) {
-      showMessage("Semester must be between 1 and 8", true);
+      showMessage('Semester must be between 1 and 8', true);
       return;
     }
-
     try {
-      // Use environment variable
       const response = await fetch(`${API_BASE_URL}/api/signup`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, usn, sem: semNum, mobno, email, password })
+        body: JSON.stringify({ name, usn, sem: semNum, mobno, email, password }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         showMessage(errorData.error || 'Failed to sign up. Please try again.', true);
         return;
       }
-
       const data = await response.json();
-
       if (data.success) {
         showMessage(`Account created successfully! Welcome, ${data.userName}!`);
         setSignUpData({
@@ -159,7 +138,7 @@ export default function Login() {
           sem: '',
           mobno: '',
           email: '',
-          password: ''
+          password: '',
         });
         setTimeout(() => {
           navigate('/events');
@@ -174,22 +153,23 @@ export default function Login() {
   };
 
   const handleSignInChange = (e) => {
-    setSignInData(prev => ({
+    setSignInData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     }));
   };
 
   const handleSignUpChange = (e) => {
     const { name, value } = e.target;
-    setSignUpData(prev => ({
+    setSignUpData((prev) => ({
       ...prev,
-      [name]: name === 'usn' ? value.toUpperCase() : value
+      [name]: name === 'usn' ? value.toUpperCase() : value,
     }));
   };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       if (isActive) {
         handleSignUp();
       } else {
@@ -206,15 +186,20 @@ export default function Login() {
     navigate('/about-us#connect-section');
   };
 
+  const togglePasswordVisibility = (formType) => {
+    setShowPassword((prev) => ({
+      ...prev,
+      [formType]: !prev[formType],
+    }));
+  };
+
   return (
     <div className="login-page">
       <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
       />
-
       <div className="top-nav-buttons">
-        {/* Updated About Us Button */}
         <button className="button" onClick={handleAboutUsClick}>
           <div className="bubble-layer bubble-1"></div>
           <div className="bubble-layer bubble-2"></div>
@@ -225,8 +210,6 @@ export default function Login() {
           <div className="bubble-layer bubble-7"></div>
           <span>About Us</span>
         </button>
-
-        {/* Updated Contact Us Button */}
         <button className="button" onClick={handleContactUsClick}>
           <div className="bubble-layer bubble-1"></div>
           <div className="bubble-layer bubble-2"></div>
@@ -238,16 +221,14 @@ export default function Login() {
           <span>Contact Us</span>
         </button>
       </div>
-
       {message.show && (
         <div className={`message ${message.isError ? 'error' : 'success'}`}>
           {message.text}
         </div>
       )}
-
       <div className={`container ${isActive ? 'active' : ''}`} id="container">
         <div className="form-container sign-up">
-          <div onKeyPress={handleKeyPress}>
+          <form onKeyPress={handleKeyPress}>
             <h1>Create Account</h1>
             <input
               type="text"
@@ -284,28 +265,26 @@ export default function Login() {
               value={signUpData.email}
               onChange={handleSignUpChange}
             />
-            {/* Updated Password Input for Sign Up */}
             <div className="password-wrapper">
               <input
-                type={showSignUpPassword ? 'text' : 'password'}
+                type={showPassword.signUp ? 'text' : 'password'}
                 name="password"
                 placeholder="Password"
                 value={signUpData.password}
                 onChange={handleSignUpChange}
               />
-              <i 
-                className={`fa-solid ${showSignUpPassword ? 'fa-eye-slash' : 'fa-eye'} password-toggle-icon`}
-                onClick={() => setShowSignUpPassword(prev => !prev)}
+              <i
+                className={`fa-solid ${showPassword.signUp ? 'fa-eye-slash' : 'fa-eye'} password-toggle-icon`}
+                onClick={() => togglePasswordVisibility('signUp')}
               ></i>
             </div>
             <button type="button" onClick={handleSignUp}>
               Sign Up
             </button>
-          </div>
+          </form>
         </div>
-
         <div className="form-container sign-in">
-          <div onKeyPress={handleKeyPress}>
+          <form onKeyPress={handleKeyPress}>
             <h1>Sign In</h1>
             <input
               type="text"
@@ -315,23 +294,22 @@ export default function Login() {
               value={signInData.usn}
               onChange={handleSignInChange}
             />
-            {/* Updated Password Input for Sign In */}
             <div className="password-wrapper">
               <input
-                type={showSignInPassword ? 'text' : 'password'}
+                type={showPassword.signIn ? 'text' : 'password'}
                 name="password"
                 placeholder="Password"
                 id="password"
                 value={signInData.password}
                 onChange={handleSignInChange}
               />
-              <i 
-                className={`fa-solid ${showSignInPassword ? 'fa-eye-slash' : 'fa-eye'} password-toggle-icon`}
-                onClick={() => setShowSignInPassword(prev => !prev)}
+              <i
+                className={`fa-solid ${showPassword.signIn ? 'fa-eye-slash' : 'fa-eye'} password-toggle-icon`}
+                onClick={() => togglePasswordVisibility('signIn')}
               ></i>
             </div>
-            <a 
-              href="#" 
+            <a
+              href="#"
               onClick={(e) => {
                 e.preventDefault();
                 navigate('/forgot-password');
@@ -343,52 +321,45 @@ export default function Login() {
             <button type="button" onClick={handleSignIn}>
               Sign In
             </button>
-          </div>
+          </form>
         </div>
-
         <div className="toggle-container">
           <div className="toggle">
             <div className="toggle-panel toggle-left">
               <h1>Welcome Back!</h1>
               <p>Enter your personal details to use all of site features</p>
-              <button className="hidden" id="login" onClick={() => setIsActive(false)}>
+              <button className="hidden" onClick={() => setIsActive(false)}>
                 Sign In
               </button>
             </div>
             <div className="toggle-panel toggle-right">
               <h1>Hello, Friend!</h1>
               <p>Register with your personal details to create a new account</p>
-              <button className="hidden" id="register" onClick={() => setIsActive(true)}>
+              <button className="hidden" onClick={() => setIsActive(true)}>
                 Sign Up
               </button>
             </div>
           </div>
         </div>
-
-        {/* Updated Mobile Toggle */}
-        <div className="glass-radio-group mobile-toggle">
-          <input 
-            type="radio" 
-            name="mobile-toggle" 
-            id="glass-signin" 
+        <div className="mobile-toggle">
+          <input
+            type="radio"
+            name="toggle"
+            id="glass-signin"
             checked={!isActive}
             onChange={() => setIsActive(false)}
           />
           <label htmlFor="glass-signin">Sign In</label>
-
-          <input 
-            type="radio" 
-            name="mobile-toggle" 
-            id="glass-signup" 
+          <input
+            type="radio"
+            name="toggle"
+            id="glass-signup"
             checked={isActive}
             onChange={() => setIsActive(true)}
           />
           <label htmlFor="glass-signup">Sign Up</label>
-
           <div className="glass-glider"></div>
         </div>
-        {/* End of Updated Mobile Toggle */}
-
       </div>
     </div>
   );
