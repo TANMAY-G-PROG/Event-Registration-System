@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ticket.css';
 
-// Get the base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function OrganizerTicket() {
   const [eventData, setEventData] = useState(null);
@@ -27,8 +26,8 @@ export default function OrganizerTicket() {
 
   const fetchUserData = async () => {
     try {
-      // EDITED: Using API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/me`, {
+      // ✅ CHANGED: Using relative path
+      const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -54,8 +53,8 @@ export default function OrganizerTicket() {
       }
       setUserUSN(usn);
 
-      // EDITED: Using API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}`, {
+      // ✅ CHANGED: Using relative path
+      const response = await fetch(`/api/events/${eventId}`, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
