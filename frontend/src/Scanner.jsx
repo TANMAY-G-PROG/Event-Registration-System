@@ -1,56 +1,42 @@
 import { useState, useRef, useEffect } from 'react';
 
-// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 export default function Scanner() {
-  // 'loading', 'scanning', 'success', 'error'
-  const [pageState, setPageState] = useState('loading'); 
+  const [pageState, setPageState] = useState('loading');
   const [errorMsg, setErrorMsg] = useState(null);
-  
   const [lastResult, setLastResult] = useState('');
   const [libraryLoaded, setLibraryLoaded] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [userUSN, setUserUSN] = useState(null);
-  
+
   const scannerRef = useRef(null);
   const html5QrcodeScannerRef = useRef(null);
   const fileInputRef = useRef(null);
   const fileScannerRef = useRef(null);
 
-  // On component mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const role = urlParams.get('role');
-    
     const detectedRole = role === 'volunteer' ? 'volunteer' : 'participant';
     setUserRole(detectedRole);
     console.log('✅ User role detected:', detectedRole);
-
     fetchUserData();
-    loadQRLibrary(); // Start loading library immediately
+    loadQRLibrary();
   }, []);
 
-  // --- START OF LOGIC FIX ---
-
   const fetchUserData = async () => {
-    // We start in 'loading' state by default, so no setPageState here.
     try {
-      // ✅ CHANGED: Using relative path
       const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
-
       if (response.ok) {
         const data = await response.json();
         setUserUSN(data.userUSN);
         console.log('✅ User USN loaded:', data.userUSN);
-        // On success, we just set the USN.
-        // The useEffect below will handle changing the pageState.
       } else {
         setErrorMsg('User not authenticated. Please sign in first.');
         setPageState('error');
@@ -62,34 +48,23 @@ export default function Scanner() {
     }
   };
 
-  // Effect to transition from 'loading' to 'scanning'
   useEffect(() => {
-    // If we are currently in the loading state...
     if (pageState === 'loading' && userUSN && libraryLoaded) {
-      // ...and both prerequisites are now met, we are ready to scan.
       console.log('🚀 Prerequisites met. Switching to scanning state.');
       setPageState('scanning');
     }
-  }, [pageState, userUSN, libraryLoaded]); // Watch for changes to these 3 values
+  }, [pageState, userUSN, libraryLoaded]);
 
-  // Effect to manage the scanner *hardware* based on the pageState
   useEffect(() => {
     if (pageState === 'scanning') {
-      // Small delay to ensure DOM is ready
       const timer = setTimeout(() => initScanner(), 100);
       return () => clearTimeout(timer);
     }
-    
-    // If not scanning, ensure scanner is cleaned up
     if (pageState !== 'scanning') {
       cleanupScanner();
     }
-    
-    // Main cleanup on unmount
     return () => cleanupScanner();
-  }, [pageState]); // This hook *only* depends on pageState
-
-  // --- END OF LOGIC FIX ---
+  }, [pageState]);
 
   const cleanupScanner = () => {
     if (html5QrcodeScannerRef.current) {
@@ -109,7 +84,6 @@ export default function Scanner() {
       setLibraryLoaded(true);
       return;
     }
-
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
     script.onload = () => {
@@ -128,9 +102,7 @@ export default function Scanner() {
       console.log('⚠️ Scanner not ready or already initialized');
       return;
     }
-
     console.log('🎥 Initializing scanner');
-
     try {
       const scanner = new window.Html5QrcodeScanner(
         'reader',
@@ -141,14 +113,13 @@ export default function Scanner() {
           showTorchButtonIfSupported: true,
           rememberLastUsedCamera: true,
           videoConstraints: {
-            facingMode: { ideal: "environment" }
+            facingMode: { ideal: 'environment' },
           },
           supportedScanTypes: [0, 1],
-          formatsToSupport: [0, 1]
+          formatsToSupport: [0, 1],
         },
-        false // verbose = false
+        false
       );
-
       scanner.render(onScanSuccess, onScanError);
       html5QrcodeScannerRef.current = scanner;
       setIsScanning(true);
@@ -162,10 +133,8 @@ export default function Scanner() {
 
   const onScanSuccess = async (decodedText) => {
     console.log(`✅ QR Code detected: ${decodedText}`);
-    
     setIsScanning(false);
     setLastResult(decodedText);
-    
     if (decodedText.startsWith('eventId:')) {
       const eventId = decodedText.split(':')[1];
       await markAttendance(eventId);
@@ -178,25 +147,19 @@ export default function Scanner() {
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
     console.log('📁 File selected:', file.name);
-
     if (!window.Html5Qrcode) {
       setErrorMsg('QR scanner library not loaded. Please refresh and try again.');
       setPageState('error');
       return;
     }
-
     try {
       if (!fileScannerRef.current) {
-        fileScannerRef.current = new window.Html5Qrcode("file-reader");
+        fileScannerRef.current = new window.Html5Qrcode('file-reader');
       }
-      
       const decodedText = await fileScannerRef.current.scanFile(file, true);
       console.log('✅ QR decoded from file:', decodedText);
-      
       await onScanSuccess(decodedText);
-      
     } catch (err) {
       console.error('File scan error:', err);
       setErrorMsg('Could not read QR code from image. Please try another image.');
@@ -214,31 +177,23 @@ export default function Scanner() {
       setPageState('error');
       return;
     }
-
     console.log(`🎯 Marking attendance - Role: ${userRole}, USN: ${userUSN}, Event: ${eventId}`);
-
     try {
-      const endpoint = userRole === 'volunteer' 
-        ? '/api/mark-volunteer-attendance' // ✅ CHANGED
-        : '/api/mark-participant-attendance'; // ✅ CHANGED
-
+      const endpoint = userRole === 'volunteer' ? '/api/mark-volunteer-attendance' : '/api/mark-participant-attendance';
       console.log(`📡 Calling endpoint: ${endpoint}`);
-
       const response = await fetch(endpoint, {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           eventId: eventId,
-          usn: userUSN
-        })
+          usn: userUSN,
+        }),
       });
-
       const data = await response.json();
       console.log('📥 Response:', data);
-
       if (response.ok && data.success) {
         setPageState('success');
         setErrorMsg(null);
@@ -255,9 +210,7 @@ export default function Scanner() {
   };
 
   const onScanError = (errorMessage) => {
-    // Ignore common "not found" errors
-    if (errorMessage.includes('NotFoundException') || 
-        errorMessage.includes('No MultiFormat Readers')) {
+    if (errorMessage.includes('NotFoundException') || errorMessage.includes('No MultiFormat Readers')) {
       return;
     }
     console.log(`Scan error: ${errorMessage}`);
@@ -267,19 +220,17 @@ export default function Scanner() {
     console.log('🔄 Restarting scanner');
     setLastResult('');
     setErrorMsg(null);
-    
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    
     setPageState('scanning');
   };
 
   const restartScanner = () => {
     setErrorMsg(null);
-    setUserUSN(null); // Reset user USN
+    setUserUSN(null);
     setPageState('loading');
-    fetchUserData(); // Re-fetch user data
+    fetchUserData();
   };
 
   const goBack = () => {
@@ -288,9 +239,7 @@ export default function Scanner() {
 
   return (
     <div className="scanner-container">
-      {/* Hidden element for file scanner */}
       <div id="file-reader" style={{ display: 'none' }} />
-
       <div className="scanner-card">
         <div className="scanner-header">
           <div className="scanner-icon">📱</div>
@@ -298,21 +247,18 @@ export default function Scanner() {
           <p className="scanner-subtitle">
             {userRole === 'volunteer' ? '🤝 Volunteer' : '🎫 Participant'} - Scan event QR code
           </p>
-          {/* This will now be hidden during the initial loading state */}
           {userUSN && (
             <p className="scanner-usn">
               USN: {userUSN}
             </p>
           )}
         </div>
-
         {pageState === 'loading' && (
           <div className="status-box loading-box fade-in">
             <div className="status-icon">⏳</div>
             <p>Loading user data...</p>
           </div>
         )}
-
         {pageState === 'error' && (
           <div className="status-box error-box fade-in">
             <div className="status-icon">⚠️</div>
@@ -327,7 +273,6 @@ export default function Scanner() {
             </div>
           </div>
         )}
-        
         {pageState === 'scanning' && (
           <div className="scanner-main fade-in">
             <div className="scanner-video-container">
@@ -338,7 +283,6 @@ export default function Scanner() {
                 </div>
               )}
             </div>
-
             <div className="file-upload-box">
               <p>Or upload QR code image</p>
               <input
@@ -353,7 +297,6 @@ export default function Scanner() {
                 📁 Choose Image File
               </label>
             </div>
-
             <div className="instructions-box">
               <div className="instructions-title">📋 Instructions:</div>
               <ul>
@@ -365,7 +308,6 @@ export default function Scanner() {
             </div>
           </div>
         )}
-
         {pageState === 'success' && (
           <div className="status-box success-box fade-in">
             <div className="status-icon">✅</div>
@@ -374,7 +316,7 @@ export default function Scanner() {
             </h2>
             <p className="success-message">
               Your attendance has been successfully recorded as a {userRole}.
-            </p> 
+            </p>
             <div className="button-group">
               <button onClick={goBack} className="btn btn-success-light">
                 ← Back to Event
@@ -386,7 +328,6 @@ export default function Scanner() {
           </div>
         )}
       </div>
-
       <style>{`
         :root {
           --background-gradient: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
@@ -410,7 +351,6 @@ export default function Scanner() {
           --border-radius-md: 16px;
           --border-radius-sm: 12px;
         }
-
         .scanner-container {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
           background: var(--background-gradient);
@@ -421,7 +361,6 @@ export default function Scanner() {
           padding: 20px;
           box-sizing: border-box;
         }
-
         .scanner-card {
           background: var(--card-background);
           backdrop-filter: blur(10px);
@@ -433,11 +372,9 @@ export default function Scanner() {
           text-align: center;
           box-sizing: border-box;
         }
-
         .scanner-header {
           margin-bottom: 32px;
         }
-
         .scanner-icon {
           font-size: 48px;
           margin-bottom: 16px;
@@ -446,90 +383,72 @@ export default function Scanner() {
           -webkit-text-fill-color: transparent;
           background-clip: text;
         }
-
         .scanner-title {
           color: var(--text-primary);
           font-size: 28px;
           font-weight: 700;
           margin: 0 0 8px 0;
         }
-
         .scanner-subtitle {
           color: var(--text-secondary);
           font-size: 16px;
           margin: 0;
         }
-
         .scanner-usn {
           color: var(--text-light);
           font-size: 14px;
           margin-top: 8px;
           font-weight: 600;
         }
-
         .fade-in {
           animation: fadeIn 0.5s ease;
         }
-
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        
-        /* --- Status Boxes (Loading, Error, Success) --- */
-
         .status-box {
           border-radius: var(--border-radius-sm);
           padding: 24px;
           margin: 24px 0;
         }
-
         .status-icon {
           font-size: 48px;
           margin-bottom: 16px;
         }
-
         .loading-box {
           background: rgba(102, 126, 234, 0.1);
           border: 2px solid rgba(102, 126, 234, 0.3);
           color: var(--primary-color);
           font-weight: 600;
         }
-
         .error-box {
           background: var(--danger-background);
           border: 2px solid var(--danger-border);
           color: var(--danger-color);
         }
-        
         .error-message {
           margin: 0 0 16px 0;
           font-size: 14px;
           font-weight: 600;
           line-height: 1.5;
         }
-        
         .success-box {
           background: var(--success-gradient);
           color: white;
           padding: 32px 24px;
           border-radius: var(--border-radius-md);
         }
-        
         .success-title {
           font-size: 22px;
           font-weight: 700;
           margin: 0 0 8px 0;
         }
-        
         .success-message {
           font-size: 14px;
           margin: 0 0 24px 0;
           opacity: 0.9;
         }
-
-        /* --- Button Styles --- */
-        
         .button-group {
           display: flex;
           gap: 12px;
@@ -537,7 +456,6 @@ export default function Scanner() {
           flex-wrap: wrap;
           margin-top: 16px;
         }
-
         .btn {
           border: none;
           border-radius: 12px;
@@ -549,63 +467,49 @@ export default function Scanner() {
           text-decoration: none;
           display: inline-block;
         }
-        
         .btn:hover {
           transform: translateY(-2px);
           box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
         }
-        
         .btn-primary {
           background: var(--primary-gradient);
           color: white;
         }
-        
         .btn-danger {
           background: var(--danger-color);
           color: white;
         }
-        
         .btn-danger:hover {
-           box-shadow: 0 8px 20px rgba(211, 47, 47, 0.3);
+          box-shadow: 0 8px 20px rgba(211, 47, 47, 0.3);
         }
-
         .btn-secondary {
           background: var(--secondary-color);
           color: white;
         }
-        
         .btn-secondary:hover {
-           box-shadow: 0 8px 20px rgba(108, 117, 125, 0.3);
+          box-shadow: 0 8px 20px rgba(108, 117, 125, 0.3);
         }
-        
         .btn-success-light {
           background: rgba(255, 255, 255, 0.9);
           color: var(--primary-color);
           border: 2px solid rgba(255, 255, 255, 0.3);
         }
-        
         .btn-success-light:hover {
           background: white;
           box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
         }
-        
         .btn-success-dark {
           background: rgba(255, 255, 255, 0.2);
           color: white;
           border: 2px solid rgba(255, 255, 255, 0.3);
         }
-        
         .btn-success-dark:hover {
           background: rgba(255, 255, 255, 0.3);
           box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
         }
-
-        /* --- Scanner Main Area --- */
-
         .scanner-main {
           margin-top: 24px;
         }
-        
         .scanner-video-container {
           position: relative;
           border-radius: var(--border-radius-md);
@@ -613,13 +517,11 @@ export default function Scanner() {
           background: #000;
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
-
         #reader {
           width: 100%;
           min-height: 300px;
           border-radius: var(--border-radius-md);
         }
-
         .scanner-status-badge {
           position: absolute;
           top: 16px;
@@ -633,7 +535,6 @@ export default function Scanner() {
           animation: pulse 2s infinite;
           z-index: 1000;
         }
-
         .file-upload-box {
           margin: 24px 0;
           padding: 16px;
@@ -641,14 +542,12 @@ export default function Scanner() {
           border-radius: var(--border-radius-sm);
           border: 2px dashed rgba(102, 126, 234, 0.3);
         }
-        
         .file-upload-box p {
           margin: 0 0 12px 0;
           color: var(--primary-color);
           font-weight: 600;
           font-size: 14px;
         }
-
         .instructions-box {
           background: var(--secondary-background);
           border-radius: var(--border-radius-sm);
@@ -658,32 +557,26 @@ export default function Scanner() {
           line-height: 1.7;
           text-align: left;
         }
-        
         .instructions-title {
           font-weight: 600;
           margin-bottom: 8px;
           color: var(--text-instructions);
         }
-        
         .instructions-box ul {
           margin: 0;
           padding-left: 20px;
         }
-
-        /* --- QR Library Overrides --- */
         #reader video {
           border-radius: 16px !important;
           width: 100% !important;
           max-width: 100% !important;
         }
-
         #reader__dashboard_section {
           background: rgba(255, 255, 255, 0.95) !important;
           backdrop-filter: blur(10px) !important;
           border-radius: 0 0 16px 16px !important;
           padding: 16px !important;
         }
-
         #reader__dashboard_section button {
           background: var(--primary-gradient) !important;
           border: none !important;
@@ -695,12 +588,10 @@ export default function Scanner() {
           transition: all 0.3s ease !important;
           cursor: pointer !important;
         }
-
         #reader__dashboard_section button:hover {
           transform: translateY(-2px) !important;
           box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4) !important;
         }
-
         #reader__dashboard_section select {
           border: 2px solid #e9ecef !important;
           border-radius: 8px !important;
@@ -710,16 +601,14 @@ export default function Scanner() {
           width: 100% !important;
           max-width: 100% !important;
         }
-        
         #reader__scan_region {
           border-radius: 16px !important;
         }
-
         @keyframes pulse {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.05); }
         }
-      }</style>
+      `}</style>
     </div>
   );
 }
