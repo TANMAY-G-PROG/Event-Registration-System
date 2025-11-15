@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
-// Define the API base URL from Vite environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const Volunteers = () => {
   const navigate = useNavigate();
@@ -25,8 +24,8 @@ const Volunteers = () => {
 
   const fetchUserInfo = async () => {
     try {
-      // UPDATED: Replaced localhost with API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/me`, {
+      // ✅ CHANGED
+      const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -107,8 +106,8 @@ const Volunteers = () => {
 
   const fetchVolunteerEvents = async () => {
     try {
-      // UPDATED: Replaced localhost with API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/my-volunteer-events`, {
+      // ✅ CHANGED
+      const response = await fetch('/api/my-volunteer-events', {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -450,4 +449,3 @@ const Volunteers = () => {
 };
 
 export default Volunteers;
-
