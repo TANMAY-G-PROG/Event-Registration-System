@@ -28,6 +28,12 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['set-cookie']
 }));
+// Force credentials header for Safari/iOS
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
+
 
 app.use(express.json());
 
@@ -38,19 +44,20 @@ app.get('/health', (req, res) => {
 
 // --- Secure Session ---
 app.use(session({
-    secret: process.env.SESSION_SECRET, 
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     name: 'sessionId',
     rolling: true,
     cookie: {
-        secure: IS_PRODUCTION,
         httpOnly: true,
         maxAge: 10 * 60 * 1000,
-        sameSite: IS_PRODUCTION ? 'none' : 'lax',
+        secure: IS_PRODUCTION ? true : false,  
+        sameSite: IS_PRODUCTION ? "none" : "lax",
         path: '/'
     }
 }));
+
 
 // Debug middleware to log all requests
 app.use((req, res, next) => {
