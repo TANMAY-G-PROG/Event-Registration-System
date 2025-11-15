@@ -2603,6 +2603,94 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         res.status(500).json({ error: 'Error generating Excel file' });
     }
 });
+app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        const userUSN = req.session.userUSN;
+
+        if (!eventId || isNaN(eventId)) {
+            return res.status(400).json({ error: 'Invalid event ID' });
+        }
+
+        // Fetch event details
+        const { data: eventRows, error: eventError } = await supabase
+            .from('event')
+            .select(`
+                eid, ename, eventdesc, eventdate, eventtime, eventloc, 
+                maxpart, maxvoln, regfee, orgusn,
+                club:orgcid(cname),
+                student:orgusn(sname)
+            `)
+            .eq('eid', eventId)
+            .limit(1);
+
+        if (eventError) {
+            console.error('Error fetching event details:', eventError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!eventRows || eventRows.length === 0) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        const event = eventRows[0];
+        
+        // Transform event data
+        const transformedEvent = {
+            ...event,
+            eventDate: event.eventdate,
+            eventTime: event.eventtime,
+            eventLoc: event.eventloc,
+            maxPart: event.maxpart,
+            maxVoln: event.maxvoln,
+            regFee: event.regfee,
+            clubName: event.club?.cname,
+            organizerName: event.student?.sname,
+            OrgUsn: event.orgusn
+        };
+
+        // Check if user is registered as participant
+        const { data: participantCheck, error: participantError } = await supabase
+            .from('participant')
+            .select('partstatus, payment_status')
+            .eq('partusn', userUSN)
+            .eq('parteid', eventId)
+            .limit(1);
+
+        if (participantError) {
+            console.error('Error checking participant status:', participantError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        // User is registered as participant
+        if (participantCheck && participantCheck.length > 0) {
+            transformedEvent.isRegistered = true;
+            transformedEvent.paymentStatus = participantCheck[0].payment_status || null;
+            transformedEvent.attendanceMarked = participantCheck[0].partstatus || false;
+
+            console.log(`✅ Participant status for ${userUSN} on event ${eventId}:`, {
+                isRegistered: true,
+                paymentStatus: transformedEvent.paymentStatus,
+                attendanceMarked: transformedEvent.attendanceMarked
+            });
+
+            return res.json(transformedEvent);
+        }
+
+        // User is not registered
+        console.log(`ℹ️ User ${userUSN} is not registered for event ${eventId}`);
+        return res.status(403).json({ 
+            error: 'You are not registered for this event',
+            isRegistered: false 
+        });
+
+    } catch (err) {
+        console.error('Error fetching participant event status:', err);
+        res.status(500).json({
+            error: 'Error fetching event details: ' + err.message 
+        });
+    }
+});
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
