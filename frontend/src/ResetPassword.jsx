@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './style.css';
 
-// Get the base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -51,8 +50,8 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      // EDITED: Using API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/reset-password`, {
+      // ✅ CHANGED: Using relative path
+      const response = await fetch('/api/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
