@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './organisers.css';
 
-// Get the base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const Organisers = () => {
   const navigate = useNavigate();
@@ -79,7 +78,7 @@ const Organisers = () => {
 
   const fetchOrganizerEvents = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/my-organized-events`, {
+      const response = await fetch('/api/my-organized-events', { // ✅ CHANGED
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -111,7 +110,7 @@ const Organisers = () => {
     try {
       setGeneratingExcel(prev => ({ ...prev, [eventId]: true }));
 
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/generate-details`, {
+      const response = await fetch(`/api/events/${eventId}/generate-details`, { // ✅ CHANGED
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -158,7 +157,7 @@ const Organisers = () => {
     setLoadingPayments(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/events/${event.eid}/pending-payments`, {
+      const response = await fetch(`/api/events/${event.eid}/pending-payments`, { // ✅ CHANGED
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -189,7 +188,7 @@ const Organisers = () => {
     setProcessingPayment(prev => ({ ...prev, [participantUSN]: 'verifying' }));
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/payments/verify`, {
+      const response = await fetch('/api/payments/verify', { // ✅ CHANGED
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -225,7 +224,7 @@ const Organisers = () => {
     setProcessingPayment(prev => ({ ...prev, [participantUSN]: 'rejecting' }));
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/payments/reject`, {
+      const response = await fetch('/api/payments/reject', { // ✅ CHANGED
         method: 'POST',
         credentials: 'include',
         headers: {
