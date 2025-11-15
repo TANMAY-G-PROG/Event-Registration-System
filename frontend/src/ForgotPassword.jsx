@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './style.css';
 
-// Use environment variable for API URL (from your new code)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -34,19 +33,18 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      // Use the dynamic API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/forgot-password`, {
+      // ✅ CHANGED: Using relative path
+      const response = await fetch('/api/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Added from your new code for cookies
+        credentials: 'include', 
         body: JSON.stringify({ email })
       });
 
       const data = await response.json();
 
-      // More robust check from your new code
       if (response.ok && data.success) {
         showMessage(data.message || 'Password reset link sent! Check your email.');
         setEmail('');
@@ -60,15 +58,12 @@ export default function ForgotPassword() {
       }
     } catch (error) {
       console.error('Forgot password error:', error);
-      // Improved error message from your new code
       showMessage('Network error. Please check your connection and try again.', true);
     } finally {
       setLoading(false);
     }
   };
 
-  // This JSX uses all your original CSS classes from './style.css'
-  // It avoids the inline styles from your deployed code, which is better.
   return (
     <div className="login-page">
       <link
@@ -97,7 +92,7 @@ export default function ForgotPassword() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-              autoComplete="email" // Added from your new code
+              autoComplete="email" 
             />
             
             <button 
@@ -112,7 +107,7 @@ export default function ForgotPassword() {
               type="button"
               onClick={() => navigate('/')}
               className="back-button"
-              disabled={loading} // Added from your new code
+              disabled={loading}
             >
               Back to Sign In
             </button>
