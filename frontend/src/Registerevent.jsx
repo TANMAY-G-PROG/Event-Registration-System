@@ -5,8 +5,7 @@ import { useNavigate } from "react-router-dom"
 import QRCode from "qrcode"
 import "./registerevent.css"
 
-// Get the base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 function formatTime12h(timeString) {
   if (!timeString) return "Time TBA"
@@ -41,14 +40,6 @@ export default function Registerevent() {
   const [transactionId, setTransactionId] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("")
-
-  // Debug log for API URL
-  useEffect(() => {
-    console.log('🔍 API_BASE_URL:', API_BASE_URL);
-    if (!API_BASE_URL) {
-      console.warn('⚠️ VITE_API_BASE_URL is not defined in environment variables');
-    }
-  }, [])
 
   function showFlash(type, message) {
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -114,7 +105,7 @@ export default function Registerevent() {
       setLoading(true)
       setError("")
       
-      const url = `${API_BASE_URL}/api/events`
+      const url = '/api/events' // ✅ CHANGED
       console.log('🌐 Fetching events from:', url)
       
       const response = await fetch(url, { 
@@ -156,7 +147,7 @@ export default function Registerevent() {
 
   async function loadTeamStatus(eventId) {
     try {
-      const url = `${API_BASE_URL}/api/events/${eventId}/team-status`
+      const url = `/api/events/${eventId}/team-status` // ✅ CHANGED
       console.log('🔍 Loading team status from:', url)
       
       const response = await fetch(url, {
@@ -183,7 +174,7 @@ export default function Registerevent() {
 
   async function fetchMyRegistrations() {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/my-participant-events`, { 
+      const res = await fetch('/api/my-participant-events', { // ✅ CHANGED
         credentials: 'include' 
       })
       if (!res.ok) return
@@ -247,7 +238,7 @@ export default function Registerevent() {
 
     // Logic for FREE events
     try {
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/join`, {
+      const response = await fetch(`/api/events/${eventId}/join`, { // ✅ CHANGED
         method: "POST",
         credentials: "include",
         headers: { 
@@ -287,7 +278,7 @@ export default function Registerevent() {
 
       const validUSNs = memberUSNs.filter(usn => usn.trim() !== '')
 
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/create-team`, {
+      const response = await fetch(`/api/events/${eventId}/create-team`, { // ✅ CHANGED
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -322,7 +313,7 @@ export default function Registerevent() {
 
   async function handleViewInvites(eventId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/my-invites`, {
+      const response = await fetch(`/api/events/${eventId}/my-invites`, { // ✅ CHANGED
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -352,7 +343,7 @@ export default function Registerevent() {
 
   async function handleConfirmJoin(teamId, eventId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/teams/${teamId}/confirm-join`, {
+      const response = await fetch(`/api/teams/${teamId}/confirm-join`, { // ✅ CHANGED
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -367,7 +358,6 @@ export default function Registerevent() {
       }
 
       const successMsg = data?.message || 'Successfully joined team!'
-      showModalFlash('success', successMsg)
       
       setTimeout(() => {
         setShowTeamModal(null)
@@ -384,7 +374,7 @@ export default function Registerevent() {
   async function handleRegisterTeam(event, teamState) {
     const eventId = event.eid
     try {
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/register-team`, {
+      const response = await fetch(`/api/events/${eventId}/register-team`, { // ✅ CHANGED
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -453,8 +443,8 @@ export default function Registerevent() {
     const eventId = event.eid
 
     const url = isTeam
-      ? `${API_BASE_URL}/api/events/${eventId}/register-team-upi`
-      : `${API_BASE_URL}/api/events/${eventId}/register-upi`
+      ? `/api/events/${eventId}/register-team-upi` // ✅ CHANGED
+      : `/api/events/${eventId}/register-upi` // ✅ CHANGED
     
     const body = JSON.stringify({
       transaction_id: transactionId.trim()
