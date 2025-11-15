@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './style.css';
 
-// Get the base URL from environment variables, with a fallback
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+// API calls are now relative to use the proxy
+// We no longer need the API_BASE_URL variable
 
 export default function Login() {
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ export default function Login() {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/me`, {
+      const response = await fetch('/api/me', { // ✅ CHANGED
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -69,7 +69,7 @@ export default function Login() {
       return;
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/api/signin`, {
+      const response = await fetch('/api/signin', { // ✅ CHANGED
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -116,7 +116,7 @@ export default function Login() {
       return;
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/api/signup`, {
+      const response = await fetch('/api/signup', { // ✅ CHANGED
         method: 'POST',
         credentials: 'include',
         headers: {
