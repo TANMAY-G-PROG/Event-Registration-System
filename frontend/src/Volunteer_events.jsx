@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './volunteer_events.css';
 
-// Get the base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function VolunteerEvents() {
   const navigate = useNavigate();
@@ -44,8 +43,8 @@ export default function VolunteerEvents() {
   const fetchEvents = async () => {
     try {
       setIsLoading(true);
-      // EDITED: Using API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/events`, {
+      // ✅ CHANGED: Using relative path
+      const response = await fetch('/api/events', {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -86,8 +85,8 @@ export default function VolunteerEvents() {
       // Fetch volunteer counts in parallel and update as they come in
       uniqueEvents.forEach(async (event, index) => {
         try {
-          // EDITED: Using API_BASE_URL
-          const countResponse = await fetch(`${API_BASE_URL}/api/events/${event.eid}/volunteer-count`, {
+          // ✅ CHANGED: Using relative path
+          const countResponse = await fetch(`/api/events/${event.eid}/volunteer-count`, {
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' }
           });
@@ -139,8 +138,8 @@ export default function VolunteerEvents() {
     setTimeout(() => ripple.remove(), 600);
 
     try {
-      // EDITED: Using API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/volunteer`, {
+      // ✅ CHANGED: Using relative path
+      const response = await fetch(`/api/events/${eventId}/volunteer`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
