@@ -1,19 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // <--- 1. IMPORT useNavigate
-import './ticket.css';
+import { useNavigate, useSearchParams } from 'react-router-dom'; // Use useSearchParams
+import './ticket.css'; // Changed to ticket.css as per your other files
 
-// Get the base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function ParticipantTicket() {
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate(); // <--- 2. INITIALIZE useNavigate
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams(); // Use searchParams hook
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const eventId = urlParams.get('eventId');
+    const eventId = searchParams.get('eventId'); // Get eventId from URL
 
     if (!eventId) {
       setError('No event ID provided in the URL');
@@ -22,49 +21,35 @@ export default function ParticipantTicket() {
     }
 
     fetchEventData(eventId);
-  }, []);
+  }, [searchParams]); // Rerun if searchParams change
 
   const fetchEventData = async (eventId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/my-participant-events`, {
+      // ✅ CHANGED: Fetched from the correct endpoint to get payment status
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'GET',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch participant events');
+        if (response.status === 401) {
+          navigate('/'); // Redirect if not logged in
+        }
+        throw new Error('Failed to fetch event data');
       }
 
       const data = await response.json();
-      let foundEvent = null;
-
-      // Search in array format
-      if (data.participantEvents && Array.isArray(data.participantEvents)) {
-        foundEvent = data.participantEvents.find(
-          (event) => event.eid == eventId || event.id == eventId
-        );
-      }
-      // Search in object format with categories
-      else if (data.participantEvents && typeof data.participantEvents === 'object') {
-        for (const category of ['ongoing', 'completed', 'upcoming']) {
-          if (
-            data.participantEvents[category] &&
-            Array.isArray(data.participantEvents[category])
-          ) {
-            foundEvent = data.participantEvents[category].find(
-              (event) => event.eid == eventId || event.id == eventId
-            );
-            if (foundEvent) break;
-          }
-        }
-      }
-
-      if (foundEvent) {
-        setEventData(foundEvent);
+      
+      // Check if user is actually a participant
+      if (!data.isRegistered) {
+        setError("You are not registered as a participant for this event.");
         setLoading(false);
-      } else {
-        setError(`Could not load event details. Event ID: ${eventId} not found.`);
-        setLoading(false);
+        return;
       }
+      
+      setEventData(data);
+      setLoading(false);
     } catch (err) {
       console.error('Error fetching event:', err);
       setError('Unable to load event details. Please try again.');
@@ -73,12 +58,12 @@ export default function ParticipantTicket() {
   };
 
   const handleBack = () => {
-    window.location.href = '/participants';
+    navigate('/participants'); // Use navigate
   };
 
   const handleScanQR = () => {
-    // window.location.href = '/scanner'; // <--- 3. REMOVE THIS LINE
-    navigate('/scanner'); // <--- 3. ADD THIS LINE
+    // Pass the participant role to the scanner
+    navigate('/scanner?role=participant');
   };
 
   const formatDate = (dateString) => {
@@ -101,6 +86,11 @@ export default function ParticipantTicket() {
     hours = hours ? hours : 12;
     return `${hours}:${minutes} ${ampm}`;
   };
+
+  // ⭐️ NEW: Determine payment status and message
+  const isPaidEvent = eventData?.regFee > 0;
+  const isPaymentPending = eventData?.paymentStatus === 'pending_verification';
+  const canScan = !isPaidEvent || (isPaidEvent && !isPaymentPending);
 
   return (
     <div className="ticket-page-wrapper">
@@ -131,17 +121,24 @@ export default function ParticipantTicket() {
           <div className="tk-ticket-card">
             <div className="tk-ticket-header">
               <h1 className="tk-event-title">
-                {eventData.ename || eventData.name || 'Untitled Event'}
+                {eventData.ename || 'Untitled Event'}
               </h1>
-              <p className="tk-event-id">Event ID: {eventData.eid || eventData.id}</p>
+              <p className="tk-event-id">Event ID: {eventData.eid}</p>
+              {/* ⭐️ NEW: Show payment status badge */}
+              {isPaidEvent && (
+                <p className={`tk-user-badge ${isPaymentPending ? 'pending' : 'verified'}`}>
+                  {isPaymentPending ? '💳 Payment Pending Verification' : '✅ Payment Verified'}
+                </p>
+              )}
             </div>
 
             <div className="tk-ticket-content">
+              {/* ... (all your tk-info-section divs remain the same) ... */}
               <div className="tk-info-section">
                 <div className="tk-info-icon">📅</div>
                 <div className="tk-info-content">
                   <h3>Date</h3>
-                  <p>{formatDate(eventData.eventDate || eventData.date)}</p>
+                  <p>{formatDate(eventData.eventDate)}</p>
                 </div>
               </div>
 
@@ -149,7 +146,7 @@ export default function ParticipantTicket() {
                 <div className="tk-info-icon">⏰</div>
                 <div className="tk-info-content">
                   <h3>Time</h3>
-                  <p>{formatTime(eventData.eventTime || eventData.time)}</p>
+                  <p>{formatTime(eventData.eventTime)}</p>
                 </div>
               </div>
 
@@ -157,7 +154,7 @@ export default function ParticipantTicket() {
                 <div className="tk-info-icon">📍</div>
                 <div className="tk-info-content">
                   <h3>Location</h3>
-                  <p>{eventData.eventLoc || eventData.location || 'Location TBD'}</p>
+                  <p>{eventData.eventLoc || 'Location TBD'}</p>
                 </div>
               </div>
 
@@ -165,7 +162,7 @@ export default function ParticipantTicket() {
                 <div className="tk-info-icon">👥</div>
                 <div className="tk-info-content">
                   <h3>Max Participants</h3>
-                  <p>{eventData.maxPart || eventData.maxParticipants || 'No limit'}</p>
+                  <p>{eventData.maxPart || 'No limit'}</p>
                 </div>
               </div>
 
@@ -173,7 +170,7 @@ export default function ParticipantTicket() {
                 <div className="tk-info-icon">🤝</div>
                 <div className="tk-info-content">
                   <h3>Max Volunteers</h3>
-                  <p>{eventData.maxVoln || eventData.maxVolunteers || 'No limit'}</p>
+                  <p>{eventData.maxVoln || 'No limit'}</p>
                 </div>
               </div>
 
@@ -181,35 +178,43 @@ export default function ParticipantTicket() {
                 <div className="tk-info-icon">💰</div>
                 <div className="tk-info-content">
                   <h3>Registration Fee</h3>
-                  <p>₹{eventData.regFee || eventData.registrationFee || '0'}</p>
+                  <p>₹{eventData.regFee || '0'}</p>
                 </div>
               </div>
 
-              {(eventData.clubName || eventData.club) && (
+              {eventData.clubName && (
                 <div className="tk-info-section">
                   <div className="tk-info-icon">🏛️</div>
                   <div className="tk-info-content">
                     <h3>Organized by</h3>
-                    <p>{eventData.clubName || eventData.club}</p>
+                    <p>{eventData.clubName}</p>
                   </div>
                 </div>
               )}
 
               <div className="tk-description-section">
                 <h3>Event Description</h3>
-                <p>{eventData.eventdesc || eventData.description || 'No description available'}</p>
+                <p>{eventData.eventdesc || 'No description available'}</p>
               </div>
             </div>
 
             <div className="tk-ticket-footer">
+              {/* ⭐️ NEW: Added disabled logic to the button */}
               <button
                 onClick={handleScanQR}
                 className="tk-qr-placeholder tk-qr-scanner"
-                title="Open QR Scanner"
+                title={canScan ? "Open QR Scanner" : "Payment must be verified to mark attendance"}
+                disabled={!canScan} 
               >
                 📱
-                <div className="tk-qr-text">SCAN QR</div>
+                <div className="tk-qr-text">MARK ATTENDANCE</div>
               </button>
+              {/* ⭐️ NEW: Show a message when button is disabled */}
+              {!canScan && (
+                 <p className="tk-payment-pending-message">
+                   Your payment is pending verification. Attendance can be marked once the organizer approves your payment.
+                 </p>
+              )}
             </div>
           </div>
         )}
