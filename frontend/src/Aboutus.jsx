@@ -43,7 +43,7 @@ const AboutUs = () => {
   ];
 
   const socialLinks = [
-    { name: "Email Us", icon: "fas fa-envelope", url: "mailto:your-email@example.com" }
+    { name: "Email Us", icon: "fas fa-envelope", url: "flopass333@gmail.com" }
   ];
 
   const handleContactClick = (linkedin) => {
@@ -131,4 +131,5 @@ Smooth design, fast processing, no nonsense. Just vibes + efficiency.
 
 
 export default AboutUs;
+
 
