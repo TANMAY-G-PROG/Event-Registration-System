@@ -1409,87 +1409,6 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
         // Verify organizer
         const { data: event, error: eventError } = await supabase
             .from('event')
-            .select('orgusn, ename')
-            .eq('eid', eventId)
-            .limit(1);
-
-        if (eventError || !event || event.length === 0) {
-            return res.status(404).json({ error: 'Event not found' });
-        }
-
-        if (event[0].orgusn !== userUSN) {
-            return res.status(403).json({ error: 'Not authorized to view payments for this event' });
-        }
-
-        // Get all participants with pending payment status
-        const { data: pendingParticipants, error: participantError } = await supabase
-            .from('participant')
-            .select(`
-                partusn,
-                payment_status,
-                team_id,
-                student:partusn (
-                    sname,
-                    emailid,
-                    mobno
-                ),
-                team:team_id (
-                    team_name
-                )
-            `)
-            .eq('parteid', eventId)
-            .eq('payment_status', 'pending_verification');
-
-        if (participantError) {
-            console.error('Error fetching pending participants:', participantError);
-            return res.status(500).json({ error: 'Database error' });
-        }
-
-        // Get payment details for each participant
-        const paymentsWithDetails = await Promise.all(
-            (pendingParticipants || []).map(async (participant) => {
-                const { data: paymentData } = await supabase
-                    .from('payment')
-                    .select('upi_transaction_id, amount, created_at')
-                    .eq('usn', participant.partusn)
-                    .eq('event_id', eventId)
-                    .eq('status', 'pending_verification')
-                    .order('created_at', { ascending: false })
-                    .limit(1);
-
-                return {
-                    partusn: participant.partusn,
-                    studentName: participant.student?.sname || 'Unknown',
-                    studentEmail: participant.student?.emailid || 'N/A',
-                    studentMobile: participant.student?.mobno || 'N/A',
-                    transactionId: paymentData?.[0]?.upi_transaction_id || 'N/A',
-                    amount: paymentData?.[0]?.amount || 0,
-                    submittedAt: paymentData?.[0]?.created_at || null,
-                    teamName: participant.team?.team_name || null
-                };
-            })
-        );
-
-        console.log(`✅ Found ${paymentsWithDetails.length} pending payments for event ${eventId}`);
-        res.json({
-            success: true,
-            pendingPayments: paymentsWithDetails
-        });
-    } catch (err) {
-        console.error('Error fetching pending payments:', err);
-        res.status(500).json({ error: 'Error fetching pending payments' });
-    }
-});
-
-// Get pending payments for an event (organizer only)
-app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) => {
-    try {
-        const eventId = req.params.eventId;
-        const userUSN = req.session.userUSN;
-
-        // Verify organizer
-        const { data: event, error: eventError } = await supabase
-            .from('event')
             .select('orgusn, ename, is_team')
             .eq('eid', eventId)
             .limit(1);
@@ -1504,104 +1423,99 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
 
         const isTeamEvent = event[0].is_team;
 
-        // Get all participants with pending payment status
-        const { data: pendingParticipants, error: participantError } = await supabase
-            .from('participant')
-            .select(`
-                partusn,
-                payment_status,
-                team_id,
-                student:partusn (
-                    sname,
-                    emailid,
-                    mobno
-                ),
-                team:team_id (
-                    team_name,
-                    leader_usn
-                )
-            `)
-            .eq('parteid', eventId)
-            .eq('payment_status', 'pending_verification');
-
-        if (participantError) {
-            console.error('Error fetching pending participants:', participantError);
-            return res.status(500).json({ error: 'Database error' });
-        }
-
         let paymentsToShow = [];
 
         if (isTeamEvent) {
-            // For team events, show only team leaders
-            const teamLeadersMap = new Map();
+            // For team events, ONLY show team leaders who have actually made payments
+            const { data: pendingPayments, error: paymentsError } = await supabase
+                .from('payment')
+                .select(`
+                    usn,
+                    amount,
+                    upi_transaction_id,
+                    created_at,
+                    status,
+                    student:usn (
+                        sname,
+                        emailid,
+                        mobno
+                    )
+                `)
+                .eq('event_id', eventId)
+                .eq('status', 'pending_verification');
 
-            for (const participant of pendingParticipants || []) {
-                const teamId = participant.team_id;
-                const leaderUSN = participant.team?.leader_usn;
-
-                // Only show the team leader
-                if (leaderUSN === participant.partusn) {
-                    if (!teamLeadersMap.has(teamId)) {
-                        // Get payment details
-                        const { data: paymentData } = await supabase
-                            .from('payment')
-                            .select('upi_transaction_id, amount, created_at')
-                            .eq('usn', participant.partusn)
-                            .eq('event_id', eventId)
-                            .eq('status', 'pending_verification')
-                            .order('created_at', { ascending: false })
-                            .limit(1);
-
-                        // Count team members
-                        const { count: memberCount } = await supabase
-                            .from('team_members')
-                            .select('*', { count: 'exact', head: true })
-                            .eq('team_id', teamId)
-                            .eq('join_status', true);
-
-                        teamLeadersMap.set(teamId, {
-                            partusn: participant.partusn,
-                            studentName: participant.student?.sname || 'Unknown',
-                            studentEmail: participant.student?.emailid || 'N/A',
-                            studentMobile: participant.student?.mobno || 'N/A',
-                            transactionId: paymentData?.[0]?.upi_transaction_id || 'N/A',
-                            amount: paymentData?.[0]?.amount || 0,
-                            submittedAt: paymentData?.[0]?.created_at || null,
-                            teamName: participant.team?.team_name || 'Unknown Team',
-                            teamMemberCount: memberCount || 1,
-                            isTeamLeader: true
-                        });
-                    }
-                }
+            if (paymentsError) {
+                console.error('Error fetching payments:', paymentsError);
+                return res.status(500).json({ error: 'Database error' });
             }
 
-            paymentsToShow = Array.from(teamLeadersMap.values());
-        } else {
-            // For non-team events, show all participants
-            paymentsToShow = await Promise.all(
-                (pendingParticipants || []).map(async (participant) => {
-                    const { data: paymentData } = await supabase
-                        .from('payment')
-                        .select('upi_transaction_id, amount, created_at')
-                        .eq('usn', participant.partusn)
-                        .eq('event_id', eventId)
-                        .eq('status', 'pending_verification')
-                        .order('created_at', { ascending: false })
-                        .limit(1);
+            // For each payment, check if this person is a team leader
+            for (const payment of pendingPayments || []) {
+                const { data: teamData } = await supabase
+                    .from('team')
+                    .select('id, team_name, leader_usn')
+                    .eq('event_id', eventId)
+                    .eq('leader_usn', payment.usn)
+                    .limit(1);
 
-                    return {
-                        partusn: participant.partusn,
-                        studentName: participant.student?.sname || 'Unknown',
-                        studentEmail: participant.student?.emailid || 'N/A',
-                        studentMobile: participant.student?.mobno || 'N/A',
-                        transactionId: paymentData?.[0]?.upi_transaction_id || 'N/A',
-                        amount: paymentData?.[0]?.amount || 0,
-                        submittedAt: paymentData?.[0]?.created_at || null,
-                        teamName: null,
-                        isTeamLeader: false
-                    };
-                })
-            );
+                // Only include if this person is a team leader
+                if (teamData && teamData.length > 0) {
+                    // Count team members
+                    const { count: memberCount } = await supabase
+                        .from('team_members')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('team_id', teamData[0].id)
+                        .eq('join_status', true);
+
+                    paymentsToShow.push({
+                        partusn: payment.usn,
+                        studentName: payment.student?.sname || 'Unknown',
+                        studentEmail: payment.student?.emailid || 'N/A',
+                        studentMobile: payment.student?.mobno || 'N/A',
+                        transactionId: payment.upi_transaction_id || 'N/A',
+                        amount: payment.amount || 0,
+                        submittedAt: payment.created_at || null,
+                        teamName: teamData[0].team_name || 'Unknown Team',
+                        teamMemberCount: memberCount || 1,
+                        isTeamLeader: true
+                    });
+                }
+            }
+        } else {
+            // For non-team events, show all participants with pending payments
+            const { data: pendingPayments, error: paymentsError } = await supabase
+                .from('payment')
+                .select(`
+                    usn,
+                    amount,
+                    upi_transaction_id,
+                    created_at,
+                    status,
+                    student:usn (
+                        sname,
+                        emailid,
+                        mobno
+                    )
+                `)
+                .eq('event_id', eventId)
+                .eq('status', 'pending_verification');
+
+            if (paymentsError) {
+                console.error('Error fetching payments:', paymentsError);
+                return res.status(500).json({ error: 'Database error' });
+            }
+
+            paymentsToShow = (pendingPayments || []).map(payment => ({
+                partusn: payment.usn,
+                studentName: payment.student?.sname || 'Unknown',
+                studentEmail: payment.student?.emailid || 'N/A',
+                studentMobile: payment.student?.mobno || 'N/A',
+                transactionId: payment.upi_transaction_id || 'N/A',
+                amount: payment.amount || 0,
+                submittedAt: payment.created_at || null,
+                teamName: null,
+                isTeamLeader: false
+            }));
         }
 
         console.log(`✅ Found ${paymentsToShow.length} pending payments for event ${eventId}`);
@@ -1615,7 +1529,8 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
         res.status(500).json({ error: 'Error fetching pending payments' });
     }
 });
-// Reject a payment (organizer only)
+
+
 
 // ==================== TEAM EVENTS ENDPOINTS ====================
 
