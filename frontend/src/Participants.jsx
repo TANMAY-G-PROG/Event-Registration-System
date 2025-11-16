@@ -4,8 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
-// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 const Participants = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState({
@@ -40,7 +38,7 @@ const Participants = () => {
 
   const fetchUserInfo = async () => {
     try {
-      const response = await fetch('/api/me', { // ✅ CHANGED
+      const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -112,7 +110,7 @@ const Participants = () => {
 
   const fetchParticipantEvents = async () => {
     try {
-      const response = await fetch('/api/my-participant-events', { // ✅ CHANGED
+      const response = await fetch('/api/my-participant-events', {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -140,171 +138,167 @@ const Participants = () => {
     }
   };
 
-const generateCertificate = async (event) => {
-    // Cleanup & set loading state
-    if (downloadLinks[event.eid] && downloadLinks[event.eid].url) {
-      window.URL.revokeObjectURL(downloadLinks[event.eid].url);
-    }
-    setGeneratingIds(prev => new Set(prev).add(event.eid));
-    setDownloadLinks(prev => ({ ...prev, [event.eid]: null }));
+  const generateCertificate = async (event) => {
+    // Cleanup & set loading state
+    if (downloadLinks[event.eid] && downloadLinks[event.eid].url) {
+      window.URL.revokeObjectURL(downloadLinks[event.eid].url);
+    }
+    setGeneratingIds(prev => new Set(prev).add(event.eid));
+    setDownloadLinks(prev => ({ ...prev, [event.eid]: null }));
 
-    try {
-      // Check if participant attended the event
-      if (!event.PartStatus) {
-        alert('Certificate is only available for attended events.');
-        setGeneratingIds(prev => {
-          const next = new Set(prev);
-          next.delete(event.eid);
-          return next;
-        });
-        return;
-      }
-      
-      const t = new Date().getTime();
-      const templateUrl = `/certificate-template.pdf?v=${t}`;
-      const existingPdfBytes = await fetch(templateUrl).then(res => {
-        if (!res.ok) {
-          throw new Error('Certificate template not found. Please ensure certificate-template.pdf is in the public folder.');
-        }
-        return res.arrayBuffer();
-      });
+    try {
+      // Check if participant attended the event
+      if (!event.PartStatus) {
+        alert('Certificate is only available for attended events.');
+        setGeneratingIds(prev => {
+          const next = new Set(prev);
+          next.delete(event.eid);
+          return next;
+        });
+        return;
+      }
+      
+      const t = new Date().getTime();
+      const templateUrl = `/certificate-template.pdf?v=${t}`;
+      const existingPdfBytes = await fetch(templateUrl).then(res => {
+        if (!res.ok) {
+          throw new Error('Certificate template not found. Please ensure certificate-template.pdf is in the public folder.');
+        }
+        return res.arrayBuffer();
+      });
 
-      const pdfDoc = await PDFDocument.load(existingPdfBytes);
-      pdfDoc.registerFontkit(fontkit);
-      
-      const pages = pdfDoc.getPages();
-      const firstPage = pages[0];
-      const { width, height } = firstPage.getSize();
+      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      pdfDoc.registerFontkit(fontkit);
+      
+      const pages = pdfDoc.getPages();
+      const firstPage = pages[0];
+      const { width, height } = firstPage.getSize();
 
-      let nameFont;
-      try {
-        const fontUrl = `/Allura-Regular.ttf?v=${t}`;
-        const fontBytes = await fetch(fontUrl).then(res => {
-          if (!res.ok) {
-            throw new Error('Allura-Regular.ttf font file not found.');
-          }
-          return res.arrayBuffer();
-        });
-        nameFont = await pdfDoc.embedFont(fontBytes);
-      } catch (fontError) {
-        console.warn('Could not load custom font, using TimesRomanBold as fallback:', fontError);
-        nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-      }
-      
-      const font = await pdfDoc.embedFont(StandardFonts.Courier);
-      const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
+      let nameFont;
+      try {
+        const fontUrl = `/Allura-Regular.ttf?v=${t}`;
+        const fontBytes = await fetch(fontUrl).then(res => {
+          if (!res.ok) {
+            throw new Error('Allura-Regular.ttf font file not found.');
+          }
+          return res.arrayBuffer();
+        });
+        nameFont = await pdfDoc.embedFont(fontBytes);
+      } catch (fontError) {
+        console.warn('Could not load custom font, using TimesRomanBold as fallback:', fontError);
+        nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+      }
+      
+      const font = await pdfDoc.embedFont(StandardFonts.Courier);
+      const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
-      let descFont;
-      try {
-        const descFontUrl = `/PlayfairDisplay-MediumItalic.ttf?v=${t}`;
-        const descFontBytes = await fetch(descFontUrl).then(res => {
-          if (!res.ok) {
-            throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found.');
-          }
-          return res.arrayBuffer();
-        });
-        descFont = await pdfDoc.embedFont(descFontBytes);
-      } catch (fontError) {
-        console.warn('Could not load custom description font, using Courier as fallback:', fontError);
-        descFont = font;
-      }
+      let descFont;
+      try {
+        const descFontUrl = `/PlayfairDisplay-MediumItalic.ttf?v=${t}`;
+        const descFontBytes = await fetch(descFontUrl).then(res => {
+          if (!res.ok) {
+            throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found.');
+          }
+          return res.arrayBuffer();
+        });
+        descFont = await pdfDoc.embedFont(descFontBytes);
+      } catch (fontError) {
+        console.warn('Could not load custom description font, using Courier as fallback:', fontError);
+        descFont = font;
+      }
 
-      const nameColor = rgb(0xF7 / 255, 0xD9 / 255, 0x91 / 255); // #F7D991
-      const whiteColor = rgb(1, 1, 1);
+      const nameColor = rgb(0xF7 / 255, 0xD9 / 255, 0x91 / 255); // #F7D991
+      const whiteColor = rgb(1, 1, 1);
 
-      const nameText = userInfo.userName;
-      const nameSize = 38;
-      const nameWidth = nameFont.widthOfTextAtSize(nameText, nameSize);
-      firstPage.drawText(nameText, {
-        x: (width - nameWidth) / 2, // Center horizontally
-        y: 250, // Adjust based on your template (from bottom)
-        size: nameSize,
-        font: nameFont,
-        color: nameColor,
-      });
+      const nameText = userInfo.userName;
+      const nameSize = 38;
+      const nameWidth = nameFont.widthOfTextAtSize(nameText, nameSize);
+      firstPage.drawText(nameText, {
+        x: (width - nameWidth) / 2,
+        y: 250,
+        size: nameSize,
+        font: nameFont,
+        color: nameColor,
+      });
 
-      const usnSize = 19;
-      firstPage.drawText(userInfo.userUSN, {
-        x: 170, // Adjust X position based on your template
-        y: 155, // ✅ FIX: Moved down from 160 to create space
-        size: usnSize,
-        font: font,
-        color: whiteColor,
-      });
+      const usnSize = 19;
+      firstPage.drawText(userInfo.userUSN, {
+        x: 170,
+        y: 160,
+        size: usnSize,
+        font: font,
+        color: whiteColor,
+      });
 
-      const formattedDate = formatDate(event.eventDate);
-      const dateSize = 16;
-      firstPage.drawText(formattedDate, { // Note: Date width is not calculated, so this is right-aligned
-        x: 510, // Adjust X as needed
-        y: 155, // ✅ FIX: Moved down from 160 to match USN
-        size: dateSize,
-        font: boldFont,
-        color: whiteColor,
-      });
+      const formattedDate = formatDate(event.eventDate);
+      const dateSize = 16;
+      firstPage.drawText(formattedDate, {
+        x: 510,
+        y: 160,
+        size: dateSize,
+        font: boldFont,
+        color: whiteColor,
+      });
 
-      const eventDesc = event.eventdesc || event.ename;
-      const descSize = 10;
-      const maxWidth = width - 200; // ✅ FIX 1: Use page width (800-ish) minus 100pt margins each side
-      const xPosition = (width - maxWidth) / 2; // ✅ FIX 2: Center the text block
-      
-      const words = eventDesc.split(' ');
-      let line = '';
-      let yPosition = 230; // ✅ FIX: Moved up slightly from 225
-      
-      words.forEach((word, index) => {
-        const testLine = line + word + ' ';
-        const testWidth = descFont.widthOfTextAtSize(testLine, descSize);
-        
-        if (testWidth > maxWidth && line !== '') {
-          firstPage.drawText(line.trim(), {
-            x: xPosition, // ✅ FIX: Use calculated X position
-            y: yPosition,
-            size: descSize,
-            font: descFont,
-            color: whiteColor,
-          });
-          line = word + ' ';
-          yPosition -= 15;
-        } else {
-          line = testLine;
-        }
-      });
-      
-      if (line !== '') {
-        firstPage.drawText(line.trim(), {
-          x: xPosition, // ✅ FIX: Use calculated X position
-          y: yPosition,
-          size: descSize,
-          font: descFont,
-          color: whiteColor,
-        });
-      }
+      // ✅ UPDATED: Using volunteers.jsx positioning (x: 190, y: 225)
+      const eventDesc = event.eventdesc || event.ename;
+      const descSize = 10;
+      const maxWidth = 450;
+      
+      const words = eventDesc.split(' ');
+      let line = '';
+      let yPosition = 225;
+      
+      words.forEach((word, index) => {
+        const testLine = line + word + ' ';
+        const testWidth = descFont.widthOfTextAtSize(testLine, descSize);
+        
+        if (testWidth > maxWidth && line !== '') {
+          firstPage.drawText(line.trim(), {
+            x: 190,
+            y: yPosition,
+            size: descSize,
+            font: descFont,
+            color: whiteColor,
+          });
+          line = word + ' ';
+          yPosition -= 15;
+        } else {
+          line = testLine;
+        }
+      });
+      
+      if (line !== '') {
+        firstPage.drawText(line.trim(), {
+          x: 190,
+          y: yPosition,
+          size: descSize,
+          font: descFont,
+          color: whiteColor,
+        });
+      }
 
-      // Serialize the PDF to bytes
-      const pdfBytes = await pdfDoc.save();
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const filename = `Certificate_${event.ename.replace(/\s+/g, '_')}_${userInfo.userUSN}_${formattedDate.replace(/ /g, '_')}.pdf`;
 
-      // Set the state with download link
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const filename = `Certificate_${event.ename.replace(/\s+/g, '_')}_${userInfo.userUSN}_${formattedDate.replace(/ /g, '_')}.pdf`;
+      setDownloadLinks(prev => ({
+        ...prev,
+        [event.eid]: { url, filename }
+      }));
 
-      setDownloadLinks(prev => ({
-        ...prev,
-        [event.eid]: { url, filename }
-      }));
-
-    } catch (error) {
-      console.error('Error generating certificate:', error);
-      alert(`Error generating certificate: ${error.message}`);
-    } finally {
-      // Always remove from "generating" state
-      setGeneratingIds(prev => {
-        const next = new Set(prev);
-        next.delete(event.eid);
-        return next;
-  _     });
-    }
-  };
+    } catch (error) {
+      console.error('Error generating certificate:', error);
+      alert(`Error generating certificate: ${error.message}`);
+    } finally {
+      setGeneratingIds(prev => {
+        const next = new Set(prev);
+        next.delete(event.eid);
+        return next;
+      });
+    }
+  };
 
   const getParticipantStatus = (status) => {
     switch (status) {
@@ -330,10 +324,8 @@ const generateCertificate = async (event) => {
 
   const handleEventButtonClick = (event, eventType) => {
     if (eventType === 'completed') {
-      // Generate certificate (this function now handles state)
       generateCertificate(event);
     } else {
-      // Navigate to ticket page for other events
       navigate(`/participant-ticket?eventId=${event.eid}`);
     }
   };
@@ -390,12 +382,10 @@ const generateCertificate = async (event) => {
         <div className="event-actions">
           {eventType === 'completed' ? (
             generatingIds.has(event.eid) ? (
-              // State 1: Generating...
               <button className="event-btn" disabled>
                 Generating...
               </button>
             ) : downloadLinks[event.eid] ? (
-              // State 2: Download link is ready
               <a
                 href={downloadLinks[event.eid].url}
                 download={downloadLinks[event.eid].filename}
@@ -404,7 +394,6 @@ const generateCertificate = async (event) => {
                 Download Now
               </a>
             ) : (
-              // State 3: Default "View Certificate" button
               <button
                 className="event-btn"
                 onClick={() => handleEventButtonClick(event, eventType)}
@@ -413,7 +402,6 @@ const generateCertificate = async (event) => {
               </button>
             )
           ) : (
-            // This is the original button for "upcoming" and "ongoing"
             <button
               className="event-btn"
               onClick={() => handleEventButtonClick(event, eventType)}
@@ -481,4 +469,3 @@ const generateCertificate = async (event) => {
 };
 
 export default Participants;
-
