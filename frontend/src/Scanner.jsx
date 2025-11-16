@@ -132,9 +132,19 @@ export default function Scanner() {
   };
 
   const onScanSuccess = async (decodedText) => {
+    // Prevent duplicate scans
+    if (!isScanning || lastResult === decodedText) {
+      console.log('⚠️ Duplicate scan prevented');
+      return;
+    }
+    
     console.log(`✅ QR Code detected: ${decodedText}`);
     setIsScanning(false);
     setLastResult(decodedText);
+    
+    // Stop the scanner immediately
+    cleanupScanner();
+    
     if (decodedText.startsWith('eventId:')) {
       const eventId = decodedText.split(':')[1];
       await markAttendance(eventId);
@@ -607,6 +617,71 @@ export default function Scanner() {
         @keyframes pulse {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.05); }
+        }
+        @media (max-width: 600px) {
+          .scanner-container {
+            padding: 20px;
+          }
+          
+          .scanner-card {
+            padding: 24px 16px;
+            border-radius: 16px;
+          }
+          
+          .scanner-title {
+            font-size: 24px;
+          }
+          
+          .scanner-subtitle {
+            font-size: 14px;
+          }
+          
+          .scanner-icon {
+            font-size: 40px;
+          }
+          
+          .button-group {
+            flex-direction: column;
+            width: 100%;
+          }
+          
+          .btn {
+            width: 100%;
+            padding: 12px 20px;
+          }
+          
+          .file-upload-box {
+            padding: 12px;
+          }
+          
+          .file-upload-box p {
+            font-size: 13px;
+          }
+          
+          .instructions-box {
+            padding: 12px;
+            font-size: 13px;
+          }
+          
+          .instructions-box ul {
+            padding-left: 16px;
+          }
+          
+          .instructions-box li {
+            margin-bottom: 8px;
+          }
+          
+          #reader {
+            min-height: 250px;
+          }
+          
+          .success-title {
+            font-size: 20px;
+          }
+          
+          .success-message {
+            font-size: 13px;
+          }
         }
       `}</style>
     </div>
