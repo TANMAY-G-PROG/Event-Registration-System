@@ -4,8 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
-// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 const Volunteers = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState({
@@ -17,14 +15,28 @@ const Volunteers = () => {
   const [error, setError] = useState(null);
   const [userInfo, setUserInfo] = useState({ userName: '', userUSN: '' });
 
+  // ✅ ADDED: Same state management as participants.jsx
+  const [generatingIds, setGeneratingIds] = useState(new Set());
+  const [downloadLinks, setDownloadLinks] = useState({});
+
   useEffect(() => {
     fetchUserInfo();
     fetchVolunteerEvents();
   }, []);
 
+  // ✅ ADDED: Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(downloadLinks).forEach(link => {
+        if (link && link.url) {
+          window.URL.revokeObjectURL(link.url);
+        }
+      });
+    };
+  }, [downloadLinks]);
+
   const fetchUserInfo = async () => {
     try {
-      // ✅ CHANGED
       const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
@@ -70,7 +82,6 @@ const Volunteers = () => {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
 
-    // First, remove duplicates based on eid
     const uniqueEvents = events.reduce((acc, current) => {
       const exists = acc.find(event => event.eid === current.eid);
       if (!exists) {
@@ -106,7 +117,6 @@ const Volunteers = () => {
 
   const fetchVolunteerEvents = async () => {
     try {
-      // ✅ CHANGED
       const response = await fetch('/api/my-volunteer-events', {
         method: 'GET',
         credentials: 'include',
@@ -135,23 +145,28 @@ const Volunteers = () => {
     }
   };
 
+  // ✅ UPDATED: Now uses state management instead of direct download
   const generateCertificate = async (event) => {
+    // Cleanup & set loading state
+    if (downloadLinks[event.eid] && downloadLinks[event.eid].url) {
+      window.URL.revokeObjectURL(downloadLinks[event.eid].url);
+    }
+    setGeneratingIds(prev => new Set(prev).add(event.eid));
+    setDownloadLinks(prev => ({ ...prev, [event.eid]: null }));
+
     try {
-      // Check if volunteer actually volunteered for the event (status must be true)
       if (!event.VolnStatus) {
         alert('Certificate is only available for confirmed volunteer participation.');
+        setGeneratingIds(prev => {
+          const next = new Set(prev);
+          next.delete(event.eid);
+          return next;
+        });
         return;
       }
 
-      // --- CACHE-BUSTING CHANGE ---
-      // Add a unique timestamp to force the browser to re-download the files
       const t = new Date().getTime();
-      // --- END OF CHANGE ---
-
-      // Fetch the PDF template
-      // --- CACHE-BUSTING CHANGE ---
       const templateUrl = `/certificate-template.pdf?v=${t}`;
-      // --- END OF CHANGE ---
       const existingPdfBytes = await fetch(templateUrl).then(res => {
         if (!res.ok) {
           throw new Error('Certificate template not found. Please ensure certificate-template.pdf is in the public folder.');
@@ -159,26 +174,19 @@ const Volunteers = () => {
         return res.arrayBuffer();
       });
 
-      // Load the PDF template
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
-      
-      // Register fontkit to enable custom fonts
       pdfDoc.registerFontkit(fontkit);
       
-      // Get the first page
       const pages = pdfDoc.getPages();
       const firstPage = pages[0];
       const { width, height } = firstPage.getSize();
 
-      // Try to embed Allura-Regular font for volunteer name
       let nameFont;
       try {
-        // --- CACHE-BUSTING CHANGE ---
-        const fontUrl = `/Allura-Regular.ttf?v=${t}`; // CHANGED
-        // --- END OF CHANGE ---
+        const fontUrl = `/Allura-Regular.ttf?v=${t}`;
         const fontBytes = await fetch(fontUrl).then(res => {
           if (!res.ok) {
-            throw new Error('Allura-Regular.ttf font file not found.'); // CHANGED
+            throw new Error('Allura-Regular.ttf font file not found.');
           }
           return res.arrayBuffer();
         });
@@ -188,16 +196,12 @@ const Volunteers = () => {
         nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
       }
       
-      // Regular font for other text
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
       const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
-      // Load Playfair Display font for description
       let descFont;
       try {
-        // --- CACHE-BUSTING CHANGE ---
         const descFontUrl = `/PlayfairDisplay-MediumItalic.ttf?v=${t}`;
-        // --- END OF CHANGE ---
         const descFontBytes = await fetch(descFontUrl).then(res => {
           if (!res.ok) {
             throw new Error('PlayfairDisplay-MediumItalic.ttf font file not found.');
@@ -210,53 +214,46 @@ const Volunteers = () => {
         descFont = font;
       }
 
-      // Colors for text
-      const nameColor = rgb(0xF7 / 255, 0xD9 / 255, 0x91 / 255); // #F7D991
+      const nameColor = rgb(0xF7 / 255, 0xD9 / 255, 0x91 / 255);
       const whiteColor = rgb(1, 1, 1);
 
-      // Add volunteer name (centered) with Allura-Regular font
       const nameText = userInfo.userName;
       const nameSize = 38;
       const nameWidth = nameFont.widthOfTextAtSize(nameText, nameSize);
       firstPage.drawText(nameText, {
-        x: (width - nameWidth) / 2, // Center horizontally
-        y: 250, // Adjust based on your template (from bottom)
+        x: (width - nameWidth) / 2,
+        y: 250,
         size: nameSize,
         font: nameFont,
         color: nameColor,
       });
 
-      // Add USN
       const usnSize = 19;
       firstPage.drawText(userInfo.userUSN, {
-        x: 170, // Adjust X position based on your template
-        y: 160, // Adjust Y position based on your template
+        x: 170,
+        y: 160,
         size: usnSize,
         font: font,
         color: whiteColor,
       });
 
-      // Add Event Date
       const formattedDate = formatDate(event.eventDate);
       const dateSize = 16;
-      const dateWidth = boldFont.widthOfTextAtSize(formattedDate, dateSize);
       firstPage.drawText(formattedDate, {
-        x: 510, // Center the date horizontally
-        y: 160, // Position below USN (adjust as needed)
+        x: 510,
+        y: 160,
         size: dateSize,
         font: boldFont,
         color: whiteColor,
       });
 
-      // Add Event Description (with word wrapping)
       const eventDesc = event.eventdesc || event.ename;
       const descSize = 10;
-      const maxWidth = 450; // Maximum width for text
+      const maxWidth = 450;
       
-      // Simple word wrapping
       const words = eventDesc.split(' ');
       let line = '';
-      let yPosition = 225; // Starting Y position
+      let yPosition = 225;
       
       words.forEach((word, index) => {
         const testLine = line + word + ' ';
@@ -264,7 +261,7 @@ const Volunteers = () => {
         
         if (testWidth > maxWidth && line !== '') {
           firstPage.drawText(line.trim(), {
-            x: 190, // Adjust X position
+            x: 190,
             y: yPosition,
             size: descSize,
             font: descFont,
@@ -277,10 +274,9 @@ const Volunteers = () => {
         }
       });
       
-      // Draw remaining text
       if (line !== '') {
         firstPage.drawText(line.trim(), {
-          x: 190, // Adjust X position
+          x: 190,
           y: yPosition,
           size: descSize,
           font: descFont,
@@ -288,21 +284,26 @@ const Volunteers = () => {
         });
       }
 
-      // Serialize the PDF to bytes
+      // ✅ CHANGED: Store blob URL instead of immediate download
       const pdfBytes = await pdfDoc.save();
-
-      // Create a blob and download
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Volunteer_Certificate_${event.ename.replace(/\s+/g, '_')}_${userInfo.userUSN}_${formattedDate.replace(/ /g, '_')}.pdf`;
-      link.click();
-      window.URL.revokeObjectURL(url);
+      const filename = `Volunteer_Certificate_${event.ename.replace(/\s+/g, '_')}_${userInfo.userUSN}_${formattedDate.replace(/ /g, '_')}.pdf`;
+
+      setDownloadLinks(prev => ({
+        ...prev,
+        [event.eid]: { url, filename }
+      }));
 
     } catch (error) {
       console.error('Error generating certificate:', error);
       alert(`Error generating certificate: ${error.message}`);
+    } finally {
+      setGeneratingIds(prev => {
+        const next = new Set(prev);
+        next.delete(event.eid);
+        return next;
+      });
     }
   };
 
@@ -332,10 +333,8 @@ const Volunteers = () => {
 
   const handleEventButtonClick = (event, eventType) => {
     if (eventType === 'completed') {
-      // Generate and download certificate for completed events
       generateCertificate(event);
     } else {
-      // Navigate to ticket page for other events
       navigate(`/volunteer-ticket?eventId=${event.eid}`);
     }
   };
@@ -380,15 +379,39 @@ const Volunteers = () => {
           <p>Date: {formatDate(event.eventDate)}</p>
           <p>Time: {formatTime(event.eventTime)}</p>
           <p>Location: {event.eventLoc || 'N/A'}</p>
-          <p>Status: {getVolunteerStatus(event.VolStatus)}</p>
+          <p>Status: {getVolunteerStatus(event.VolnStatus)}</p>
         </div>
         <div className="event-actions">
-          <button
-            className="event-btn"
-            onClick={() => handleEventButtonClick(event, eventType)}
-          >
-            {getButtonText(eventType)}
-          </button>
+          {/* ✅ UPDATED: Same three-state logic as participants.jsx */}
+          {eventType === 'completed' ? (
+            generatingIds.has(event.eid) ? (
+              <button className="event-btn" disabled>
+                Generating...
+              </button>
+            ) : downloadLinks[event.eid] ? (
+              <a
+                href={downloadLinks[event.eid].url}
+                download={downloadLinks[event.eid].filename}
+                className="event-btn"
+              >
+                Download Now
+              </a>
+            ) : (
+              <button
+                className="event-btn"
+                onClick={() => handleEventButtonClick(event, eventType)}
+              >
+                {getButtonText(eventType)}
+              </button>
+            )
+          ) : (
+            <button
+              className="event-btn"
+              onClick={() => handleEventButtonClick(event, eventType)}
+            >
+              {getButtonText(eventType)}
+            </button>
+          )}
         </div>
       </div>
     ));
