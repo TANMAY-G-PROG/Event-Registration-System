@@ -1481,20 +1481,16 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
     }
 });
 
-// Verify/Approve a payment (organizer only)
-app.post('/api/payments/verify', requireAuth, async (req, res) => {
+// Get pending payments for an event (organizer only)
+app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) => {
     try {
-        const { participantUSN, eventId } = req.body;
-        const organizerUSN = req.session.userUSN;
-
-        if (!participantUSN || !eventId) {
-            return res.status(400).json({ error: 'Participant USN and Event ID are required' });
-        }
+        const eventId = req.params.eventId;
+        const userUSN = req.session.userUSN;
 
         // Verify organizer
         const { data: event, error: eventError } = await supabase
             .from('event')
-            .select('orgusn')
+            .select('orgusn, ename, is_team')
             .eq('eid', eventId)
             .limit(1);
 
@@ -1502,110 +1498,124 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
             return res.status(404).json({ error: 'Event not found' });
         }
 
-        if (event[0].orgusn !== organizerUSN) {
-            return res.status(403).json({ error: 'Not authorized to verify payments for this event' });
+        if (event[0].orgusn !== userUSN) {
+            return res.status(403).json({ error: 'Not authorized to view payments for this event' });
         }
 
-        // Update payment status in payment table
-        const { error: paymentUpdateError } = await supabase
-            .from('payment')
-            .update({ status: 'verified' })
-            .eq('usn', participantUSN)
-            .eq('event_id', eventId)
-            .eq('status', 'pending_verification');
+        const isTeamEvent = event[0].is_team;
 
-        if (paymentUpdateError) {
-            console.error('Error updating payment status:', paymentUpdateError);
-            return res.status(500).json({ error: 'Failed to update payment status' });
-        }
-
-        // Update participant payment status
-        const { error: participantUpdateError } = await supabase
+        // Get all participants with pending payment status
+        const { data: pendingParticipants, error: participantError } = await supabase
             .from('participant')
-            .update({ payment_status: 'verified' })
-            .eq('partusn', participantUSN)
-            .eq('parteid', eventId);
+            .select(`
+                partusn,
+                payment_status,
+                team_id,
+                student:partusn (
+                    sname,
+                    emailid,
+                    mobno
+                ),
+                team:team_id (
+                    team_name,
+                    leader_usn
+                )
+            `)
+            .eq('parteid', eventId)
+            .eq('payment_status', 'pending_verification');
 
-        if (participantUpdateError) {
-            console.error('Error updating participant status:', participantUpdateError);
-            return res.status(500).json({ error: 'Failed to update participant status' });
+        if (participantError) {
+            console.error('Error fetching pending participants:', participantError);
+            return res.status(500).json({ error: 'Database error' });
         }
 
-        console.log(`✅ Payment verified: ${participantUSN} for event ${eventId} by ${organizerUSN}`);
-        
+        let paymentsToShow = [];
+
+        if (isTeamEvent) {
+            // For team events, show only team leaders
+            const teamLeadersMap = new Map();
+
+            for (const participant of pendingParticipants || []) {
+                const teamId = participant.team_id;
+                const leaderUSN = participant.team?.leader_usn;
+
+                // Only show the team leader
+                if (leaderUSN === participant.partusn) {
+                    if (!teamLeadersMap.has(teamId)) {
+                        // Get payment details
+                        const { data: paymentData } = await supabase
+                            .from('payment')
+                            .select('upi_transaction_id, amount, created_at')
+                            .eq('usn', participant.partusn)
+                            .eq('event_id', eventId)
+                            .eq('status', 'pending_verification')
+                            .order('created_at', { ascending: false })
+                            .limit(1);
+
+                        // Count team members
+                        const { count: memberCount } = await supabase
+                            .from('team_members')
+                            .select('*', { count: 'exact', head: true })
+                            .eq('team_id', teamId)
+                            .eq('join_status', true);
+
+                        teamLeadersMap.set(teamId, {
+                            partusn: participant.partusn,
+                            studentName: participant.student?.sname || 'Unknown',
+                            studentEmail: participant.student?.emailid || 'N/A',
+                            studentMobile: participant.student?.mobno || 'N/A',
+                            transactionId: paymentData?.[0]?.upi_transaction_id || 'N/A',
+                            amount: paymentData?.[0]?.amount || 0,
+                            submittedAt: paymentData?.[0]?.created_at || null,
+                            teamName: participant.team?.team_name || 'Unknown Team',
+                            teamMemberCount: memberCount || 1,
+                            isTeamLeader: true
+                        });
+                    }
+                }
+            }
+
+            paymentsToShow = Array.from(teamLeadersMap.values());
+        } else {
+            // For non-team events, show all participants
+            paymentsToShow = await Promise.all(
+                (pendingParticipants || []).map(async (participant) => {
+                    const { data: paymentData } = await supabase
+                        .from('payment')
+                        .select('upi_transaction_id, amount, created_at')
+                        .eq('usn', participant.partusn)
+                        .eq('event_id', eventId)
+                        .eq('status', 'pending_verification')
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+
+                    return {
+                        partusn: participant.partusn,
+                        studentName: participant.student?.sname || 'Unknown',
+                        studentEmail: participant.student?.emailid || 'N/A',
+                        studentMobile: participant.student?.mobno || 'N/A',
+                        transactionId: paymentData?.[0]?.upi_transaction_id || 'N/A',
+                        amount: paymentData?.[0]?.amount || 0,
+                        submittedAt: paymentData?.[0]?.created_at || null,
+                        teamName: null,
+                        isTeamLeader: false
+                    };
+                })
+            );
+        }
+
+        console.log(`✅ Found ${paymentsToShow.length} pending payments for event ${eventId}`);
         res.json({
             success: true,
-            message: 'Payment verified successfully!'
+            pendingPayments: paymentsToShow,
+            isTeamEvent
         });
     } catch (err) {
-        console.error('Error verifying payment:', err);
-        res.status(500).json({ error: 'Error verifying payment' });
+        console.error('Error fetching pending payments:', err);
+        res.status(500).json({ error: 'Error fetching pending payments' });
     }
 });
-
 // Reject a payment (organizer only)
-app.post('/api/payments/reject', requireAuth, async (req, res) => {
-    try {
-        const { participantUSN, eventId, reason } = req.body;
-        const organizerUSN = req.session.userUSN;
-
-        if (!participantUSN || !eventId) {
-            return res.status(400).json({ error: 'Participant USN and Event ID are required' });
-        }
-
-        // Verify organizer
-        const { data: event, error: eventError } = await supabase
-            .from('event')
-            .select('orgusn')
-            .eq('eid', eventId)
-            .limit(1);
-
-        if (eventError || !event || event.length === 0) {
-            return res.status(404).json({ error: 'Event not found' });
-        }
-
-        if (event[0].orgusn !== organizerUSN) {
-            return res.status(403).json({ error: 'Not authorized to reject payments for this event' });
-        }
-
-        // Update payment status in payment table
-        const { error: paymentUpdateError } = await supabase
-            .from('payment')
-            .update({ 
-                status: 'rejected',
-                rejection_reason: reason || 'Payment rejected by organizer'
-            })
-            .eq('usn', participantUSN)
-            .eq('event_id', eventId)
-            .eq('status', 'pending_verification');
-
-        if (paymentUpdateError) {
-            console.error('Error updating payment status:', paymentUpdateError);
-            return res.status(500).json({ error: 'Failed to update payment status' });
-        }
-
-        // Remove participant from event
-        const { error: deleteParticipantError } = await supabase
-            .from('participant')
-            .delete()
-            .eq('partusn', participantUSN)
-            .eq('parteid', eventId);
-
-        if (deleteParticipantError) {
-            console.error('Error removing participant:', deleteParticipantError);
-            return res.status(500).json({ error: 'Failed to remove participant' });
-        }
-
-        console.log(`✅ Payment rejected: ${participantUSN} for event ${eventId} by ${organizerUSN}`);
-        res.json({
-            success: true,
-            message: 'Payment rejected and participant removed from event'
-        });
-    } catch (err) {
-        console.error('Error rejecting payment:', err);
-        res.status(500).json({ error: 'Error rejecting payment' });
-    }
-});
 
 // ==================== TEAM EVENTS ENDPOINTS ====================
 
