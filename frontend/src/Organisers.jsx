@@ -19,6 +19,7 @@ const Organisers = () => {
   const [pendingPayments, setPendingPayments] = useState([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [processingPayment, setProcessingPayment] = useState({});
+  const [isTeamEvent, setIsTeamEvent] = useState(false);
 
   useEffect(() => {
     fetchOrganizerEvents();
@@ -169,10 +170,12 @@ const Organisers = () => {
 
       const data = await response.json();
       setPendingPayments(data.pendingPayments || []);
+      setIsTeamEvent(data.isTeamEvent || false);
     } catch (err) {
       console.error('Error fetching pending payments:', err);
       alert('Error loading pending payments');
       setPendingPayments([]);
+      setIsTeamEvent(false);
     } finally {
       setLoadingPayments(false);
     }
@@ -199,7 +202,13 @@ const Organisers = () => {
       }
 
       const data = await response.json();
-      alert(data.message || 'Payment verified successfully!');
+      
+      // Show success message with count if it's a team
+      if (data.verifiedCount && data.verifiedCount > 1) {
+        alert(`${data.message}\nAll ${data.verifiedCount} team members can now mark attendance.`);
+      } else {
+        alert(data.message || 'Payment verified successfully!');
+      }
       
       // Refresh pending payments
       setPendingPayments(prev => prev.filter(p => p.partusn !== participantUSN));
@@ -349,6 +358,7 @@ const Organisers = () => {
               <h2>💳 Pending Payment Verifications</h2>
               <p className="payment-modal-subtitle">
                 {selectedEventForPayments?.ename}
+                {isTeamEvent && <span className="team-badge"> 👥 Team Event</span>}
               </p>
               <button 
                 className="payment-modal-close"
@@ -369,70 +379,97 @@ const Organisers = () => {
                   <p>✅ No pending payments to verify</p>
                 </div>
               ) : (
-                <div className="payments-list">
-                  {pendingPayments.map((payment, index) => (
-                    <div key={index} className="payment-card">
-                      <div className="payment-info">
-                        <div className="payment-header-row">
-                          <h3 className="payment-student-name">
-                            {payment.studentName || 'Unknown'}
-                          </h3>
-                          <span className="payment-amount">₹{payment.amount}</span>
-                        </div>
-                        
-                        <div className="payment-details">
-                          <div className="payment-detail-item">
-                            <span className="detail-label">USN:</span>
-                            <span className="detail-value">{payment.partusn}</span>
-                          </div>
-                          <div className="payment-detail-item">
-                            <span className="detail-label">Email:</span>
-                            <span className="detail-value">{payment.studentEmail || 'N/A'}</span>
-                          </div>
-                          <div className="payment-detail-item">
-                            <span className="detail-label">Mobile:</span>
-                            <span className="detail-value">{payment.studentMobile || 'N/A'}</span>
-                          </div>
-                          <div className="payment-detail-item">
-                            <span className="detail-label">Transaction ID:</span>
-                            <span className="detail-value transaction-id">
-                              {payment.transactionId || 'N/A'}
-                            </span>
-                          </div>
-                          {payment.teamName && (
-                            <div className="payment-detail-item">
-                              <span className="detail-label">Team:</span>
-                              <span className="detail-value">{payment.teamName}</span>
-                            </div>
-                          )}
-                          <div className="payment-detail-item">
-                            <span className="detail-label">Submitted:</span>
-                            <span className="detail-value">
-                              {payment.submittedAt ? new Date(payment.submittedAt).toLocaleString() : 'N/A'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="payment-actions">
-                        <button
-                          className="payment-btn payment-btn-approve"
-                          onClick={() => handleVerifyPayment(payment.partusn, selectedEventForPayments.eid)}
-                          disabled={processingPayment[payment.partusn]}
-                        >
-                          {processingPayment[payment.partusn] === 'verifying' ? (
-                            <>
-                              <span className="btn-spinner"></span>
-                              Approving...
-                            </>
-                          ) : (
-                            <>✓ Approve Payment</>
-                          )}
-                        </button>
-                      </div>
+                <>
+                  {isTeamEvent && (
+                    <div className="team-event-notice">
+                      <p>
+                        <strong>ℹ️ Team Event Notice:</strong> Verifying a team leader's payment will automatically verify all team members' payments.
+                      </p>
                     </div>
-                  ))}
-                </div>
+                  )}
+                  <div className="payments-list">
+                    {pendingPayments.map((payment, index) => (
+                      <div key={index} className="payment-card">
+                        <div className="payment-info">
+                          <div className="payment-header-row">
+                            <h3 className="payment-student-name">
+                              {payment.studentName || 'Unknown'}
+                              {payment.isTeamLeader && (
+                                <span className="team-leader-badge"> 👑 Team Leader</span>
+                              )}
+                            </h3>
+                            <span className="payment-amount">₹{payment.amount}</span>
+                          </div>
+                          
+                          <div className="payment-details">
+                            <div className="payment-detail-item">
+                              <span className="detail-label">USN:</span>
+                              <span className="detail-value">{payment.partusn}</span>
+                            </div>
+                            <div className="payment-detail-item">
+                              <span className="detail-label">Email:</span>
+                              <span className="detail-value">{payment.studentEmail || 'N/A'}</span>
+                            </div>
+                            <div className="payment-detail-item">
+                              <span className="detail-label">Mobile:</span>
+                              <span className="detail-value">{payment.studentMobile || 'N/A'}</span>
+                            </div>
+                            <div className="payment-detail-item">
+                              <span className="detail-label">Transaction ID:</span>
+                              <span className="detail-value transaction-id">
+                                {payment.transactionId || 'N/A'}
+                              </span>
+                            </div>
+                            {payment.teamName && (
+                              <>
+                                <div className="payment-detail-item">
+                                  <span className="detail-label">Team:</span>
+                                  <span className="detail-value">{payment.teamName}</span>
+                                </div>
+                                {payment.teamMemberCount && (
+                                  <div className="payment-detail-item">
+                                    <span className="detail-label">Team Size:</span>
+                                    <span className="detail-value">
+                                      {payment.teamMemberCount} member{payment.teamMemberCount !== 1 ? 's' : ''}
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                            <div className="payment-detail-item">
+                              <span className="detail-label">Submitted:</span>
+                              <span className="detail-value">
+                                {payment.submittedAt ? new Date(payment.submittedAt).toLocaleString() : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="payment-actions">
+                          <button
+                            className="payment-btn payment-btn-approve"
+                            onClick={() => handleVerifyPayment(payment.partusn, selectedEventForPayments.eid)}
+                            disabled={processingPayment[payment.partusn]}
+                          >
+                            {processingPayment[payment.partusn] === 'verifying' ? (
+                              <>
+                                <span className="btn-spinner"></span>
+                                Approving...
+                              </>
+                            ) : (
+                              <>
+                                ✓ Approve Payment
+                                {payment.isTeamLeader && payment.teamMemberCount > 1 && (
+                                  <span className="approve-count"> (All {payment.teamMemberCount})</span>
+                                )}
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </div>
