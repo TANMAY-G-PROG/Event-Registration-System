@@ -73,13 +73,12 @@ const AboutUs = () => {
       {/* Hero Section */}
       <section className="aboutus-hero">
         <div className="hero-content">
-          <h1 className="hero-title">About ePASS</h1>
+          <h1 className="hero-title">About Flo</h1>
           <div className="hero-underline"></div>
           <p className="hero-description">
-            XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+Hey there! 👋 This is FLO — the place where we finally said “bye-bye” to manual forms and “hello” to effortless online passes.
+We built this platform because life’s too short to wait in lines or deal with slow processes. With FLO, you can apply, track, and receive approvals faster than your chai cools down.
+Smooth design, fast processing, no nonsense. Just vibes + efficiency.
           </p>
         </div>
       </section>
@@ -132,3 +131,4 @@ const AboutUs = () => {
 
 
 export default AboutUs;
+
