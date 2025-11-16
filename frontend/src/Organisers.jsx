@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import DOMPurify from 'dompurify'; // For sanitizing HTML
 import './organisers.css';
 
 const Organisers = () => {
@@ -7,13 +8,11 @@ const Organisers = () => {
   const [events, setEvents] = useState({
     ongoing: [],
     completed: [],
-    upcoming: []
+    upcoming: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [generatingExcel, setGeneratingExcel] = useState({});
-  
-  // Payment verification modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedEventForPayments, setSelectedEventForPayments] = useState(null);
   const [pendingPayments, setPendingPayments] = useState([]);
@@ -21,45 +20,19 @@ const Organisers = () => {
   const [processingPayment, setProcessingPayment] = useState({});
   const [isTeamEvent, setIsTeamEvent] = useState(false);
 
-  useEffect(() => {
-    fetchOrganizerEvents();
-  }, []);
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const formatTime = (timeString) => {
-    if (!timeString) return 'N/A';
-    const timeParts = timeString.split(':');
-    let hours = parseInt(timeParts[0]);
-    const minutes = timeParts[1];
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    return `${hours}:${minutes} ${ampm}`;
-  };
-
-  const categorizeEvents = (events) => {
+  // Memoize categorizeEvents to prevent unnecessary re-computations
+  const categorizeEvents = useCallback((events) => {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
-
     const categorized = {
       ongoing: [],
       completed: [],
-      upcoming: []
+      upcoming: [],
     };
 
-    events.forEach(event => {
+    events.forEach((event) => {
       const eventDate = new Date(event.eventDate);
       eventDate.setHours(0, 0, 0, 0);
-
       const diffTime = eventDate.getTime() - currentDate.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -73,7 +46,7 @@ const Organisers = () => {
     });
 
     return categorized;
-  };
+  }, []);
 
   const fetchOrganizerEvents = async () => {
     try {
@@ -81,8 +54,8 @@ const Organisers = () => {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
 
       if (!response.ok) {
@@ -105,16 +78,44 @@ const Organisers = () => {
     }
   };
 
+  useEffect(() => {
+    fetchOrganizerEvents();
+    // Cleanup function
+    return () => {
+      // Any cleanup logic if needed
+    };
+  }, [navigate, categorizeEvents]);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (timeString) => {
+    if (!timeString) return 'N/A';
+    const timeParts = timeString.split(':');
+    let hours = parseInt(timeParts[0]);
+    const minutes = timeParts[1];
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${hours}:${minutes} ${ampm}`;
+  };
+
   const handleGenerateDetails = async (eventId, eventName) => {
     try {
-      setGeneratingExcel(prev => ({ ...prev, [eventId]: true }));
-
+      setGeneratingExcel((prev) => ({ ...prev, [eventId]: true }));
       const response = await fetch(`/api/events/${eventId}/generate-details`, {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
 
       if (!response.ok) {
@@ -137,16 +138,13 @@ const Organisers = () => {
       a.download = `Event_${eventName.replace(/\s+/g, '_')}_Details.xlsx`;
       document.body.appendChild(a);
       a.click();
-      
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-
-      console.log('✅ Excel file downloaded successfully');
     } catch (err) {
       console.error('Error generating Excel file:', err);
       alert('Error generating Excel file. Please try again.');
     } finally {
-      setGeneratingExcel(prev => ({ ...prev, [eventId]: false }));
+      setGeneratingExcel((prev) => ({ ...prev, [eventId]: false }));
     }
   };
 
@@ -154,14 +152,13 @@ const Organisers = () => {
     setSelectedEventForPayments(event);
     setShowPaymentModal(true);
     setLoadingPayments(true);
-
     try {
       const response = await fetch(`/api/events/${event.eid}/pending-payments`, {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
 
       if (!response.ok) {
@@ -182,41 +179,37 @@ const Organisers = () => {
   };
 
   const handleVerifyPayment = async (participantUSN, eventId) => {
-    setProcessingPayment(prev => ({ ...prev, [participantUSN]: 'verifying' }));
-
+    setProcessingPayment((prev) => ({ ...prev, [participantUSN]: 'verifying' }));
     try {
       const response = await fetch('/api/payments/verify', {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           participantUSN,
-          eventId
-        })
+          eventId,
+        }),
       });
 
+      const data = await response.json();
       if (!response.ok) {
-        throw new Error('Failed to verify payment');
+        throw new Error(data.error || `HTTP status ${response.status}`);
       }
 
-      const data = await response.json();
-      
-      // Show success message with count if it's a team
       if (data.verifiedCount && data.verifiedCount > 1) {
         alert(`${data.message}\nAll ${data.verifiedCount} team members can now mark attendance.`);
       } else {
         alert(data.message || 'Payment verified successfully!');
       }
-      
-      // Refresh pending payments
-      setPendingPayments(prev => prev.filter(p => p.partusn !== participantUSN));
+
+      setPendingPayments((prev) => prev.filter((p) => p.partusn !== participantUSN));
     } catch (err) {
       console.error('Error verifying payment:', err);
-      alert('Error verifying payment. Please try again.');
+      alert(`Error: ${err.message || 'Failed to verify payment. Please try again.'}`);
     } finally {
-      setProcessingPayment(prev => ({ ...prev, [participantUSN]: null }));
+      setProcessingPayment((prev) => ({ ...prev, [participantUSN]: null }));
     }
   };
 
@@ -236,7 +229,9 @@ const Organisers = () => {
     if (loading) {
       return (
         <div className="event-item">
-          <p><strong>Loading...</strong></p>
+          <p>
+            <strong>Loading...</strong>
+          </p>
         </div>
       );
     }
@@ -244,7 +239,9 @@ const Organisers = () => {
     if (error) {
       return (
         <div className="event-item">
-          <p><strong>Error:</strong> Could not load events. {error}</p>
+          <p>
+            <strong>Error:</strong> Could not load events. {error}
+          </p>
         </div>
       );
     }
@@ -252,29 +249,36 @@ const Organisers = () => {
     if (!eventsList || eventsList.length === 0) {
       return (
         <div className="event-item">
-          <p><strong>No events available</strong></p>
+          <p>
+            <strong>No events available</strong>
+          </p>
         </div>
       );
     }
 
-    return eventsList.map(event => (
+    return eventsList.map((event) => (
       <div className="event-item" key={event.eid}>
         <div className="event-info">
-          <p><strong>{event.ename || 'N/A'}</strong></p>
-          <p><em>{event.eventdesc || 'No description'}</em></p>
+          <p>
+            <strong>{DOMPurify.sanitize(event.ename || 'N/A')}</strong>
+          </p>
+          <p>
+            <em>{DOMPurify.sanitize(event.eventdesc || 'No description')}</em>
+          </p>
           <p>Date: {formatDate(event.eventDate)}</p>
           <p>Time: {formatTime(event.eventTime)}</p>
-          <p>Location: {event.eventLoc || 'N/A'}</p>
+          <p>Location: {DOMPurify.sanitize(event.eventLoc || 'N/A')}</p>
           <p>Max Participants: {event.maxPart || 'No limit'}</p>
           <p>Max Volunteers: {event.maxVoln || 'No limit'}</p>
           <p>Registration Fee: ₹{event.regFee || '0'}</p>
-          {event.clubName && <p>Club: {event.clubName}</p>}
+          {event.clubName && <p>Club: {DOMPurify.sanitize(event.clubName)}</p>}
         </div>
         <div className="event-actions">
           {eventType !== 'completed' && (
             <button
               className="event-btn"
               onClick={() => handleEventButtonClick(event.eid, eventType)}
+              aria-label={`View details for ${event.ename}`}
             >
               View Event
             </button>
@@ -283,6 +287,7 @@ const Organisers = () => {
             <button
               className="event-btn event-btn-payment"
               onClick={() => handleViewPendingPayments(event)}
+              aria-label={`Verify payments for ${event.ename}`}
             >
               💳 Verify Payments
             </button>
@@ -291,6 +296,7 @@ const Organisers = () => {
             className="event-btn"
             onClick={() => handleGenerateDetails(event.eid, event.ename)}
             disabled={generatingExcel[event.eid]}
+            aria-label={`Generate details for ${event.ename}`}
           >
             {generatingExcel[event.eid] ? 'Generating...' : 'Generate Details'}
           </button>
@@ -302,12 +308,16 @@ const Organisers = () => {
   return (
     <div className="organisers-page">
       <div className="logout-container">
-        <button id="backBtn" className="logout-btn" onClick={handleBack}>
+        <button
+          id="backBtn"
+          className="logout-btn"
+          onClick={handleBack}
+          aria-label="Back to events"
+        >
           <i className="fas fa-arrow-left"></i>
           Back
         </button>
       </div>
-
       <section className="hero-section">
         <div className="container">
           <div className="card-grid">
@@ -320,7 +330,6 @@ const Organisers = () => {
                 </div>
               </div>
             </div>
-
             <div className="card" id="ongoing-card">
               <div className="card__background"></div>
               <div className="card__content">
@@ -330,7 +339,6 @@ const Organisers = () => {
                 </div>
               </div>
             </div>
-
             <div className="card" id="upcoming-card">
               <div className="card__background"></div>
               <div className="card__content">
@@ -341,33 +349,41 @@ const Organisers = () => {
               </div>
             </div>
           </div>
-
           <div className="button-container">
-            <button onClick={handleOrganiseClick}>
+            <button onClick={handleOrganiseClick} aria-label="Organise new event">
               Organise New Event
             </button>
           </div>
         </div>
       </section>
-
-      {/* Payment Verification Modal */}
       {showPaymentModal && (
-        <div className="payment-modal-overlay" onClick={() => setShowPaymentModal(false)}>
-          <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="payment-modal-overlay"
+          onClick={() => setShowPaymentModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="payment-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="document"
+          >
             <div className="payment-modal-header">
               <h2>💳 Pending Payment Verifications</h2>
               <p className="payment-modal-subtitle">
-                {selectedEventForPayments?.ename}
-                {isTeamEvent && <span className="team-badge"> 👥 Team Event</span>}
+                {DOMPurify.sanitize(selectedEventForPayments?.ename)}
+                {isTeamEvent && (
+                  <span className="team-badge"> 👥 Team Event</span>
+                )}
               </p>
-              <button 
+              <button
                 className="payment-modal-close"
                 onClick={() => setShowPaymentModal(false)}
+                aria-label="Close payment verification modal"
               >
                 ×
               </button>
             </div>
-
             <div className="payment-modal-body">
               {loadingPayments ? (
                 <div className="payment-loading">
@@ -383,7 +399,9 @@ const Organisers = () => {
                   {isTeamEvent && (
                     <div className="team-event-notice">
                       <p>
-                        <strong>ℹ️ Team Event Notice:</strong> Verifying a team leader's payment will automatically verify all team members' payments.
+                        <strong>ℹ️ Team Event Notice:</strong> Verifying a team
+                        leader's payment will automatically verify all team
+                        members' payments.
                       </p>
                     </div>
                   )}
@@ -393,44 +411,69 @@ const Organisers = () => {
                         <div className="payment-info">
                           <div className="payment-header-row">
                             <h3 className="payment-student-name">
-                              {payment.studentName || 'Unknown'}
+                              {DOMPurify.sanitize(
+                                payment.studentName || 'Unknown'
+                              )}
                               {payment.isTeamLeader && (
-                                <span className="team-leader-badge"> 👑 Team Leader</span>
+                                <span className="team-leader-badge">
+                                  {' '}
+                                  👑 Team Leader
+                                </span>
                               )}
                             </h3>
-                            <span className="payment-amount">₹{payment.amount}</span>
+                            <span className="payment-amount">
+                              ₹{payment.amount}
+                            </span>
                           </div>
-                          
                           <div className="payment-details">
                             <div className="payment-detail-item">
                               <span className="detail-label">USN:</span>
-                              <span className="detail-value">{payment.partusn}</span>
+                              <span className="detail-value">
+                                {DOMPurify.sanitize(payment.partusn)}
+                              </span>
                             </div>
                             <div className="payment-detail-item">
                               <span className="detail-label">Email:</span>
-                              <span className="detail-value">{payment.studentEmail || 'N/A'}</span>
+                              <span className="detail-value">
+                                {DOMPurify.sanitize(
+                                  payment.studentEmail || 'N/A'
+                                )}
+                              </span>
                             </div>
                             <div className="payment-detail-item">
                               <span className="detail-label">Mobile:</span>
-                              <span className="detail-value">{payment.studentMobile || 'N/A'}</span>
+                              <span className="detail-value">
+                                {DOMPurify.sanitize(
+                                  payment.studentMobile || 'N/A'
+                                )}
+                              </span>
                             </div>
                             <div className="payment-detail-item">
-                              <span className="detail-label">Transaction ID:</span>
+                              <span className="detail-label">
+                                Transaction ID:
+                              </span>
                               <span className="detail-value transaction-id">
-                                {payment.transactionId || 'N/A'}
+                                {DOMPurify.sanitize(
+                                  payment.transactionId || 'N/A'
+                                )}
                               </span>
                             </div>
                             {payment.teamName && (
                               <>
                                 <div className="payment-detail-item">
                                   <span className="detail-label">Team:</span>
-                                  <span className="detail-value">{payment.teamName}</span>
+                                  <span className="detail-value">
+                                    {DOMPurify.sanitize(payment.teamName)}
+                                  </span>
                                 </div>
                                 {payment.teamMemberCount && (
                                   <div className="payment-detail-item">
-                                    <span className="detail-label">Team Size:</span>
+                                    <span className="detail-label">
+                                      Team Size:
+                                    </span>
                                     <span className="detail-value">
-                                      {payment.teamMemberCount} member{payment.teamMemberCount !== 1 ? 's' : ''}
+                                      {payment.teamMemberCount}{' '}
+                                      member{payment.teamMemberCount !== 1 ? 's' : ''}
                                     </span>
                                   </div>
                                 )}
@@ -439,19 +482,27 @@ const Organisers = () => {
                             <div className="payment-detail-item">
                               <span className="detail-label">Submitted:</span>
                               <span className="detail-value">
-                                {payment.submittedAt ? new Date(payment.submittedAt).toLocaleString() : 'N/A'}
+                                {payment.submittedAt
+                                  ? new Date(payment.submittedAt).toLocaleString()
+                                  : 'N/A'}
                               </span>
                             </div>
                           </div>
                         </div>
-
                         <div className="payment-actions">
                           <button
                             className="payment-btn payment-btn-approve"
-                            onClick={() => handleVerifyPayment(payment.partusn, selectedEventForPayments.eid)}
+                            onClick={() =>
+                              handleVerifyPayment(
+                                payment.partusn,
+                                selectedEventForPayments.eid
+                              )
+                            }
                             disabled={processingPayment[payment.partusn]}
+                            aria-label={`Approve payment for ${payment.studentName}`}
                           >
-                            {processingPayment[payment.partusn] === 'verifying' ? (
+                            {processingPayment[payment.partusn] ===
+                            'verifying' ? (
                               <>
                                 <span className="btn-spinner"></span>
                                 Approving...
@@ -459,9 +510,13 @@ const Organisers = () => {
                             ) : (
                               <>
                                 ✓ Approve Payment
-                                {payment.isTeamLeader && payment.teamMemberCount > 1 && (
-                                  <span className="approve-count"> (All {payment.teamMemberCount})</span>
-                                )}
+                                {payment.isTeamLeader &&
+                                  payment.teamMemberCount > 1 && (
+                                    <span className="approve-count">
+                                      {' '}
+                                      (All {payment.teamMemberCount})
+                                    </span>
+                                  )}
                               </>
                             )}
                           </button>
