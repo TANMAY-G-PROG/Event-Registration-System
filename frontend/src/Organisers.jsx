@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './organisers.css';
 
-// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 const Organisers = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState({
@@ -78,7 +76,7 @@ const Organisers = () => {
 
   const fetchOrganizerEvents = async () => {
     try {
-      const response = await fetch('/api/my-organized-events', { // ✅ CHANGED
+      const response = await fetch('/api/my-organized-events', {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -110,7 +108,7 @@ const Organisers = () => {
     try {
       setGeneratingExcel(prev => ({ ...prev, [eventId]: true }));
 
-      const response = await fetch(`/api/events/${eventId}/generate-details`, { // ✅ CHANGED
+      const response = await fetch(`/api/events/${eventId}/generate-details`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -157,7 +155,7 @@ const Organisers = () => {
     setLoadingPayments(true);
 
     try {
-      const response = await fetch(`/api/events/${event.eid}/pending-payments`, { // ✅ CHANGED
+      const response = await fetch(`/api/events/${event.eid}/pending-payments`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -181,14 +179,10 @@ const Organisers = () => {
   };
 
   const handleVerifyPayment = async (participantUSN, eventId) => {
-    if (!confirm('Are you sure you want to approve this payment?')) {
-      return;
-    }
-
     setProcessingPayment(prev => ({ ...prev, [participantUSN]: 'verifying' }));
 
     try {
-      const response = await fetch('/api/payments/verify', { // ✅ CHANGED
+      const response = await fetch('/api/payments/verify', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -212,43 +206,6 @@ const Organisers = () => {
     } catch (err) {
       console.error('Error verifying payment:', err);
       alert('Error verifying payment. Please try again.');
-    } finally {
-      setProcessingPayment(prev => ({ ...prev, [participantUSN]: null }));
-    }
-  };
-
-  const handleRejectPayment = async (participantUSN, eventId) => {
-    const reason = prompt('Please enter rejection reason (optional):');
-    if (reason === null) return; // User cancelled
-
-    setProcessingPayment(prev => ({ ...prev, [participantUSN]: 'rejecting' }));
-
-    try {
-      const response = await fetch('/api/payments/reject', { // ✅ CHANGED
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          participantUSN,
-          eventId,
-          reason: reason || 'Payment rejected by organizer'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to reject payment');
-      }
-
-      const data = await response.json();
-      alert(data.message || 'Payment rejected successfully!');
-      
-      // Refresh pending payments
-      setPendingPayments(prev => prev.filter(p => p.partusn !== participantUSN));
-    } catch (err) {
-      console.error('Error rejecting payment:', err);
-      alert('Error rejecting payment. Please try again.');
     } finally {
       setProcessingPayment(prev => ({ ...prev, [participantUSN]: null }));
     }
@@ -469,21 +426,7 @@ const Organisers = () => {
                               Approving...
                             </>
                           ) : (
-                            <>✓ Approve</>
-                          )}
-                        </button>
-                        <button
-                          className="payment-btn payment-btn-reject"
-                          onClick={() => handleRejectPayment(payment.partusn, selectedEventForPayments.eid)}
-                          disabled={processingPayment[payment.partusn]}
-                        >
-                          {processingPayment[payment.partusn] === 'rejecting' ? (
-                            <>
-                              <span className="btn-spinner"></span>
-                              Rejecting...
-                            </>
-                          ) : (
-                            <>✗ Reject</>
+                            <>✓ Approve Payment</>
                           )}
                         </button>
                       </div>
