@@ -132,17 +132,15 @@ export default function Scanner() {
   };
 
   const onScanSuccess = async (decodedText) => {
-    // Prevent duplicate scans
-    if (!isScanning || lastResult === decodedText) {
-      console.log('⚠️ Duplicate scan prevented');
-      return;
-    }
+    // Prevent multiple scans while processing
+    if (pageState !== 'scanning') return;
     
     console.log(`✅ QR Code detected: ${decodedText}`);
     setIsScanning(false);
+    setPageState('processing'); // Temporary state to prevent duplicate scans
     setLastResult(decodedText);
     
-    // Stop the scanner immediately
+    // Stop scanner immediately
     cleanupScanner();
     
     if (decodedText.startsWith('eventId:')) {
@@ -558,6 +556,12 @@ export default function Scanner() {
           font-weight: 600;
           font-size: 14px;
         }
+        .file-upload-box label {
+          word-wrap: break-word;
+          white-space: normal;
+          max-width: 100%;
+          display: inline-block;
+        }
         .instructions-box {
           background: var(--secondary-background);
           border-radius: var(--border-radius-sm);
@@ -619,68 +623,28 @@ export default function Scanner() {
           50% { transform: scale(1.05); }
         }
         @media (max-width: 600px) {
-          .scanner-container {
-            padding: 20px;
-          }
-          
           .scanner-card {
             padding: 24px 16px;
-            border-radius: 16px;
           }
-          
           .scanner-title {
             font-size: 24px;
           }
-          
-          .scanner-subtitle {
-            font-size: 14px;
-          }
-          
           .scanner-icon {
             font-size: 40px;
           }
-          
+          .btn {
+            font-size: 13px;
+            padding: 10px 16px;
+          }
+          .file-upload-box {
+            padding: 12px;
+          }
           .button-group {
             flex-direction: column;
             width: 100%;
           }
-          
-          .btn {
+          .button-group .btn {
             width: 100%;
-            padding: 12px 20px;
-          }
-          
-          .file-upload-box {
-            padding: 12px;
-          }
-          
-          .file-upload-box p {
-            font-size: 13px;
-          }
-          
-          .instructions-box {
-            padding: 12px;
-            font-size: 13px;
-          }
-          
-          .instructions-box ul {
-            padding-left: 16px;
-          }
-          
-          .instructions-box li {
-            margin-bottom: 8px;
-          }
-          
-          #reader {
-            min-height: 250px;
-          }
-          
-          .success-title {
-            font-size: 20px;
-          }
-          
-          .success-message {
-            font-size: 13px;
           }
         }
       `}</style>
