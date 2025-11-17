@@ -14,27 +14,24 @@
   position: relative;
 }
 
-/* ==== Animated background particles – DENSE, VISIBLE & SLOW ==== */
+/* ==== Animated background particles – FIXED FOR MOBILE ==== */
 .aboutus-container::before {
   content: '';
-  position: fixed;
+  position: absolute; /* Changed from fixed to absolute */
   inset: 0;
   background-image:
-    /* 24 bright, larger particles – same as the dense version */
     radial-gradient(3px 3px at 10% 15%, rgba(255,255,255,0.60), transparent),
     radial-gradient(4px 4px at 25% 80%, rgba(102,126,234,0.55), transparent),
     radial-gradient(2px 2px at 40% 30%, rgba(240,147,251,0.50), transparent),
     radial-gradient(3.5px 3.5px at 55% 65%, rgba(118,75,162,0.58), transparent),
     radial-gradient(2.5px 2.5px at 70% 20%, rgba(255,255,255,0.52), transparent),
     radial-gradient(3px 3px at 85% 90%, rgba(102,126,234,0.60), transparent),
-
     radial-gradient(2px 2px at 15% 45%, rgba(240,147,251,0.48), transparent),
     radial-gradient(3.5px 3.5px at 35% 10%, rgba(118,75,162,0.55), transparent),
     radial-gradient(4px 4px at 50% 85%, rgba(255,255,255,0.62), transparent),
     radial-gradient(2.5px 2.5px at 65% 40%, rgba(102,126,234,0.50), transparent),
     radial-gradient(3px 3px at 80% 55%, rgba(240,147,251,0.53), transparent),
     radial-gradient(2px 2px at 95% 25%, rgba(118,75,162,0.57), transparent),
-
     radial-gradient(3px 3px at 20% 60%, rgba(255,255,255,0.58), transparent),
     radial-gradient(4px 4px at 45% 95%, rgba(102,126,234,0.54), transparent),
     radial-gradient(2.5px 2.5px at 60% 15%, rgba(240,147,251,0.49), transparent),
@@ -43,15 +40,15 @@
     radial-gradient(3px 3px at 90% 45%, rgba(102,126,234,0.57), transparent);
   background-size: 300% 300%;
   background-repeat: repeat;
-  
-  /* SLOW DRIFT – 20 s, exactly like the original */
   animation: aboutus-particleFloat 20s ease-in-out infinite;
   pointer-events: none;
-  z-index: 1;
+  z-index: 0; /* Changed from 1 to 0 */
 }
 
 .aboutus-container > * {
   box-sizing: border-box;
+  position: relative;
+  z-index: 1;
 }
 
 .aboutus-container * {
@@ -130,7 +127,7 @@
   max-width: 1400px;
   margin: 0 auto;
   position: relative;
-  z-index: auto;
+  z-index: 1;
 }
 
 .aboutus-container .team-section::before {
@@ -549,4 +546,3 @@
     font-size: 1.2rem;
   }
 }
-
