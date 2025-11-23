@@ -1,1380 +1,647 @@
 /* ===================================
-   REGISTEREVENT COMPONENT - SCOPED STYLES
-   All styles are prefixed with .registerevent-
+   REGISTEREVENT - CYBER GLASS REDESIGN
    =================================== */
 
-/* CSS Variables - scoped to component */
+/* 1. CORE VARIABLES & THEME */
 .registerevent-page {
-  --re-background: #0b0e14;
-  --re-foreground: #e6e7ea;
-  --re-muted: #98a1b2;
-  --re-primary: #0ea5e9;
-  --re-accent: #22d3ee;
-  --re-card: color-mix(in oklab, #0b0e14 70%, white 6%);
-  --re-success: #10b981;
-  --re-error: #ef4444;
+  /* Core Palette - Deep Space & Neon */
+  --re-bg-deep: #050507;
+  --re-bg-surface: #0a0a0f;
+  --re-text-primary: #ffffff;
+  --re-text-secondary: #94a3b8;
+  --re-text-tertiary: #475569;
+  
+  /* Accents */
+  --re-accent-cyan: #00f0ff;
+  --re-accent-violet: #7000ff;
+  --re-accent-success: #00ff9d;
+  --re-accent-error: #ff0055;
+  --re-accent-warning: #ffbd00;
+
+  /* Glassmorphism System */
+  --re-glass-surface: rgba(255, 255, 255, 0.03);
+  --re-glass-border: rgba(255, 255, 255, 0.08);
+  --re-glass-highlight: rgba(255, 255, 255, 0.15);
+  --re-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  
+  /* Spacing & Layout */
+  --re-container-width: 1200px;
+  --re-radius-lg: 24px;
+  --re-radius-md: 16px;
+  --re-radius-sm: 8px;
+  
+  /* Animation */
+  --re-ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --re-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Main page container */
+/* 2. GLOBAL RESET & BASE */
 .registerevent-page {
   position: relative;
   min-height: 100vh;
+  background-color: var(--re-bg-deep);
+  color: var(--re-text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
-  margin: 0;
-  padding: 0;
-  color: var(--re-foreground);
-  background: var(--re-background);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  isolation: isolate;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Lightweight geometric hero background (CSS-only) */
+/* 3. ATMOSPHERIC BACKGROUNDS */
 .registerevent-hero-bg {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
+  overflow: hidden;
   pointer-events: none;
-  background-color: var(--re-background);
-  background-image: 
-    radial-gradient(60rem 60rem at 20% 20%, color-mix(in oklab, var(--re-primary) 22%, transparent), transparent 55%),
-    radial-gradient(48rem 48rem at 80% 28%, color-mix(in oklab, #22d3ee 18%, transparent), transparent 52%),
-    radial-gradient(44rem 44rem at 50% 80%, color-mix(in oklab, #60a5fa 16%, transparent), transparent 50%),
-    radial-gradient(100% 100% at 50% 0%, color-mix(in oklab, black 6%, transparent), transparent 60%);
-  filter: saturate(1.05) brightness(1.02);
 }
 
-/* Container */
+/* Noise Texture */
+.registerevent-noise {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  opacity: 0.07;
+  z-index: 2;
+  mix-blend-mode: overlay;
+}
+
+/* Glowing Orbs */
+.registerevent-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.6;
+  animation: blob-float 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.registerevent-blob-1 {
+  top: -10%;
+  left: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, var(--re-accent-violet), transparent 70%);
+  animation-delay: 0s;
+}
+
+.registerevent-blob-2 {
+  bottom: -10%;
+  right: -10%;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, var(--re-accent-cyan), transparent 70%);
+  animation-delay: -5s;
+}
+
+@keyframes blob-float {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(30px, 50px) scale(1.1); }
+}
+
+/* 4. LAYOUT CONTAINER */
 .registerevent-container {
-  position: relative;
-  z-index: 1;
-  padding: 96px 16px 48px;
-  max-width: 1080px;
+  max-width: var(--re-container-width);
   margin: 0 auto;
+  padding: 120px 24px 60px;
+  position: relative;
+  z-index: 10;
 }
 
-/* Glass surface effect */
-.registerevent-surface {
-  background: color-mix(in oklab, var(--re-background) 75%, white 5%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid color-mix(in oklab, white 12%, transparent);
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
-}
-
-/* Flash messages */
-.registerevent-flash {
-  margin-bottom: 16px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  text-align: center;
-  font-weight: 600;
-  font-size: 14px;
-  border: 1px solid color-mix(in oklab, white 12%, transparent);
-  animation: registerevent-slideIn 0.3s ease-out;
-}
-
-@keyframes registerevent-slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.registerevent-flash-success {
-  background: color-mix(in oklab, var(--re-success) 16%, transparent);
-  border-color: color-mix(in oklab, var(--re-success) 36%, transparent);
-  color: #d1fae5;
-}
-
-.registerevent-flash-error {
-  background: color-mix(in oklab, var(--re-error) 16%, transparent);
-  border-color: color-mix(in oklab, var(--re-error) 36%, transparent);
-  color: #fee2e2;
-}
-
-.registerevent-flash-info {
-  background: color-mix(in oklab, var(--re-primary) 16%, transparent);
-  border-color: color-mix(in oklab, var(--re-primary) 36%, transparent);
-  color: #e0f2fe;
-}
-
-/* Header */
+/* 5. HEADER & HERO SECTION */
 .registerevent-header {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 32px;
+  margin-bottom: 80px;
+  position: relative;
 }
 
 .registerevent-header-text {
-  min-width: 288px;
-}
-
-.registerevent-title {
-  margin: 0;
-  font-size: 32px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--re-foreground);
-  line-height: 1.2;
-}
-
-.registerevent-subtitle {
-  margin: 6px 0 0;
-  font-size: 14px;
-  color: var(--re-muted);
-  line-height: 1.5;
-}
-
-/* Filters */
-.registerevent-filters {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.registerevent-filter-btn {
-  appearance: none;
-  border: 1px solid color-mix(in oklab, white 10%, transparent);
-  background: color-mix(in oklab, var(--re-background) 80%, white 4%);
-  color: var(--re-foreground);
-  border-radius: 12px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 180ms ease;
-  min-width: 84px;
-}
-
-.registerevent-filter-btn:hover {
-  transform: translateY(-1px);
-  background: color-mix(in oklab, var(--re-background) 75%, white 6%);
-}
-
-.registerevent-filter-btn:focus-visible {
-  outline: 2px solid var(--re-primary);
-  outline-offset: 2px;
-}
-
-.registerevent-filter-active {
-  background: var(--re-primary) !important;
-  border-color: var(--re-primary) !important;
-  color: white !important;
-  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.35);
-}
-
-/* Loading, error, no events states */
-.registerevent-state {
-  text-align: center;
-  padding: 48px 12px 24px;
-}
-
-.registerevent-spinner {
-  display: inline-block;
-  width: 32px;
-  height: 32px;
-  border: 3px solid color-mix(in oklab, var(--re-primary) 20%, transparent);
-  border-top-color: var(--re-primary);
-  border-radius: 50%;
-  animation: registerevent-spin 0.8s linear infinite;
-}
-
-@keyframes registerevent-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.registerevent-muted {
-  margin-top: 12px;
-  color: var(--re-muted);
-  font-size: 15px;
-}
-
-.registerevent-error {
-  color: var(--re-error);
-  font-weight: 600;
-  font-size: 16px;
-  margin: 0 0 12px;
-}
-
-.registerevent-retry-btn {
-  margin-top: 12px;
-  border: 1px solid color-mix(in oklab, white 14%, transparent);
-  background: color-mix(in oklab, var(--re-background) 80%, white 6%);
-  color: var(--re-foreground);
-  border-radius: 12px;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 180ms ease;
-}
-
-.registerevent-retry-btn:hover {
-  background: color-mix(in oklab, var(--re-background) 75%, white 8%);
-  transform: translateY(-1px);
-}
-
-/* Events list */
-.registerevent-list {
-  margin-top: 24px;
-  display: grid;
-  gap: 20px;
-  padding: 0 16px;
-}
-
-/* Event card */
-.registerevent-card {
-  background: color-mix(in oklab, var(--re-background) 60%, white 4%);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid color-mix(in oklab, white 12%, transparent);
-  border-radius: 14px;
-  padding: 20px;
-  transition: all 200ms ease;
-}
-
-.registerevent-card:hover {
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
-  transform: translateY(-2px);
-}
-
-.registerevent-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-
-.registerevent-card-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.registerevent-card-title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--re-foreground);
-  line-height: 1.3;
-}
-
-.registerevent-card-desc {
-  margin: 0 0 16px;
-  font-size: 14px;
-  color: var(--re-muted);
-  line-height: 1.6;
-}
-
-/* Status badges */
-.registerevent-badge {
-  display: inline-block;
-  border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: capitalize;
-  letter-spacing: 0.025em;
-}
-
-.registerevent-badge-upcoming {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.registerevent-badge-ongoing {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.registerevent-badge-completed {
-  background: #e5e7eb;
-  color: #374151;
-}
-
-.registerevent-badge-team {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.registerevent-badge-success {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-/* Register button container */
-.registerevent-register-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-/* Register button with animated outline */
-.registerevent-register-btn {
-  position: relative;
-  border: none;
-  background: transparent;
-  padding: 10px 18px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: all 200ms ease;
-  box-shadow: inset 0 -6px 10px rgba(143, 223, 255, 0.12);
-  white-space: nowrap;
-}
-
-.registerevent-register-btn:hover {
-  box-shadow: inset 0 -5px 10px rgba(143, 223, 255, 0.24);
-  transform: translateY(-1px);
-}
-
-.registerevent-register-btn:focus-visible {
-  outline: 2px solid var(--re-primary);
-  outline-offset: 2px;
-}
-
-.registerevent-btn-border,
-.registerevent-btn-fill {
-  position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  content: "";
-  display: block;
-  pointer-events: none;
-}
-
-.registerevent-btn-border {
-  padding: 1px;
-  background: linear-gradient(90deg, rgba(255, 170, 64, 0.5), rgba(156, 64, 255, 0.5), rgba(255, 170, 64, 0.5));
-  background-size: 300% 100%;
-  animation: registerevent-gradient-x 8s linear infinite;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-}
-
-.registerevent-btn-fill {
-  background: color-mix(in oklab, var(--re-background) 80%, white 4%);
-}
-
-.registerevent-btn-label {
-  position: relative;
-  z-index: 2;
-  font-weight: 600;
-  font-size: 14px;
-  background: linear-gradient(90deg, #ffaa40, #ffffff, #ffaa40);
-  background-size: 300% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: registerevent-gradient-x 8s linear infinite;
-}
-
-@keyframes registerevent-gradient-x {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 140% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-/* Team controls */
-.registerevent-team-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  max-width: 400px;
-}
-
-.registerevent-team-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.registerevent-team-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--re-foreground);
-}
-
-.registerevent-team-status {
-  font-size: 13px;
-  color: var(--re-muted);
-}
-
-.registerevent-team-waiting {
-  font-size: 13px;
-  color: var(--re-accent);
-  font-weight: 500;
-  padding: 8px 12px;
-  background: color-mix(in oklab, var(--re-accent) 10%, transparent);
-  border-radius: 8px;
-  text-align: center;
-}
-
-.registerevent-team-members-list {
-  background: color-mix(in oklab, var(--re-background) 50%, white 2%);
-  border: 1px solid color-mix(in oklab, white 8%, transparent);
-  border-radius: 10px;
-  padding: 12px;
-  margin-top: 8px;
-}
-
-.registerevent-team-members-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--re-foreground);
-  margin-bottom: 8px;
-}
-
-.registerevent-team-member-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-top: 1px solid color-mix(in oklab, white 6%, transparent);
-  font-size: 13px;
-}
-
-.registerevent-team-member-item:first-child {
-  border-top: none;
-  padding-top: 0;
-}
-
-.registerevent-status-joined {
-  color: var(--re-success);
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.registerevent-status-pending {
-  color: var(--re-muted);
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.registerevent-team-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.registerevent-team-action-btn {
-  position: relative;
-  border: none;
-  background: transparent;
-  padding: 10px 18px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: all 200ms ease;
-  box-shadow: inset 0 -6px 10px rgba(143, 223, 255, 0.12);
-  white-space: nowrap;
-  flex: 1;
-  min-width: 140px;
-}
-
-.registerevent-team-action-btn:hover {
-  box-shadow: inset 0 -5px 10px rgba(143, 223, 255, 0.24);
-  transform: translateY(-1px);
-}
-
-.registerevent-team-action-btn:focus-visible {
-  outline: 2px solid var(--re-primary);
-  outline-offset: 2px;
-}
-
-.registerevent-team-badge {
-  display: inline-block;
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: center;
-}
-
-.registerevent-team-loading {
-  font-size: 13px;
-  color: var(--re-muted);
-  font-style: italic;
-}
-
-/* Modal styles */
-.registerevent-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-  animation: registerevent-fadeIn 0.2s ease;
-}
-
-@keyframes registerevent-fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.registerevent-modal {
-  background: color-mix(in oklab, var(--re-background) 85%, white 8%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid color-mix(in oklab, white 15%, transparent);
-  border-radius: 16px;
-  max-width: 500px;
-  width: 100%;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  animation: registerevent-slideUp 0.3s ease;
-}
-
-/* Wider modal for UPI payment */
-.registerevent-upi-modal {
   max-width: 600px;
 }
 
-@keyframes registerevent-slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.registerevent-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid color-mix(in oklab, white 10%, transparent);
-}
-
-.registerevent-modal-title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--re-foreground);
-  letter-spacing: -0.01em;
-}
-
-.registerevent-modal-close {
-  appearance: none;
-  background: color-mix(in oklab, var(--re-background) 70%, white 6%);
-  border: 1px solid color-mix(in oklab, white 12%, transparent);
-  color: var(--re-foreground);
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 24px;
+.registerevent-title {
+  font-size: clamp(3rem, 5vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
   line-height: 1;
-  transition: all 180ms ease;
-}
-
-.registerevent-modal-close:hover {
-  background: color-mix(in oklab, var(--re-background) 60%, white 8%);
-  transform: rotate(90deg);
-}
-
-.registerevent-modal-close:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.registerevent-modal-body {
-  padding: 24px;
-}
-
-/* UPI Payment Modal Styles */
-.registerevent-upi-container {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 24px;
-  align-items: start;
-  margin-bottom: 32px;
-}
-
-/* QR Code Section */
-.registerevent-qr-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.registerevent-qr-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--re-foreground);
-  margin: 0 0 16px 0;
-  letter-spacing: -0.01em;
-}
-
-.registerevent-qr-wrapper {
-  background: white;
-  padding: 16px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  margin-bottom: 12px;
-}
-
-.registerevent-qr-image {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-width: 280px;
-}
-
-.registerevent-qr-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 60px 20px;
-  background: color-mix(in oklab, var(--re-background) 70%, white 4%);
-  border-radius: 12px;
-  border: 2px dashed color-mix(in oklab, white 15%, transparent);
-}
-
-.registerevent-qr-loading .registerevent-spinner {
-  width: 28px;
-  height: 28px;
-}
-
-.registerevent-qr-loading p {
   margin: 0;
-  font-size: 13px;
-  color: var(--re-muted);
+  background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 40px rgba(255,255,255,0.1);
 }
 
-.registerevent-qr-hint {
-  margin: 0;
-  font-size: 12px;
-  color: var(--re-muted);
-  line-height: 1.4;
+.registerevent-subtitle {
+  font-size: 1.125rem;
+  color: var(--re-text-secondary);
+  margin-top: 16px;
+  font-weight: 400;
+  max-width: 45ch;
+  line-height: 1.6;
 }
 
-/* Divider */
-.registerevent-divider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* 6. SEGMENTED CONTROL FILTERS */
+.registerevent-filters {
+  display: inline-flex;
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--re-glass-border);
+  border-radius: 100px;
+  gap: 4px;
   position: relative;
 }
 
-.registerevent-divider::before {
+.registerevent-filter-btn {
+  background: transparent;
+  border: none;
+  color: var(--re-text-secondary);
+  padding: 10px 24px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 100px;
+  transition: all 0.3s var(--re-ease-smooth);
+  position: relative;
+  z-index: 2;
+}
+
+.registerevent-filter-btn:hover {
+  color: var(--re-text-primary);
+}
+
+.registerevent-filter-active {
+  color: #000 !important;
+  background: var(--re-text-primary);
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+}
+
+/* 7. EVENT GRID MASONRY */
+.registerevent-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 32px;
+  perspective: 1000px;
+}
+
+/* 8. HOLOGRAPHIC CARD DESIGN */
+.registerevent-card {
+  background: var(--re-glass-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--re-glass-border);
+  border-radius: var(--re-radius-lg);
+  padding: 0; 
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.4s var(--re-ease-elastic), box-shadow 0.4s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.registerevent-card::before {
   content: '';
   position: absolute;
   top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 1px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    color-mix(in oklab, white 20%, transparent) 20%,
-    color-mix(in oklab, white 20%, transparent) 80%,
-    transparent
-  );
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  opacity: 0.5;
 }
 
-.registerevent-divider span {
-  background: color-mix(in oklab, var(--re-background) 85%, white 8%);
-  color: var(--re-muted);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in oklab, white 12%, transparent);
-  position: relative;
-  z-index: 1;
+.registerevent-card:hover {
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4), 
+              0 0 0 1px rgba(255,255,255,0.1);
 }
 
-/* Pay Section */
-.registerevent-pay-section {
+.registerevent-card-content {
+  padding: 28px;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
 }
 
-.registerevent-pay-title {
-  font-size: 16px;
+.registerevent-card-header {
+  margin-bottom: 24px;
+}
+
+.registerevent-card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.registerevent-card-title {
+  font-size: 1.5rem;
   font-weight: 700;
-  color: var(--re-foreground);
-  margin: 0 0 16px 0;
-  letter-spacing: -0.01em;
+  color: var(--re-text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.registerevent-card-desc {
+  font-size: 0.95rem;
+  color: var(--re-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Badges */
+.registerevent-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.registerevent-badge {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+}
+
+.registerevent-badge-upcoming {
+  background: rgba(0, 240, 255, 0.1);
+  color: var(--re-accent-cyan);
+  border-color: rgba(0, 240, 255, 0.2);
+}
+
+.registerevent-badge-ongoing {
+  background: rgba(0, 255, 157, 0.1);
+  color: var(--re-accent-success);
+  border-color: rgba(0, 255, 157, 0.2);
+}
+
+.registerevent-badge-completed {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--re-text-tertiary);
+}
+
+.registerevent-badge-team {
+  background: linear-gradient(135deg, rgba(112, 0, 255, 0.2), rgba(0, 240, 255, 0.2));
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Data Grid (Info) */
+.registerevent-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: auto;
+  padding-top: 24px;
+  border-top: 1px solid var(--re-glass-border);
+}
+
+.registerevent-info-item h4 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--re-text-tertiary);
+  margin: 0 0 6px 0;
+  font-weight: 600;
+}
+
+.registerevent-info-item p {
+  font-size: 0.9rem;
+  color: var(--re-text-primary);
+  margin: 0;
+  font-weight: 500;
+}
+
+/* 9. ACTIONS & BUTTONS */
+.registerevent-actions-footer {
+  padding: 20px 28px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid var(--re-glass-border);
+}
+
+.registerevent-register-btn, 
+.registerevent-pay-btn,
+.registerevent-modal-submit-btn,
+.registerevent-invite-confirm-btn,
+.registerevent-upi-pay-btn {
+  width: 100%;
+  position: relative;
+  padding: 14px 24px;
+  border-radius: 12px;
+  border: none;
+  background: var(--re-text-primary);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.2s var(--re-ease-smooth), box-shadow 0.2s;
+  overflow: hidden;
+  z-index: 1;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.registerevent-register-btn:hover,
+.registerevent-pay-btn:hover,
+.registerevent-upi-pay-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(255, 255, 255, 0.4);
+}
+
+.registerevent-team-action-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.registerevent-team-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: white;
+}
+
+/* 10. TEAM HUD PANEL */
+.registerevent-hud-panel {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--re-glass-border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.registerevent-hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--re-glass-border);
+  padding-bottom: 12px;
+}
+
+.registerevent-hud-label {
+  font-size: 0.75rem;
+  color: var(--re-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.registerevent-hud-value {
+  color: var(--re-accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+}
+
+.registerevent-member-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.registerevent-member-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 6px;
+}
+
+.registerevent-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+.registerevent-status-indicator::before {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.registerevent-status-indicator.joined { color: var(--re-accent-success); }
+.registerevent-status-indicator.joined::before { background: var(--re-accent-success); box-shadow: 0 0 8px var(--re-accent-success); }
+
+.registerevent-status-indicator.pending { color: var(--re-accent-warning); }
+.registerevent-status-indicator.pending::before { background: var(--re-accent-warning); }
+
+/* 11. MODALS */
+.registerevent-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modal-fade-in 0.3s ease-out;
+}
+
+.registerevent-modal {
+  background: #111116;
+  border: 1px solid var(--re-glass-highlight);
+  border-radius: 24px;
+  width: 90%;
+  max-width: 550px;
+  box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  animation: modal-scale-in 0.4s var(--re-ease-elastic);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.registerevent-modal-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--re-glass-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255,255,255,0.02);
+}
+
+.registerevent-modal-title {
+  font-size: 1.25rem;
+  color: white;
+  margin: 0;
+}
+
+.registerevent-modal-close {
+  background: transparent;
+  border: 1px solid var(--re-glass-border);
+  color: var(--re-text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.registerevent-modal-close:hover {
+  background: white;
+  color: black;
+}
+
+.registerevent-modal-body {
+  padding: 32px;
+}
+
+/* Form Styles inside Modal */
+.registerevent-form-group {
+  margin-bottom: 20px;
+}
+
+.registerevent-form-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--re-text-secondary);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.registerevent-form-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--re-glass-border);
+  padding: 14px;
+  border-radius: 12px;
+  color: white;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box; 
+}
+
+.registerevent-form-input:focus {
+  outline: none;
+  border-color: var(--re-accent-cyan);
+  box-shadow: 0 0 0 4px rgba(0, 240, 255, 0.1);
+}
+
+/* UPI Special Styles */
+.registerevent-qr-wrapper {
+  background: white;
+  padding: 16px;
+  border-radius: 16px;
+  margin: 0 auto 20px;
+  width: fit-content;
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
 }
 
 .registerevent-payment-details {
-  background: color-mix(in oklab, var(--re-background) 70%, white 4%);
-  border: 1px solid color-mix(in oklab, white 12%, transparent);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--re-glass-border);
   border-radius: 12px;
   padding: 16px;
-  width: 100%;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .registerevent-payment-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid color-mix(in oklab, white 8%, transparent);
-}
-
-.registerevent-payment-row:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.registerevent-payment-row:first-child {
-  padding-top: 0;
-}
-
-.registerevent-payment-label {
-  font-size: 13px;
-  color: var(--re-muted);
-  font-weight: 500;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 .registerevent-payment-value {
-  font-size: 13px;
-  color: var(--re-foreground);
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--re-accent-cyan);
+}
+
+/* 12. FLASH MESSAGES */
+.registerevent-flash {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 100px;
   font-weight: 600;
-  text-align: right;
-}
-
-.registerevent-payment-amount {
-  font-size: 18px;
-  color: var(--re-primary);
-}
-
-.registerevent-upi-id {
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  word-break: break-all;
-}
-
-.registerevent-upi-pay-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  text-align: center;
-  background: linear-gradient(135deg, var(--re-primary) 0%, var(--re-accent) 100%);
-  border: none;
-  color: white;
-  padding: 14px 24px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: none;
-  transition: all 200ms ease;
-  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3);
-}
-
-.registerevent-upi-pay-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
-}
-
-.registerevent-upi-pay-btn svg {
-  flex-shrink: 0;
-}
-
-/* Transaction Section */
-.registerevent-transaction-section {
-  border-top: 1px solid color-mix(in oklab, white 10%, transparent);
-  padding-top: 24px;
-}
-
-.registerevent-transaction-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--re-foreground);
-  margin: 0 0 12px 0;
-  letter-spacing: -0.01em;
-}
-
-.registerevent-transaction-hint {
-  font-size: 14px;
-  color: var(--re-muted);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.registerevent-transaction-hint strong {
-  color: var(--re-foreground);
-  font-weight: 600;
-}
-
-/* Team form */
-.registerevent-team-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.registerevent-form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.registerevent-form-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--re-foreground);
-  margin-bottom: 4px;
-}
-
-.registerevent-form-input {
-  appearance: none;
-  background: color-mix(in oklab, var(--re-background) 70%, white 4%);
-  border: 1px solid color-mix(in oklab, white 12%, transparent);
-  color: var(--re-foreground);
-  padding: 12px 14px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-family: inherit;
-  transition: all 180ms ease;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.registerevent-form-input:focus {
-  outline: none;
-  border-color: var(--re-primary);
-  background: color-mix(in oklab, var(--re-background) 65%, white 6%);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--re-primary) 15%, transparent);
-}
-
-.registerevent-form-input::placeholder {
-  color: var(--re-muted);
-}
-
-.registerevent-form-input:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.registerevent-member-input-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.registerevent-member-input-row .registerevent-form-input {
-  flex: 1;
-}
-
-.registerevent-remove-btn {
-  appearance: none;
-  background: color-mix(in oklab, var(--re-error) 15%, transparent);
-  border: 1px solid color-mix(in oklab, var(--re-error) 30%, transparent);
-  color: var(--re-error);
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  font-size: 0.9rem;
+  z-index: 2000;
+  backdrop-filter: blur(12px);
+  animation: slide-down 0.4s var(--re-ease-elastic);
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 20px;
-  line-height: 1;
-  transition: all 180ms ease;
-  flex-shrink: 0;
+  gap: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
-.registerevent-remove-btn:hover {
-  background: color-mix(in oklab, var(--re-error) 25%, transparent);
-  transform: scale(1.05);
+.registerevent-flash-success {
+  background: rgba(0, 255, 157, 0.15);
+  border: 1px solid rgba(0, 255, 157, 0.3);
+  color: #a3ffce;
 }
 
-.registerevent-add-member-btn {
-  appearance: none;
-  background: color-mix(in oklab, var(--re-primary) 12%, transparent);
-  border: 1px dashed color-mix(in oklab, var(--re-primary) 40%, transparent);
-  color: var(--re-primary);
-  padding: 10px 16px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 180ms ease;
-  width: 100%;
-  margin-top: 4px;
+.registerevent-flash-error {
+  background: rgba(255, 0, 85, 0.15);
+  border: 1px solid rgba(255, 0, 85, 0.3);
+  color: #ffc2d6;
 }
 
-.registerevent-add-member-btn:hover {
-  background: color-mix(in oklab, var(--re-primary) 18%, transparent);
-  border-color: var(--re-primary);
-  transform: translateY(-1px);
-}
-
-.registerevent-modal-submit-btn {
-  appearance: none;
-  background: linear-gradient(135deg, var(--re-primary) 0%, var(--re-accent) 100%);
-  border: none;
-  color: white;
-  padding: 14px 24px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 200ms ease;
-  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3);
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.registerevent-modal-submit-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
-}
-
-.registerevent-modal-submit-btn:active {
-  transform: translateY(0);
-}
-
-.registerevent-modal-submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-/* Button spinner */
-.registerevent-btn-spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+/* 13. UTILITIES */
+.registerevent-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: var(--re-accent-cyan);
   border-radius: 50%;
-  animation: registerevent-spin 0.6s linear infinite;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
 }
 
-.registerevent-form-hint {
-  font-size: 12px;
-  color: var(--re-muted);
-  margin-top: 4px;
-  margin-bottom: 12px;
-  line-height: 1.4;
-}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes modal-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-scale-in { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes slide-down { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
-/* Invites list */
-.registerevent-invites-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.registerevent-invites-description {
-  font-size: 14px;
-  color: var(--re-muted);
-  margin: 0 0 12px;
-  line-height: 1.5;
-}
-
-.registerevent-no-invites {
-  text-align: center;
-  padding: 32px 16px;
-}
-
-.registerevent-no-invites p {
-  font-size: 14px;
-  color: var(--re-muted);
-  margin: 0;
-}
-
-.registerevent-invite-card {
-  background: color-mix(in oklab, var(--re-background) 70%, white 4%);
-  border: 1px solid color-mix(in oklab, white 12%, transparent);
-  border-radius: 12px;
-  padding: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  transition: all 180ms ease;
-}
-
-.registerevent-invite-card:hover {
-  background: color-mix(in oklab, var(--re-background) 65%, white 6%);
-  border-color: color-mix(in oklab, white 18%, transparent);
-}
-
-.registerevent-invite-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.registerevent-invite-team-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--re-foreground);
-  letter-spacing: -0.01em;
-}
-
-.registerevent-invite-leader {
-  font-size: 13px;
-  color: var(--re-muted);
-}
-
-.registerevent-invite-status-badge {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--re-muted);
-  background: color-mix(in oklab, var(--re-background) 60%, white 6%);
-  padding: 4px 10px;
-  border-radius: 999px;
-  margin-top: 4px;
-  width: fit-content;
-}
-
-.registerevent-invite-joined-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--re-success);
-  background: color-mix(in oklab, var(--re-success) 15%, transparent);
-  padding: 8px 16px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--re-success) 30%, transparent);
-}
-
-.registerevent-invite-confirm-btn {
-  appearance: none;
-  background: linear-gradient(135deg, var(--re-primary) 0%, var(--re-accent) 100%);
-  border: none;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 200ms ease;
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
-  white-space: nowrap;
-}
-
-.registerevent-invite-confirm-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.35);
-}
-
-.registerevent-invite-confirm-btn:active {
-  transform: translateY(0);
-}
-
-/* Section titles */
-.registerevent-section-title {
-  margin: 20px 0 12px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--re-foreground);
-  letter-spacing: -0.015em;
-}
-
-/* Details grid */
-.registerevent-details {
-  display: grid;
-  grid-template-columns: 160px 1fr;
-  gap: 0 24px;
-}
-
-.registerevent-detail-row {
-  display: grid;
-  grid-template-columns: subgrid;
-  grid-column: 1 / -1;
-  border-top: 1px solid color-mix(in oklab, white 12%, transparent);
-  padding: 16px 0;
-}
-
-.registerevent-detail-row:first-child {
-  border-top: none;
-  padding-top: 0;
-}
-
-.registerevent-detail-label {
-  margin: 0;
-  color: var(--re-muted);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.registerevent-detail-value {
-  margin: 0;
-  color: var(--re-foreground);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.5;
-}
-
-/* About section */
-.registerevent-about {
-  margin-top: 8px;
-  padding-bottom: 12px;
-  color: var(--re-foreground);
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-/* Back button */
 .registerevent-back {
-  margin-top: 24px;
-  padding: 16px;
+  margin-top: 60px;
+  display: flex;
+  justify-content: center;
 }
 
 .registerevent-back-btn {
-  appearance: none;
-  background: color-mix(in oklab, var(--re-background) 80%, white 6%);
-  border: 1px solid color-mix(in oklab, white 12%, transparent);
-  color: var(--re-foreground);
-  border-radius: 12px;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-weight: 500;
+  background: transparent;
+  border: 1px solid var(--re-glass-border);
+  color: var(--re-text-secondary);
+  padding: 12px 24px;
+  border-radius: 100px;
   cursor: pointer;
-  transition: all 180ms ease;
+  transition: all 0.2s;
 }
 
 .registerevent-back-btn:hover {
-  background: color-mix(in oklab, var(--re-background) 75%, white 8%);
-  transform: translateY(-1px);
+  border-color: white;
+  color: white;
 }
 
-.registerevent-back-btn:focus-visible {
-  outline: 2px solid var(--re-primary);
-  outline-offset: 2px;
-}
-
-/* Responsive adjustments */
+/* Responsive */
 @media (max-width: 768px) {
-  .registerevent-container {
-    padding-top: 64px;
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-
-  .registerevent-surface {
-    padding: 16px;
-  }
-
-  .registerevent-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .registerevent-title {
-    font-size: 28px;
-  }
-
-  .registerevent-filters {
-    width: 100%;
-  }
-
-  .registerevent-filter-btn {
-    flex: 1;
-    min-width: auto;
-  }
-
-  .registerevent-details {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-
-  .registerevent-detail-row {
-    grid-template-columns: 1fr;
-    gap: 4px;
-    padding: 12px 0;
-  }
-
-  .registerevent-card-top {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .registerevent-register-actions {
-    width: 100%;
-  }
-
-  .registerevent-register-btn {
-    flex: 1;
-    text-align: center;
-    min-width: 0;
-  }
-
-  .registerevent-list {
-    padding: 0 8px;
-  }
-
-  .registerevent-team-actions {
-    flex-direction: column;
-  }
-
-  .registerevent-team-action-btn {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .registerevent-team-controls {
-    max-width: 100%;
-  }
-
-  .registerevent-modal {
-    max-height: 90vh;
-    margin: 10px;
-  }
-
-  .registerevent-upi-modal {
-    max-width: 100%;
-  }
-
-  .registerevent-modal-header {
-    padding: 16px 20px;
-  }
-
-  .registerevent-modal-body {
-    padding: 20px;
-  }
-
-  .registerevent-invite-card {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .registerevent-invite-confirm-btn {
-    width: 100%;
-  }
-
-  /* UPI Modal - Stack layout on mobile */
-  .registerevent-upi-container {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-
-  .registerevent-divider {
-    height: 1px;
-  }
-
-  .registerevent-divider::before {
-    top: 50%;
-    bottom: auto;
-    left: 0;
-    right: 0;
-    width: 100%;
-    height: 1px;
-    transform: translateY(-50%);
-    background: linear-gradient(
-      to right,
-      transparent,
-      color-mix(in oklab, white 20%, transparent) 20%,
-      color-mix(in oklab, white 20%, transparent) 80%,
-      transparent
-    );
-  }
-}
-
-@media (max-width: 480px) {
-  .registerevent-title {
-    font-size: 24px;
-  }
-
-  .registerevent-card-title {
-    font-size: 20px;
-  }
-
-  .registerevent-card {
-    padding: 16px;
-  }
-
-  .registerevent-register-actions {
-    flex-direction: column;
-  }
-
-  .registerevent-register-btn {
-    width: 100%;
-  }
-
-  .registerevent-team-members-list {
-    padding: 10px;
-  }
-
-  .registerevent-team-member-item {
-    font-size: 12px;
-    padding: 6px 0;
-  }
-
-  .registerevent-modal-title {
-    font-size: 20px;
-  }
-
-  .registerevent-qr-wrapper {
-    padding: 12px;
-  }
-
-  .registerevent-qr-image {
-    max-width: 240px;
-  }
-
-  .registerevent-payment-details {
-    padding: 12px;
-  }
-
-  .registerevent-upi-pay-btn {
-    font-size: 14px;
-    padding: 12px 20px;
-  }
+  .registerevent-container { padding-top: 80px; padding-left: 16px; padding-right: 16px; }
+  .registerevent-title { font-size: 2.5rem; }
+  .registerevent-filters { width: 100%; display: flex; overflow-x: auto; padding: 4px; }
+  .registerevent-filter-btn { flex: 1; padding: 10px 16px; white-space: nowrap; }
+  .registerevent-list { grid-template-columns: 1fr; }
+  .registerevent-info-grid { grid-template-columns: 1fr 1fr; }
 }
