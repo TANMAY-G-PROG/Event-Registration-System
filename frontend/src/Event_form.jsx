@@ -136,7 +136,7 @@ const EventForm = () => {
             </div>
           </div>
 
-          {/* MOBILE HEADER */}
+          {/* MOBILE HEADER: COMPACT & PREMIUM */}
           <div className="event-form-card-side event-form-left event-form-mobile-header">
             <div className="event-form-left-header">
               <div className="event-form-glow-text">
@@ -170,7 +170,6 @@ const EventForm = () => {
                 required 
               />
               
-              {/* Date & Time Inputs with Placeholders */}
               <input 
                 className="event-form-input" 
                 type="date" 
@@ -194,7 +193,7 @@ const EventForm = () => {
                 className="event-form-input" 
                 type="text" 
                 name="eventLocation" 
-                placeholder="Location" 
+                placeholder="Location (e.g., Main Hall)" 
                 value={formData.eventLocation} 
                 onChange={handleChange} 
                 required 
