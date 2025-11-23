@@ -4,8 +4,8 @@
 
 /* 1. CORE VARIABLES & THEME */
 .registerevent-page {
-  /* Core Palette - Deep Space & Neon */
-  --re-bg-deep: #050507;
+  /* Core Palette - Updated to Match Your Preferred Background */
+  --re-bg-deep: #0b0e14; 
   --re-bg-surface: #0a0a0f;
   --re-text-primary: #ffffff;
   --re-text-secondary: #94a3b8;
@@ -35,67 +35,36 @@
   --re-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 2. GLOBAL RESET & BASE */
+/* 2. GLOBAL RESET & BASE - Fixing Overflow/White Edges */
 .registerevent-page {
   position: relative;
   min-height: 100vh;
+  width: 100%;          /* Ensure full width */
+  margin: 0;            /* Reset margin */
+  padding: 0;           /* Reset padding */
   background-color: var(--re-bg-deep);
   color: var(--re-text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  overflow-x: hidden;
+  overflow-x: hidden;   /* Prevent horizontal scrolling */
   isolation: isolate;
   -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
 }
 
-/* 3. ATMOSPHERIC BACKGROUNDS */
+/* 3. ATMOSPHERIC BACKGROUNDS - Restored from New Code */
 .registerevent-hero-bg {
   position: fixed;
   inset: 0;
   z-index: -1;
-  overflow: hidden;
   pointer-events: none;
-}
-
-/* Noise Texture */
-.registerevent-noise {
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
-  opacity: 0.07;
-  z-index: 2;
-  mix-blend-mode: overlay;
-}
-
-/* Glowing Orbs */
-.registerevent-blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.6;
-  animation: blob-float 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.registerevent-blob-1 {
-  top: -10%;
-  left: -10%;
-  width: 50vw;
-  height: 50vw;
-  background: radial-gradient(circle, var(--re-accent-violet), transparent 70%);
-  animation-delay: 0s;
-}
-
-.registerevent-blob-2 {
-  bottom: -10%;
-  right: -10%;
-  width: 60vw;
-  height: 60vw;
-  background: radial-gradient(circle, var(--re-accent-cyan), transparent 70%);
-  animation-delay: -5s;
-}
-
-@keyframes blob-float {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(30px, 50px) scale(1.1); }
+  /* The specific background you requested */
+  background-color: #0b0e14;
+  background-image: 
+    radial-gradient(60rem 60rem at 20% 20%, color-mix(in oklab, #0ea5e9 22%, transparent), transparent 55%),
+    radial-gradient(48rem 48rem at 80% 28%, color-mix(in oklab, #22d3ee 18%, transparent), transparent 52%),
+    radial-gradient(44rem 44rem at 50% 80%, color-mix(in oklab, #60a5fa 16%, transparent), transparent 50%),
+    radial-gradient(100% 100% at 50% 0%, color-mix(in oklab, black 6%, transparent), transparent 60%);
+  filter: saturate(1.05) brightness(1.02);
 }
 
 /* 4. LAYOUT CONTAINER */
@@ -105,6 +74,8 @@
   padding: 120px 24px 60px;
   position: relative;
   z-index: 10;
+  width: 100%; /* Ensure container doesn't shrink weirdly */
+  box-sizing: border-box;
 }
 
 /* 5. HEADER & HERO SECTION */
