@@ -26,18 +26,27 @@
 /* Base styles - Desktop First */
 .ticket-page-wrapper {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  
+  /* Background Gradient */
   background: #00416A;
   background: -webkit-linear-gradient(to right, #E4E5E6, #00416A);
   background: linear-gradient(to right, #E4E5E6, #00416A);
+  
+  /* Layout & Spacing */
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
   user-select: none;
-  overflow-x: hidden;
   padding: 100px 20px;
   position: relative;
+
+  /* FIX FOR WHITE EDGES */
+  width: 100%;            /* Force full width */
+  margin: 0;              /* Remove margins */
+  box-sizing: border-box; /* Ensure padding doesn't overflow width */
+  overflow-x: hidden;     /* Prevent horizontal scrollbars */
 }
 
 .ticket-page-wrapper .tk-background-glow {
@@ -51,6 +60,7 @@
               radial-gradient(circle at 40% 40%, rgba(18, 194, 233, 0.1), transparent 50%);
   animation: tk-backgroundShift 8s ease-in-out infinite;
   pointer-events: none;
+  z-index: 0;
 }
 
 @keyframes tk-backgroundShift {
