@@ -204,7 +204,7 @@ const EventForm = () => {
                 className="event-form-input" 
                 type="text" 
                 name="eventLocation" 
-                placeholder="Location (e.g., Main Hall)" 
+                placeholder="Location" 
                 value={formData.eventLocation} 
                 onChange={handleChange} 
                 required 
@@ -314,3 +314,4 @@ const EventForm = () => {
 };
 
 export default EventForm;
+
