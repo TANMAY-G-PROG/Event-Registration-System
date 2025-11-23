@@ -204,19 +204,14 @@
 }
 
 /* ==============================================================
-   MOBILE: CLEAN & MINIMAL HEADER
-   ============================================================== */
-/* ... [Keep your Desktop Styles above unmodified] ... */
-
-/* ==============================================================
-   MOBILE: MODERN FLOW & UX OVERHAUL
+   MOBILE: COMPACT PREMIUM HEADER & MODERN FLOW
    ============================================================== */
 @media screen and (max-width: 900px) {
   /* Fix scrolling & cursor issues on mobile */
   .event-form-container {
     position: relative;
     height: auto;
-    min-height: 100dvh; /* Uses dynamic viewport height */
+    min-height: 100dvh;
     width: 100%;
     overflow-y: auto;
     cursor: default;
@@ -242,7 +237,7 @@
     height: auto;
   }
 
-  /* --- Header Redesign: Compact & Premium --- */
+  /* --- Header Redesign: Minimal & Premium (60px) --- */
   .event-form-desktop-header {
     display: none !important;
   }
@@ -250,48 +245,71 @@
   .event-form-mobile-header {
     display: flex;
     width: 100%;
-    height: 80px; /* Reduced height to save screen real estate */
-    background: #0a0a0a;
+    min-height: 60px; /* Compact Height */
+    height: 60px;
+    max-height: 60px;
+    background: #050505; /* Deep Black/Grey */
     align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
+    justify-content: center; /* Centered Text */
+    padding: 0 20px;
     box-sizing: border-box;
     position: sticky;
     top: 0;
     z-index: 50;
-    border-bottom: 1px solid rgba(0, 165, 120, 0.3);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* Subtle Divider */
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+  }
+
+  /* Remove all old animations/glows from pseudo-elements */
+  .event-form-mobile-header::before,
+  .event-form-mobile-header::after {
+    display: none;
   }
 
   .event-form-left-header {
-    text-align: left;
+    text-align: center;
     padding: 0;
+    width: 100%;
   }
 
   .event-form-glow-text {
-    flex-direction: row;
-    gap: 8px;
-    font-size: 20px;
-    align-items: baseline;
+    display: flex;
+    flex-direction: row; /* Side by side */
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    line-height: 1;
   }
 
+  /* Remove the sweep shine animation */
+  .event-form-glow-text::before {
+    display: none;
+  }
+
+  /* Clean Text Styling */
   .event-form-neon {
-    font-size: 22px;
-    color: #fff;
-    font-weight: 700;
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-shadow: none; /* Remove glow */
   }
 
   .event-form-neon-alt {
-    font-size: 22px;
-    color: #00a578;
+    font-size: 18px;
+    font-weight: 700;
+    color: #00a578; /* Brand Green */
+    text-shadow: none;
   }
 
-  /* --- Form Container & Rhythm --- */
+  /* --- Form Container Layout --- */
   .event-form-card-side.event-form-right {
     width: 100%;
-    padding: 24px 20px 120px 20px; /* Bottom padding ensures content clears fixed button */
+    padding: 24px 20px 120px 20px;
     background: #f8f9fa;
-    min-height: calc(100dvh - 80px);
+    min-height: calc(100dvh - 60px);
     height: auto;
     display: block;
   }
@@ -309,22 +327,22 @@
     max-width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 16px; /* Consistent vertical rhythm */
+    gap: 16px;
   }
 
-  /* --- Inputs: Thumb-Friendly & Modern --- */
+  /* --- Inputs: Mobile Friendly --- */
   .event-form-input,
   .event-form-textarea {
     width: 100%;
     background: #ffffff;
     border: 1px solid #e0e0e0;
-    border-radius: 12px; /* Soft corners */
-    padding: 16px; /* Larger touch target */
-    font-size: 16px; /* Prevents iOS zoom on focus */
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
     color: #333;
-    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transition: all 0.2s ease;
     box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-    margin-bottom: 0; /* Handled by flex gap */
+    margin-bottom: 0;
     -webkit-appearance: none;
   }
 
@@ -347,7 +365,7 @@
     line-height: 1.5;
   }
 
-  /* --- Checkbox: Tappable Row --- */
+  /* --- Checkbox --- */
   .event-form-checkbox-group {
     background: #fff;
     border: 1px solid #e0e0e0;
@@ -356,25 +374,19 @@
     margin: 8px 0;
     display: flex;
     align-items: center;
-    transition: border-color 0.2s;
-  }
-
-  .event-form-checkbox-group:active {
-    background-color: #f0fdf4;
-    border-color: #00a578;
   }
 
   .event-form-checkbox-label {
     width: 100%;
     display: flex;
     align-items: center;
-    justify-content: space-between; /* Label left, box right */
+    justify-content: space-between;
   }
 
   .event-form-checkbox {
     width: 24px;
     height: 24px;
-    order: 2; /* Move checkbox to right for better thumb reach */
+    order: 2;
     accent-color: #00a578;
   }
 
@@ -401,19 +413,14 @@
     box-shadow: 0 10px 25px rgba(0, 165, 120, 0.4);
     z-index: 100;
     margin: 0;
-    transition: transform 0.2s, box-shadow 0.2s;
-    
-    /* Glass backdrop for the bar area if desired, 
-       but here we just float the button cleanly */
+    transition: transform 0.2s;
   }
 
   .event-form-button:active {
     transform: scale(0.98);
-    box-shadow: 0 5px 15px rgba(0, 165, 120, 0.3);
   }
 
-  /* --- Split Inputs (Min/Max Team) --- */
-  /* Helper class to be added in JSX for side-by-side inputs on mobile */
+  /* Helper for split inputs */
   .event-form-row {
     display: flex;
     gap: 12px;
@@ -430,37 +437,14 @@
   }
   
   .event-form-mobile-header {
-    height: 70px;
+    height: 60px; /* Enforce strictly */
+    min-height: 60px;
     padding: 0 16px;
   }
   
-  .event-form-neon, .event-form-neon-alt {
-    font-size: 20px;
-  }
-  
-  .event-form-title {
-    font-size: 22px;
+  .event-form-button {
+    bottom: 20px;
+    width: calc(100% - 32px);
+    left: 16px;
   }
 }
-/* ==============================================================
-   ANIMATIONS – only shine, aurora, particle
-   ============================================================== */
-@keyframes event-form-aurora {
-  0%,100% { transform: translate(-50%,-50%) scale(.9); opacity:.45; }
-  50%     { transform: translate(-48%,-52%) scale(1.1); opacity:.65; }
-}
-
-@keyframes event-form-particle {
-  0%   { transform: translate(-120px,-80px); opacity:0; }
-  15%  { opacity:1; }
-  85%  { opacity:1; }
-  100% { transform: translate(calc(100vw + 80px),80px); opacity:0; }
-}
-
-@keyframes event-form-shine {
-  0%   { left:-100%; opacity:0; }
-  20%  { opacity:.35; }
-  40%  { left:100%; opacity:0; }
-  100% { left:100%; opacity:0; }
-}
-
