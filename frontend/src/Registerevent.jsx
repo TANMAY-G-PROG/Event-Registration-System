@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import QRCode from "qrcode"
-import "./registerevent.css" // Importing the separate CSS file
+import "./registerevent.css"
 
 function formatTime12h(timeString) {
   if (!timeString) return "Time TBA"
@@ -598,11 +598,7 @@ export default function Registerevent() {
     <main className="registerevent-page">
       
       {/* Background Elements */}
-      <div className="registerevent-hero-bg" aria-hidden="true">
-         <div className="registerevent-noise"></div>
-         <div className="registerevent-blob registerevent-blob-1"></div>
-         <div className="registerevent-blob registerevent-blob-2"></div>
-      </div>
+      <div className="registerevent-hero-bg" aria-hidden="true" />
 
       <div className="registerevent-container">
         {flash.message && (
