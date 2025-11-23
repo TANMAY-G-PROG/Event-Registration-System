@@ -129,14 +129,14 @@ const EventForm = () => {
       <div className="event-form-wrap event-form-registration">
         <div className="event-form-card">
 
-          {/* DESKTOP HEADER - UNTOUCHED */}
+          {/* DESKTOP HEADER */}
           <div className="event-form-card-side event-form-left event-form-desktop-header">
             <div className="event-form-logo-text" data-text="Hey Organisers">
               Hey Organisers
             </div>
           </div>
 
-          {/* MOBILE HEADER - REDESIGNED */}
+          {/* MOBILE HEADER */}
           <div className="event-form-card-side event-form-left event-form-mobile-header">
             <div className="event-form-left-header">
               <div className="event-form-glow-text">
@@ -170,14 +170,31 @@ const EventForm = () => {
                 required 
               />
               
-              <input className="event-form-input" type="date" name="eventDate" value={formData.eventDate} onChange={handleChange} required />
-              <input className="event-form-input" type="time" name="eventTime" value={formData.eventTime} onChange={handleChange} required />
+              {/* Date & Time Inputs with Placeholders */}
+              <input 
+                className="event-form-input" 
+                type="date" 
+                name="eventDate" 
+                placeholder="Select Date"
+                value={formData.eventDate} 
+                onChange={handleChange} 
+                required 
+              />
+              <input 
+                className="event-form-input" 
+                type="time" 
+                name="eventTime" 
+                placeholder="Select Time"
+                value={formData.eventTime} 
+                onChange={handleChange} 
+                required 
+              />
               
               <input 
                 className="event-form-input" 
                 type="text" 
                 name="eventLocation" 
-                placeholder="Location (e.g., Main Hall)" 
+                placeholder="Location" 
                 value={formData.eventLocation} 
                 onChange={handleChange} 
                 required 
