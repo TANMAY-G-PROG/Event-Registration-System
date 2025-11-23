@@ -14,6 +14,7 @@ const EventForm = () => {
     maxVolunteers: '',
     OrgCid: '',
     registrationFee: '',
+    upiId: '', // Added UPI ID state
     isTeamEvent: false,
     minTeamSize: '',
     maxTeamSize: ''
@@ -39,6 +40,8 @@ const EventForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const regFee = parseFloat(formData.registrationFee) || 0;
+
     const data = {
       eventName: formData.eventName,
       eventDescription: formData.eventDescription,
@@ -48,7 +51,9 @@ const EventForm = () => {
       maxParticipants: parseInt(formData.maxParticipants) || null,
       maxVolunteers: parseInt(formData.maxVolunteers) || null,
       OrgCid: parseInt(formData.OrgCid) || null,
-      registrationFee: parseFloat(formData.registrationFee) || 0,
+      registrationFee: regFee,
+      // Only include UPI ID if fee > 0
+      upiId: regFee > 0 ? formData.upiId : null, 
       isTeamEvent: formData.isTeamEvent,
       minTeamSize: formData.isTeamEvent ? (parseInt(formData.minTeamSize) || null) : null,
       maxTeamSize: formData.isTeamEvent ? (parseInt(formData.maxTeamSize) || null) : null
@@ -57,6 +62,12 @@ const EventForm = () => {
     // Validation
     if (!data.eventName || !data.eventDescription || !data.eventDate || !data.eventTime || !data.eventLocation || !data.OrgCid) {
       showMessage('Please fill in all required fields.', true);
+      return;
+    }
+
+    // Validate UPI ID if fee is present
+    if (data.registrationFee > 0 && !data.upiId) {
+      showMessage('Please enter a valid UPI ID for paid events.', true);
       return;
     }
 
@@ -102,7 +113,7 @@ const EventForm = () => {
         setFormData({
           eventName: '', eventDescription: '', eventDate: '', eventTime: '',
           eventLocation: '', maxParticipants: '', maxVolunteers: '', OrgCid: '',
-          registrationFee: '', isTeamEvent: false, minTeamSize: '', maxTeamSize: ''
+          registrationFee: '', upiId: '', isTeamEvent: false, minTeamSize: '', maxTeamSize: ''
         });
         setTimeout(() => navigate('/organisers'), 2000);
       } else {
@@ -136,7 +147,7 @@ const EventForm = () => {
             </div>
           </div>
 
-          {/* MOBILE HEADER: COMPACT & PREMIUM */}
+          {/* MOBILE HEADER */}
           <div className="event-form-card-side event-form-left event-form-mobile-header">
             <div className="event-form-left-header">
               <div className="event-form-glow-text">
@@ -279,6 +290,19 @@ const EventForm = () => {
                 min="0" 
                 required 
               />
+
+              {/* UPI ID INPUT - Only shows if Fee > 0 */}
+              {parseFloat(formData.registrationFee) > 0 && (
+                <input 
+                  className="event-form-input" 
+                  type="text" 
+                  name="upiId" 
+                  placeholder="Organizer UPI ID (e.g. name@okhdfcbank)" 
+                  value={formData.upiId} 
+                  onChange={handleChange} 
+                  required 
+                />
+              )}
               
               <button className="event-form-button" type="submit">Publish Event</button>
             </form>
