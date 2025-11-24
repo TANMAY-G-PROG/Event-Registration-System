@@ -363,7 +363,7 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             maxVoln: p.event?.maxvoln,
             regFee: p.event?.regfee,
             clubName: p.event?.club?.cname,
-            PartStatus: p.partstatus,
+            PartStatus: p.partstatus==true,
             PartUSN: p.partusn,
             role: 'participant'
         })).filter(e => e.eid);
