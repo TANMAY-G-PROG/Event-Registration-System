@@ -35,6 +35,16 @@
   --re-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* --- GLOBAL FIX (New) --- */
+/* Paints the underlying bounce dark */
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #0b0e14;
+  height: 100%;
+  width: 100%;
+}
+
 /* 2. GLOBAL RESET & BASE - FIXED FOR MOBILE GESTURE BAR */
 .registerevent-page {
   position: fixed;
@@ -45,12 +55,14 @@
   width: 100%;
   
   /* MOBILE FIX: Use Dynamic Viewport Height & Safe Area Padding */
-  height: 100dvh; 
-  padding-bottom: env(safe-area-inset-bottom);
+  height: 100dvh;
+  
+  /* UPDATED FIX: Extra buffer for gesture bar */
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
 
   margin: 0;
   padding: 0;
-  background-color: var(--re-bg-deep);
+  background-color: var(--re-bg-deep); /* Ensures dark background if overscrolled */
   color: var(--re-text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
@@ -58,7 +70,8 @@
   isolation: isolate;
   -webkit-font-smoothing: antialiased;
   box-sizing: border-box;
-  overscroll-behavior: auto;
+  
+  /* ALLOWS pull-to-refresh */
   -webkit-overflow-scrolling: touch;
 }
 
