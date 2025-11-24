@@ -99,7 +99,7 @@ const EventForm = () => {
     }
 
     try {
-      const res = await fetch('http://localhost:3000/api/events/create', {
+      const res = await fetch('/api/events/create', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -314,4 +314,5 @@ const EventForm = () => {
 };
 
 export default EventForm;
+
 
