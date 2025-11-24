@@ -1,20 +1,24 @@
 @import url('https://fonts.googleapis.com/css?family=Montserrat:400,700');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
 
-/* --- 1. ANIMATION PROPS (For Back Button) --- */
+/* --- 1. ANIMATION PROPS --- */
 @property --angle-1 { syntax: '<angle>'; inherits: false; initial-value: -75deg; }
 @property --angle-2 { syntax: '<angle>'; inherits: false; initial-value: -45deg; }
 :root { --anim--hover-time: 400ms; --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1); }
 
 .participants-page {
-  /* --- 2. BACKGROUND (Register Event Style - Dark Radial) --- */
+  /* --- 2. BACKGROUND --- */
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  min-height: 100vh;
+  
+  /* FIXED: Mobile Gesture Bar & Viewport Handling */
+  min-height: 100dvh;
   width: 100%;
+  padding-bottom: env(safe-area-inset-bottom);
+  
   font-family: 'Montserrat', sans-serif;
   color: white;
   overflow-x: hidden;
@@ -26,7 +30,7 @@
 .part-bg-layer {
   position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background-color: #0b0e14;
-  background-image: 
+  background-image:
     radial-gradient(60rem 60rem at 20% 20%, rgba(14, 165, 233, 0.22), transparent 55%),
     radial-gradient(48rem 48rem at 80% 28%, rgba(34, 211, 238, 0.18), transparent 52%),
     radial-gradient(44rem 44rem at 50% 80%, rgba(96, 165, 250, 0.16), transparent 50%),
@@ -34,13 +38,10 @@
   filter: saturate(1.05) brightness(1.02);
 }
 
-/* Noise removed as per your request */
-
 .participants-page * { box-sizing: border-box; }
 
-/* --- 3. EXACT SHINY BACK BUTTON (From Old Code) --- */
+/* --- 3. EXACT SHINY BACK BUTTON --- */
 .participants-page .logout-container { position: fixed; top: 20px; left: 20px; z-index: 1000; }
-
 .participants-page .logout-btn {
   /* Basic Styling */
   --border-width: clamp(1px, 0.0625em, 4px);
@@ -61,7 +62,6 @@
   text-shadow: 0em 0.25em 0.05em rgba(0, 0, 0, 0.1);
   padding-inline: 1.5em; padding-block: 0.875em; text-decoration: none;
 }
-
 .participants-page .logout-btn::before {
   content: ""; display: block; position: absolute; z-index: 3;
   width: calc(100% - var(--border-width)); height: calc(100% - var(--border-width));
@@ -71,7 +71,6 @@
   mix-blend-mode: screen; pointer-events: none; background-size: 200% 200%; background-position: 0% 50%; background-repeat: no-repeat;
   transition: background-position calc(var(--anim--hover-time) * 1.25) var(--anim--hover-ease), --angle-2 calc(var(--anim--hover-time) * 1.25) var(--anim--hover-ease);
 }
-
 .participants-page .logout-btn::after {
   content: ""; position: absolute; z-index: 1; inset: 0; border-radius: 999vw;
   width: calc(100% + var(--border-width)); height: calc(100% + var(--border-width));
@@ -82,7 +81,6 @@
   transition: all var(--anim--hover-time) var(--anim--hover-ease), --angle-1 500ms ease;
   box-shadow: inset 0 0 0 calc(var(--border-width) / 2) rgba(255, 255, 255, 0.5);
 }
-
 .participants-page .logout-btn:hover { transform: scale(0.975); }
 .participants-page .logout-btn:hover::before { background-position: 25% 50%; }
 .participants-page .logout-btn:hover::after { --angle-1: -125deg; }
@@ -96,9 +94,7 @@
   justify-content: center; padding: 100px 24px 40px;
   background: transparent;
 }
-
 .participants-page .container { display: flex; flex-direction: column; max-width: 1200px; width: 100%; }
-
 .participants-page .card-grid {
   display: grid; grid-template-columns: 1fr; gap: 24px; width: 100%;
 }
@@ -108,7 +104,6 @@
 /* --- 5. CARDS (Old Style with Blur Effect) --- */
 .participants-page .card { position: relative; cursor: pointer; transition: transform 0.3s ease; }
 .participants-page .card:before { content: ''; display: block; padding-bottom: 150%; width: 100%; }
-
 .participants-page .card__background {
   background-size: cover; background-position: center; border-radius: 24px;
   position: absolute; inset: 0; transform-origin: center;
@@ -117,12 +112,10 @@
   filter: brightness(0.75) saturate(1.2) contrast(0.85);
   border: 1px solid rgba(255,255,255,0.1);
 }
-
 /* BLUR EFFECT */
 .participants-page .card-grid:hover > .card:not(:hover) .card__background {
   filter: brightness(0.5) saturate(0) contrast(1.2) blur(20px);
 }
-
 /* Gradients */
 #completed-card .card__background {
   background-image: radial-gradient(circle 311px at 8.6% 27.9%, rgba(62, 147, 252, 0.57) 12.9%, rgba(239, 183, 192, 0.44) 91.2%);
@@ -133,21 +126,17 @@
 #upcoming-card .card__background {
   background-image: radial-gradient(circle farthest-corner at 10% 20%, rgba(90, 92, 106, 0.7) 0%, rgba(32, 45, 58, 0.7) 81.3%);
 }
-
 .participants-page .card:hover { transform: scale(1.05) translateZ(0); z-index: 10; }
 .participants-page .card:hover .card__background { transform: scale(1.05) translateZ(0); }
-
 .participants-page .card__content {
   position: absolute; inset: 0; padding: 24px;
   display: flex; flex-direction: column; z-index: 2;
 }
-
 .participants-page .card__heading {
   color: rgba(255, 255, 255, 0.9); font-size: 1.9rem;
   text-shadow: 2px 2px 20px rgba(255, 255, 255, 0.5);
   line-height: 1.4; margin-bottom: 16px;
 }
-
 .participants-page .card__details {
   margin-top: 16px; background: rgba(0, 0, 0, 0.6);
   padding: 16px; border-radius: 8px; flex: 1;
@@ -196,7 +185,6 @@
 .part-status { border-top: 1px solid rgba(255,255,255,0.2); padding-top: 8px; margin-bottom: 10px; font-size: 0.8rem; color: white; }
 .status-attended { color: #00ff9d; font-weight: bold; }
 .status-reg { color: #aaa; }
-
 .part-event-actions { display: flex; gap: 5px; }
 .part-glass-btn {
   flex: 1; padding: 6px 10px; border-radius: 6px;
@@ -217,4 +205,3 @@
 @media (max-width: 768px) {
   .participants-page .card-grid { grid-template-columns: 1fr; }
 }
-
