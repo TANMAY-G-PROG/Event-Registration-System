@@ -265,6 +265,10 @@ const Organisers = () => {
 
   return (
     <div className="organisers-unique-wrapper">
+      {/* Exact Background from RegisterEvent */}
+      <div className="org-background-layer"></div>
+      <div className="org-noise-overlay"></div>
+
       {/* Shiny Back Button */}
       <div className="org-logout-container">
         <button className="org-logout-btn" onClick={handleBack}>
@@ -275,7 +279,7 @@ const Organisers = () => {
       <section className="org-hero-section">
         <div className="org-container">
           
-          {/* Card Grid Layout */}
+          {/* Old Card Grid Layout */}
           <div className="org-card-grid">
             
             <div className="org-card" id="completed-card">
