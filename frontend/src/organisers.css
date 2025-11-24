@@ -37,7 +37,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   color: white;
-  overscroll-behavior: none;
+  overscroll-behavior: auto;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -256,3 +256,4 @@
   .org-pay-action { width: 100%; }
   .org-verify-btn { width: 100%; }
 }
+
