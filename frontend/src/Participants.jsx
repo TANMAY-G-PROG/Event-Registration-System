@@ -175,9 +175,9 @@ const Participants = () => {
   const handleBack = () => navigate('/events');
 
   const renderEventsList = (eventsList, eventType) => {
-    if (loading) return <div className="part-event-message">Loading...</div>;
-    if (error) return <div className="part-event-message error">Error: {error}</div>;
-    if (!eventsList || eventsList.length === 0) return <div className="part-event-message">No events found.</div>;
+    if (loading) return <div className="event-item"><p>Loading...</p></div>;
+    if (error) return <div className="event-item"><p>Error: {error}</p></div>;
+    if (!eventsList || eventsList.length === 0) return <div className="event-item"><p>No events available</p></div>;
 
     return eventsList.map(event => (
       <div className="part-event-item-glass" key={event.eid}>
@@ -219,10 +219,12 @@ const Participants = () => {
   };
 
   return (
-    <div className="participants-unique-wrapper">
+    <div className="participants-page">
+      {/* Register Event Style Background Layer */}
+      <div className="part-bg-layer"></div>
       <div className="part-noise-overlay"></div>
 
-      {/* Preserved Back Button */}
+      {/* Exact Old Code Shiny Back Button */}
       <div className="logout-container">
         <button id="backBtn" className="logout-btn" onClick={handleBack}>
           <i className="fas fa-arrow-left"></i> Back
@@ -232,7 +234,6 @@ const Participants = () => {
       <section className="hero-section">
         <div className="container">
           
-          {/* 3-Card Grid Layout (Matching Organisers) */}
           <div className="card-grid">
             
             <div className="card" id="completed-card">
@@ -267,7 +268,7 @@ const Participants = () => {
 
           </div>
 
-          {/* Preserved Participate Button */}
+          {/* Exact Old Code Participate Button */}
           <div className="button-container">
             <button onClick={handleParticipateClick}>
               Participate in other Event
