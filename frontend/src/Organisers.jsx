@@ -207,32 +207,32 @@ const Organisers = () => {
 
   // --- Render Event Item (Premium Glass Style inside Cards) ---
   const renderEventsList = (eventsList, eventType) => {
-    if (loading) return <div className="event-message">Loading events...</div>;
-    if (error) return <div className="event-message error">Error: {error}</div>;
-    if (!eventsList || eventsList.length === 0) return <div className="event-message">No {eventType} events found.</div>;
+    if (loading) return <div className="org-event-message">Loading events...</div>;
+    if (error) return <div className="org-event-message error">Error: {error}</div>;
+    if (!eventsList || eventsList.length === 0) return <div className="org-event-message">No {eventType} events found.</div>;
 
     return eventsList.map((event) => (
-      <div className="event-item-glass" key={event.eid}>
-        <div className="event-info">
+      <div className="org-event-item-glass" key={event.eid}>
+        <div className="org-event-info">
           <h4>{DOMPurify.sanitize(event.ename || 'N/A')}</h4>
-          <p className="description">{DOMPurify.sanitize(event.eventdesc || 'No description')}</p>
+          <p className="org-description">{DOMPurify.sanitize(event.eventdesc || 'No description')}</p>
           
-          <div className="meta-info">
+          <div className="org-meta-info">
             <span><i className="fas fa-calendar-alt"></i> {formatDate(event.eventDate)}</span>
             <span><i className="fas fa-clock"></i> {formatTime(event.eventTime)}</span>
             <span><i className="fas fa-map-marker-alt"></i> {DOMPurify.sanitize(event.eventLoc || 'N/A')}</span>
           </div>
 
-          <div className="stats-info">
+          <div className="org-stats-info">
              <span><i className="fas fa-users"></i> {event.maxPart || '∞'} Seats</span>
-             {event.regFee > 0 && <span className="fee-tag">₹{event.regFee}</span>}
+             {event.regFee > 0 && <span className="org-fee-tag">₹{event.regFee}</span>}
           </div>
         </div>
 
-        <div className="event-actions">
+        <div className="org-event-actions">
           {eventType !== 'completed' && (
             <button
-              className="glass-btn secondary"
+              className="org-glass-btn secondary"
               onClick={() => handleEventButtonClick(event.eid)}
               title="View Event Page"
             >
@@ -242,7 +242,7 @@ const Organisers = () => {
 
           {event.regFee > 0 && eventType !== 'completed' && (
             <button
-              className="glass-btn primary pulse-border"
+              className="org-glass-btn primary org-pulse-border"
               onClick={() => handleViewPendingPayments(event)}
               title="Verify Payments"
             >
@@ -251,12 +251,12 @@ const Organisers = () => {
           )}
 
           <button
-            className="glass-btn tertiary"
+            className="org-glass-btn tertiary"
             onClick={() => handleGenerateDetails(event.eid, event.ename)}
             disabled={generatingExcel[event.eid]}
             title="Download Excel"
           >
-            {generatingExcel[event.eid] ? <span className="spinner-sm"></span> : <><i className="fas fa-file-excel"></i> Details</>}
+            {generatingExcel[event.eid] ? <span className="org-spinner-sm"></span> : <><i className="fas fa-file-excel"></i> Details</>}
           </button>
         </div>
       </div>
@@ -264,48 +264,48 @@ const Organisers = () => {
   };
 
   return (
-    <div className="organisers-dashboard-wrapper">
-      {/* Register Event Style Background */}
-      <div className="registerevent-hero-bg" aria-hidden="true"></div>
+    <div className="organisers-unique-wrapper">
+      {/* Background Elements */}
+      <div className="org-noise-overlay"></div>
 
-      {/* Old Code Shiny Back Button */}
-      <div className="logout-container">
-        <button className="logout-btn" onClick={handleBack}>
+      {/* Shiny Back Button */}
+      <div className="org-logout-container">
+        <button className="org-logout-btn" onClick={handleBack}>
           <i className="fas fa-arrow-left"></i> Back
         </button>
       </div>
 
-      <section className="hero-section">
-        <div className="container">
+      <section className="org-hero-section">
+        <div className="org-container">
           
           {/* Old Card Grid Layout */}
-          <div className="card-grid">
+          <div className="org-card-grid">
             
-            <div className="card" id="completed-card">
-              <div className="card__background"></div>
-              <div className="card__content">
-                <h3 className="card__heading">Completed Events</h3>
-                <div className="card__details">
+            <div className="org-card" id="completed-card">
+              <div className="org-card__background"></div>
+              <div className="org-card__content">
+                <h3 className="org-card__heading">Completed Events</h3>
+                <div className="org-card__details">
                    {renderEventsList(events.completed, 'completed')}
                 </div>
               </div>
             </div>
 
-            <div className="card" id="ongoing-card">
-              <div className="card__background"></div>
-              <div className="card__content">
-                <h3 className="card__heading">Ongoing Events</h3>
-                <div className="card__details">
+            <div className="org-card" id="ongoing-card">
+              <div className="org-card__background"></div>
+              <div className="org-card__content">
+                <h3 className="org-card__heading">Ongoing Events</h3>
+                <div className="org-card__details">
                    {renderEventsList(events.ongoing, 'ongoing')}
                 </div>
               </div>
             </div>
 
-            <div className="card" id="upcoming-card">
-              <div className="card__background"></div>
-              <div className="card__content">
-                <h3 className="card__heading">Upcoming Events</h3>
-                <div className="card__details">
+            <div className="org-card" id="upcoming-card">
+              <div className="org-card__background"></div>
+              <div className="org-card__content">
+                <h3 className="org-card__heading">Upcoming Events</h3>
+                <div className="org-card__details">
                    {renderEventsList(events.upcoming, 'upcoming')}
                 </div>
               </div>
@@ -314,7 +314,7 @@ const Organisers = () => {
           </div>
 
           {/* Old Code Animated Organise Button */}
-          <div className="button-container">
+          <div className="org-button-container">
             <button onClick={handleOrganiseClick}>
                Organise New Event
             </button>
@@ -324,66 +324,66 @@ const Organisers = () => {
 
       {/* Fintech Payment Modal */}
       {showPaymentModal && (
-        <div className="fintech-modal-overlay" onClick={() => setShowPaymentModal(false)}>
-          <div className="fintech-modal" onClick={(e) => e.stopPropagation()}>
-             <div className="modal-top-bar">
-                <div className="modal-title-group">
+        <div className="org-fintech-modal-overlay" onClick={() => setShowPaymentModal(false)}>
+          <div className="org-fintech-modal" onClick={(e) => e.stopPropagation()}>
+             <div className="org-modal-top-bar">
+                <div className="org-modal-title-group">
                    <h2>Payment Verification</h2>
-                   <span className="modal-subtitle">{selectedEventForPayments?.ename}</span>
+                   <span className="org-modal-subtitle">{selectedEventForPayments?.ename}</span>
                 </div>
-                <button className="modal-close-btn" onClick={() => setShowPaymentModal(false)}>×</button>
+                <button className="org-modal-close-btn" onClick={() => setShowPaymentModal(false)}>×</button>
              </div>
 
-             <div className="modal-content-area">
+             <div className="org-modal-content-area">
                 {loadingPayments ? (
-                  <div className="payment-loading-state">
-                     <div className="spinner-dots"></div>
+                  <div className="org-payment-loading-state">
+                     <div className="org-spinner-dots"></div>
                      <p>Loading transactions...</p>
                   </div>
                 ) : pendingPayments.length === 0 ? (
-                  <div className="empty-payments">
-                     <div className="check-ring-lg"><i className="fas fa-check"></i></div>
+                  <div className="org-empty-payments">
+                     <div className="org-check-ring-lg"><i className="fas fa-check"></i></div>
                      <h3>All Caught Up!</h3>
                      <p>No pending transactions found.</p>
                   </div>
                 ) : (
-                  <div className="payment-list">
+                  <div className="org-payment-list">
                     {isTeamEvent && (
-                       <div className="notice-banner">
+                       <div className="org-notice-banner">
                           <i className="fas fa-users"></i>
                           <span><strong>Team Event:</strong> Verifying Leader approves everyone.</span>
                        </div>
                     )}
                     
                     {pendingPayments.map((payment, index) => (
-                      <div className="payment-row-card" key={index} style={{animationDelay: `${index * 0.05}s`}}>
-                         <div className="pay-user-info">
-                            <div className="avatar-placeholder">
+                      <div className="org-payment-row-card" key={index} style={{animationDelay: `${index * 0.05}s`}}>
+                         <div className="org-pay-user-info">
+                            <div className="org-avatar-placeholder">
                                {payment.studentName.charAt(0)}
                             </div>
-                            <div className="text-details">
-                               <h5>{DOMPurify.sanitize(payment.studentName)} {payment.isTeamLeader && <span className="tag-leader">LEADER</span>}</h5>
-                               <span className="usn">{payment.partusn}</span>
+                            <div className="org-text-details">
+                               <h5>{DOMPurify.sanitize(payment.studentName)} {payment.isTeamLeader && <span className="org-tag-leader">LEADER</span>}</h5>
+                               <span className="org-usn">{payment.partusn}</span>
                             </div>
                          </div>
                          
-                         <div className="pay-meta">
-                            <span className="pay-id">ID: {payment.transactionId}</span>
-                            <span className="pay-amount">₹{payment.amount}</span>
+                         <div className="org-pay-meta">
+                            <span className="org-pay-id">ID: {payment.transactionId}</span>
+                            <span className="org-pay-amount">₹{payment.amount}</span>
                          </div>
 
-                         <div className="pay-action">
+                         <div className="org-pay-action">
                            {processingPayment[payment.partusn] === 'success' ? (
-                              <div className="success-tick-anim">
+                              <div className="org-success-tick-anim">
                                  <i className="fas fa-check-circle"></i>
                               </div>
                            ) : (
                               <button 
-                                className={`verify-btn ${processingPayment[payment.partusn] ? 'loading' : ''}`}
+                                className={`org-verify-btn ${processingPayment[payment.partusn] ? 'loading' : ''}`}
                                 onClick={() => handleVerifyPayment(payment.partusn, selectedEventForPayments.eid)}
                                 disabled={!!processingPayment[payment.partusn]}
                               >
-                                 {processingPayment[payment.partusn] === 'verifying' ? <div className="spinner-dots-sm"></div> : 'Approve'}
+                                 {processingPayment[payment.partusn] === 'verifying' ? <div className="org-spinner-dots-sm"></div> : 'Approve'}
                               </button>
                            )}
                          </div>
