@@ -406,7 +406,7 @@ app.get('/api/my-volunteer-events', requireAuth, async (req, res) => {
             maxVoln: v.event?.maxvoln,
             regFee: v.event?.regfee,
             clubName: v.event?.club?.cname,
-            VolnStatus: v.volnstatus,
+            VolnStatus: v.volnstatus==true,
             role: 'volunteer'
         })).filter(e => e.eid);
         
