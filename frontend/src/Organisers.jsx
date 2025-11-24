@@ -21,7 +21,7 @@ const Organisers = () => {
   const [processingPayment, setProcessingPayment] = useState({});
   const [isTeamEvent, setIsTeamEvent] = useState(false);
 
-  // --- Logic Preserved ---
+  // --- Logic ---
   const categorizeEvents = useCallback((events) => {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
@@ -205,15 +205,14 @@ const Organisers = () => {
   const handleOrganiseClick = () => navigate('/create-event');
   const handleBack = () => navigate('/events');
 
-  // --- Render Event Item (Using Updated Buttons inside Cards) ---
+  // --- RENDER LIST (New Item Style inside Old Card) ---
   const renderEventsList = (eventsList, eventType) => {
-    if (loading) return <div className="event-message">Loading events...</div>;
+    if (loading) return <div className="event-message">Loading...</div>;
     if (error) return <div className="event-message error">Error: {error}</div>;
-    if (!eventsList || eventsList.length === 0) return <div className="event-message">No {eventType} events found.</div>;
+    if (!eventsList || eventsList.length === 0) return <div className="event-message">No events available</div>;
 
     return eventsList.map((event) => (
       <div className="event-item-glass" key={event.eid}>
-        
         <div className="event-info">
           <h4>{DOMPurify.sanitize(event.ename || 'N/A')}</h4>
           <p className="description">{DOMPurify.sanitize(event.eventdesc || 'No description')}</p>
@@ -225,8 +224,8 @@ const Organisers = () => {
           </div>
 
           <div className="stats-info">
-             <span><i className="fas fa-users"></i> {event.maxPart || '∞'} Seats</span>
-             {event.regFee > 0 && <span className="fee-tag">₹{event.regFee}</span>}
+             <span><i className="fas fa-users"></i> {event.maxPart || '∞'}</span>
+             <span><i className="fas fa-money-bill-wave"></i> ₹{event.regFee || '0'}</span>
           </div>
         </div>
 
@@ -237,7 +236,7 @@ const Organisers = () => {
               onClick={() => handleEventButtonClick(event.eid)}
               title="View Event Page"
             >
-              <i className="fas fa-eye"></i> View
+              View
             </button>
           )}
 
@@ -257,7 +256,7 @@ const Organisers = () => {
             disabled={generatingExcel[event.eid]}
             title="Download Excel"
           >
-            {generatingExcel[event.eid] ? <span className="spinner-sm"></span> : <><i className="fas fa-file-excel"></i> Details</>}
+            {generatingExcel[event.eid] ? '...' : <i className="fas fa-download"></i>}
           </button>
         </div>
       </div>
@@ -265,12 +264,9 @@ const Organisers = () => {
   };
 
   return (
-    <div className="organisers-dashboard-wrapper">
-      {/* Background Elements */}
-      <div className="noise-overlay"></div>
-
+    <div className="organisers-page">
       <div className="logout-container">
-        <button className="back-nav-btn" onClick={handleBack}>
+        <button className="logout-btn" onClick={handleBack}>
           <i className="fas fa-arrow-left"></i> Back
         </button>
       </div>
@@ -278,49 +274,54 @@ const Organisers = () => {
       <section className="hero-section">
         <div className="container">
           
+          {/* OLD CARD GRID STRUCTURE */}
           <div className="card-grid">
             
-            <div className="pop-card" id="completed-card">
-              <div className="card-header">
-                 <h3>Completed Events</h3>
-                 <span className="count-badge">{events.completed.length}</span>
-              </div>
-              <div className="card-body">
-                 {renderEventsList(events.completed, 'completed')}
-              </div>
-            </div>
-
-            <div className="pop-card" id="ongoing-card">
-              <div className="card-header">
-                 <h3>Ongoing Events</h3>
-                 <div className="live-tag"><span className="blink"></span> LIVE</div>
-              </div>
-              <div className="card-body">
-                 {renderEventsList(events.ongoing, 'ongoing')}
+            {/* Completed Card */}
+            <div className="card" id="completed-card">
+              <div className="card__background"></div>
+              <div className="card__content">
+                <h3 className="card__heading">Completed Events</h3>
+                <div className="card__details">
+                   {renderEventsList(events.completed, 'completed')}
+                </div>
               </div>
             </div>
 
-            <div className="pop-card" id="upcoming-card">
-              <div className="card-header">
-                 <h3>Upcoming Events</h3>
-                 <span className="count-badge">{events.upcoming.length}</span>
+            {/* Ongoing Card */}
+            <div className="card" id="ongoing-card">
+              <div className="card__background"></div>
+              <div className="card__content">
+                <h3 className="card__heading">Ongoing Events</h3>
+                <div className="card__details">
+                   {renderEventsList(events.ongoing, 'ongoing')}
+                </div>
               </div>
-              <div className="card-body">
-                 {renderEventsList(events.upcoming, 'upcoming')}
+            </div>
+
+            {/* Upcoming Card */}
+            <div className="card" id="upcoming-card">
+              <div className="card__background"></div>
+              <div className="card__content">
+                <h3 className="card__heading">Upcoming Events</h3>
+                <div className="card__details">
+                   {renderEventsList(events.upcoming, 'upcoming')}
+                </div>
               </div>
             </div>
 
           </div>
 
+          {/* OLD BUTTON CONTAINER */}
           <div className="button-container">
-            <button className="create-event-btn" onClick={handleOrganiseClick}>
-              <span className="plus-icon">+</span> Organise New Event
+            <button onClick={handleOrganiseClick}>
+               Organise New Event
             </button>
           </div>
         </div>
       </section>
 
-      {/* Fintech Modal */}
+      {/* NEW FINTECH MODAL */}
       {showPaymentModal && (
         <div className="fintech-modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div className="fintech-modal" onClick={(e) => e.stopPropagation()}>
