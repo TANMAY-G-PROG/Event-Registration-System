@@ -104,7 +104,6 @@ export default function Registerevent() {
       setError("")
       
       const url = '/api/events'
-      console.log('🌐 Fetching events from:', url)
       
       const response = await fetch(url, { 
         method: "GET",
@@ -120,8 +119,6 @@ export default function Registerevent() {
       }
       
       if (!response.ok) {
-        const text = await response.text()
-        console.error('❌ Response error:', text)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       
@@ -151,7 +148,6 @@ export default function Registerevent() {
       })
 
       if (!response.ok) {
-        console.error('Failed to load team status for event', eventId)
         return
       }
 
@@ -220,14 +216,12 @@ export default function Registerevent() {
         showFlash("error", "Organizer has not set up payments for this event.")
         return
       }
-      console.log('Showing UPI modal for event:', event)
       setTransactionId("")
       setModalFlash({ type: "", message: "" })
       setShowUpiModal({ event, isTeam: false })
       return
     }
 
-    // Logic for FREE events
     try {
       const response = await fetch(`/api/events/${eventId}/join`, { 
         method: "POST",
@@ -383,7 +377,6 @@ export default function Registerevent() {
           showFlash("error", "Organizer has not set up payments for this event.")
           return
         }
-        console.log('Showing UPI modal for TEAM event:', event)
         setTransactionId("")
         setModalFlash({ type: "", message: "" })
         setShowUpiModal({ event, isTeam: true, teamId: teamState.teamId })
@@ -701,10 +694,10 @@ export default function Registerevent() {
                       </div>
 
                       {event.is_team ? (
-                         <div className="registerevent-info-item">
+                          <div className="registerevent-info-item">
                            <h4>Team Size</h4>
                            <p>{event.min_team_size} - {event.max_team_size}</p>
-                         </div>
+                          </div>
                       ) : (
                         event.maxPart && (
                           <div className="registerevent-info-item">
@@ -913,16 +906,16 @@ export default function Registerevent() {
                 </div>
 
                 <a
-                   href={generateUpiUrl(
-                     showUpiModal.event.upiId,
-                     showUpiModal.event.ename,
-                     showUpiModal.event.regFee,
-                     showUpiModal.event.eid
-                   )}
-                   className="registerevent-upi-pay-btn"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   style={{marginBottom: '24px'}}
+                    href={generateUpiUrl(
+                      showUpiModal.event.upiId,
+                      showUpiModal.event.ename,
+                      showUpiModal.event.regFee,
+                      showUpiModal.event.eid
+                    )}
+                    className="registerevent-upi-pay-btn"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{marginBottom: '24px'}}
                 >
                   Pay via UPI App
                 </a>
