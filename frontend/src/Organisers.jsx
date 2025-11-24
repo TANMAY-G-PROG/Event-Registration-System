@@ -1,338 +1,468 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Calendar, Clock, MapPin, CreditCard, 
-  ArrowLeft, Download, TrendingUp, 
-  Activity, CheckCircle, AlertCircle, X, Loader2, Users 
-} from 'lucide-react';
-import './organisers.css'; // Make sure this path is correct
+import DOMPurify from 'dompurify';
+import './organisers.css';
 
 const Organisers = () => {
   const navigate = useNavigate();
-  
-  // --- State ---
-  const [events, setEvents] = useState({ ongoing: [], completed: [], upcoming: [] });
+
+  const [events, setEvents] = useState({
+    ongoing: [],
+    completed: [],
+    upcoming: [],
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [generatingExcel, setGeneratingExcel] = useState({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEventForPayments, setSelectedEventForPayments] = useState(null);
   const [pendingPayments, setPendingPayments] = useState([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [processingPayment, setProcessingPayment] = useState({});
   const [isTeamEvent, setIsTeamEvent] = useState(false);
 
-  // --- Helpers ---
-  const categorizeEvents = useCallback((eventsList) => {
+  // Memoize categorizeEvents to prevent unnecessary re-renders
+  const categorizeEvents = useCallback((events) => {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
-    const categorized = { ongoing: [], completed: [], upcoming: [] };
 
-    eventsList.forEach((event) => {
+    const categorized = {
+      ongoing: [],
+      completed: [],
+      upcoming: [],
+    };
+
+    events.forEach((event) => {
       const eventDate = new Date(event.eventDate);
       eventDate.setHours(0, 0, 0, 0);
       const diffTime = eventDate.getTime() - currentDate.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      if (diffDays === 0) categorized.ongoing.push(event);
-      else if (diffDays < 0) categorized.completed.push(event);
-      else categorized.upcoming.push(event);
+      if (diffDays === 0) {
+        categorized.ongoing.push(event);
+      } else if (diffDays < 0) {
+        categorized.completed.push(event);
+      } else {
+        categorized.upcoming.push(event);
+      }
     });
+
     return categorized;
   }, []);
 
   const fetchOrganizerEvents = async () => {
     try {
-      const response = await fetch('/api/my-organized-events');
+      const response = await fetch('/api/my-organized-events', {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
       if (!response.ok) {
-         if (response.status === 401) return navigate('/');
-         throw new Error('Failed to fetch');
+        if (response.status === 401) {
+          navigate('/');
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
       const data = await response.json();
-      setEvents(categorizeEvents(data.organizerEvents || []));
+      const categorizedEvents = categorizeEvents(data.organizerEvents || []);
+      setEvents(categorizedEvents);
+      setLoading(false);
     } catch (err) {
-      console.error(err);
+      console.error('Error fetching organizer events:', err);
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchOrganizerEvents(); }, []);
+  useEffect(() => {
+    fetchOrganizerEvents();
+  }, [navigate, categorizeEvents]);
 
-  // --- Stats Calculation ---
-  const stats = useMemo(() => {
-    const allEvents = [...events.ongoing, ...events.upcoming, ...events.completed];
-    const totalEvents = allEvents.length;
-    const totalRev = allEvents.reduce((acc, curr) => acc + (curr.regFee || 0), 0);
-    const activeEvents = events.ongoing.length + events.upcoming.length;
-    return { totalEvents, totalRev, activeEvents };
-  }, [events]);
-
-  // --- Handlers ---
-  const handleGenerateDetails = async (e, eventId, eventName) => {
-    e.stopPropagation();
-    setGeneratingExcel(prev => ({ ...prev, [eventId]: true }));
-    try {
-        const response = await fetch(`/api/events/${eventId}/generate-details`);
-        if (!response.ok) throw new Error('Failed');
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Event_${eventName.replace(/\s+/g, '_')}_Details.xlsx`;
-        a.click();
-    } catch (err) { alert('Error generating file'); } 
-    finally { setGeneratingExcel(prev => ({ ...prev, [eventId]: false })); }
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   };
 
-  const openPaymentModal = async (e, event) => {
-    e.stopPropagation();
-    setSelectedEvent(event);
-    setShowPaymentModal(true);
-    setLoadingPayments(true);
-    try {
-        const res = await fetch(`/api/events/${event.eid}/pending-payments`);
-        const data = await res.json();
-        setPendingPayments(data.pendingPayments || []);
-        setIsTeamEvent(data.isTeamEvent || false);
-    } catch (err) { setPendingPayments([]); } 
-    finally { setLoadingPayments(false); }
+  const formatTime = (timeString) => {
+    if (!timeString) return 'N/A';
+    const [hours, minutes] = timeString.split(':');
+    let h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${minutes} ${ampm}`;
   };
 
-  const verifyPayment = async (usn, eventId) => {
-    setProcessingPayment(prev => ({ ...prev, [usn]: 'verifying' }));
+  const handleGenerateDetails = async (eventId, eventName) => {
     try {
-        const res = await fetch('/api/payments/verify', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ participantUSN: usn, eventId })
-        });
-        const data = await res.json();
-        if(!res.ok) throw new Error(data.error);
-        
-        setProcessingPayment(prev => ({ ...prev, [usn]: 'success' }));
-        setTimeout(() => {
-            setPendingPayments(prev => prev.filter(p => p.partusn !== usn));
-            setProcessingPayment(prev => ({ ...prev, [usn]: null }));
-        }, 1000);
+      setGeneratingExcel((prev) => ({ ...prev, [eventId]: true }));
+
+      const response = await fetch(`/api/events/${eventId}/generate-details`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          alert('Session expired. Please login again.');
+          navigate('/');
+          return;
+        }
+        if (response.status === 403) {
+          alert('You are not authorized to generate details for this event.');
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Event_${eventName.replace(/\s+/g, '_')}_Details.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (err) {
-        alert(err.message);
-        setProcessingPayment(prev => ({ ...prev, [usn]: null }));
+      console.error('Error generating Excel file:', err);
+      alert('Error generating Excel file. Please try again.');
+    } finally {
+      setGeneratingExcel((prev) => ({ ...prev, [eventId]: false }));
     }
   };
 
-  // --- Sub-Components ---
-  const EventCard = ({ event, type }) => {
-    const isCompleted = type === 'completed';
-    const badgeColor = isCompleted ? 'orange' : type === 'ongoing' ? 'green' : 'blue';
-    const badgeText = isCompleted ? 'Completed' : type === 'ongoing' ? 'Live Now' : 'Upcoming';
+  const handleViewPendingPayments = async (event) => {
+    setSelectedEventForPayments(event);
+    setShowPaymentModal(true);
+    setLoadingPayments(true);
 
-    return (
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="glass-panel"
-      >
-        <div className="card-content">
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-             <span className={`badge ${badgeColor}`}>{badgeText}</span>
-             {event.regFee > 0 && <span style={{ color: '#34d399', fontWeight: 'bold' }}>₹{event.regFee}</span>}
-          </div>
+    try {
+      const response = await fetch(`/api/events/${event.eid}/pending-payments`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-          <h3 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', fontWeight: 'bold' }}>{event.ename}</h3>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-            {event.eventdesc || "No description provided."}
-          </p>
+      if (!response.ok) throw new Error('Failed to fetch pending payments');
 
-          <div className="event-info-row"><Calendar size={16}/> {new Date(event.eventDate).toLocaleDateString()}</div>
-          <div className="event-info-row"><Clock size={16}/> {event.eventTime}</div>
-          <div className="event-info-row"><MapPin size={16}/> {event.eventLoc}</div>
+      const data = await response.json();
+      setPendingPayments(data.pendingPayments || []);
+      setIsTeamEvent(data.isTeamEvent || false);
+    } catch (err) {
+      console.error('Error fetching pending payments:', err);
+      alert('Error loading pending payments');
+      setPendingPayments([]);
+      setIsTeamEvent(false);
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
+  const handleVerifyPayment = async (participantUSN, eventId) => {
+    setProcessingPayment((prev) => ({ ...prev, [participantUSN]: 'verifying' }));
+
+    try {
+      const response = await fetch('/api/payments/verify', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantUSN, eventId }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || `HTTP status ${response.status}`);
+
+      if (data.verifiedCount && data.verifiedCount > 1) {
+        alert(`${data.message}\nAll ${data.verifiedCount} team members can now mark attendance.`);
+      } else {
+        alert(data.message || 'Payment verified successfully!');
+      }
+
+      setPendingPayments((prev) => prev.filter((p) => p.partusn !== participantUSN));
+    } catch (err) {
+      console.error('Error verifying payment:', err);
+      alert(`Error: ${err.message || 'Failed to verify payment. Please try again.'}`);
+    } finally {
+      setProcessingPayment((prev) => ({ ...prev, [participantUSN]: null }));
+    }
+  };
+
+  const handleEventButtonClick = (eventId) => {
+    navigate(`/organiser-ticket?eventId=${eventId}`);
+  };
+
+  const handleOrganiseClick = () => navigate('/create-event');
+  const handleBack = () => navigate('/events');
+
+  const renderEventsList = (eventsList, eventType) => {
+    if (loading) {
+      return (
+        <div className="event-item">
+          <p><strong>Loading...</strong></p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="event-item">
+          <p><strong>Error:</strong> Could not load events. {error}</p>
+        </div>
+      );
+    }
+
+    if (!eventsList || eventsList.length === 0) {
+      return (
+        <div className="event-item">
+          <p><strong>No events available</strong></p>
+        </div>
+      );
+    }
+
+    return eventsList.map((event) => (
+      <div className="event-item" key={event.eid}>
+        <div className="event-info">
+          <p><strong>{DOMPurify.sanitize(event.ename || 'N/A')}</strong></p>
+          <p><em>{DOMPurify.sanitize(event.eventdesc || 'No description')}</em></p>
+          <p>Date: {formatDate(event.eventDate)}</p>
+          <p>Time: {formatTime(event.eventTime)}</p>
+          <p>Location: {DOMPurify.sanitize(event.eventLoc || 'N/A')}</p>
+          <p>Max Participants: {event.maxPart || 'No limit'}</p>
+          <p>Max Volunteers: {event.maxVoln || 'No limit'}</p>
+          <p>Registration Fee: ₹{event.regFee || '0'}</p>
+          {event.clubName && <p>Club: {DOMPurify.sanitize(event.clubName)}</p>}
         </div>
 
-        <div className="card-actions">
-            {!isCompleted && (
-                 <button className="btn-glass" style={{flex: 1, justifyContent: 'center'}} onClick={() => navigate(`/organiser-ticket?eventId=${event.eid}`)}>
-                    View
-                 </button>
-            )}
-            {!isCompleted && event.regFee > 0 && (
-                <button className="btn-glass btn-verify" style={{flex: 1, justifyContent: 'center'}} onClick={(e) => openPaymentModal(e, event)}>
-                    <CreditCard size={14} /> Verify
-                </button>
-            )}
-            <button className="btn-glass" onClick={(e) => handleGenerateDetails(e, event.eid, event.ename)}>
-               {generatingExcel[event.eid] ? <Loader2 className="spinner" size={18}/> : <Download size={18} />}
+        <div className="event-actions">
+          {eventType !== 'completed' && (
+            <button
+              className="event-btn"
+              onClick={() => handleEventButtonClick(event.eid)}
+              aria-label={`View details for ${event.ename}`}
+            >
+              View Event
             </button>
+          )}
+
+          {event.regFee > 0 && eventType !== 'completed' && (
+            <button
+              className="event-btn event-btn-payment"
+              onClick={() => handleViewPendingPayments(event)}
+              aria-label={`Verify payments for ${event.ename}`}
+            >
+              Verify Payments
+            </button>
+          )}
+
+          <button
+            className="event-btn"
+            onClick={() => handleGenerateDetails(event.eid, event.ename)}
+            disabled={generatingExcel[event.eid]}
+            aria-label={`Generate details for ${event.ename}`}
+          >
+            {generatingExcel[event.eid] ? 'Generating...' : 'Generate Details'}
+          </button>
         </div>
-      </motion.div>
-    );
+      </div>
+    ));
   };
 
   return (
-    <div className="dashboard-container">
-        {/* Background FX */}
-        <div className="ambient-background">
-            <div className="glow-orb orb-1" />
-            <div className="glow-orb orb-2" />
-            <div className="glow-orb orb-3" />
-        </div>
+    <div className="organisers-page">
+      <div className="logout-container">
+        <button id="backBtn" className="logout-btn" onClick={handleBack} aria-label="Back to events">
+          Back
+        </button>
+      </div>
 
-        {/* Top Header */}
-        <div className="header-row">
-            <button className="btn-glass" onClick={() => navigate('/events')}>
-                <ArrowLeft size={16} /> Back to Hub
-            </button>
-            <button className="btn-primary" onClick={() => navigate('/create-event')}>
-                + Create Event
-            </button>
-        </div>
+      <section className="hero-section">
+        <div className="container">
+          <div className="card-grid">
+            <div className="card" id="completed-card">
+              <div className="card__background"></div>
+              <div className="card__content">
+                <h3 className="card__heading">Completed Events</h3>
+                <div className="card__details">{renderEventsList(events.completed, 'completed')}</div>
+              </div>
+            </div>
 
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="header-section" 
-            style={{marginBottom: '3rem'}}
+            <div className="card" id="ongoing-card">
+              <div className="card__background"></div>
+              <div className="card__content">
+                <h3 className="card__heading">Ongoing Events</h3>
+                <div className="card__details">{renderEventsList(events.ongoing, 'ongoing')}</div>
+              </div>
+            </div>
+
+            <div className="card" id="upcoming-card">
+              <div className="card__background"></div>
+              <div className="card__content">
+                <h3 className="card__heading">Upcoming Events</h3>
+                <div className="card__details">{renderEventsList(events.upcoming, 'upcoming')}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="button-container">
+            <button onClick={handleOrganiseClick} aria-label="Organise new event">
+              Organise New Event
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Payment Verification Modal */}
+      {showPaymentModal && (
+        <div
+          className="payment-modal-overlay"
+          onClick={() => setShowPaymentModal(false)}
+          role="dialog"
+          aria-modal="true"
         >
-            <h1 className="hero-title">Organizer <span className="text-gradient">Dashboard</span></h1>
-            <p className="subtitle">Manage events, verify payments, and track metrics.</p>
-        </motion.div>
+          <div className="payment-modal" onClick={(e) => e.stopPropagation()} role="document">
+            <div className="payment-modal-header">
+              <h2>Pending Payment Verifications</h2>
+              <p className="payment-modal-subtitle">
+                {DOMPurify.sanitize(selectedEventForPayments?.ename)}
+                {isTeamEvent && <span className="team-badge">Team Event</span>}
+              </p>
+              <button
+                className="payment-modal-close"
+                onClick={() => setShowPaymentModal(false)}
+                aria-label="Close payment verification modal"
+              >
+                ×
+              </button>
+            </div>
 
-        {/* Stats Grid */}
-        <div className="grid-3">
-            <div className="glass-panel">
-                <div style={{display:'flex', justifyContent:'space-between'}}>
-                    <div><p className="stat-label">Active Events</p><h3 className="stat-value">{stats.activeEvents}</h3></div>
-                    <Activity color="#a78bfa" />
+            <div className="payment-modal-body">
+              {loadingPayments ? (
+                <div className="payment-loading">
+                  <div className="spinner"></div>
+                  <p>Loading pending payments...</p>
                 </div>
-            </div>
-            <div className="glass-panel">
-                <div style={{display:'flex', justifyContent:'space-between'}}>
-                    <div><p className="stat-label">Total Events</p><h3 className="stat-value">{stats.totalEvents}</h3></div>
-                    <Calendar color="#60a5fa" />
+              ) : pendingPayments.length === 0 ? (
+                <div className="no-payments">
+                  <p>No pending payments to verify</p>
                 </div>
-            </div>
-            <div className="glass-panel">
-                <div style={{display:'flex', justifyContent:'space-between'}}>
-                    <div><p className="stat-label">Est. Revenue</p><h3 className="stat-value">₹{stats.totalRev}</h3></div>
-                    <TrendingUp color="#34d399" />
-                </div>
-            </div>
-        </div>
+              ) : (
+                <>
+                  {isTeamEvent && (
+                    <div className="team-event-notice">
+                      <p>
+                        <strong>Info:</strong> Verifying a team leader's payment will automatically verify all team members' payments.
+                      </p>
+                    </div>
+                  )}
 
-        {/* Content */}
-        {loading ? (
-            <div style={{display:'flex', justifyContent:'center', padding: '4rem'}}>
-                <Loader2 size={40} className="spinner" color="#3b82f6" />
-            </div>
-        ) : error ? (
-            <div className="glass-panel" style={{borderColor: '#ef4444', color: '#f87171', textAlign: 'center'}}>
-                <AlertCircle style={{margin: '0 auto 10px'}}/> {error}
-            </div>
-        ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
-                {events.ongoing.length > 0 && (
-                    <section>
-                        <h2 style={{fontSize: '1.5rem', marginBottom: '1.5rem'}}>Happening Now</h2>
-                        <div className="grid-3">
-                            {events.ongoing.map(ev => <EventCard key={ev.eid} event={ev} type="ongoing" />)}
-                        </div>
-                    </section>
-                )}
-                <section>
-                    <h2 style={{fontSize: '1.5rem', marginBottom: '1.5rem'}}>Upcoming Events</h2>
-                    {events.upcoming.length > 0 ? (
-                        <div className="grid-3">
-                            {events.upcoming.map(ev => <EventCard key={ev.eid} event={ev} type="upcoming" />)}
-                        </div>
-                    ) : <p className="subtitle">No upcoming events found.</p>}
-                </section>
-                {events.completed.length > 0 && (
-                    <section style={{opacity: 0.6}}>
-                        <h2 style={{fontSize: '1.5rem', marginBottom: '1.5rem'}}>Past Events</h2>
-                        <div className="grid-3">
-                            {events.completed.map(ev => <EventCard key={ev.eid} event={ev} type="completed" />)}
-                        </div>
-                    </section>
-                )}
-            </div>
-        )}
+                  <div className="payments-list">
+                    {pendingPayments.map((payment, index) => (
+                      <div key={index} className="payment-card">
+                        <div className="payment-info">
+                          <div className="payment-header-row">
+                            <h3 className="payment-student-name">
+                              {DOMPurify.sanitize(payment.studentName || 'Unknown')}
+                              {payment.isTeamLeader && (
+                                <span className="team-leader-badge">Team Leader</span>
+                              )}
+                            </h3>
+                            <span className="payment-amount">₹{payment.amount}</span>
+                          </div>
 
-        {/* Payment Modal */}
-        <AnimatePresence>
-            {showPaymentModal && (
-                <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
-                    <motion.div 
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        className="modal-content"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className="modal-header">
-                            <div>
-                                <h2 style={{fontSize:'1.25rem', fontWeight:'bold', display:'flex', alignItems:'center', gap:'10px'}}>
-                                    <CreditCard size={20} color="#34d399"/> Verify Payments
-                                </h2>
-                                <p style={{fontSize:'0.9rem', color:'rgba(255,255,255,0.5)', margin:0}}>
-                                    {selectedEvent?.ename} {isTeamEvent && '• Team Event'}
-                                </p>
+                          <div className="payment-details">
+                            <div className="payment-detail-item">
+                              <span className="detail-label">USN:</span>
+                              <span className="detail-value">{DOMPurify.sanitize(payment.partusn)}</span>
                             </div>
-                            <button onClick={() => setShowPaymentModal(false)} style={{background:'none', border:'none', color:'white', cursor:'pointer'}}>
-                                <X />
-                            </button>
-                        </div>
-                        <div className="modal-body">
-                            {loadingPayments ? (
-                                <div style={{textAlign:'center', padding:'2rem'}}><Loader2 className="spinner" style={{margin:'0 auto'}}/></div>
-                            ) : pendingPayments.length === 0 ? (
-                                <div style={{textAlign:'center', padding:'2rem', color:'rgba(255,255,255,0.3)'}}>
-                                    <CheckCircle size={48} style={{margin:'0 auto 10px'}}/>
-                                    <p>All payments verified!</p>
+                            <div className="payment-detail-item">
+                              <span className="detail-label">Email:</span>
+                              <span className="detail-value">
+                                {DOMPurify.sanitize(payment.studentEmail || 'N/A')}
+                              </span>
+                            </div>
+                            <div className="payment-detail-item">
+                              <span className="detail-label">Mobile:</span>
+                              <span className="detail-value">
+                                {DOMPurify.sanitize(payment.studentMobile || 'N/A')}
+                              </span>
+                            </div>
+                            <div className="payment-detail-item">
+                              <span className="detail-label">Transaction ID:</span>
+                              <span className="detail-value transaction-id">
+                                {DOMPurify.sanitize(payment.transactionId || 'N/A')}
+                              </span>
+                            </div>
+
+                            {payment.teamName && (
+                              <>
+                                <div className="payment-detail-item">
+                                  <span className="detail-label">Team:</span>
+                                  <span className="detail-value">{DOMPurify.sanitize(payment.teamName)}</span>
                                 </div>
-                            ) : (
-                                <div>
-                                    {isTeamEvent && (
-                                        <div style={{padding:'10px', background:'rgba(59,130,246,0.1)', borderRadius:'8px', marginBottom:'1rem', display:'flex', gap:'10px', fontSize:'0.9rem', color:'#93c5fd'}}>
-                                            <Users size={16} /> <span>Approving a Team Leader approves the whole team.</span>
-                                        </div>
-                                    )}
-                                    {pendingPayments.map(payment => (
-                                        <div key={payment.partusn} className="payment-row">
-                                            <div style={{flex: 1}}>
-                                                <h4 style={{margin:0, fontWeight:'bold'}}>
-                                                    {payment.studentName}
-                                                    {payment.isTeamLeader && <span className="badge purple" style={{marginLeft:'8px', fontSize:'0.7rem'}}>Leader</span>}
-                                                </h4>
-                                                <p style={{margin:'4px 0 0', fontSize:'0.8rem', color:'rgba(255,255,255,0.5)'}}>{payment.partusn}</p>
-                                            </div>
-                                            <div style={{textAlign:'right'}}>
-                                                <div style={{fontWeight:'bold', fontSize:'1.1rem'}}>₹{payment.amount}</div>
-                                                <div style={{fontSize:'0.7rem', color:'rgba(255,255,255,0.4)'}}>{payment.transactionId}</div>
-                                            </div>
-                                            <button 
-                                                onClick={() => verifyPayment(payment.partusn, selectedEvent.eid)}
-                                                disabled={!!processingPayment[payment.partusn]}
-                                                className="btn-primary"
-                                                style={{
-                                                    padding: '8px 16px', fontSize: '0.9rem',
-                                                    background: processingPayment[payment.partusn] === 'success' ? '#10b981' : '#2563eb'
-                                                }}
-                                            >
-                                                {processingPayment[payment.partusn] === 'verifying' ? <Loader2 className="spinner" size={16}/> : 
-                                                 processingPayment[payment.partusn] === 'success' ? <CheckCircle size={16}/> : 'Approve'}
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
+                                {payment.teamMemberCount && (
+                                  <div className="payment-detail-item">
+                                    <span className="detail-label">Team Size:</span>
+                                    <span className="detail-value">
+                                      {payment.teamMemberCount} member{payment.teamMemberCount !== 1 ? 's' : ''}
+                                    </span>
+                                  </div>
+                                )}
+                              </>
                             )}
+
+                            <div className="payment-detail-item">
+                              <span className="detail-label">Submitted:</span>
+                              <span className="detail-value">
+                                {payment.submittedAt
+                                  ? new Date(payment.submittedAt).toLocaleString()
+                                  : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
+
+                        <div className="payment-actions">
+                          <button
+                            className="payment-btn payment-btn-approve"
+                            onClick={() =>
+                              handleVerifyPayment(payment.partusn, selectedEventForPayments.eid)
+                            }
+                            disabled={processingPayment[payment.partusn]}
+                            aria-label={`Approve payment for ${payment.studentName}`}
+                          >
+                            {processingPayment[payment.partusn] === 'verifying' ? (
+                              <>
+                                <span className="btn-spinner"></span> Approving...
+                              </>
+                            ) : (
+                              <>
+                                Approve Payment
+                                {payment.isTeamLeader && payment.teamMemberCount > 1 && (
+                                  <span className="approve-count">
+                                    {' '}(All {payment.teamMemberCount})
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
