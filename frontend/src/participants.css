@@ -1,13 +1,23 @@
 @import url('https://fonts.googleapis.com/css?family=Montserrat:400,700');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
 
-/* --- 1. ANIMATION PROPS --- */
+/* --- 1. GLOBAL FIXES (New) --- */
+/* This paints the underlying browser window dark, so the "bounce" is dark, not white */
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #0b0e14;
+  height: 100%;
+  width: 100%;
+}
+
+/* --- 2. ANIMATION PROPS --- */
 @property --angle-1 { syntax: '<angle>'; inherits: false; initial-value: -75deg; }
 @property --angle-2 { syntax: '<angle>'; inherits: false; initial-value: -45deg; }
 :root { --anim--hover-time: 400ms; --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1); }
 
 .participants-page {
-  /* --- 2. BACKGROUND --- */
+  /* --- 3. BACKGROUND --- */
   position: fixed;
   top: 0;
   left: 0;
@@ -17,13 +27,16 @@
   /* FIXED: Mobile Gesture Bar & Viewport Handling */
   min-height: 100dvh;
   width: 100%;
-  padding-bottom: env(safe-area-inset-bottom);
+  
+  /* UPDATED FIX: Extra buffer for gesture bar */
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
   
   font-family: 'Montserrat', sans-serif;
   color: white;
   overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior: auto;
+  
+  /* ALLOWS pull-to-refresh but smooths momentum */
   -webkit-overflow-scrolling: touch;
 }
 
@@ -40,7 +53,7 @@
 
 .participants-page * { box-sizing: border-box; }
 
-/* --- 3. EXACT SHINY BACK BUTTON --- */
+/* --- 4. EXACT SHINY BACK BUTTON --- */
 .participants-page .logout-container { position: fixed; top: 20px; left: 20px; z-index: 1000; }
 .participants-page .logout-btn {
   /* Basic Styling */
@@ -88,7 +101,7 @@
 .participants-page .logout-btn:active::before { background-position: 50% 15%; --angle-2: -15deg; }
 .participants-page .logout-btn:active::after { --angle-1: -75deg; }
 
-/* --- 4. LAYOUT --- */
+/* --- 5. LAYOUT --- */
 .participants-page .hero-section {
   align-items: flex-start; display: flex; min-height: 100vh;
   justify-content: center; padding: 100px 24px 40px;
@@ -101,7 +114,7 @@
 @media (min-width: 768px) { .participants-page .card-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1100px) { .participants-page .card-grid { grid-template-columns: repeat(3, 1fr); } }
 
-/* --- 5. CARDS (Old Style with Blur Effect) --- */
+/* --- 6. CARDS (Old Style with Blur Effect) --- */
 .participants-page .card { position: relative; cursor: pointer; transition: transform 0.3s ease; }
 .participants-page .card:before { content: ''; display: block; padding-bottom: 150%; width: 100%; }
 .participants-page .card__background {
@@ -146,7 +159,7 @@
 .participants-page .card__details::-webkit-scrollbar-track { background: transparent; }
 .participants-page .card__details::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.4); border-radius: 3px; }
 
-/* --- 6. EXACT OLD PARTICIPATE BUTTON --- */
+/* --- 7. EXACT OLD PARTICIPATE BUTTON --- */
 .participants-page .button-container {
   display: flex; justify-content: center; margin-top: 32px; width: 100%;
 }
@@ -172,7 +185,7 @@
   box-shadow: 0 0 0 0 transparent; transition: box-shadow 0.2s ease-in; transform: translateY(0);
 }
 
-/* --- 7. GLASS ITEMS (Inside Cards) --- */
+/* --- 8. GLASS ITEMS (Inside Cards) --- */
 .part-event-item-glass {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
