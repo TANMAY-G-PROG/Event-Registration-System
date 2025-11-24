@@ -205,7 +205,7 @@ const Organisers = () => {
   const handleOrganiseClick = () => navigate('/create-event');
   const handleBack = () => navigate('/events');
 
-  // --- Render Event Item (Glass Style inside Cards) ---
+  // --- Render Event Item ---
   const renderEventsList = (eventsList, eventType) => {
     if (loading) return <div className="org-event-message">Loading events...</div>;
     if (error) return <div className="org-event-message error">Error: {error}</div>;
@@ -265,10 +265,6 @@ const Organisers = () => {
 
   return (
     <div className="organisers-unique-wrapper">
-      {/* Exact Background from RegisterEvent */}
-      <div className="org-background-layer"></div>
-      <div className="org-noise-overlay"></div>
-
       {/* Shiny Back Button */}
       <div className="org-logout-container">
         <button className="org-logout-btn" onClick={handleBack}>
