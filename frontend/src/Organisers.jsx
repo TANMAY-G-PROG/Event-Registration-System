@@ -205,7 +205,7 @@ const Organisers = () => {
   const handleOrganiseClick = () => navigate('/create-event');
   const handleBack = () => navigate('/events');
 
-  // --- Render Event Item (Premium Glass Style inside Cards) ---
+  // --- Render Event Item (Glass Style inside Cards) ---
   const renderEventsList = (eventsList, eventType) => {
     if (loading) return <div className="org-event-message">Loading events...</div>;
     if (error) return <div className="org-event-message error">Error: {error}</div>;
@@ -265,9 +265,6 @@ const Organisers = () => {
 
   return (
     <div className="organisers-unique-wrapper">
-      {/* Background Elements */}
-      <div className="org-noise-overlay"></div>
-
       {/* Shiny Back Button */}
       <div className="org-logout-container">
         <button className="org-logout-btn" onClick={handleBack}>
@@ -278,7 +275,7 @@ const Organisers = () => {
       <section className="org-hero-section">
         <div className="org-container">
           
-          {/* Old Card Grid Layout */}
+          {/* Card Grid Layout */}
           <div className="org-card-grid">
             
             <div className="org-card" id="completed-card">
