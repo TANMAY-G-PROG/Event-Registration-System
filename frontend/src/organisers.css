@@ -1,95 +1,119 @@
 @import url('https://fonts.googleapis.com/css?family=Montserrat:400,700');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
 
-/* --- OLD VARIABLES & ROOT --- */
+/* --- OLD CODE ANIMATION PROPS --- */
 @property --angle-1 { syntax: '<angle>'; inherits: false; initial-value: -75deg; }
 @property --angle-2 { syntax: '<angle>'; inherits: false; initial-value: -45deg; }
 :root { --anim--hover-time: 400ms; --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1); }
 
-.organisers-page {
-  --background-dark: #2d3548;
-  --text-light: rgba(255, 255, 255, 0.6);
-  --text-lighter: rgba(255, 255, 255, 0.9);
-  --spacing-s: 8px;
-  --spacing-m: 16px;
-  --spacing-l: 24px;
-  --spacing-xl: 32px;
-  --spacing-xxl: 64px;
-  --width-container: 1200px;
-  --primary-color: #1a73e8;
+.organisers-dashboard-wrapper {
+  /* Basic Reset */
+  --text-main: #ffffff;
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --neon-cyan: #00f0ff;
+  --neon-purple: #bd00ff;
+  --neon-emerald: #00ff9d;
 
   font-family: 'Montserrat', sans-serif;
-  font-size: 14px;
+  color: var(--text-main);
   min-height: 100vh;
   width: 100%;
-  margin: 0;
-  padding: 0;
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  /* Use pseudo-element for bg later or stick to JS structure */
+  overflow-x: hidden;
 }
 
-.organisers-page * { box-sizing: border-box; }
-
-/* --- HERO BACKGROUND (Restored Old) --- */
-.organisers-page .hero-section {
-  align-items: flex-start;
-  background: linear-gradient(15deg, #0f4667 0%, #2a6973 150%);
-  display: flex;
-  min-height: 100vh;
-  justify-content: center;
-  padding: var(--spacing-xxl) var(--spacing-l);
+.organisers-dashboard-wrapper * {
+  box-sizing: border-box;
 }
 
-.organisers-page .container {
-  display: flex;
-  flex-direction: column;
-  max-width: var(--width-container);
-  width: 100%;
-}
-
-.organisers-page .card-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--spacing-l);
-  width: 100%;
-}
-
-@media (min-width: 540px) { .organisers-page .card-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 960px) { .organisers-page .card-grid { grid-template-columns: repeat(3, 1fr); } }
-
-/* --- CARDS (Restored Old) --- */
-.organisers-page .card {
-  position: relative;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.organisers-page .card:before {
-  content: '';
-  display: block;
-  padding-bottom: 150%;
-  width: 100%;
-}
-
-.organisers-page .card__background {
-  background-size: cover;
-  background-position: center;
-  border-radius: var(--spacing-l);
-  position: absolute;
+/* --- BACKGROUND (FROM REGISTEREVENT) --- */
+.registerevent-hero-bg {
+  position: fixed;
   inset: 0;
-  transform-origin: center;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #0b0e14;
+  background-image: 
+    radial-gradient(60rem 60rem at 20% 20%, rgba(14, 165, 233, 0.22), transparent 55%),
+    radial-gradient(48rem 48rem at 80% 28%, rgba(34, 211, 238, 0.18), transparent 52%),
+    radial-gradient(44rem 44rem at 50% 80%, rgba(96, 165, 250, 0.16), transparent 50%),
+    radial-gradient(100% 100% at 50% 0%, rgba(0, 0, 0, 0.06), transparent 60%);
+  filter: saturate(1.05) brightness(1.02);
+}
+
+/* --- SHINY BACK BUTTON (FROM OLD CODE) --- */
+.logout-container { position: fixed; top: 20px; left: 20px; z-index: 1000; }
+
+.logout-btn {
+  all: unset; cursor: pointer; position: relative;
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Inter', sans-serif; font-weight: 500; font-size: 14px;
+  color: white; text-shadow: 0em 0.25em 0.05em rgba(0, 0, 0, 0.1);
+  padding: 0.875em 1.5em; border-radius: 999vw;
+  background: linear-gradient(-75deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(4px);
+  transition: all var(--anim--hover-time) var(--anim--hover-ease);
+}
+
+.logout-btn::before {
+  content: ""; display: block; position: absolute; z-index: 3;
+  width: calc(100% - 2px); height: calc(100% - 2px); top: 1px; left: 1px;
+  border-radius: 999vw;
+  background: linear-gradient(var(--angle-2), rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 40% 50%, rgba(255,255,255,0) 55%);
+  mix-blend-mode: screen; pointer-events: none; background-size: 200% 200%;
+  transition: background-position calc(var(--anim--hover-time)*1.25) var(--anim--hover-ease), --angle-2 calc(var(--anim--hover-time)*1.25) var(--anim--hover-ease);
+}
+
+.logout-btn::after {
+  content: ""; position: absolute; z-index: 1; inset: 0; border-radius: 999vw;
+  width: 100%; height: 100%; padding: 1px;
+  background: conic-gradient(from var(--angle-1) at 50% 50%, rgba(0,0,0,0.5), rgba(0,0,0,0) 5% 40%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0) 60% 95%, rgba(0,0,0,0.5));
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  transition: all var(--anim--hover-time) var(--anim--hover-ease), --angle-1 0.5s ease;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5);
+}
+
+.logout-btn:hover { transform: scale(0.98); }
+.logout-btn:hover::before { background-position: 25% 50%; }
+.logout-btn:hover::after { --angle-1: -125deg; }
+
+/* --- LAYOUT --- */
+.hero-section {
+  align-items: flex-start; display: flex; min-height: 100vh;
+  justify-content: center; padding: 100px 24px 40px;
+}
+
+.container { display: flex; flex-direction: column; max-width: 1200px; width: 100%; }
+
+.card-grid {
+  display: grid; grid-template-columns: 1fr; gap: 24px; width: 100%;
+}
+@media (min-width: 768px) { .card-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1100px) { .card-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* --- CARDS (OLD CODE) --- */
+.card {
+  position: relative; cursor: pointer; transition: transform 0.3s ease;
+}
+.card:before { content: ''; display: block; padding-bottom: 150%; width: 100%; }
+
+.card__background {
+  background-size: cover; background-position: center; border-radius: 24px;
+  position: absolute; inset: 0; transform-origin: center;
   transform: scale(1) translateZ(0);
   transition: filter 200ms linear, transform 200ms linear;
   filter: brightness(0.75) saturate(1.2) contrast(0.85);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
-/* --- BLUR EFFECT (Key Requirement) --- */
-.organisers-page .card-grid:hover > .card:not(:hover) .card__background {
+/* BLUR EFFECT ON SIBLINGS */
+.card-grid:hover > .card:not(:hover) .card__background {
   filter: brightness(0.5) saturate(0) contrast(1.2) blur(20px);
 }
 
-/* Exact old gradients */
+/* Card Gradients */
 #completed-card .card__background {
   background-image: radial-gradient(circle 311px at 8.6% 27.9%, rgba(62, 147, 252, 0.57) 12.9%, rgba(239, 183, 192, 0.44) 91.2%);
 }
@@ -100,119 +124,58 @@
   background-image: radial-gradient(circle farthest-corner at 10% 20%, rgba(90, 92, 106, 0.7) 0%, rgba(32, 45, 58, 0.7) 81.3%);
 }
 
-.organisers-page .card:hover { transform: scale(1.05) translateZ(0); z-index: 10; }
-.organisers-page .card:hover .card__background { transform: scale(1.05) translateZ(0); }
+.card:hover { transform: scale(1.05) translateZ(0); z-index: 10; }
+.card:hover .card__background { transform: scale(1.05) translateZ(0); }
 
-.organisers-page .card__content {
-  position: absolute; inset: 0; padding: var(--spacing-l);
+.card__content {
+  position: absolute; inset: 0; padding: 24px;
   display: flex; flex-direction: column; z-index: 2;
 }
 
-.organisers-page .card__heading {
-  color: var(--text-lighter);
-  font-size: 1.9rem;
+.card__heading {
+  color: rgba(255, 255, 255, 0.9); font-size: 1.9rem;
   text-shadow: 2px 2px 20px rgba(255, 255, 255, 0.5);
-  line-height: 1.4;
-  word-spacing: 100vw;
-  margin-bottom: var(--spacing-m);
+  line-height: 1.4; margin-bottom: 16px;
 }
 
-.organisers-page .card__details {
-  margin-top: var(--spacing-m);
-  background: rgba(0, 0, 0, 0.6);
-  padding: var(--spacing-m);
-  border-radius: var(--spacing-s);
-  flex: 1;
-  overflow-y: auto;
-  backdrop-filter: blur(10px);
+.card__details {
+  margin-top: 16px; background: rgba(0, 0, 0, 0.6);
+  padding: 16px; border-radius: 8px; flex: 1;
+  overflow-y: auto; backdrop-filter: blur(10px);
 }
+.card__details::-webkit-scrollbar { width: 6px; }
+.card__details::-webkit-scrollbar-track { background: transparent; }
+.card__details::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.4); border-radius: 3px; }
 
-.organisers-page .card__details::-webkit-scrollbar { width: 6px; }
-.organisers-page .card__details::-webkit-scrollbar-track { background: transparent; }
-.organisers-page .card__details::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.4); border-radius: 3px; }
-
-/* --- BUTTON (Restored Old) --- */
-.organisers-page .button-container {
-  display: flex; justify-content: center; margin-top: var(--spacing-xl); width: 100%;
+/* --- ORGANISE BUTTON (OLD CODE) --- */
+.button-container {
+  display: flex; justify-content: center; margin-top: 32px; width: 100%;
 }
-
-.organisers-page .button-container button {
-  position: relative;
-  padding: 12px 24px;
-  border-radius: 8px;
-  border: 2px solid rgb(61, 106, 255);
-  font-size: 14px;
-  text-transform: uppercase;
-  font-weight: 600;
-  letter-spacing: 2px;
-  background: transparent;
-  color: #fff;
-  overflow: hidden;
-  box-shadow: 0 0 0 0 transparent;
-  transition: all 0.2s ease-in;
-  cursor: pointer;
+.button-container button {
+  position: relative; padding: 12px 24px; border-radius: 8px;
+  border: 2px solid rgb(61, 106, 255); font-size: 14px;
+  text-transform: uppercase; font-weight: 600; letter-spacing: 2px;
+  background: transparent; color: #fff; overflow: hidden;
+  box-shadow: 0 0 0 0 transparent; transition: all 0.2s ease-in; cursor: pointer;
 }
-
-.organisers-page .button-container button:hover {
+.button-container button:hover {
   background: rgb(61, 106, 255);
   box-shadow: 0 0 30px 5px rgba(0, 142, 236, 0.815);
-  transition: all 0.2s ease-out;
-  transform: translateY(-2px);
+  transition: all 0.2s ease-out; transform: translateY(-2px);
 }
+.button-container button:hover::before { animation: sh02 0.5s 0s linear; }
+.button-container button::before {
+  content: ''; display: block; width: 0px; height: 86%; position: absolute;
+  top: 7%; left: 0%; opacity: 0; background: #fff;
+  box-shadow: 0 0 50px 30px #fff; transform: skewX(-20deg);
+}
+@keyframes sh02 { from { opacity: 0; left: 0%; } 50% { opacity: 1; } to { opacity: 0; left: 100%; } }
 
-.organisers-page .button-container button:hover::before {
-  animation: sh02 0.5s 0s linear;
-}
-
-.organisers-page .button-container button::before {
-  content: '';
-  display: block;
-  width: 0px;
-  height: 86%;
-  position: absolute;
-  top: 7%;
-  left: 0%;
-  opacity: 0;
-  background: #fff;
-  box-shadow: 0 0 50px 30px #fff;
-  transform: skewX(-20deg);
-}
-
-@keyframes sh02 {
-  from { opacity: 0; left: 0%; }
-  50% { opacity: 1; }
-  to { opacity: 0; left: 100%; }
-}
-
-/* --- BACK BUTTON (Restored Old) --- */
-.organisers-page .logout-container { position: fixed; top: 20px; left: 20px; z-index: 1000; }
-.organisers-page .logout-btn {
-  all: unset; cursor: pointer; position: relative;
-  display: flex; align-items: center; gap: 8px;
-  font-family: 'Inter', sans-serif; font-weight: 500; font-size: 14px;
-  color: white; text-shadow: 0em 0.25em 0.05em rgba(0, 0, 0, 0.1);
-  padding: 0.875em 1.5em; border-radius: 999vw;
-  background: linear-gradient(-75deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
-  backdrop-filter: blur(4px);
-  transition: all var(--anim--hover-time) var(--anim--hover-ease);
-}
-.organisers-page .logout-btn::before { /* inner shine */
-  content: ""; display: block; position: absolute; z-index: 3;
-  width: calc(100% - 2px); height: calc(100% - 2px); top: 1px; left: 1px;
-  border-radius: 999vw;
-  background: linear-gradient(var(--angle-2), rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 40% 50%, rgba(255,255,255,0) 55%);
-  mix-blend-mode: screen; pointer-events: none; background-size: 200% 200%;
-  transition: background-position calc(var(--anim--hover-time)*1.25) var(--anim--hover-ease), --angle-2 calc(var(--anim--hover-time)*1.25) var(--anim--hover-ease);
-}
-.organisers-page .logout-btn:hover::before { background-position: 25% 50%; }
-
-/* --- NEW INTERNAL ITEMS (Glass list items) --- */
+/* --- EVENT LIST ITEM (PREMIUM GLASS) --- */
 .event-item-glass {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  padding: 12px; border-radius: 8px; margin-bottom: 12px;
   transition: all 0.2s ease;
 }
 .event-item-glass:hover { background: rgba(255, 255, 255, 0.2); }
@@ -220,6 +183,7 @@
 .event-item-glass .description { font-size: 0.85rem; color: rgba(255,255,255,0.8); margin-bottom: 8px; }
 .event-item-glass .meta-info { display: flex; gap: 8px; font-size: 0.75rem; color: rgba(255,255,255,0.7); margin-bottom: 8px; flex-wrap: wrap; }
 .event-item-glass .stats-info { display: flex; justify-content: space-between; font-size: 0.8rem; color: white; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); }
+.fee-tag { color: #00ff9d; font-weight: bold; }
 
 .event-actions { display: flex; gap: 5px; margin-top: 10px; }
 .glass-btn {
@@ -234,11 +198,14 @@
 .glass-btn:hover { background: white; color: black; }
 .glass-btn.primary { background: rgba(0, 255, 157, 0.25); border-color: rgba(0, 255, 157, 0.5); }
 .glass-btn.primary:hover { background: #00ff9d; color: black; }
+.pulse-border { animation: pulse 2s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0,255,157,0.4); } 70% { box-shadow: 0 0 0 5px rgba(0,255,157,0); } 100% { box-shadow: 0 0 0 0 rgba(0,255,157,0); } }
+.spinner-sm { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; }
 
 /* --- FINTECH MODAL --- */
 .fintech-modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
-  z-index: 200; display: flex; justify-content: center; align-items: center; animation: fadeIn 0.3s ease;
+  z-index: 2000; display: flex; justify-content: center; align-items: center; animation: fadeIn 0.3s ease;
 }
 .fintech-modal {
   background: #1a2332; width: 90%; max-width: 650px; max-height: 85vh;
