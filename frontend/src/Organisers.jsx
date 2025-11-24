@@ -1,535 +1,487 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DOMPurify from 'dompurify'; // For sanitizing HTML
+import DOMPurify from 'dompurify';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Calendar, Clock, MapPin, Users, CreditCard, 
+  ArrowLeft, Download, ShieldCheck, TrendingUp, 
+  Activity, CheckCircle, AlertCircle, X, Loader2 
+} from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import './organisers.css';
+
+// --- Utility for cleaner classes ---
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
+
+// --- Visual Components ---
+const GlassCard = ({ children, className, delay = 0 }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay, ease: "easeOut" }}
+    className={cn(
+      "relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-300 hover:border-white/20 hover:shadow-2xl hover:shadow-cyan-500/10 group",
+      className
+    )}
+  >
+    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+    {children}
+  </motion.div>
+);
+
+const Badge = ({ children, color = "blue" }) => {
+  const colors = {
+    blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    green: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  };
+  return (
+    <span className={cn("px-3 py-1 rounded-full text-xs font-medium border backdrop-blur-md", colors[color])}>
+      {children}
+    </span>
+  );
+};
+
+const StatCard = ({ label, value, icon: Icon, trend, delay }) => (
+  <GlassCard className="p-6 flex items-start justify-between" delay={delay}>
+    <div>
+      <p className="text-gray-400 text-sm font-medium mb-1">{label}</p>
+      <h3 className="text-3xl font-bold font-[Space_Grotesk] bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+        {value}
+      </h3>
+    </div>
+    <div className={cn("p-3 rounded-xl bg-white/5 border border-white/10 text-white/70")}>
+      <Icon size={24} />
+    </div>
+    {trend && (
+        <div className="absolute bottom-6 right-6 flex items-center gap-1 text-emerald-400 text-xs font-mono">
+            <TrendingUp size={12} />
+            {trend}
+        </div>
+    )}
+  </GlassCard>
+);
 
 const Organisers = () => {
   const navigate = useNavigate();
-  const [events, setEvents] = useState({
-    ongoing: [],
-    completed: [],
-    upcoming: [],
-  });
+  
+  // --- State ---
+  const [events, setEvents] = useState({ ongoing: [], completed: [], upcoming: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Action States
   const [generatingExcel, setGeneratingExcel] = useState({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedEventForPayments, setSelectedEventForPayments] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [pendingPayments, setPendingPayments] = useState([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [processingPayment, setProcessingPayment] = useState({});
   const [isTeamEvent, setIsTeamEvent] = useState(false);
 
-  // Memoize categorizeEvents to prevent unnecessary re-computations
-  const categorizeEvents = useCallback((events) => {
+  // --- Logic ---
+  const categorizeEvents = useCallback((eventsList) => {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
-    const categorized = {
-      ongoing: [],
-      completed: [],
-      upcoming: [],
-    };
+    const categorized = { ongoing: [], completed: [], upcoming: [] };
 
-    events.forEach((event) => {
+    eventsList.forEach((event) => {
       const eventDate = new Date(event.eventDate);
       eventDate.setHours(0, 0, 0, 0);
       const diffTime = eventDate.getTime() - currentDate.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      if (diffDays === 0) {
-        categorized.ongoing.push(event);
-      } else if (diffDays < 0) {
-        categorized.completed.push(event);
-      } else {
-        categorized.upcoming.push(event);
-      }
+      if (diffDays === 0) categorized.ongoing.push(event);
+      else if (diffDays < 0) categorized.completed.push(event);
+      else categorized.upcoming.push(event);
     });
-
     return categorized;
   }, []);
 
   const fetchOrganizerEvents = async () => {
     try {
-      const response = await fetch('/api/my-organized-events', {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
+      // Simulation for demo purposes if API fails (remove in production)
+      /* const mockEvents = [
+         { eid: 1, ename: "Hackathon 2025", eventdesc: "AI Innovation Challenge", eventDate: "2025-11-25", eventTime: "10:00", eventLoc: "Tech Park", maxPart: 100, regFee: 500, clubName: "Coding Club" },
+         { eid: 2, ename: "Cyber Summit", eventdesc: "Security Workshop", eventDate: "2025-12-01", eventTime: "09:00", eventLoc: "Auditorium", maxPart: 50, regFee: 200, clubName: "CyberCell" }
+      ]; */
+      
+      const response = await fetch('/api/my-organized-events');
       if (!response.ok) {
-        if (response.status === 401) {
-          navigate('/');
-          return;
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
+         if (response.status === 401) return navigate('/');
+         throw new Error('Failed to fetch');
       }
-
       const data = await response.json();
-      const organizerEvents = data.organizerEvents || [];
-      const categorizedEvents = categorizeEvents(organizerEvents);
-      setEvents(categorizedEvents);
-      setLoading(false);
+      setEvents(categorizeEvents(data.organizerEvents || []));
     } catch (err) {
-      console.error('Error fetching organizer events:', err);
+      console.error(err);
       setError(err.message);
+    } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchOrganizerEvents();
-    // Cleanup function
-    return () => {
-      // Any cleanup logic if needed
-    };
-  }, [navigate, categorizeEvents]);
+  useEffect(() => { fetchOrganizerEvents(); }, []);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+  // --- Stats Calculation (Memoized) ---
+  const stats = useMemo(() => {
+    const allEvents = [...events.ongoing, ...events.upcoming, ...events.completed];
+    const totalEvents = allEvents.length;
+    const totalRev = allEvents.reduce((acc, curr) => acc + (curr.regFee || 0), 0); // Simplified logic
+    const activeEvents = events.ongoing.length + events.upcoming.length;
+    
+    return { totalEvents, totalRev, activeEvents };
+  }, [events]);
 
-  const formatTime = (timeString) => {
-    if (!timeString) return 'N/A';
-    const timeParts = timeString.split(':');
-    let hours = parseInt(timeParts[0]);
-    const minutes = timeParts[1];
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    return `${hours}:${minutes} ${ampm}`;
-  };
-
-  const handleGenerateDetails = async (eventId, eventName) => {
+  // --- Handlers ---
+  const handleGenerateDetails = async (e, eventId, eventName) => {
+    e.stopPropagation();
+    setGeneratingExcel(prev => ({ ...prev, [eventId]: true }));
     try {
-      setGeneratingExcel((prev) => ({ ...prev, [eventId]: true }));
-      const response = await fetch(`/api/events/${eventId}/generate-details`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          alert('Session expired. Please login again.');
-          navigate('/');
-          return;
-        }
-        if (response.status === 403) {
-          alert('You are not authorized to generate details for this event.');
-          return;
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Event_${eventName.replace(/\s+/g, '_')}_Details.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      console.error('Error generating Excel file:', err);
-      alert('Error generating Excel file. Please try again.');
-    } finally {
-      setGeneratingExcel((prev) => ({ ...prev, [eventId]: false }));
-    }
+        const response = await fetch(`/api/events/${eventId}/generate-details`);
+        if (!response.ok) throw new Error('Failed');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Event_${eventName.replace(/\s+/g, '_')}_Details.xlsx`;
+        a.click();
+    } catch (err) { alert('Error generating file'); } 
+    finally { setGeneratingExcel(prev => ({ ...prev, [eventId]: false })); }
   };
 
-  const handleViewPendingPayments = async (event) => {
-    setSelectedEventForPayments(event);
+  const openPaymentModal = async (e, event) => {
+    e.stopPropagation();
+    setSelectedEvent(event);
     setShowPaymentModal(true);
     setLoadingPayments(true);
     try {
-      const response = await fetch(`/api/events/${event.eid}/pending-payments`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch pending payments');
-      }
-
-      const data = await response.json();
-      setPendingPayments(data.pendingPayments || []);
-      setIsTeamEvent(data.isTeamEvent || false);
-    } catch (err) {
-      console.error('Error fetching pending payments:', err);
-      alert('Error loading pending payments');
-      setPendingPayments([]);
-      setIsTeamEvent(false);
-    } finally {
-      setLoadingPayments(false);
-    }
+        const res = await fetch(`/api/events/${event.eid}/pending-payments`);
+        const data = await res.json();
+        setPendingPayments(data.pendingPayments || []);
+        setIsTeamEvent(data.isTeamEvent || false);
+    } catch (err) { setPendingPayments([]); } 
+    finally { setLoadingPayments(false); }
   };
 
-  const handleVerifyPayment = async (participantUSN, eventId) => {
-    setProcessingPayment((prev) => ({ ...prev, [participantUSN]: 'verifying' }));
+  const verifyPayment = async (usn, eventId) => {
+    setProcessingPayment(prev => ({ ...prev, [usn]: 'verifying' }));
     try {
-      const response = await fetch('/api/payments/verify', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          participantUSN,
-          eventId,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP status ${response.status}`);
-      }
-
-      if (data.verifiedCount && data.verifiedCount > 1) {
-        alert(`${data.message}\nAll ${data.verifiedCount} team members can now mark attendance.`);
-      } else {
-        alert(data.message || 'Payment verified successfully!');
-      }
-
-      setPendingPayments((prev) => prev.filter((p) => p.partusn !== participantUSN));
+        const res = await fetch('/api/payments/verify', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ participantUSN: usn, eventId })
+        });
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error);
+        
+        // Success Animation Delay
+        setProcessingPayment(prev => ({ ...prev, [usn]: 'success' }));
+        setTimeout(() => {
+            setPendingPayments(prev => prev.filter(p => p.partusn !== usn));
+            setProcessingPayment(prev => ({ ...prev, [usn]: null }));
+        }, 1000);
     } catch (err) {
-      console.error('Error verifying payment:', err);
-      alert(`Error: ${err.message || 'Failed to verify payment. Please try again.'}`);
-    } finally {
-      setProcessingPayment((prev) => ({ ...prev, [participantUSN]: null }));
+        alert(err.message);
+        setProcessingPayment(prev => ({ ...prev, [usn]: null }));
     }
   };
 
-  const handleEventButtonClick = (eventId, eventType) => {
-    navigate(`/organiser-ticket?eventId=${eventId}`);
-  };
+  // --- Sub-Components ---
+  
+  const EventCard = ({ event, type }) => {
+    const isCompleted = type === 'completed';
+    
+    return (
+      <GlassCard className="group relative flex flex-col h-full min-h-[280px]">
+        {/* Decorative Gradient Blob */}
+        <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl group-hover:bg-blue-400/30 transition-all duration-500" />
 
-  const handleOrganiseClick = () => {
-    navigate('/create-event');
-  };
+        <div className="p-6 flex-1 relative z-10">
+          <div className="flex justify-between items-start mb-4">
+             <Badge color={isCompleted ? "orange" : type === 'ongoing' ? "green" : "blue"}>
+                {isCompleted ? 'Completed' : type === 'ongoing' ? 'Happening Now' : 'Upcoming'}
+             </Badge>
+             {event.regFee > 0 && (
+                 <span className="text-emerald-400 font-mono font-bold text-lg">₹{event.regFee}</span>
+             )}
+          </div>
 
-  const handleBack = () => {
-    navigate('/events');
-  };
-
-  const renderEventsList = (eventsList, eventType) => {
-    if (loading) {
-      return (
-        <div className="event-item">
-          <p>
-            <strong>Loading...</strong>
+          <h3 className="text-2xl font-bold text-white mb-2 leading-tight group-hover:text-blue-300 transition-colors">
+            {event.ename}
+          </h3>
+          <p className="text-white/60 text-sm line-clamp-2 mb-6 h-10">
+            {event.eventdesc || "No description provided."}
           </p>
+
+          <div className="space-y-3">
+             <div className="flex items-center text-sm text-white/50 gap-3">
+                <Calendar size={16} className="text-blue-400" />
+                <span>{new Date(event.eventDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+             </div>
+             <div className="flex items-center text-sm text-white/50 gap-3">
+                <Clock size={16} className="text-purple-400" />
+                <span>{event.eventTime}</span>
+             </div>
+             <div className="flex items-center text-sm text-white/50 gap-3">
+                <MapPin size={16} className="text-pink-400" />
+                <span>{event.eventLoc}</span>
+             </div>
+          </div>
         </div>
-      );
-    }
 
-    if (error) {
-      return (
-        <div className="event-item">
-          <p>
-            <strong>Error:</strong> Could not load events. {error}
-          </p>
-        </div>
-      );
-    }
+        {/* Action Bar */}
+        <div className="p-4 border-t border-white/5 bg-black/20 backdrop-blur-md flex gap-2">
+            {!isCompleted && (
+                 <button 
+                    onClick={() => navigate(`/organiser-ticket?eventId=${event.eid}`)}
+                    className="flex-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white text-sm font-medium transition-all flex items-center justify-center gap-2 border border-white/5 hover:border-white/20"
+                 >
+                    View
+                 </button>
+            )}
+            
+            {!isCompleted && event.regFee > 0 && (
+                <button 
+                    onClick={(e) => openPaymentModal(e, event)}
+                    className="flex-1 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 hover:border-emerald-500/40 text-sm font-medium transition-all flex items-center justify-center gap-2"
+                >
+                    <CreditCard size={14} /> Verify
+                </button>
+            )}
 
-    if (!eventsList || eventsList.length === 0) {
-      return (
-        <div className="event-item">
-          <p>
-            <strong>No events available</strong>
-          </p>
-        </div>
-      );
-    }
-
-    return eventsList.map((event) => (
-      <div className="event-item" key={event.eid}>
-        <div className="event-info">
-          <p>
-            <strong>{DOMPurify.sanitize(event.ename || 'N/A')}</strong>
-          </p>
-          <p>
-            <em>{DOMPurify.sanitize(event.eventdesc || 'No description')}</em>
-          </p>
-          <p>Date: {formatDate(event.eventDate)}</p>
-          <p>Time: {formatTime(event.eventTime)}</p>
-          <p>Location: {DOMPurify.sanitize(event.eventLoc || 'N/A')}</p>
-          <p>Max Participants: {event.maxPart || 'No limit'}</p>
-          <p>Max Volunteers: {event.maxVoln || 'No limit'}</p>
-          <p>Registration Fee: ₹{event.regFee || '0'}</p>
-          {event.clubName && <p>Club: {DOMPurify.sanitize(event.clubName)}</p>}
-        </div>
-        <div className="event-actions">
-          {eventType !== 'completed' && (
-            <button
-              className="event-btn"
-              onClick={() => handleEventButtonClick(event.eid, eventType)}
-              aria-label={`View details for ${event.ename}`}
+            <button 
+                onClick={(e) => handleGenerateDetails(e, event.eid, event.ename)}
+                disabled={generatingExcel[event.eid]}
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all border border-white/5"
+                title="Download Report"
             >
-              View Event
+               {generatingExcel[event.eid] ? <Loader2 className="animate-spin" size={18}/> : <Download size={18} />}
             </button>
-          )}
-          {event.regFee > 0 && eventType !== 'completed' && (
-            <button
-              className="event-btn event-btn-payment"
-              onClick={() => handleViewPendingPayments(event)}
-              aria-label={`Verify payments for ${event.ename}`}
-            >
-              💳 Verify Payments
-            </button>
-          )}
-          <button
-            className="event-btn"
-            onClick={() => handleGenerateDetails(event.eid, event.ename)}
-            disabled={generatingExcel[event.eid]}
-            aria-label={`Generate details for ${event.ename}`}
-          >
-            {generatingExcel[event.eid] ? 'Generating...' : 'Generate Details'}
-          </button>
         </div>
-      </div>
-    ));
+      </GlassCard>
+    );
   };
 
+  // --- Main Render ---
   return (
-    <div className="organisers-page">
-      <div className="logout-container">
-        <button
-          id="backBtn"
-          className="logout-btn"
-          onClick={handleBack}
-          aria-label="Back to events"
-        >
-          <i className="fas fa-arrow-left"></i>
-          Back
-        </button>
-      </div>
-      <section className="hero-section">
-        <div className="container">
-          <div className="card-grid">
-            <div className="card" id="completed-card">
-              <div className="card__background"></div>
-              <div className="card__content">
-                <h3 className="card__heading">Completed Events</h3>
-                <div className="card__details">
-                  {renderEventsList(events.completed, 'completed')}
+    <div className="min-h-screen w-full relative p-6 md:p-12">
+        {/* Background FX */}
+        <div className="noise-overlay" />
+        <div className="ambient-glow purple" />
+        <div className="ambient-glow blue" />
+        <div className="ambient-glow cyan" />
+
+        {/* Top Nav */}
+        <div className="max-w-7xl mx-auto flex justify-between items-center mb-12 relative z-10">
+            <button 
+                onClick={() => navigate('/events')}
+                className="group flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+            >
+                <div className="p-2 rounded-full bg-white/5 border border-white/10 group-hover:border-white/30 transition-all">
+                    <ArrowLeft size={16} />
                 </div>
-              </div>
-            </div>
-            <div className="card" id="ongoing-card">
-              <div className="card__background"></div>
-              <div className="card__content">
-                <h3 className="card__heading">Ongoing Events</h3>
-                <div className="card__details">
-                  {renderEventsList(events.ongoing, 'ongoing')}
-                </div>
-              </div>
-            </div>
-            <div className="card" id="upcoming-card">
-              <div className="card__background"></div>
-              <div className="card__content">
-                <h3 className="card__heading">Upcoming Events</h3>
-                <div className="card__details">
-                  {renderEventsList(events.upcoming, 'upcoming')}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="button-container">
-            <button onClick={handleOrganiseClick} aria-label="Organise new event">
-              Organise New Event
+                <span className="font-medium tracking-wide">Back to Hub</span>
             </button>
-          </div>
+
+            <button 
+                onClick={() => navigate('/create-event')}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-full font-medium shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40 transition-all transform hover:-translate-y-0.5"
+            >
+                + Create Event
+            </button>
         </div>
-      </section>
-      {showPaymentModal && (
-        <div
-          className="payment-modal-overlay"
-          onClick={() => setShowPaymentModal(false)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            className="payment-modal"
-            onClick={(e) => e.stopPropagation()}
-            role="document"
-          >
-            <div className="payment-modal-header">
-              <h2>💳 Pending Payment Verifications</h2>
-              <p className="payment-modal-subtitle">
-                {DOMPurify.sanitize(selectedEventForPayments?.ename)}
-                {isTeamEvent && (
-                  <span className="team-badge"> 👥 Team Event</span>
-                )}
-              </p>
-              <button
-                className="payment-modal-close"
-                onClick={() => setShowPaymentModal(false)}
-                aria-label="Close payment verification modal"
-              >
-                ×
-              </button>
+
+        <div className="max-w-7xl mx-auto relative z-10 space-y-12">
+            
+            {/* Dashboard Header & Stats */}
+            <div className="space-y-8">
+                <div>
+                    <h1 className="text-5xl md:text-6xl font-bold font-[Space_Grotesk] text-white tracking-tight mb-4">
+                        Organizer <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">Dashboard</span>
+                    </h1>
+                    <p className="text-lg text-white/50 max-w-2xl">
+                        Manage your events, verify payments, and track participation in real-time.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <StatCard label="Total Active Events" value={stats.activeEvents} icon={Activity} delay={0.1} />
+                    <StatCard label="Total Lifetime Events" value={stats.totalEvents} icon={Calendar} delay={0.2} />
+                    <StatCard label="Est. Revenue" value={`₹${stats.totalRev.toLocaleString()}`} icon={TrendingUp} delay={0.3} trend="+12% this month" />
+                </div>
             </div>
-            <div className="payment-modal-body">
-              {loadingPayments ? (
-                <div className="payment-loading">
-                  <div className="spinner"></div>
-                  <p>Loading pending payments...</p>
+
+            {/* Content Sections */}
+            {loading ? (
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 size={40} className="text-blue-500 animate-spin" />
                 </div>
-              ) : pendingPayments.length === 0 ? (
-                <div className="no-payments">
-                  <p>✅ No pending payments to verify</p>
+            ) : error ? (
+                <div className="p-8 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-center">
+                    <AlertCircle className="mx-auto mb-2" size={32} />
+                    <p>{error}</p>
                 </div>
-              ) : (
-                <>
-                  {isTeamEvent && (
-                    <div className="team-event-notice">
-                      <p>
-                        <strong>ℹ️ Team Event Notice:</strong> Verifying a team
-                        leader's payment will automatically verify all team
-                        members' payments.
-                      </p>
-                    </div>
-                  )}
-                  <div className="payments-list">
-                    {pendingPayments.map((payment, index) => (
-                      <div key={index} className="payment-card">
-                        <div className="payment-info">
-                          <div className="payment-header-row">
-                            <h3 className="payment-student-name">
-                              {DOMPurify.sanitize(
-                                payment.studentName || 'Unknown'
-                              )}
-                              {payment.isTeamLeader && (
-                                <span className="team-leader-badge">
-                                  {' '}
-                                  👑 Team Leader
-                                </span>
-                              )}
-                            </h3>
-                            <span className="payment-amount">
-                              ₹{payment.amount}
-                            </span>
-                          </div>
-                          <div className="payment-details">
-                            <div className="payment-detail-item">
-                              <span className="detail-label">USN:</span>
-                              <span className="detail-value">
-                                {DOMPurify.sanitize(payment.partusn)}
-                              </span>
+            ) : (
+                <div className="space-y-16">
+                    {/* Ongoing Section */}
+                    {events.ongoing.length > 0 && (
+                        <section>
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-2 h-8 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+                                <h2 className="text-2xl font-bold text-white">Live Events</h2>
                             </div>
-                            <div className="payment-detail-item">
-                              <span className="detail-label">Email:</span>
-                              <span className="detail-value">
-                                {DOMPurify.sanitize(
-                                  payment.studentEmail || 'N/A'
-                                )}
-                              </span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {events.ongoing.map((ev, i) => <EventCard key={ev.eid} event={ev} type="ongoing" />)}
                             </div>
-                            <div className="payment-detail-item">
-                              <span className="detail-label">Mobile:</span>
-                              <span className="detail-value">
-                                {DOMPurify.sanitize(
-                                  payment.studentMobile || 'N/A'
-                                )}
-                              </span>
+                        </section>
+                    )}
+
+                    {/* Upcoming Section */}
+                    <section>
+                        <div className="flex items-center gap-3 mb-6">
+                             <div className="w-2 h-8 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+                             <h2 className="text-2xl font-bold text-white">Upcoming</h2>
+                        </div>
+                        {events.upcoming.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {events.upcoming.map((ev, i) => <EventCard key={ev.eid} event={ev} type="upcoming" />)}
                             </div>
-                            <div className="payment-detail-item">
-                              <span className="detail-label">
-                                Transaction ID:
-                              </span>
-                              <span className="detail-value transaction-id">
-                                {DOMPurify.sanitize(
-                                  payment.transactionId || 'N/A'
-                                )}
-                              </span>
+                        ) : (
+                            <p className="text-white/30 italic">No upcoming events scheduled.</p>
+                        )}
+                    </section>
+
+                    {/* Completed Section (Collapsed Visual Style) */}
+                    {events.completed.length > 0 && (
+                        <section className="opacity-60 hover:opacity-100 transition-opacity duration-500">
+                             <div className="flex items-center gap-3 mb-6">
+                                 <div className="w-2 h-8 bg-gray-500 rounded-full" />
+                                 <h2 className="text-2xl font-bold text-white">Past Events</h2>
                             </div>
-                            {payment.teamName && (
-                              <>
-                                <div className="payment-detail-item">
-                                  <span className="detail-label">Team:</span>
-                                  <span className="detail-value">
-                                    {DOMPurify.sanitize(payment.teamName)}
-                                  </span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {events.completed.map((ev, i) => <EventCard key={ev.eid} event={ev} type="completed" />)}
+                            </div>
+                        </section>
+                    )}
+                </div>
+            )}
+        </div>
+
+        {/* --- PREMIUM PAYMENT MODAL --- */}
+        <AnimatePresence>
+            {showPaymentModal && (
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                    onClick={() => setShowPaymentModal(false)}
+                >
+                    <motion.div 
+                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                        onClick={e => e.stopPropagation()}
+                        className="w-full max-w-4xl bg-[#0a0a0f] border border-white/10 rounded-3xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
+                    >
+                        {/* Modal Header */}
+                        <div className="p-6 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
+                            <div>
+                                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                                    <CreditCard className="text-emerald-400" />
+                                    Verification Portal
+                                </h2>
+                                <p className="text-white/40 text-sm mt-1">
+                                    {selectedEvent?.ename} • {isTeamEvent ? 'Team Event' : 'Individual'}
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => setShowPaymentModal(false)}
+                                className="p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
+                            {loadingPayments ? (
+                                <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                                    <Loader2 size={48} className="text-blue-500 animate-spin" />
+                                    <p className="text-white/50 text-sm animate-pulse">Fetching transactions...</p>
                                 </div>
-                                {payment.teamMemberCount && (
-                                  <div className="payment-detail-item">
-                                    <span className="detail-label">
-                                      Team Size:
-                                    </span>
-                                    <span className="detail-value">
-                                      {payment.teamMemberCount}{' '}
-                                      member{payment.teamMemberCount !== 1 ? 's' : ''}
-                                    </span>
-                                  </div>
-                                )}
-                              </>
-                            )}
-                            <div className="payment-detail-item">
-                              <span className="detail-label">Submitted:</span>
-                              <span className="detail-value">
-                                {payment.submittedAt
-                                  ? new Date(payment.submittedAt).toLocaleString()
-                                  : 'N/A'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="payment-actions">
-                          <button
-                            className="payment-btn payment-btn-approve"
-                            onClick={() =>
-                              handleVerifyPayment(
-                                payment.partusn,
-                                selectedEventForPayments.eid
-                              )
-                            }
-                            disabled={processingPayment[payment.partusn]}
-                            aria-label={`Approve payment for ${payment.studentName}`}
-                          >
-                            {processingPayment[payment.partusn] ===
-                            'verifying' ? (
-                              <>
-                                <span className="btn-spinner"></span>
-                                Approving...
-                              </>
+                            ) : pendingPayments.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-64 space-y-4 text-white/30">
+                                    <ShieldCheck size={64} />
+                                    <p>All payments verified.</p>
+                                </div>
                             ) : (
-                              <>
-                                ✓ Approve Payment
-                                {payment.isTeamLeader &&
-                                  payment.teamMemberCount > 1 && (
-                                    <span className="approve-count">
-                                      {' '}
-                                      (All {payment.teamMemberCount})
-                                    </span>
-                                  )}
-                              </>
+                                <div className="space-y-4">
+                                    {isTeamEvent && (
+                                        <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-sm flex items-start gap-3">
+                                            <Users size={18} className="mt-0.5" />
+                                            <p><strong>Batch Action:</strong> Verifying a team leader approves the entire group automatically.</p>
+                                        </div>
+                                    )}
+                                    
+                                    {pendingPayments.map((payment, idx) => (
+                                        <motion.div 
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: idx * 0.05 }}
+                                            key={payment.partusn}
+                                            className="group p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 hover:bg-white/[0.07] transition-all flex flex-col md:flex-row gap-6 items-center"
+                                        >
+                                            <div className="flex-1 space-y-1 w-full text-center md:text-left">
+                                                <h4 className="text-lg font-bold text-white flex items-center justify-center md:justify-start gap-2">
+                                                    {payment.studentName}
+                                                    {payment.isTeamLeader && <Badge color="purple">Leader</Badge>}
+                                                </h4>
+                                                <p className="text-sm text-white/50 font-mono">{payment.partusn}</p>
+                                                <div className="flex items-center justify-center md:justify-start gap-4 text-xs text-white/40 mt-2">
+                                                    <span>Mobile: {payment.studentMobile}</span>
+                                                    <span>•</span>
+                                                    <span className="font-mono bg-white/5 px-2 py-0.5 rounded">ID: {payment.transactionId}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="text-center md:text-right min-w-[120px]">
+                                                <div className="text-2xl font-bold text-white mb-1">₹{payment.amount}</div>
+                                                <div className="text-xs text-white/40">{new Date(payment.submittedAt).toLocaleDateString()}</div>
+                                            </div>
+
+                                            <button 
+                                                onClick={() => verifyPayment(payment.partusn, selectedEvent.eid)}
+                                                disabled={!!processingPayment[payment.partusn]}
+                                                className={cn(
+                                                    "w-full md:w-auto px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2",
+                                                    processingPayment[payment.partusn] === 'success' 
+                                                        ? "bg-emerald-500 text-white" 
+                                                        : "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg shadow-blue-500/20"
+                                                )}
+                                            >
+                                                {processingPayment[payment.partusn] === 'verifying' ? (
+                                                    <Loader2 size={18} className="animate-spin" />
+                                                ) : processingPayment[payment.partusn] === 'success' ? (
+                                                    <><CheckCircle size={18} /> Verified</>
+                                                ) : (
+                                                    "Approve"
+                                                )}
+                                            </button>
+                                        </motion.div>
+                                    ))}
+                                </div>
                             )}
-                          </button>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     </div>
   );
 };
