@@ -205,11 +205,11 @@ const Organisers = () => {
   const handleOrganiseClick = () => navigate('/create-event');
   const handleBack = () => navigate('/events');
 
-  // --- RENDER LIST (New Item Style inside Old Card) ---
+  // --- Render Event Item (Premium Glass Style inside Cards) ---
   const renderEventsList = (eventsList, eventType) => {
-    if (loading) return <div className="event-message">Loading...</div>;
+    if (loading) return <div className="event-message">Loading events...</div>;
     if (error) return <div className="event-message error">Error: {error}</div>;
-    if (!eventsList || eventsList.length === 0) return <div className="event-message">No events available</div>;
+    if (!eventsList || eventsList.length === 0) return <div className="event-message">No {eventType} events found.</div>;
 
     return eventsList.map((event) => (
       <div className="event-item-glass" key={event.eid}>
@@ -224,8 +224,8 @@ const Organisers = () => {
           </div>
 
           <div className="stats-info">
-             <span><i className="fas fa-users"></i> {event.maxPart || '∞'}</span>
-             <span><i className="fas fa-money-bill-wave"></i> ₹{event.regFee || '0'}</span>
+             <span><i className="fas fa-users"></i> {event.maxPart || '∞'} Seats</span>
+             {event.regFee > 0 && <span className="fee-tag">₹{event.regFee}</span>}
           </div>
         </div>
 
@@ -236,7 +236,7 @@ const Organisers = () => {
               onClick={() => handleEventButtonClick(event.eid)}
               title="View Event Page"
             >
-              View
+              <i className="fas fa-eye"></i> View
             </button>
           )}
 
@@ -256,7 +256,7 @@ const Organisers = () => {
             disabled={generatingExcel[event.eid]}
             title="Download Excel"
           >
-            {generatingExcel[event.eid] ? '...' : <i className="fas fa-download"></i>}
+            {generatingExcel[event.eid] ? <span className="spinner-sm"></span> : <><i className="fas fa-file-excel"></i> Details</>}
           </button>
         </div>
       </div>
@@ -264,7 +264,11 @@ const Organisers = () => {
   };
 
   return (
-    <div className="organisers-page">
+    <div className="organisers-dashboard-wrapper">
+      {/* Register Event Style Background */}
+      <div className="registerevent-hero-bg" aria-hidden="true"></div>
+
+      {/* Old Code Shiny Back Button */}
       <div className="logout-container">
         <button className="logout-btn" onClick={handleBack}>
           <i className="fas fa-arrow-left"></i> Back
@@ -274,10 +278,9 @@ const Organisers = () => {
       <section className="hero-section">
         <div className="container">
           
-          {/* OLD CARD GRID STRUCTURE */}
+          {/* Old Card Grid Layout */}
           <div className="card-grid">
             
-            {/* Completed Card */}
             <div className="card" id="completed-card">
               <div className="card__background"></div>
               <div className="card__content">
@@ -288,7 +291,6 @@ const Organisers = () => {
               </div>
             </div>
 
-            {/* Ongoing Card */}
             <div className="card" id="ongoing-card">
               <div className="card__background"></div>
               <div className="card__content">
@@ -299,7 +301,6 @@ const Organisers = () => {
               </div>
             </div>
 
-            {/* Upcoming Card */}
             <div className="card" id="upcoming-card">
               <div className="card__background"></div>
               <div className="card__content">
@@ -312,7 +313,7 @@ const Organisers = () => {
 
           </div>
 
-          {/* OLD BUTTON CONTAINER */}
+          {/* Old Code Animated Organise Button */}
           <div className="button-container">
             <button onClick={handleOrganiseClick}>
                Organise New Event
@@ -321,7 +322,7 @@ const Organisers = () => {
         </div>
       </section>
 
-      {/* NEW FINTECH MODAL */}
+      {/* Fintech Payment Modal */}
       {showPaymentModal && (
         <div className="fintech-modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div className="fintech-modal" onClick={(e) => e.stopPropagation()}>
