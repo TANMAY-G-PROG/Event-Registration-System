@@ -3,6 +3,7 @@ import './participants.css';
 import { useNavigate } from 'react-router-dom';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
+import DOMPurify from 'dompurify';
 
 const Participants = () => {
   const navigate = useNavigate();
@@ -23,12 +24,11 @@ const Participants = () => {
     fetchParticipantEvents();
   }, []);
 
+  // Cleanup object URLs
   useEffect(() => {
     return () => {
       Object.values(downloadLinks).forEach(link => {
-        if (link && link.url) {
-          window.URL.revokeObjectURL(link.url);
-        }
+        if (link && link.url) window.URL.revokeObjectURL(link.url);
       });
     };
   }, [downloadLinks]);
@@ -73,7 +73,8 @@ const Participants = () => {
     eventsList.forEach(event => {
       const eventDate = new Date(event.eventDate);
       eventDate.setHours(0, 0, 0, 0);
-      const diffDays = Math.ceil((eventDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+      const diffTime = eventDate.getTime() - currentDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
       if (diffDays === 0) categorized.ongoing.push(event);
       else if (diffDays < 0) categorized.completed.push(event);
@@ -99,7 +100,6 @@ const Participants = () => {
       setEvents(categorizeEvents(data.participantEvents || []));
       setLoading(false);
     } catch (err) {
-      console.error('Error fetching participant events:', err);
       setError(err.message);
       setLoading(false);
     }
@@ -128,7 +128,6 @@ const Participants = () => {
       const page = pdfDoc.getPages()[0];
       const { width } = page.getSize();
 
-      // Font Loading Logic (Simplified for brevity, exact logic maintained)
       let nameFont;
       try {
         const fontBytes = await fetch(`/Allura-Regular.ttf?v=${t}`).then(r => r.ok ? r.arrayBuffer() : Promise.reject());
@@ -138,14 +137,12 @@ const Participants = () => {
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
       const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
       
-      // Draw Text
       const nameText = userInfo.userName;
       const nameWidth = nameFont.widthOfTextAtSize(nameText, 38);
       page.drawText(nameText, { x: (width - nameWidth) / 2, y: 250, size: 38, font: nameFont, color: rgb(0.97, 0.85, 0.57) });
       page.drawText(userInfo.userUSN, { x: 170, y: 160, size: 19, font, color: rgb(1,1,1) });
       page.drawText(formatDate(event.eventDate), { x: 510, y: 160, size: 16, font: boldFont, color: rgb(1,1,1) });
 
-      // Description Drawing Logic
       const descFont = font; 
       const words = (event.eventdesc || event.ename).split(' ');
       let line = '', yPos = 225;
@@ -177,42 +174,42 @@ const Participants = () => {
   const handleParticipateClick = () => navigate('/register-event');
   const handleBack = () => navigate('/events');
 
-  const renderEvents = (list, type) => {
-    if (loading) return <div className="cyber-loader">Loading data...</div>;
-    if (error) return <div className="cyber-error">{error}</div>;
-    if (!list.length) return <div className="cyber-empty">No events found</div>;
+  const renderEventsList = (eventsList, eventType) => {
+    if (loading) return <div className="part-event-message">Loading...</div>;
+    if (error) return <div className="part-event-message error">Error: {error}</div>;
+    if (!eventsList || eventsList.length === 0) return <div className="part-event-message">No events found.</div>;
 
-    return list.map(ev => (
-      <div className="cyber-event-row" key={ev.eid}>
-        <div className="cyber-event-details">
-          <h4>{DOMPurify.sanitize(ev.ename)}</h4>
-          <div className="cyber-meta">
-            <span><i className="fas fa-calendar-alt"></i> {formatDate(ev.eventDate)}</span>
-            <span><i className="fas fa-clock"></i> {formatTime(ev.eventTime)}</span>
-            <span><i className="fas fa-map-marker-alt"></i> {ev.eventLoc}</span>
+    return eventsList.map(event => (
+      <div className="part-event-item-glass" key={event.eid}>
+        <div className="part-event-info">
+          <h4>{DOMPurify.sanitize(event.ename || 'N/A')}</h4>
+          
+          <div className="part-meta-info">
+            <span><i className="fas fa-calendar-alt"></i> {formatDate(event.eventDate)}</span>
+            <span><i className="fas fa-clock"></i> {formatTime(event.eventTime)}</span>
+            <span><i className="fas fa-map-marker-alt"></i> {DOMPurify.sanitize(event.eventLoc || 'N/A')}</span>
           </div>
-          <div className={`cyber-status status-${ev.PartStatus ? 'attended' : 'registered'}`}>
-            {ev.PartStatus ? 'Attended' : 'Registered'}
+
+          <div className="part-status">
+             Status: {event.PartStatus ? <span className="status-attended">Attended</span> : <span className="status-reg">Registered</span>}
           </div>
         </div>
-        
-        <div className="cyber-actions">
-          {type === 'completed' ? (
-            generatingIds.has(ev.eid) ? (
-              <button className="cyber-btn disabled" disabled>
-                <span className="cyber-spinner"></span> Generating...
-              </button>
-            ) : downloadLinks[ev.eid] ? (
-              <a href={downloadLinks[ev.eid].url} download={downloadLinks[ev.eid].filename} className="cyber-btn success">
+
+        <div className="part-event-actions">
+          {eventType === 'completed' ? (
+            generatingIds.has(event.eid) ? (
+              <button className="part-glass-btn" disabled>Generating...</button>
+            ) : downloadLinks[event.eid] ? (
+              <a href={downloadLinks[event.eid].url} download={downloadLinks[event.eid].filename} className="part-glass-btn success">
                 <i className="fas fa-download"></i> Download
               </a>
             ) : (
-              <button className="cyber-btn glow" onClick={() => handleEventButtonClick(ev, type)}>
-                <i className="fas fa-certificate"></i> Certificate
+              <button className="part-glass-btn primary" onClick={() => handleEventButtonClick(event, eventType)}>
+                View Certificate
               </button>
             )
           ) : (
-            <button className="cyber-btn primary" onClick={() => handleEventButtonClick(ev, type)}>
+            <button className="part-glass-btn secondary" onClick={() => handleEventButtonClick(event, eventType)}>
               View Ticket
             </button>
           )}
@@ -222,7 +219,9 @@ const Participants = () => {
   };
 
   return (
-    <div className="participants-page">
+    <div className="participants-unique-wrapper">
+      <div className="part-noise-overlay"></div>
+
       {/* Preserved Back Button */}
       <div className="logout-container">
         <button id="backBtn" className="logout-btn" onClick={handleBack}>
@@ -232,39 +231,40 @@ const Participants = () => {
 
       <section className="hero-section">
         <div className="container">
-          <h1 className="cyber-title">My <span className="highlight">Participation</span></h1>
           
-          <div className="cyber-grid">
-            {/* Completed Events Panel */}
-            <div className="cyber-panel completed-panel">
-              <div className="panel-header">
-                <h3><i className="fas fa-check-circle"></i> Completed</h3>
-                <span className="badge">{events.completed.length}</span>
-              </div>
-              <div className="panel-body">
-                {renderEvents(events.completed, 'completed')}
-              </div>
-            </div>
-
-            {/* Active Events Panel (Ongoing + Upcoming) */}
-            <div className="cyber-panel active-panel">
-              <div className="panel-header">
-                <h3><i className="fas fa-bolt"></i> Active</h3>
-                <span className="badge">{events.ongoing.length + events.upcoming.length}</span>
-              </div>
-              <div className="panel-body">
-                {events.ongoing.length > 0 && (
-                  <div className="sub-section">
-                    <h5>Ongoing Now</h5>
-                    {renderEvents(events.ongoing, 'ongoing')}
-                  </div>
-                )}
-                <div className="sub-section">
-                  <h5>Upcoming</h5>
-                  {renderEvents(events.upcoming, 'upcoming')}
+          {/* 3-Card Grid Layout (Matching Organisers) */}
+          <div className="card-grid">
+            
+            <div className="card" id="completed-card">
+              <div className="card__background"></div>
+              <div className="card__content">
+                <h3 className="card__heading">Completed Events</h3>
+                <div className="card__details">
+                   {renderEventsList(events.completed, 'completed')}
                 </div>
               </div>
             </div>
+
+            <div className="card" id="ongoing-card">
+              <div className="card__background"></div>
+              <div className="card__content">
+                <h3 className="card__heading">Ongoing Events</h3>
+                <div className="card__details">
+                   {renderEventsList(events.ongoing, 'ongoing')}
+                </div>
+              </div>
+            </div>
+
+            <div className="card" id="upcoming-card">
+              <div className="card__background"></div>
+              <div className="card__content">
+                <h3 className="card__heading">Upcoming Events</h3>
+                <div className="card__details">
+                   {renderEventsList(events.upcoming, 'upcoming')}
+                </div>
+              </div>
+            </div>
+
           </div>
 
           {/* Preserved Participate Button */}
