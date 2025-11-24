@@ -181,35 +181,52 @@ const Volunteers = () => {
     }
   };
 
-  const handleEventButtonClick = (event, type) => {
-    if (type === 'completed') generateCertificate(event);
-    else navigate(`/volunteer-ticket?eventId=${event.eid}`);
+  const getButtonText = (eventType) => {
+    switch (eventType) {
+      case 'completed':
+        return 'View Certificate';
+      case 'ongoing':
+      case 'upcoming':
+      default:
+        return 'View Details';
+    }
   };
 
-  const handleVolunteerClick = () => navigate('/volunteer-event');
-  const handleBack = () => navigate('/events');
+  const handleEventButtonClick = (event, type) => {
+    if (type === 'completed') {
+      generateCertificate(event);
+    } else {
+      navigate(`/volunteer-ticket?eventId=${event.eid}`);
+    }
+  };
+
+  const handleVolunteerClick = () => {
+    navigate('/volunteer-event');
+  };
+
+  const handleBack = () => {
+    navigate('/events');
+  };
 
   const renderEventsList = (eventsList, eventType) => {
     if (loading) return <div className="vol-event-message">Loading...</div>;
     if (error) return <div className="vol-event-message error">Error: {error}</div>;
-    if (!eventsList || eventsList.length === 0) return <div className="vol-event-message">No events found.</div>;
+    if (!eventsList || eventsList.length === 0) return <div className="vol-event-message">No events available</div>;
 
     return eventsList.map(event => (
       <div className="vol-event-item-glass" key={event.eid}>
         <div className="vol-event-info">
           <h4>{event.ename || 'N/A'}</h4>
-          
+          <p className="vol-description">{event.eventdesc || 'No description'}</p>
           <div className="vol-meta-info">
             <span><i className="fas fa-calendar-alt"></i> {formatDate(event.eventDate)}</span>
             <span><i className="fas fa-clock"></i> {formatTime(event.eventTime)}</span>
             <span><i className="fas fa-map-marker-alt"></i> {event.eventLoc || 'N/A'}</span>
           </div>
-
           <div className="vol-status">
              Status: {event.VolnStatus ? <span className="status-confirmed">Confirmed</span> : <span className="status-reg">Registered</span>}
           </div>
         </div>
-
         <div className="vol-event-actions">
           {eventType === 'completed' ? (
             generatingIds.has(event.eid) ? (
@@ -234,10 +251,11 @@ const Volunteers = () => {
   };
 
   return (
-    <div className="volunteers-unique-wrapper">
-      <div className="vol-noise-overlay"></div>
+    // ✅ SCOPED WRAPPER TO PREVENT CSS LEAK
+    <div className="volunteers-isolated-wrapper">
+      
+      <div className="vol-bg-layer"></div>
 
-      {/* Preserved Back Button */}
       <div className="logout-container">
         <button id="backBtn" className="logout-btn" onClick={handleBack}>
           <i className="fas fa-arrow-left"></i> Back
@@ -281,9 +299,8 @@ const Volunteers = () => {
 
           </div>
 
-          {/* Preserved Volunteer Button */}
           <div className="button-container">
-            <button onClick={handleVolunteerClick}>
+            <button id="volunteerOtherEvent" onClick={handleVolunteerClick}>
               Volunteer in Other Event
             </button>
           </div>
