@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import ProfileCard from './ProfileCard';
-import './Aboutus.css';
+import ProfileCard from './ProfileCard'; // Keeping your existing component
+import './aboutus.css';
 import member1 from './assets/member1.jpg';
 import member2 from './assets/member2.jpg';
 import member3 from './assets/member3.jpg';
@@ -43,36 +43,26 @@ const AboutUs = () => {
   ];
 
   const socialLinks = [
-    { name: "Email Us", icon: "fas fa-envelope", url: "mailto:flopass333@gmail.com", isEmail: true }
+    { name: "Get in Touch", icon: "fas fa-paper-plane", url: "mailto:flopass333@gmail.com", isEmail: true }
   ];
 
   const handleContactClick = (linkedin) => {
     if (linkedin) {
       window.open(linkedin, "_blank");
-    } else {
-      console.log("LinkedIn link not available");
     }
   };
 
-  // Handle email clicks separately
   const handleSocialClick = (e, link) => {
-    if (link.isEmail) {
-      // For email links, let the browser handle mailto: naturally
-      // Don't prevent default
-      return;
-    }
-    // For other links, open in new tab
+    if (link.isEmail) return;
     e.preventDefault();
     window.open(link.url, "_blank");
   };
 
-  // Scroll to hash fragment (e.g., #connect-section) when page loads
   useEffect(() => {
     const hash = window.location.hash;
     if (hash) {
       const element = document.querySelector(hash);
       if (element) {
-        // Small delay to ensure DOM is fully rendered
         setTimeout(() => {
           element.scrollIntoView({ behavior: 'smooth' });
         }, 100);
@@ -85,19 +75,21 @@ const AboutUs = () => {
       {/* Hero Section */}
       <section className="aboutus-hero">
         <div className="hero-content">
-          <h1 className="hero-title">About Flo</h1>
+          <h1 className="hero-title">
+            About <span>Flo</span>
+          </h1>
           <div className="hero-underline"></div>
           <p className="hero-description">
-            Hey there! 👋 This is FLO the place where we finally said "bye-bye" to manual forms and "hello" to effortless online passes.
-            We built this platform because life's too short to wait in lines or deal with slow processes. With FLO, you can apply, track, and receive approvals faster than your chai cools down.
-            Smooth design, fast processing, no nonsense. Just vibes + efficiency.
+            Hey there! 👋 This is FLO — the place where we finally said "bye-bye" to manual forms and "hello" to effortless online passes.
+            <br /><br />
+            We built this platform because life's too short to wait in lines. With FLO, you can apply, track, and receive approvals faster than your chai cools down. Just vibes + efficiency.
           </p>
         </div>
       </section>
 
       {/* Team Section */}
       <section className="team-section">
-        <h2 className="section-title">Meet Our Team</h2>
+        <h2 className="section-title">The Creators</h2>
         <div className="team-grid">
           {teamMembers.map((member, index) => (
             <div key={index} className="card-wrapper">
@@ -120,7 +112,7 @@ const AboutUs = () => {
 
       {/* Connect Section */}
       <section className="connect-section" id="connect-section">
-        <h2 className="connect-title">Connect With Us</h2>
+        <h2 className="connect-title">Let's Build Together</h2>
         <div className="social-links">
           {socialLinks.map((link, index) => (
             <a
