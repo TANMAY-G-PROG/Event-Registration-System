@@ -1,128 +1,117 @@
 /* ===================================
-   REGISTEREVENT - CYBER GLASS REDESIGN
+   REGISTEREVENT - STRICTLY SCOPED & ISOLATED
    =================================== */
 
-/* 1. CORE VARIABLES & THEME */
+/* 1. SCOPED VARIABLES & CONTAINER 
+   Moving :root to .registerevent-page ensures these variables 
+   only exist when this wrapper is present. */
 .registerevent-page {
-  /* Core Palette - Updated to Match Your Preferred Background */
+  /* --- Palette --- */
   --re-bg-deep: #0b0e14; 
   --re-bg-surface: #0a0a0f;
   --re-text-primary: #ffffff;
   --re-text-secondary: #94a3b8;
   --re-text-tertiary: #475569;
   
-  /* Accents */
+  /* --- Accents --- */
   --re-accent-cyan: #00f0ff;
   --re-accent-violet: #7000ff;
   --re-accent-success: #00ff9d;
   --re-accent-error: #ff0055;
   --re-accent-warning: #ffbd00;
-
-  /* Glassmorphism System */
+  
+  /* --- Glass System --- */
   --re-glass-surface: rgba(255, 255, 255, 0.03);
   --re-glass-border: rgba(255, 255, 255, 0.08);
   --re-glass-highlight: rgba(255, 255, 255, 0.15);
-  --re-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   
-  /* Spacing & Layout */
+  /* --- Layout & Anim --- */
   --re-container-width: 1200px;
   --re-radius-lg: 24px;
-  --re-radius-md: 16px;
-  --re-radius-sm: 8px;
-  
-  /* Animation */
-  --re-ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
   --re-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* 2. GLOBAL RESET & BASE - Fixing Overflow/White Edges */
-.registerevent-page {
-  position: relative;
+  
+  /* --- ISOLATION & WHITE EDGE FIX --- */
+  position: absolute; /* Detaches from global document flow */
+  top: 0;
+  left: 0;
+  right: 0;
   min-height: 100vh;
-  width: 100%;          /* Ensure full width */
-  margin: 0;            /* Reset margin */
-  padding: 0;           /* Reset padding */
-  background-color: var(--re-bg-deep);
-  color: var(--re-text-primary);
+  width: 100%;
+  background-color: var(--re-bg-deep); /* Ensures dark bg behind overscroll */
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  overflow-x: hidden;   /* Prevent horizontal scrolling */
+  overflow-x: hidden;
   isolation: isolate;
   -webkit-font-smoothing: antialiased;
   box-sizing: border-box;
 }
 
-/* 3. ATMOSPHERIC BACKGROUNDS - Restored from New Code */
+/* Ensure all children inherit box-sizing */
+.registerevent-page * {
+  box-sizing: border-box;
+}
+
+/* 2. ATMOSPHERIC BACKGROUND */
 .registerevent-hero-bg {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  /* The specific background you requested */
   background-color: #0b0e14;
   background-image: 
     radial-gradient(60rem 60rem at 20% 20%, color-mix(in oklab, #0ea5e9 22%, transparent), transparent 55%),
     radial-gradient(48rem 48rem at 80% 28%, color-mix(in oklab, #22d3ee 18%, transparent), transparent 52%),
-    radial-gradient(44rem 44rem at 50% 80%, color-mix(in oklab, #60a5fa 16%, transparent), transparent 50%),
-    radial-gradient(100% 100% at 50% 0%, color-mix(in oklab, black 6%, transparent), transparent 60%);
+    radial-gradient(44rem 44rem at 50% 80%, color-mix(in oklab, #60a5fa 16%, transparent), transparent 50%);
   filter: saturate(1.05) brightness(1.02);
 }
 
-/* 4. LAYOUT CONTAINER */
+/* 3. LAYOUT CONTAINER */
 .registerevent-container {
   max-width: var(--re-container-width);
   margin: 0 auto;
   padding: 120px 24px 60px;
   position: relative;
   z-index: 10;
-  width: 100%; /* Ensure container doesn't shrink weirdly */
-  box-sizing: border-box;
+  width: 100%;
 }
 
-/* 5. HEADER & HERO SECTION */
+/* 4. HEADER & TYPOGRAPHY */
 .registerevent-header {
   display: flex;
   flex-direction: column;
   gap: 32px;
-  margin-bottom: 80px;
-  position: relative;
-}
-
-.registerevent-header-text {
-  max-width: 600px;
+  margin-bottom: 60px;
 }
 
 .registerevent-title {
-  font-size: clamp(3rem, 5vw, 4.5rem);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
   font-weight: 800;
-  letter-spacing: -0.03em;
   line-height: 1;
   margin: 0;
   background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  text-shadow: 0 0 40px rgba(255,255,255,0.1);
 }
 
 .registerevent-subtitle {
   font-size: 1.125rem;
   color: var(--re-text-secondary);
   margin-top: 16px;
-  font-weight: 400;
-  max-width: 45ch;
   line-height: 1.6;
 }
 
-/* 6. SEGMENTED CONTROL FILTERS */
+/* 5. FILTERS */
 .registerevent-filters {
   display: inline-flex;
   padding: 6px;
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--re-glass-border);
   border-radius: 100px;
   gap: 4px;
-  position: relative;
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .registerevent-filter-btn {
@@ -135,58 +124,58 @@
   cursor: pointer;
   border-radius: 100px;
   transition: all 0.3s var(--re-ease-smooth);
-  position: relative;
-  z-index: 2;
-}
-
-.registerevent-filter-btn:hover {
-  color: var(--re-text-primary);
+  white-space: nowrap;
 }
 
 .registerevent-filter-active {
   color: #000 !important;
   background: var(--re-text-primary);
-  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
 }
 
-/* 7. EVENT GRID MASONRY */
+/* 6. EVENT GRID */
 .registerevent-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 32px;
-  perspective: 1000px;
 }
 
-/* 8. HOLOGRAPHIC CARD DESIGN */
+/* 7. CARD DESIGN (Optimized for No Blur/Lag) */
 .registerevent-card {
   background: var(--re-glass-surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--re-glass-border);
   border-radius: var(--re-radius-lg);
   padding: 0; 
   overflow: hidden;
   position: relative;
-  transition: transform 0.4s var(--re-ease-elastic), box-shadow 0.4s ease;
   display: flex;
   flex-direction: column;
+  
+  /* Performance & Clarity Fixes */
+  transform: translateZ(0); 
+  backface-visibility: hidden;
+  will-change: transform;
+  transition: transform 0.3s var(--re-ease-smooth);
 }
 
 .registerevent-card::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
   opacity: 0.5;
 }
 
 .registerevent-card:hover {
-  transform: translateY(-8px) scale(1.01);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4), 
-              0 0 0 1px rgba(255,255,255,0.1);
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); 
+}
+
+/* Ensure child text stays sharp during animation */
+.registerevent-card * {
+  transform: translateZ(0);
 }
 
 .registerevent-card-content {
@@ -194,18 +183,6 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-}
-
-.registerevent-card-header {
-  margin-bottom: 24px;
-}
-
-.registerevent-card-title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 8px;
 }
 
 .registerevent-card-title {
@@ -220,7 +197,7 @@
   font-size: 0.95rem;
   color: var(--re-text-secondary);
   line-height: 1.6;
-  margin: 0;
+  margin: 12px 0 0 0;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -228,12 +205,7 @@
 }
 
 /* Badges */
-.registerevent-badges {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
+.registerevent-badges { display: flex; gap: 8px; flex-wrap: wrap; }
 .registerevent-badge {
   padding: 6px 12px;
   border-radius: 6px;
@@ -243,31 +215,12 @@
   letter-spacing: 0.05em;
   border: 1px solid transparent;
 }
+.registerevent-badge-upcoming { background: rgba(0, 240, 255, 0.1); color: var(--re-accent-cyan); border-color: rgba(0, 240, 255, 0.2); }
+.registerevent-badge-ongoing { background: rgba(0, 255, 157, 0.1); color: var(--re-accent-success); border-color: rgba(0, 255, 157, 0.2); }
+.registerevent-badge-completed { background: rgba(255, 255, 255, 0.05); color: var(--re-text-tertiary); }
+.registerevent-badge-team { background: linear-gradient(135deg, rgba(112, 0, 255, 0.2), rgba(0, 240, 255, 0.2)); color: #fff; border: 1px solid rgba(255, 255, 255, 0.1); }
 
-.registerevent-badge-upcoming {
-  background: rgba(0, 240, 255, 0.1);
-  color: var(--re-accent-cyan);
-  border-color: rgba(0, 240, 255, 0.2);
-}
-
-.registerevent-badge-ongoing {
-  background: rgba(0, 255, 157, 0.1);
-  color: var(--re-accent-success);
-  border-color: rgba(0, 255, 157, 0.2);
-}
-
-.registerevent-badge-completed {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--re-text-tertiary);
-}
-
-.registerevent-badge-team {
-  background: linear-gradient(135deg, rgba(112, 0, 255, 0.2), rgba(0, 240, 255, 0.2));
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Data Grid (Info) */
+/* Info Grid */
 .registerevent-info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -276,7 +229,6 @@
   padding-top: 24px;
   border-top: 1px solid var(--re-glass-border);
 }
-
 .registerevent-info-item h4 {
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -285,15 +237,9 @@
   margin: 0 0 6px 0;
   font-weight: 600;
 }
+.registerevent-info-item p { font-size: 0.9rem; color: var(--re-text-primary); margin: 0; font-weight: 500; }
 
-.registerevent-info-item p {
-  font-size: 0.9rem;
-  color: var(--re-text-primary);
-  margin: 0;
-  font-weight: 500;
-}
-
-/* 9. ACTIONS & BUTTONS */
+/* 8. BUTTONS */
 .registerevent-actions-footer {
   padding: 20px 28px;
   background: rgba(0, 0, 0, 0.2);
@@ -301,12 +247,10 @@
 }
 
 .registerevent-register-btn, 
-.registerevent-pay-btn,
-.registerevent-modal-submit-btn,
 .registerevent-invite-confirm-btn,
+.registerevent-modal-submit-btn,
 .registerevent-upi-pay-btn {
   width: 100%;
-  position: relative;
   padding: 14px 24px;
   border-radius: 12px;
   border: none;
@@ -315,20 +259,12 @@
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: transform 0.2s var(--re-ease-smooth), box-shadow 0.2s;
-  overflow: hidden;
-  z-index: 1;
-  text-align: center;
+  transition: transform 0.2s var(--re-ease-smooth);
   text-decoration: none;
   display: inline-block;
+  text-align: center;
 }
-
-.registerevent-register-btn:hover,
-.registerevent-pay-btn:hover,
-.registerevent-upi-pay-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px -5px rgba(255, 255, 255, 0.4);
-}
+.registerevent-register-btn:hover { transform: translateY(-2px); }
 
 .registerevent-team-action-btn {
   background: rgba(255, 255, 255, 0.05);
@@ -341,13 +277,9 @@
   transition: all 0.3s ease;
   width: 100%;
 }
+.registerevent-team-action-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: white; }
 
-.registerevent-team-action-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: white;
-}
-
-/* 10. TEAM HUD PANEL */
+/* 9. TEAM HUD */
 .registerevent-hud-panel {
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--re-glass-border);
@@ -355,257 +287,87 @@
   padding: 16px;
   margin-top: 16px;
 }
+.registerevent-hud-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--re-glass-border); padding-bottom: 12px; }
+.registerevent-hud-label { font-size: 0.75rem; color: var(--re-text-tertiary); text-transform: uppercase; }
+.registerevent-hud-value { color: var(--re-accent-cyan); font-family: monospace; font-size: 0.85rem; }
+.registerevent-member-stack { display: flex; flex-direction: column; gap: 8px; }
+.registerevent-member-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 6px 8px; background: rgba(255,255,255,0.02); border-radius: 6px; }
 
-.registerevent-hud-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--re-glass-border);
-  padding-bottom: 12px;
-}
-
-.registerevent-hud-label {
-  font-size: 0.75rem;
-  color: var(--re-text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.registerevent-hud-value {
-  color: var(--re-accent-cyan);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem;
-}
-
-.registerevent-member-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.registerevent-member-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.85rem;
-  padding: 6px 8px;
-  background: rgba(255,255,255,0.02);
-  border-radius: 6px;
-}
-
-.registerevent-status-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-}
-
-.registerevent-status-indicator::before {
-  content: '';
-  display: block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
+.registerevent-status-indicator { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; }
+.registerevent-status-indicator::before { content: ''; display: block; width: 6px; height: 6px; border-radius: 50%; }
 .registerevent-status-indicator.joined { color: var(--re-accent-success); }
 .registerevent-status-indicator.joined::before { background: var(--re-accent-success); box-shadow: 0 0 8px var(--re-accent-success); }
-
 .registerevent-status-indicator.pending { color: var(--re-accent-warning); }
 .registerevent-status-indicator.pending::before { background: var(--re-accent-warning); }
 
-/* 11. MODALS */
+/* 10. MODALS */
 .registerevent-modal-overlay {
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: modal-fade-in 0.3s ease-out;
+  display: flex; align-items: center; justify-content: center;
+  animation: re-fade-in 0.2s ease-out;
 }
 
 .registerevent-modal {
   background: #111116;
   border: 1px solid var(--re-glass-highlight);
   border-radius: 24px;
-  width: 90%;
-  max-width: 550px;
-  box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8);
-  overflow: hidden;
-  animation: modal-scale-in 0.4s var(--re-ease-elastic);
-  max-height: 90vh;
+  width: 90%; max-width: 550px;
+  max-height: 90vh; /* Changed from dvh to vh for safer compatibility */
   overflow-y: auto;
+  box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8);
+  animation: re-scale-in 0.3s var(--re-ease-smooth);
 }
 
-.registerevent-modal-header {
-  padding: 24px;
-  border-bottom: 1px solid var(--re-glass-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(255,255,255,0.02);
-}
+.registerevent-modal-header { padding: 24px; border-bottom: 1px solid var(--re-glass-border); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); }
+.registerevent-modal-title { font-size: 1.25rem; color: white; margin: 0; }
+.registerevent-modal-close { background: transparent; border: 1px solid var(--re-glass-border); color: var(--re-text-secondary); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.registerevent-modal-close:hover { background: white; color: black; }
+.registerevent-modal-body { padding: 32px; }
 
-.registerevent-modal-title {
-  font-size: 1.25rem;
-  color: white;
-  margin: 0;
-}
+/* Form Styles */
+.registerevent-form-group { margin-bottom: 20px; }
+.registerevent-form-label { display: block; font-size: 0.85rem; color: var(--re-text-secondary); margin-bottom: 8px; font-weight: 500; }
+.registerevent-form-input { width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--re-glass-border); padding: 14px; border-radius: 12px; color: white; transition: border-color 0.2s; }
+.registerevent-form-input:focus { outline: none; border-color: var(--re-accent-cyan); }
 
-.registerevent-modal-close {
-  background: transparent;
-  border: 1px solid var(--re-glass-border);
-  color: var(--re-text-secondary);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
+/* UPI/QR Styles */
+.registerevent-qr-wrapper { background: white; padding: 16px; border-radius: 16px; margin: 0 auto 20px; width: fit-content; box-shadow: 0 0 30px rgba(0, 240, 255, 0.2); }
+.registerevent-payment-details { background: rgba(255,255,255,0.03); border: 1px solid var(--re-glass-border); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+.registerevent-payment-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.registerevent-payment-value { font-family: monospace; color: var(--re-accent-cyan); }
 
-.registerevent-modal-close:hover {
-  background: white;
-  color: black;
-}
-
-.registerevent-modal-body {
-  padding: 32px;
-}
-
-/* Form Styles inside Modal */
-.registerevent-form-group {
-  margin-bottom: 20px;
-}
-
-.registerevent-form-label {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--re-text-secondary);
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.registerevent-form-input {
-  width: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--re-glass-border);
-  padding: 14px;
-  border-radius: 12px;
-  color: white;
-  font-family: inherit;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  box-sizing: border-box; 
-}
-
-.registerevent-form-input:focus {
-  outline: none;
-  border-color: var(--re-accent-cyan);
-  box-shadow: 0 0 0 4px rgba(0, 240, 255, 0.1);
-}
-
-/* UPI Special Styles */
-.registerevent-qr-wrapper {
-  background: white;
-  padding: 16px;
-  border-radius: 16px;
-  margin: 0 auto 20px;
-  width: fit-content;
-  box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
-}
-
-.registerevent-payment-details {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--re-glass-border);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
-}
-
-.registerevent-payment-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-
-.registerevent-payment-value {
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--re-accent-cyan);
-}
-
-/* 12. FLASH MESSAGES */
+/* 11. FLASH MESSAGES */
 .registerevent-flash {
-  position: fixed;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 24px;
-  border-radius: 100px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  z-index: 2000;
-  backdrop-filter: blur(12px);
-  animation: slide-down 0.4s var(--re-ease-elastic);
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+  padding: 12px 24px; border-radius: 100px; font-weight: 600; font-size: 0.9rem;
+  z-index: 2000; backdrop-filter: blur(12px);
+  animation: re-slide-down 0.4s var(--re-ease-smooth);
+  display: flex; align-items: center; gap: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  width: max-content;
 }
+.registerevent-flash-success { background: rgba(0, 255, 157, 0.15); border: 1px solid rgba(0, 255, 157, 0.3); color: #a3ffce; }
+.registerevent-flash-error { background: rgba(255, 0, 85, 0.15); border: 1px solid rgba(255, 0, 85, 0.3); color: #ffc2d6; }
 
-.registerevent-flash-success {
-  background: rgba(0, 255, 157, 0.15);
-  border: 1px solid rgba(0, 255, 157, 0.3);
-  color: #a3ffce;
-}
-
-.registerevent-flash-error {
-  background: rgba(255, 0, 85, 0.15);
-  border: 1px solid rgba(255, 0, 85, 0.3);
-  color: #ffc2d6;
-}
-
-/* 13. UTILITIES */
+/* 12. UTILITIES & ANIMATIONS (Renamed for Isolation) */
 .registerevent-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(255,255,255,0.1);
-  border-top-color: var(--re-accent-cyan);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto;
+  width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: var(--re-accent-cyan); border-radius: 50%;
+  animation: re-spin 1s linear infinite; margin: 0 auto;
 }
 
-@keyframes spin { 100% { transform: rotate(360deg); } }
-@keyframes modal-fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes modal-scale-in { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-@keyframes slide-down { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes re-spin { 100% { transform: rotate(360deg); } }
+@keyframes re-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes re-scale-in { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes re-slide-down { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
-.registerevent-back {
-  margin-top: 60px;
-  display: flex;
-  justify-content: center;
-}
-
-.registerevent-back-btn {
-  background: transparent;
-  border: 1px solid var(--re-glass-border);
-  color: var(--re-text-secondary);
-  padding: 12px 24px;
-  border-radius: 100px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.registerevent-back-btn:hover {
-  border-color: white;
-  color: white;
-}
+.registerevent-back { margin-top: 60px; display: flex; justify-content: center; }
+.registerevent-back-btn { background: transparent; border: 1px solid var(--re-glass-border); color: var(--re-text-secondary); padding: 12px 24px; border-radius: 100px; cursor: pointer; transition: all 0.2s; }
+.registerevent-back-btn:hover { border-color: white; color: white; }
 
 /* Responsive */
 @media (max-width: 768px) {
