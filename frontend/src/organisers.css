@@ -5,7 +5,7 @@
 @property --org-angle-1 { syntax: '<angle>'; inherits: false; initial-value: -75deg; }
 @property --org-angle-2 { syntax: '<angle>'; inherits: false; initial-value: -45deg; }
 
-/* --- MAIN WRAPPER --- */
+/* --- MAIN WRAPPER (Scoped) --- */
 .organisers-unique-wrapper {
   --org-bg-dark: #2d3548;
   --org-text-light: rgba(255, 255, 255, 0.6);
@@ -13,6 +13,15 @@
   --org-primary-color: #1a73e8;
   --org-anim-time: 400ms;
   --org-anim-ease: cubic-bezier(0.25, 1, 0.5, 1);
+
+  /* SMOOTH RADIAL BACKGROUND (From RegisterEvent) - NO NOISE/DOTS */
+  background-color: #0b0e14;
+  background-image: 
+    radial-gradient(60rem 60rem at 20% 20%, rgba(14, 165, 233, 0.22), transparent 55%),
+    radial-gradient(48rem 48rem at 80% 28%, rgba(34, 211, 238, 0.18), transparent 52%),
+    radial-gradient(44rem 44rem at 50% 80%, rgba(96, 165, 250, 0.16), transparent 50%),
+    radial-gradient(100% 100% at 50% 0%, rgba(0, 0, 0, 0.06), transparent 60%);
+  filter: saturate(1.05) brightness(1.02);
 
   font-family: 'Montserrat', sans-serif;
   font-size: 14px;
@@ -28,26 +37,6 @@
 
 .organisers-unique-wrapper * {
   box-sizing: border-box;
-}
-
-/* --- REGISTER EVENT BACKGROUND (Exact copy) --- */
-.org-background-layer {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-color: #0b0e14;
-  background-image: 
-    radial-gradient(60rem 60rem at 20% 20%, color-mix(in oklab, #0ea5e9 22%, transparent), transparent 55%),
-    radial-gradient(48rem 48rem at 80% 28%, color-mix(in oklab, #22d3ee 18%, transparent), transparent 52%),
-    radial-gradient(44rem 44rem at 50% 80%, color-mix(in oklab, #60a5fa 16%, transparent), transparent 50%),
-    radial-gradient(100% 100% at 50% 0%, color-mix(in oklab, black 6%, transparent), transparent 60%);
-  filter: saturate(1.05) brightness(1.02);
-}
-
-.org-noise-overlay {
-  position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0.05;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
 /* --- SHINY BACK BUTTON (Exact Old Code) --- */
@@ -115,7 +104,7 @@
   border: 1px solid rgba(255,255,255,0.1);
 }
 
-/* BLUR EFFECT ON SIBLINGS (Card hovered -> others blur) */
+/* BLUR EFFECT ON SIBLINGS (Hover one, others blur) */
 .org-card-grid:hover > .org-card:not(:hover) .org-card__background {
   filter: brightness(0.5) saturate(0) contrast(1.2) blur(20px);
 }
