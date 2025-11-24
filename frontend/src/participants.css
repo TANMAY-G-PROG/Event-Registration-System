@@ -19,7 +19,7 @@
   color: white;
   overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior: none;
+  overscroll-behavior: auto;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -217,3 +217,4 @@
 @media (max-width: 768px) {
   .participants-page .card-grid { grid-template-columns: 1fr; }
 }
+
