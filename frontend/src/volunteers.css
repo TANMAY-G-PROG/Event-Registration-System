@@ -1,6 +1,16 @@
 @import url('https://fonts.googleapis.com/css?family=Montserrat:400,700');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
 
+/* --- GLOBAL FIX (New) --- */
+/* Paints the underlying bounce dark */
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #0b0e14;
+  height: 100%;
+  width: 100%;
+}
+
 /* --- ANIMATION PROPERTIES (Match Participants) --- */
 @property --vol-angle-1 { syntax: '<angle>'; inherits: false; initial-value: -75deg; }
 @property --vol-angle-2 { syntax: '<angle>'; inherits: false; initial-value: -45deg; }
@@ -23,11 +33,15 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding-bottom: env(safe-area-inset-bottom); /* Added Safe Area */
+  
+  /* UPDATED FIX: Extra buffer for gesture bar */
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  
   overflow-x: hidden;
   overflow-y: auto;
   color: white;
-  overscroll-behavior: auto;
+  
+  /* ALLOWS pull-to-refresh */
   -webkit-overflow-scrolling: touch;
 }
 
