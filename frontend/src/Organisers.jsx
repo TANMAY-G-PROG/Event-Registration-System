@@ -85,7 +85,7 @@ const Organisers = () => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
     });
   };
@@ -186,8 +186,6 @@ const Organisers = () => {
       setTimeout(() => {
         if (data.verifiedCount && data.verifiedCount > 1) {
           alert(`${data.message}\nAll ${data.verifiedCount} team members can now mark attendance.`);
-        } else {
-         // alert(data.message || 'Payment verified successfully!');
         }
         setPendingPayments((prev) => prev.filter((p) => p.partusn !== participantUSN));
         setProcessingPayment((prev) => ({ ...prev, [participantUSN]: null }));
@@ -207,7 +205,7 @@ const Organisers = () => {
   const handleOrganiseClick = () => navigate('/create-event');
   const handleBack = () => navigate('/events');
 
-  // --- Render Event Item (Using New Premium Styles) ---
+  // --- Render Event Item (Using Updated Buttons inside Cards) ---
   const renderEventsList = (eventsList, eventType) => {
     if (loading) return <div className="event-message">Loading events...</div>;
     if (error) return <div className="event-message error">Error: {error}</div>;
@@ -215,7 +213,6 @@ const Organisers = () => {
 
     return eventsList.map((event) => (
       <div className="event-item-glass" key={event.eid}>
-        <div className="event-glow-accent"></div>
         
         <div className="event-info">
           <h4>{DOMPurify.sanitize(event.ename || 'N/A')}</h4>
@@ -269,10 +266,8 @@ const Organisers = () => {
 
   return (
     <div className="organisers-dashboard-wrapper">
-      {/* New Background Elements */}
+      {/* Background Elements */}
       <div className="noise-overlay"></div>
-      <div className="ambient-blob blob-1"></div>
-      <div className="ambient-blob blob-2"></div>
 
       <div className="logout-container">
         <button className="back-nav-btn" onClick={handleBack}>
@@ -282,12 +277,12 @@ const Organisers = () => {
 
       <section className="hero-section">
         <div className="container">
-          {/* Old Grid Layout with New Styling */}
+          
           <div className="card-grid">
             
-            <div className="glass-card" id="completed-card">
+            <div className="pop-card" id="completed-card">
               <div className="card-header">
-                 <h3>Completed</h3>
+                 <h3>Completed Events</h3>
                  <span className="count-badge">{events.completed.length}</span>
               </div>
               <div className="card-body">
@@ -295,7 +290,7 @@ const Organisers = () => {
               </div>
             </div>
 
-            <div className="glass-card main-highlight" id="ongoing-card">
+            <div className="pop-card" id="ongoing-card">
               <div className="card-header">
                  <h3>Ongoing Events</h3>
                  <div className="live-tag"><span className="blink"></span> LIVE</div>
@@ -305,9 +300,9 @@ const Organisers = () => {
               </div>
             </div>
 
-            <div className="glass-card" id="upcoming-card">
+            <div className="pop-card" id="upcoming-card">
               <div className="card-header">
-                 <h3>Upcoming</h3>
+                 <h3>Upcoming Events</h3>
                  <span className="count-badge">{events.upcoming.length}</span>
               </div>
               <div className="card-body">
@@ -325,7 +320,7 @@ const Organisers = () => {
         </div>
       </section>
 
-      {/* New Fintech Modal */}
+      {/* Fintech Modal */}
       {showPaymentModal && (
         <div className="fintech-modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div className="fintech-modal" onClick={(e) => e.stopPropagation()}>
