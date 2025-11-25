@@ -38,7 +38,7 @@ export default function Login() {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch('/api/me', { // ✅ CHANGED
+      const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -69,7 +69,7 @@ export default function Login() {
       return;
     }
     try {
-      const response = await fetch('/api/signin', { // ✅ CHANGED
+      const response = await fetch('/api/signin', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -98,10 +98,9 @@ export default function Login() {
       showMessage('Please fill in all fields', true);
       return;
     }
-    if (!/^1BM\d{2}[A-Z]{2}\d{3}$/.test(usn)) {
-      showMessage('Invalid USN format. Example: 1BM23CS101', true);
-      return;
-    }
+    
+    // REMOVED: Strict 1BM regex check to allow other college USNs
+    
     if (!/\S+@\S+\.\S+/.test(email)) {
       showMessage('Please enter a valid email address', true);
       return;
@@ -116,7 +115,7 @@ export default function Login() {
       return;
     }
     try {
-      const response = await fetch('/api/signup', { // ✅ CHANGED
+      const response = await fetch('/api/signup', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -163,6 +162,7 @@ export default function Login() {
     const { name, value } = e.target;
     setSignUpData((prev) => ({
       ...prev,
+      // Still converting to uppercase, but no longer enforcing 1BM prefix
       [name]: name === 'usn' ? value.toUpperCase() : value,
     }));
   };
