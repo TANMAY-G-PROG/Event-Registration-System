@@ -105,12 +105,9 @@ app.post('/api/signup', async (req, res) => {
     try {
         const { name, usn, sem, mobno, email, password } = req.body;
         
+        // Removed specific 1BM regex check to allow any USN format (e.g., 1RV...)
         if (!usn || !name || !email || !sem || !mobno || !password) {
             return res.status(400).json({ error: 'All fields are required' });
-        }
-
-        if (!/^1BM\d{2}[A-Z]{2}\d{3}$/.test(usn)) {
-            return res.status(400).json({ error: 'Invalid USN format' });
         }
 
         const { data: existingUser, error: checkError } = await supabase
