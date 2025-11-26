@@ -151,7 +151,11 @@ const Volunteers = () => {
       page.drawText(formatDate(event.eventDate), { x: 510, y: 160, size: 16, font: boldFont, color: rgb(1,1,1) });
 
       const descFont = font; 
-      const words = (event.eventdesc || event.ename).split(' ');
+
+      // --- UPDATED LOGIC HERE: Use certificate_info if available ---
+      const contentText = event.certificate_info || event.eventdesc || event.ename;
+      const words = contentText.split(' ');
+
       let line = '', yPos = 225;
       words.forEach(word => {
         const testLine = line + word + ' ';
@@ -170,25 +174,6 @@ const Volunteers = () => {
       alert(`Error: ${err.message}`);
     } finally {
       setGeneratingIds(prev => { const next = new Set(prev); next.delete(event.eid); return next; });
-    }
-  };
-
-  const getVolunteerStatus = (status) => {
-    switch (status) {
-      case 0: case false: return 'Registered';
-      case 1: case true: return 'Confirmed';
-      default: return 'Unknown';
-    }
-  };
-
-  const getButtonText = (eventType) => {
-    switch (eventType) {
-      case 'completed':
-        return 'View Certificate';
-      case 'ongoing':
-      case 'upcoming':
-      default:
-        return 'View Details';
     }
   };
 
@@ -224,7 +209,7 @@ const Volunteers = () => {
             <span><i className="fas fa-map-marker-alt"></i> {event.eventLoc || 'N/A'}</span>
           </div>
           <div className="vol-status">
-             Status: {event.VolnStatus ? <span className="status-confirmed">Confirmed</span> : <span className="status-reg">Registered</span>}
+              Status: {event.VolnStatus ? <span className="status-confirmed">Confirmed</span> : <span className="status-reg">Registered</span>}
           </div>
         </div>
         <div className="vol-event-actions">
@@ -251,7 +236,6 @@ const Volunteers = () => {
   };
 
   return (
-    // ✅ SCOPED WRAPPER TO PREVENT CSS LEAK
     <div className="volunteers-isolated-wrapper">
       
       <div className="vol-bg-layer"></div>
