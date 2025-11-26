@@ -144,7 +144,11 @@ const Participants = () => {
       page.drawText(formatDate(event.eventDate), { x: 510, y: 160, size: 16, font: boldFont, color: rgb(1,1,1) });
 
       const descFont = font; 
-      const words = (event.eventdesc || event.ename).split(' ');
+      
+      // --- UPDATED LOGIC HERE: Use certificate_info if available ---
+      const contentText = event.certificate_info || event.eventdesc || event.ename;
+      const words = contentText.split(' ');
+      
       let line = '', yPos = 225;
       words.forEach(word => {
         const testLine = line + word + ' ';
@@ -191,7 +195,7 @@ const Participants = () => {
           </div>
 
           <div className="part-status">
-             Status: {event.PartStatus ? <span className="status-attended">Attended</span> : <span className="status-reg">Registered</span>}
+              Status: {event.PartStatus ? <span className="status-attended">Attended</span> : <span className="status-reg">Registered</span>}
           </div>
         </div>
 
@@ -220,11 +224,9 @@ const Participants = () => {
 
   return (
     <div className="participants-page">
-      {/* Register Event Style Background Layer */}
       <div className="part-bg-layer"></div>
       <div className="part-noise-overlay"></div>
 
-      {/* Exact Old Code Shiny Back Button */}
       <div className="logout-container">
         <button id="backBtn" className="logout-btn" onClick={handleBack}>
           <i className="fas fa-arrow-left"></i> Back
@@ -268,7 +270,6 @@ const Participants = () => {
 
           </div>
 
-          {/* Exact Old Code Participate Button */}
           <div className="button-container">
             <button onClick={handleParticipateClick}>
               Participate in other Event
