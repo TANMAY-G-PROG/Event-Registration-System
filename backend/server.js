@@ -463,6 +463,7 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
         const { 
             eventName, 
             eventDescription, 
+            certificate_info,
             eventDate, 
             eventTime, 
             eventLocation, 
@@ -541,6 +542,7 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
         const eventData = {
             ename: eventName,
             eventdesc: eventDescription,
+            certificate_info: certificate_info || null,
             eventdate: eventDate,
             eventtime: eventTime,
             eventloc: eventLocation,
