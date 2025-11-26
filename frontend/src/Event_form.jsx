@@ -7,6 +7,7 @@ const EventForm = () => {
   const [formData, setFormData] = useState({
     eventName: '',
     eventDescription: '',
+    certificateInfo: '', // Added new state
     eventDate: '',
     eventTime: '',
     eventLocation: '',
@@ -14,7 +15,7 @@ const EventForm = () => {
     maxVolunteers: '',
     OrgCid: '',
     registrationFee: '',
-    upiId: '', // Added UPI ID state
+    upiId: '', 
     isTeamEvent: false,
     minTeamSize: '',
     maxTeamSize: ''
@@ -45,6 +46,7 @@ const EventForm = () => {
     const data = {
       eventName: formData.eventName,
       eventDescription: formData.eventDescription,
+      certificate_info: formData.certificateInfo || null, // Map to DB column
       eventDate: formData.eventDate,
       eventTime: formData.eventTime,
       eventLocation: formData.eventLocation,
@@ -52,7 +54,6 @@ const EventForm = () => {
       maxVolunteers: parseInt(formData.maxVolunteers) || null,
       OrgCid: parseInt(formData.OrgCid) || null,
       registrationFee: regFee,
-      // Only include UPI ID if fee > 0
       upiId: regFee > 0 ? formData.upiId : null, 
       isTeamEvent: formData.isTeamEvent,
       minTeamSize: formData.isTeamEvent ? (parseInt(formData.minTeamSize) || null) : null,
@@ -65,7 +66,6 @@ const EventForm = () => {
       return;
     }
 
-    // Validate UPI ID if fee is present
     if (data.registrationFee > 0 && !data.upiId) {
       showMessage('Please enter a valid UPI ID for paid events.', true);
       return;
@@ -111,7 +111,7 @@ const EventForm = () => {
       if (res.ok) {
         showMessage('Event created successfully!');
         setFormData({
-          eventName: '', eventDescription: '', eventDate: '', eventTime: '',
+          eventName: '', eventDescription: '', certificateInfo: '', eventDate: '', eventTime: '',
           eventLocation: '', maxParticipants: '', maxVolunteers: '', OrgCid: '',
           registrationFee: '', upiId: '', isTeamEvent: false, minTeamSize: '', maxTeamSize: ''
         });
@@ -179,6 +179,16 @@ const EventForm = () => {
                 onChange={handleChange} 
                 rows="3" 
                 required 
+              />
+
+              {/* NEW FIELD: Certificate Info */}
+              <textarea 
+                className="event-form-textarea" 
+                name="certificateInfo" 
+                placeholder="Certificate Text (Optional: What do you want displayed on the certificate?)" 
+                value={formData.certificateInfo} 
+                onChange={handleChange} 
+                rows="2" 
               />
               
               <input 
@@ -291,7 +301,6 @@ const EventForm = () => {
                 required 
               />
 
-              {/* UPI ID INPUT - Only shows if Fee > 0 */}
               {parseFloat(formData.registrationFee) > 0 && (
                 <input 
                   className="event-form-input" 
@@ -314,5 +323,3 @@ const EventForm = () => {
 };
 
 export default EventForm;
-
-
