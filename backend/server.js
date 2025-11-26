@@ -340,7 +340,7 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             .select(`
                 partstatus, partusn,
                 event:parteid (
-                    eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
+                    eid, ename, eventdesc,certificate_info, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
                     club:orgcid(cname)
                 )
             `)
