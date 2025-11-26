@@ -46,7 +46,8 @@ export default function ForgotPassword() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        showMessage(data.message || 'Password reset link sent! Check your email.');
+        // ✅ UPDATED: Added spam folder instruction to the success message
+        showMessage(data.message || 'Link sent! Check your email (and Spam folder).');
         setEmail('');
         
         // Redirect to login after 3 seconds
@@ -82,8 +83,14 @@ export default function ForgotPassword() {
           <form onSubmit={handleSubmit}>
             <i className="fa-solid fa-lock forgot-password-icon"></i>
             <h1>Forgot Password?</h1>
+            
+            {/* ✅ UPDATED: Added a visual note in the description text */}
             <p className="forgot-password-description">
               Enter your email address and we'll send you a link to reset your password.
+              <br />
+              <span style={{ fontSize: '0.9em', opacity: 0.8 }}>
+                (Please check your Spam/Junk folder if not found)
+              </span>
             </p>
             
             <input
