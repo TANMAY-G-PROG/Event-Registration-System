@@ -213,27 +213,22 @@ const Organisers = () => {
     setShowPaymentModal(false);
   };
 
-  // Prevent body scroll when modal is open and scroll to top
+  // --- FIXED SCROLL LOGIC ---
+  // We lock the wrapper specifically because it is the scroll container
   useEffect(() => {
-    if (showPaymentModal) {
-      // Save current scroll position
-      const scrollY = window.scrollY;
-      
-      // Prevent body scroll
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
-      
-      return () => {
-        // Restore scroll position when closing
-        document.body.style.overflow = 'unset';
-        document.body.style.position = 'unset';
-        document.body.style.top = 'unset';
-        document.body.style.width = 'unset';
-        window.scrollTo(0, scrollY);
-      };
+    const wrapper = document.querySelector('.organisers-unique-wrapper');
+    if (showPaymentModal && wrapper) {
+      // Lock scroll on the wrapper
+      wrapper.style.overflow = 'hidden';
+    } else if (wrapper) {
+      // Restore scroll
+      wrapper.style.overflow = 'auto'; // or 'overlay' or unset depending on CSS, 'auto' is safest
     }
+    
+    // Cleanup
+    return () => {
+      if (wrapper) wrapper.style.overflow = 'auto';
+    };
   }, [showPaymentModal]);
 
   // --- Render Event Item ---
@@ -295,61 +290,64 @@ const Organisers = () => {
   };
 
   return (
-    <div className="organisers-unique-wrapper">
-      {/* Shiny Back Button */}
-      <div className="org-logout-container">
-        <button className="org-logout-btn" onClick={handleBack}>
-          <i className="fas fa-arrow-left"></i> Back
-        </button>
+    <>
+      <div className="organisers-unique-wrapper">
+        {/* Shiny Back Button */}
+        <div className="org-logout-container">
+          <button className="org-logout-btn" onClick={handleBack}>
+            <i className="fas fa-arrow-left"></i> Back
+          </button>
+        </div>
+
+        <section className="org-hero-section">
+          <div className="org-container">
+            
+            {/* Card Grid Layout */}
+            <div className="org-card-grid">
+              
+              <div className="org-card" id="completed-card">
+                <div className="org-card__background"></div>
+                <div className="org-card__content">
+                  <h3 className="org-card__heading">Completed Events</h3>
+                  <div className="org-card__details">
+                     {renderEventsList(events.completed, 'completed')}
+                  </div>
+                </div>
+              </div>
+
+              <div className="org-card" id="ongoing-card">
+                <div className="org-card__background"></div>
+                <div className="org-card__content">
+                  <h3 className="org-card__heading">Ongoing Events</h3>
+                  <div className="org-card__details">
+                     {renderEventsList(events.ongoing, 'ongoing')}
+                  </div>
+                </div>
+              </div>
+
+              <div className="org-card" id="upcoming-card">
+                <div className="org-card__background"></div>
+                <div className="org-card__content">
+                  <h3 className="org-card__heading">Upcoming Events</h3>
+                  <div className="org-card__details">
+                     {renderEventsList(events.upcoming, 'upcoming')}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Animated Organise Button */}
+            <div className="org-button-container">
+              <button onClick={handleOrganiseClick}>
+                 Organise New Event
+              </button>
+            </div>
+          </div>
+        </section>
       </div>
 
-      <section className="org-hero-section">
-        <div className="org-container">
-          
-          {/* Card Grid Layout */}
-          <div className="org-card-grid">
-            
-            <div className="org-card" id="completed-card">
-              <div className="org-card__background"></div>
-              <div className="org-card__content">
-                <h3 className="org-card__heading">Completed Events</h3>
-                <div className="org-card__details">
-                   {renderEventsList(events.completed, 'completed')}
-                </div>
-              </div>
-            </div>
-
-            <div className="org-card" id="ongoing-card">
-              <div className="org-card__background"></div>
-              <div className="org-card__content">
-                <h3 className="org-card__heading">Ongoing Events</h3>
-                <div className="org-card__details">
-                   {renderEventsList(events.ongoing, 'ongoing')}
-                </div>
-              </div>
-            </div>
-
-            <div className="org-card" id="upcoming-card">
-              <div className="org-card__background"></div>
-              <div className="org-card__content">
-                <h3 className="org-card__heading">Upcoming Events</h3>
-                <div className="org-card__details">
-                   {renderEventsList(events.upcoming, 'upcoming')}
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Animated Organise Button */}
-          <div className="org-button-container">
-            <button onClick={handleOrganiseClick}>
-               Organise New Event
-            </button>
-          </div>
-        </div>
-      </section>
-
+      {/* --- MOVED OUTSIDE OF WRAPPER TO FIX POSITIONING --- */}
       {/* Payment Modal - MOBILE OPTIMIZED */}
       {showPaymentModal && (
         <div 
@@ -390,14 +388,14 @@ const Organisers = () => {
              <div className="org-modal-content-area">
                 {loadingPayments ? (
                   <div className="org-payment-loading-state">
-                     <div className="org-spinner-dots"></div>
-                     <p>Loading transactions...</p>
+                      <div className="org-spinner-dots"></div>
+                      <p>Loading transactions...</p>
                   </div>
                 ) : pendingPayments.length === 0 ? (
                   <div className="org-empty-payments">
-                     <div className="org-check-ring-lg"><i className="fas fa-check"></i></div>
-                     <h3>All Caught Up!</h3>
-                     <p>No pending transactions found.</p>
+                      <div className="org-check-ring-lg"><i className="fas fa-check"></i></div>
+                      <h3>All Caught Up!</h3>
+                      <p>No pending transactions found.</p>
                   </div>
                 ) : (
                   <div className="org-payment-list">
@@ -410,44 +408,44 @@ const Organisers = () => {
                     
                     {pendingPayments.map((payment, index) => (
                       <div className="org-payment-row-card" key={index} style={{animationDelay: `${index * 0.05}s`}}>
-                         <div className="org-pay-user-info">
-                            <div className="org-avatar-placeholder">
-                               {payment.studentName.charAt(0)}
-                            </div>
-                            <div className="org-text-details">
-                               <h5>{DOMPurify.sanitize(payment.studentName)} {payment.isTeamLeader && <span className="org-tag-leader">LEADER</span>}</h5>
-                               <span className="org-usn">{payment.partusn}</span>
-                            </div>
-                         </div>
-                         
-                         <div className="org-pay-meta">
-                            <span className="org-pay-id">ID: {payment.transactionId}</span>
-                            <span className="org-pay-amount">₹{payment.amount}</span>
-                         </div>
+                          <div className="org-pay-user-info">
+                             <div className="org-avatar-placeholder">
+                                {payment.studentName.charAt(0)}
+                             </div>
+                             <div className="org-text-details">
+                                <h5>{DOMPurify.sanitize(payment.studentName)} {payment.isTeamLeader && <span className="org-tag-leader">LEADER</span>}</h5>
+                                <span className="org-usn">{payment.partusn}</span>
+                             </div>
+                          </div>
+                          
+                          <div className="org-pay-meta">
+                             <span className="org-pay-id">ID: {payment.transactionId}</span>
+                             <span className="org-pay-amount">₹{payment.amount}</span>
+                          </div>
 
-                         <div className="org-pay-action">
-                           {processingPayment[payment.partusn] === 'success' ? (
-                              <div className="org-success-tick-anim">
-                                 <i className="fas fa-check-circle"></i>
-                              </div>
-                           ) : (
-                              <button 
-                                className={`org-verify-btn ${processingPayment[payment.partusn] ? 'loading' : ''}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleVerifyPayment(payment.partusn, selectedEventForPayments.eid);
-                                }}
-                                onTouchEnd={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleVerifyPayment(payment.partusn, selectedEventForPayments.eid);
-                                }}
-                                disabled={!!processingPayment[payment.partusn]}
-                              >
-                                 {processingPayment[payment.partusn] === 'verifying' ? <div className="org-spinner-dots-sm"></div> : 'Approve'}
-                              </button>
-                           )}
-                         </div>
+                          <div className="org-pay-action">
+                            {processingPayment[payment.partusn] === 'success' ? (
+                               <div className="org-success-tick-anim">
+                                   <i className="fas fa-check-circle"></i>
+                               </div>
+                            ) : (
+                               <button 
+                                 className={`org-verify-btn ${processingPayment[payment.partusn] ? 'loading' : ''}`}
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   handleVerifyPayment(payment.partusn, selectedEventForPayments.eid);
+                                 }}
+                                 onTouchEnd={(e) => {
+                                   e.preventDefault();
+                                   e.stopPropagation();
+                                   handleVerifyPayment(payment.partusn, selectedEventForPayments.eid);
+                                 }}
+                                 disabled={!!processingPayment[payment.partusn]}
+                               >
+                                  {processingPayment[payment.partusn] === 'verifying' ? <div className="org-spinner-dots-sm"></div> : 'Approve'}
+                               </button>
+                            )}
+                          </div>
                       </div>
                     ))}
                   </div>
@@ -456,7 +454,7 @@ const Organisers = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
