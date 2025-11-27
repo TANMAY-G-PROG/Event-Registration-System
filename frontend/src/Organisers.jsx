@@ -167,6 +167,9 @@ const Organisers = () => {
   };
 
   const handleVerifyPayment = async (participantUSN, eventId) => {
+    // Prevent double clicks
+    if (processingPayment[participantUSN]) return;
+    
     setProcessingPayment((prev) => ({ ...prev, [participantUSN]: 'verifying' }));
 
     try {
@@ -204,6 +207,23 @@ const Organisers = () => {
 
   const handleOrganiseClick = () => navigate('/create-event');
   const handleBack = () => navigate('/events');
+
+  // Close modal handler - separated for better control
+  const handleCloseModal = () => {
+    setShowPaymentModal(false);
+  };
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (showPaymentModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showPaymentModal]);
 
   // --- Render Event Item ---
   const renderEventsList = (eventsList, eventType) => {
@@ -319,16 +339,43 @@ const Organisers = () => {
         </div>
       </section>
 
-      {/* Fintech Payment Modal */}
+      {/* Fintech Payment Modal - MOBILE OPTIMIZED */}
       {showPaymentModal && (
-        <div className="org-fintech-modal-overlay" onClick={() => setShowPaymentModal(false)}>
-          <div className="org-fintech-modal" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className="org-fintech-modal-overlay" 
+          onMouseDown={(e) => {
+            // Only close if clicking directly on overlay, not on modal content
+            if (e.target.classList.contains('org-fintech-modal-overlay')) {
+              handleCloseModal();
+            }
+          }}
+          onTouchStart={(e) => {
+            // Same for touch events
+            if (e.target.classList.contains('org-fintech-modal-overlay')) {
+              handleCloseModal();
+            }
+          }}
+        >
+          <div 
+            className="org-fintech-modal" 
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+          >
              <div className="org-modal-top-bar">
                 <div className="org-modal-title-group">
                    <h2>Payment Verification</h2>
                    <span className="org-modal-subtitle">{selectedEventForPayments?.ename}</span>
                 </div>
-                <button className="org-modal-close-btn" onClick={() => setShowPaymentModal(false)}>×</button>
+                <button 
+                  className="org-modal-close-btn" 
+                  onClick={handleCloseModal}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    handleCloseModal();
+                  }}
+                >
+                  ×
+                </button>
              </div>
 
              <div className="org-modal-content-area">
@@ -377,7 +424,15 @@ const Organisers = () => {
                            ) : (
                               <button 
                                 className={`org-verify-btn ${processingPayment[payment.partusn] ? 'loading' : ''}`}
-                                onClick={() => handleVerifyPayment(payment.partusn, selectedEventForPayments.eid)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleVerifyPayment(payment.partusn, selectedEventForPayments.eid);
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleVerifyPayment(payment.partusn, selectedEventForPayments.eid);
+                                }}
                                 disabled={!!processingPayment[payment.partusn]}
                               >
                                  {processingPayment[payment.partusn] === 'verifying' ? <div className="org-spinner-dots-sm"></div> : 'Approve'}
