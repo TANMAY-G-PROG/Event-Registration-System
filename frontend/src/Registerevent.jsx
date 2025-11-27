@@ -185,12 +185,18 @@ export default function Registerevent() {
     }
   }, [])
 
+  // --- UPDATED: Load team status for both UPCOMING and ONGOING events ---
   useEffect(() => {
-    const upcomingEvents = eventsData.upcoming || []
-    upcomingEvents.forEach(event => {
+    const activeEvents = [
+      ...(eventsData.upcoming || []),
+      ...(eventsData.ongoing || [])
+    ];
+    
+    activeEvents.forEach(event => {
       loadTeamStatus(event.eid)
     })
-  }, [eventsData.upcoming])
+  }, [eventsData.upcoming, eventsData.ongoing]) 
+  // ----------------------------------------------------------------------
 
   const allEvents = useMemo(() => {
     return [
@@ -709,8 +715,8 @@ export default function Registerevent() {
                     </div>
                   </div>
 
-                  {/* Dynamic Action Footer - Handles all team logic/status logic */}
-                  {event.status === "upcoming" && renderTeamControls(event)}
+                  {/* --- UPDATED: Allow registration for UPCOMING and ONGOING --- */}
+                  {(event.status === "upcoming" || event.status === "ongoing") && renderTeamControls(event)}
                 </article>
               )
             })}
@@ -921,25 +927,25 @@ export default function Registerevent() {
                 </a>
 
                 <div style={{borderTop: '1px solid var(--re-glass-border)', paddingTop: '24px', textAlign: 'left'}}>
-                   <div className="registerevent-form-group">
-                    <label className="registerevent-form-label">Transaction ID (UTR)</label>
-                    <input
-                      type="text"
-                      className="registerevent-form-input"
-                      value={transactionId}
-                      onChange={(e) => setTransactionId(e.target.value)}
-                      placeholder="Enter Transaction ID after payment"
-                      disabled={isSubmitting}
-                    />
-                   </div>
-                   <button
-                    type="button"
-                    className="registerevent-modal-submit-btn"
-                    onClick={handleSubmitUpiPayment}
-                    disabled={isSubmitting}
-                   >
-                    {isSubmitting ? "Verifying..." : "Submit & Complete Registration"}
-                   </button>
+                    <div className="registerevent-form-group">
+                     <label className="registerevent-form-label">Transaction ID (UTR)</label>
+                     <input
+                       type="text"
+                       className="registerevent-form-input"
+                       value={transactionId}
+                       onChange={(e) => setTransactionId(e.target.value)}
+                       placeholder="Enter Transaction ID after payment"
+                       disabled={isSubmitting}
+                     />
+                    </div>
+                    <button
+                     type="button"
+                     className="registerevent-modal-submit-btn"
+                     onClick={handleSubmitUpiPayment}
+                     disabled={isSubmitting}
+                    >
+                     {isSubmitting ? "Verifying..." : "Submit & Complete Registration"}
+                    </button>
                 </div>
               </div>
             </div>
