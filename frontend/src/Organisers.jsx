@@ -208,7 +208,7 @@ const Organisers = () => {
   const handleOrganiseClick = () => navigate('/create-event');
   const handleBack = () => navigate('/events');
 
-  // Close modal handler - separated for better control
+  // Close modal handler
   const handleCloseModal = () => {
     setShowPaymentModal(false);
   };
@@ -295,7 +295,7 @@ const Organisers = () => {
       <section className="org-hero-section">
         <div className="org-container">
           
-          {/* Old Card Grid Layout */}
+          {/* Card Grid Layout */}
           <div className="org-card-grid">
             
             <div className="org-card" id="completed-card">
@@ -330,7 +330,7 @@ const Organisers = () => {
 
           </div>
 
-          {/* Old Code Animated Organise Button */}
+          {/* Animated Organise Button */}
           <div className="org-button-container">
             <button onClick={handleOrganiseClick}>
                Organise New Event
@@ -339,18 +339,16 @@ const Organisers = () => {
         </div>
       </section>
 
-      {/* Fintech Payment Modal - MOBILE OPTIMIZED */}
+      {/* Payment Modal - MOBILE OPTIMIZED */}
       {showPaymentModal && (
         <div 
           className="org-fintech-modal-overlay" 
           onMouseDown={(e) => {
-            // Only close if clicking directly on overlay, not on modal content
             if (e.target.classList.contains('org-fintech-modal-overlay')) {
               handleCloseModal();
             }
           }}
           onTouchStart={(e) => {
-            // Same for touch events
             if (e.target.classList.contains('org-fintech-modal-overlay')) {
               handleCloseModal();
             }
