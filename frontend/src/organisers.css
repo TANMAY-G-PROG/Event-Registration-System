@@ -551,3 +551,141 @@ html, body {
   .org-pay-action { width: 100%; }
   .org-verify-btn { width: 100%; }
 }
+/* ========================================
+   MOBILE OPTIMIZATIONS FOR PAYMENT MODAL
+   Add these styles to your organisers.css
+   ======================================== */
+
+/* Ensure buttons are tappable on mobile */
+.org-verify-btn,
+.org-modal-close-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Increase touch target size for mobile */
+@media (max-width: 768px) {
+  .org-verify-btn {
+    min-height: 44px !important;
+    min-width: 90px !important;
+    padding: 10px 20px !important;
+    font-size: 15px !important;
+    border-radius: 8px !important;
+  }
+
+  .org-modal-close-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    font-size: 32px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Make payment cards more spacious on mobile */
+  .org-payment-row-card {
+    padding: 16px !important;
+    margin-bottom: 12px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .org-pay-user-info {
+    width: 100%;
+  }
+
+  .org-pay-meta {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .org-pay-action {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* Modal positioning for mobile */
+  .org-fintech-modal {
+    width: 95% !important;
+    max-width: 100% !important;
+    max-height: 90vh !important;
+    margin: auto;
+  }
+
+  .org-modal-content-area {
+    max-height: calc(90vh - 120px) !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent zoom on double tap */
+  .org-fintech-modal * {
+    touch-action: manipulation;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .org-payment-row-card {
+    padding: 12px !important;
+  }
+
+  .org-verify-btn {
+    width: 100% !important;
+    min-width: unset !important;
+  }
+
+  .org-pay-meta {
+    font-size: 12px;
+  }
+
+  .org-modal-title-group h2 {
+    font-size: 18px !important;
+  }
+
+  .org-modal-subtitle {
+    font-size: 12px !important;
+  }
+}
+
+/* Active state for better touch feedback */
+.org-verify-btn:active:not(:disabled) {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+.org-modal-close-btn:active {
+  transform: scale(0.9);
+  opacity: 0.7;
+}
+
+/* Improve scrolling on iOS */
+.org-modal-content-area {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Prevent text selection during button press */
+.org-payment-row-card * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection only for specific elements */
+.org-pay-id,
+.org-usn {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
