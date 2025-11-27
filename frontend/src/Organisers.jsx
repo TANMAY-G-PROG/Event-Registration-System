@@ -213,16 +213,27 @@ const Organisers = () => {
     setShowPaymentModal(false);
   };
 
-  // Prevent body scroll when modal is open
+  // Prevent body scroll when modal is open and scroll to top
   useEffect(() => {
     if (showPaymentModal) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      
+      // Prevent body scroll
       document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      
+      return () => {
+        // Restore scroll position when closing
+        document.body.style.overflow = 'unset';
+        document.body.style.position = 'unset';
+        document.body.style.top = 'unset';
+        document.body.style.width = 'unset';
+        window.scrollTo(0, scrollY);
+      };
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
   }, [showPaymentModal]);
 
   // --- Render Event Item ---
