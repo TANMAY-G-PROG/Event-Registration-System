@@ -373,7 +373,7 @@
   }
 }
 
-/* MOBILE VIEW - UPDATED SCROLLBAR LOGIC */
+/* MOBILE VIEW - OPTIMIZED */
 @media (max-width: 768px) {
   
   .aboutus-hero { padding: 80px 20px 60px; }
@@ -390,48 +390,65 @@
   .social-link { padding: 18px 35px; font-size: 1.1rem; }
   .social-link i { font-size: 1.5rem; }
 
-  /* 1. Container Scroll Logic */
+  /* 1. SCROLLBAR LOGIC */
   .aboutus-container {
     height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
     scroll-behavior: smooth;
   }
-
-  /* 2. Increased Width to accommodate the "move left" padding */
-  .aboutus-container::-webkit-scrollbar {
-    width: 26px; /* Wide touch area */
-  }
-
-  /* 3. Track - MARGIN TOP TRICK */
+  .aboutus-container::-webkit-scrollbar { width: 26px; }
   .aboutus-container::-webkit-scrollbar-track {
     background: transparent;
-    /* margin-top: 35vh -> Starts the scrollbar 35% down the screen
-       This simulates it "only appearing" after the hero section. 
-    */
     margin-top: 35vh; 
     margin-bottom: 10vh; 
   }
-
-  /* 4. Thumb - MOVE LEFT TRICK */
   .aboutus-container::-webkit-scrollbar-thumb {
     background-color: rgba(240, 147, 251, 0.6); 
     background-clip: content-box; 
     border-radius: 99px;
-    
-    /* border-right: 20px -> Pushes the bar DEEP into the screen (leftwards)
-       border-left: 2px -> Defines bar thickness 
-    */
     border-right: 20px solid transparent; 
     border-left: 2px solid transparent;
     border-top: 0;
     border-bottom: 0;
   }
-
   .aboutus-container::-webkit-scrollbar-thumb:active {
     background-color: #f093fb; 
     border-right: 20px solid transparent; 
     border-left: 2px solid transparent;
+  }
+
+  /* 2. CARD ANIMATION & SCROLL FIXES (NEW) */
+  /* This prevents the card from "trapping" your finger */
+  .card-wrapper, 
+  .card-wrapper > div {
+    touch-action: pan-y !important; 
+    transform: none !important;
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out !important;
+    pointer-events: auto !important;
+  }
+
+  /* Replace 3D tilt with Slide Up animation */
+  .card-wrapper {
+    margin-bottom: 20px;
+    opacity: 0; /* Start hidden */
+    animation: aboutus-mobileSlideUp 0.8s ease-out forwards;
+  }
+
+  .card-wrapper:nth-child(1) { animation-delay: 0.1s; }
+  .card-wrapper:nth-child(2) { animation-delay: 0.2s; }
+  .card-wrapper:nth-child(3) { animation-delay: 0.3s; }
+  .card-wrapper:nth-child(4) { animation-delay: 0.4s; }
+
+  @keyframes aboutus-mobileSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
