@@ -11,7 +11,7 @@ const AboutUs = () => {
   const teamMembers = [
     {
       name: "Tanmay",
-      title: "Role/Position",
+      title: "Developer",
       handle: "@tanmay",
       status: "Available",
       avatarUrl: member1,
@@ -19,7 +19,7 @@ const AboutUs = () => {
     },
     {
       name: "Suchit",
-      title: "Role/Position",
+      title: "Developer",
       handle: "@suchitks",
       status: "Available",
       avatarUrl: member2,
@@ -27,7 +27,7 @@ const AboutUs = () => {
     },
     {
       name: "Yashwanth",
-      title: "Role/Position",
+      title: "Developer",
       handle: "@yashwant",
       status: "Available",
       avatarUrl: member3,
@@ -35,7 +35,7 @@ const AboutUs = () => {
     },
     {
       name: "Suchith N",
-      title: "Role/Position",
+      title: "Developer",
       handle: "@suchithn",
       status: "Available",
       avatarUrl: member4,
@@ -148,6 +148,7 @@ const AboutUs = () => {
 };
 
 export default AboutUs;
+
 
 
 
