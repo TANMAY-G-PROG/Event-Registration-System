@@ -15,7 +15,7 @@ const AboutUs = () => {
       handle: "username1",
       status: "Available",
       avatarUrl: member1,
-      linkedin: "https://www.instagram.com/suchitkadidal/",
+      linkedin: "https://www.linkedin.com/in/tanmaya-g-shetty/",
     },
     {
       name: "Suchit",
@@ -23,7 +23,7 @@ const AboutUs = () => {
       handle: "username2",
       status: "Available",
       avatarUrl: member2,
-      linkedin: "https://www.instagram.com/suchitkadidal/",
+      linkedin: "https://www.linkedin.com/in/suchit-k-s-56a648283",
     },
     {
       name: "Yashwanth",
@@ -148,3 +148,4 @@ const AboutUs = () => {
 };
 
 export default AboutUs;
+
