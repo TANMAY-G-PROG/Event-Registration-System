@@ -1,18 +1,93 @@
 import React, { useEffect, useState, useRef } from 'react';
-import ProfileCard from './ProfileCard';
+import { Mail, Linkedin, ArrowRight } from 'lucide-react';
 import './Aboutus.css';
 
+// Import your local assets
 import member1 from './assets/member1.jpg';
 import member2 from './assets/member2.jpg';
 import member3 from './assets/member3.jpg';
 import member4 from './assets/member4.jpg';
 
-const AboutUs = () => {
-  // State to track if the device is mobile
-  const [isMobile, setIsMobile] = useState(false);
+// --- Internal Component: ProfileCard ---
+// (Includes the logic to disable tilt on mobile via props)
+const ProfileCard = ({ name, title, handle, avatarUrl, onContactClick, enableTilt }) => {
+  const cardRef = useRef(null);
   
-  // Ref for the IntersectionObserver
-  const observerRef = useRef(null);
+  const handleMouseMove = (e) => {
+    if (!enableTilt || !cardRef.current) return;
+    const card = cardRef.current;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    const rotateX = ((y - centerY) / centerY) * -10;
+    const rotateY = ((x - centerX) / centerX) * 10;
+    
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+  };
+
+  const handleMouseLeave = () => {
+    if (!enableTilt || !cardRef.current) return;
+    cardRef.current.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)';
+  };
+
+  return (
+    <div 
+      ref={cardRef}
+      className={`profile-card ${enableTilt ? 'desktop-tilt' : ''}`}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
+      <img src={avatarUrl} alt={name} className="profile-avatar" />
+      <h3 className="profile-name">{name}</h3>
+      <p className="profile-title">{title}</p>
+      <div style={{opacity: 0.7, marginBottom: '15px'}}>@{handle}</div>
+      <button className="profile-btn" onClick={onContactClick}>
+        Contact <ArrowRight size={16} />
+      </button>
+    </div>
+  );
+};
+
+// --- Internal Component: Apple-Style Scroll Reveal ---
+const FadeInSection = ({ children, delay = '0s' }) => {
+  const [isVisible, setVisible] = useState(false);
+  const domRef = useRef();
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    const currentElement = domRef.current;
+    if (currentElement) observer.observe(currentElement);
+
+    return () => {
+      if (currentElement) observer.unobserve(currentElement);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={domRef}
+      className={`fade-in-section ${isVisible ? 'is-visible' : ''}`}
+      style={{ transitionDelay: delay }}
+    >
+      {children}
+    </div>
+  );
+};
+
+// --- Main Component ---
+const AboutUs = () => {
+  const [isMobile, setIsMobile] = useState(false);
 
   const teamMembers = [
     {
@@ -50,155 +125,88 @@ const AboutUs = () => {
   ];
 
   const socialLinks = [
-    {
-      name: "Email Us",
-      icon: "fas fa-envelope",
-      url: "mailto:flopass333@gmail.com",
-      isEmail: true,
-    },
+    { name: "Email Us", icon: Mail, url: "mailto:flopass333@gmail.com", isEmail: true },
   ];
 
-  // Detect mobile screen size
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    // Initial check
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
     handleResize();
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // SCROLL REVEAL ANIMATION ENGINE (Mobile Only)
-  useEffect(() => {
-    // We only run this observer on mobile to prevent conflict with desktop animations
-    if (!isMobile) return;
-
-    const observerOptions = {
-      root: null,
-      rootMargin: '0px',
-      threshold: 0.15 // Trigger when 15% of the element is visible
-    };
-
-    const observerCallback = (entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('reveal-active');
-          // Stop observing once revealed so it doesn't animate again
-          observerRef.current.unobserve(entry.target);
-        }
-      });
-    };
-
-    observerRef.current = new IntersectionObserver(observerCallback, observerOptions);
-    
-    // Select all elements we want to animate
-    const hiddenElements = document.querySelectorAll('.mobile-reveal');
-    hiddenElements.forEach(el => observerRef.current.observe(el));
-
-    return () => {
-      if (observerRef.current) observerRef.current.disconnect();
-    };
-  }, [isMobile]);
-
   const handleContactClick = (linkedin) => {
-    if (linkedin) {
-      window.open(linkedin, "_blank");
-    } else {
-      console.log("LinkedIn link not available");
-    }
+    if (linkedin) window.open(linkedin, "_blank");
   };
 
   const handleSocialClick = (e, link) => {
-    if (link.isEmail) {
-      return; // Let browser handle mailto: naturally
-    }
+    if (link.isEmail) return;
     e.preventDefault();
     window.open(link.url, "_blank");
   };
 
-  // Smooth scroll to hash on page load
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash) {
-      const element = document.querySelector(hash);
-      if (element) {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-      }
-    }
-  }, []);
-
   return (
     <div className="aboutus-container">
       {/* Hero Section */}
-      <section className="aboutus-hero mobile-reveal">
-        <div className="hero-content">
-          <h1 className="hero-title">About Flo</h1>
-          <div className="hero-underline"></div>
-          <p className="hero-description">
-            Hey there! This is FLO — the place where we finally said "bye-bye" to
-            manual forms and "hello" to effortless online passes. We built this
-            platform because life's too short to wait in lines or deal with slow
-            processes. With FLO, you can apply, track, and receive approvals
-            faster than your chai cools down.
-            <br />
-            <br />
-            Smooth design, fast processing, no nonsense. Just vibes + efficiency.
-          </p>
-        </div>
+      <section className="aboutus-hero">
+        <FadeInSection>
+          <div className="hero-content">
+            <h1 className="hero-title">About Flo</h1>
+            <div className="hero-underline"></div>
+            <p className="hero-description">
+              Hey there! This is FLO — the place where we finally said "bye-bye" to
+              manual forms and "hello" to effortless online passes. We built this
+              platform because life's too short to wait in lines.
+              <br /><br />
+              Smooth design, fast processing, no nonsense. Just vibes + efficiency.
+            </p>
+          </div>
+        </FadeInSection>
       </section>
 
       {/* Team Section */}
       <section className="team-section">
-        <h2 className="section-title mobile-reveal">Meet Our Team</h2>
+        <FadeInSection>
+          <h2 className="section-title">Meet Our Team</h2>
+        </FadeInSection>
+        
         <div className="team-grid">
           {teamMembers.map((member, index) => (
-            <div 
-              key={index} 
-              className="card-wrapper mobile-reveal"
-              // Add inline delay for staggered effect
-              style={{ transitionDelay: isMobile ? `${index * 100}ms` : '0ms' }}
-            >
-              <ProfileCard
-                name={member.name}
-                title={member.title}
-                handle={member.handle}
-                status={member.status}
-                contactText="Contact"
-                avatarUrl={member.avatarUrl}
-                showUserInfo={true}
-                // Disable tilt completely on mobile for better scroll performance
-                enableTilt={!isMobile}
-                enableMobileTilt={false}
-                onContactClick={() => handleContactClick(member.linkedin)}
-              />
-            </div>
+            <FadeInSection key={index} delay={isMobile ? '0s' : `${index * 0.1}s`}>
+              <div className="card-wrapper">
+                <ProfileCard
+                  name={member.name}
+                  title={member.title}
+                  handle={member.handle}
+                  avatarUrl={member.avatarUrl}
+                  enableTilt={!isMobile} // Disabled on mobile
+                  onContactClick={() => handleContactClick(member.linkedin)}
+                />
+              </div>
+            </FadeInSection>
           ))}
         </div>
       </section>
 
       {/* Connect Section */}
       <section className="connect-section" id="connect-section">
-        <h2 className="connect-title mobile-reveal">Connect With Us</h2>
-        <div className="social-links mobile-reveal">
-          {socialLinks.map((link, index) => (
-            <a
-              key={index}
-              href={link.url}
-              className="social-link"
-              onClick={(e) => handleSocialClick(e, link)}
-              rel="noopener noreferrer"
-              aria-label={link.name}
-            >
-              <i className={link.icon}></i>
-              <span>{link.name}</span>
-            </a>
-          ))}
-        </div>
+        <FadeInSection>
+          <h2 className="connect-title">Connect With Us</h2>
+          <div className="social-links">
+            {socialLinks.map((link, index) => (
+              <a
+                key={index}
+                href={link.url}
+                className="social-link"
+                onClick={(e) => handleSocialClick(e, link)}
+                rel="noopener noreferrer"
+              >
+                <link.icon size={24} style={{marginRight: '10px'}} />
+                <span>{link.name}</span>
+              </a>
+            ))}
+          </div>
+        </FadeInSection>
       </section>
     </div>
   );
