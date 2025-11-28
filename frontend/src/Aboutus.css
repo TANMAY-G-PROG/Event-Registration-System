@@ -373,10 +373,9 @@
   }
 }
 
-/* MOBILE VIEW - SCROLLBAR LOGIC UPDATED HERE */
+/* MOBILE VIEW - UPDATED SCROLLBAR LOGIC */
 @media (max-width: 768px) {
   
-  /* 1. Layout Adjustments */
   .aboutus-hero { padding: 80px 20px 60px; }
   .team-section { padding: 40px 15px 60px; }
   .section-title { margin-bottom: 40px; }
@@ -391,7 +390,7 @@
   .social-link { padding: 18px 35px; font-size: 1.1rem; }
   .social-link i { font-size: 1.5rem; }
 
-  /* 2. Scrollbar Container Setup */
+  /* 1. Container Scroll Logic */
   .aboutus-container {
     height: 100vh;
     overflow-y: auto;
@@ -399,24 +398,31 @@
     scroll-behavior: smooth;
   }
 
-  /* 3. The Hit Area */
+  /* 2. Increased Width to accommodate the "move left" padding */
   .aboutus-container::-webkit-scrollbar {
-    width: 14px; 
+    width: 26px; /* Wide touch area */
   }
 
-  /* 4. The Invisible Track with Margin (Reduces Scroll Length) */
+  /* 3. Track - MARGIN TOP TRICK */
   .aboutus-container::-webkit-scrollbar-track {
     background: transparent;
-    margin-block: 20vh; /* Keeps scrollbar in the middle */
+    /* margin-top: 35vh -> Starts the scrollbar 35% down the screen
+       This simulates it "only appearing" after the hero section. 
+    */
+    margin-top: 35vh; 
+    margin-bottom: 10vh; 
   }
 
-  /* 5. The Thumb (Bar) - Positioned Left away from edge */
+  /* 4. Thumb - MOVE LEFT TRICK */
   .aboutus-container::-webkit-scrollbar-thumb {
     background-color: rgba(240, 147, 251, 0.6); 
     background-clip: content-box; 
-    border-radius: 10px;
-    /* Pushes the bar 8px to the LEFT (away from bezel) */
-    border-right: 8px solid transparent; 
+    border-radius: 99px;
+    
+    /* border-right: 20px -> Pushes the bar DEEP into the screen (leftwards)
+       border-left: 2px -> Defines bar thickness 
+    */
+    border-right: 20px solid transparent; 
     border-left: 2px solid transparent;
     border-top: 0;
     border-bottom: 0;
@@ -424,7 +430,7 @@
 
   .aboutus-container::-webkit-scrollbar-thumb:active {
     background-color: #f093fb; 
-    border-right: 8px solid transparent; 
+    border-right: 20px solid transparent; 
     border-left: 2px solid transparent;
   }
 }
