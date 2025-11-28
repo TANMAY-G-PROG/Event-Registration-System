@@ -34,12 +34,12 @@ const AboutUs = () => {
       linkedin: "https://www.instagram.com/suchitkadidal/",
     },
     {
-      name: "Member Name 4",
+      name: "Suchith N",
       title: "Role/Position",
       handle: "username4",
       status: "Available",
       avatarUrl: member4,
-      linkedin: "https://www.instagram.com/suchitkadidal/",
+      linkedin: "https://www.linkedin.com/in/suchithn/",
     },
   ];
 
@@ -148,4 +148,5 @@ const AboutUs = () => {
 };
 
 export default AboutUs;
+
 
