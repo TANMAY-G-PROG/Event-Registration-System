@@ -406,31 +406,63 @@
   .social-link i { font-size: 1.2rem; }
 }
 
-/* FORCE VISIBLE SCROLLBAR ON MOBILE */
+/* --- REPLACE THE BOTTOM @MEDIA BLOCK WITH THIS --- */
+
 @media (max-width: 768px) {
+
   .aboutus-container {
     height: 100vh;
-    overflow-y: scroll;
+    overflow-y: auto;
     overflow-x: hidden;
+    scroll-behavior: smooth; 
   }
 
-  /* WebKit Browsers (Chrome, Safari, Android) */
+  /* 1. Container Width */
   .aboutus-container::-webkit-scrollbar {
-    width: 8px;
+    /* We make this WIDER to create room for the empty space */
+    width: 18px; 
   }
 
+  /* 2. The Track */
   .aboutus-container::-webkit-scrollbar-track {
-    background: rgba(69, 64, 161, 0.285);  /* <-- MUST NOT BE transparent */
-    border-radius: 10px;
+    background: transparent; 
+    /* Keeps the scrollbar short in the middle */
+    margin-block: 10vh; 
   }
 
+  .aboutus-container::-webkit-scrollbar-track:active,
+  .aboutus-container::-webkit-scrollbar-track:hover {
+
+    background-color: #11083193;
+    border-radius: 9px;
+    /* Add a glow effect */
+    box-shadow: inset 0 0 10px rgba(118, 75, 162, 0.8);
+  }
+
+  /* 3. The Thumb (The actual bar) */
   .aboutus-container::-webkit-scrollbar-thumb {
-    background: linear-gradient(
-      180deg,
-      #667eea,   /* soft blue */
-      #764ba2,   /* deep purple */
-      #f093fb    /* pink glow */
-    );  /* <-- solid color = ALWAYS visible */
-    border-radius: 10px;
+    /* TRICK TO MOVE LEFT: Transparent border acts as margin */
+    border: 7px solid transparent; 
+    background-clip: content-box; /* Clips the color so it doesn't spill into the border */
+    border-radius: 99px;
+
+    /* IDLE STATE: "Ghost Mode" */
+    /* Since Chrome ignores blur, we use low opacity to make it look faint/inactive */
+    background-color: rgba(240, 147, 251, 0.3); 
+    
+    transition: background-color 0.3s ease, border 0.3s ease;
+  }
+
+  /* 4. The Thumb - ACTIVE STATE (Touched) */
+  .aboutus-container::-webkit-scrollbar-thumb:active,
+  .aboutus-container::-webkit-scrollbar-thumb:hover {
+    /* When touched, it becomes solid pink/purple */
+    background-color: #f093fb;
+    
+    /* Optional: Make it slightly thicker when touching by reducing the border */
+    border: 5px solid transparent; 
+    
+    /* Add a glow effect */
+    box-shadow: inset 0 0 10px rgba(118, 75, 162, 0.8);
   }
 }
