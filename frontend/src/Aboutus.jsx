@@ -12,7 +12,7 @@ const AboutUs = () => {
     {
       name: "Tanmay",
       title: "Role/Position",
-      handle: "username1",
+      handle: "@tanmay",
       status: "Available",
       avatarUrl: member1,
       linkedin: "https://www.linkedin.com/in/tanmaya-g-shetty/",
@@ -20,7 +20,7 @@ const AboutUs = () => {
     {
       name: "Suchit",
       title: "Role/Position",
-      handle: "username2",
+      handle: "@suchitks",
       status: "Available",
       avatarUrl: member2,
       linkedin: "https://www.linkedin.com/in/suchit-k-s-56a648283",
@@ -28,7 +28,7 @@ const AboutUs = () => {
     {
       name: "Yashwanth",
       title: "Role/Position",
-      handle: "username3",
+      handle: "@yashwant",
       status: "Available",
       avatarUrl: member3,
       linkedin: "https://www.instagram.com/suchitkadidal/",
@@ -36,7 +36,7 @@ const AboutUs = () => {
     {
       name: "Suchith N",
       title: "Role/Position",
-      handle: "username4",
+      handle: "@suchithn",
       status: "Available",
       avatarUrl: member4,
       linkedin: "https://www.linkedin.com/in/suchithn/",
@@ -148,5 +148,6 @@ const AboutUs = () => {
 };
 
 export default AboutUs;
+
 
 
