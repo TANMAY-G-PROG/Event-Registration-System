@@ -405,3 +405,32 @@
   .social-link { padding: 12px 20px; font-size: 0.95rem; }
   .social-link i { font-size: 1.2rem; }
 }
+
+/* FORCE VISIBLE SCROLLBAR ON MOBILE */
+@media (max-width: 768px) {
+  .aboutus-container {
+    height: 100vh;
+    overflow-y: scroll;
+    overflow-x: hidden;
+  }
+
+  /* WebKit Browsers (Chrome, Safari, Android) */
+  .aboutus-container::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .aboutus-container::-webkit-scrollbar-track {
+    background: rgba(69, 64, 161, 0.285);  /* <-- MUST NOT BE transparent */
+    border-radius: 10px;
+  }
+
+  .aboutus-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+      180deg,
+      #667eea,   /* soft blue */
+      #764ba2,   /* deep purple */
+      #f093fb    /* pink glow */
+    );  /* <-- solid color = ALWAYS visible */
+    border-radius: 10px;
+  }
+}
