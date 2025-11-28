@@ -410,12 +410,11 @@
 @media (max-width: 768px) {
   /* WebKit Browsers (Chrome, Safari, Android) */
   .aboutus-container::-webkit-scrollbar {
-    width: 20px; /* Wider for easier finger access */
+    width: 22px; /* Wider for easier finger access */
   }
 
   .aboutus-container::-webkit-scrollbar-track {
     background: transparent; /* Hide the track */
-    margin: 15px 0;
   }
 
   .aboutus-container::-webkit-scrollbar-thumb {
@@ -425,11 +424,12 @@
       #764ba2,
       #f093fb
     );
-    border-radius: 10px;
-    border: 5px solid transparent; /* Creates space from all edges, especially right */
-    border-left: 2px solid transparent; /* Less space on left */
+    border-radius: 12px;
+    border-right: 6px solid rgba(0, 0, 0, 0); /* Space from right edge */
+    border-left: 3px solid rgba(0, 0, 0, 0); /* Space from left */
     background-clip: padding-box;
-    min-height: 80px;
+    min-height: 100px;
+    box-shadow: 0 0 15px rgba(102, 126, 234, 0.6); /* Glowing effect */
   }
 
   .aboutus-container::-webkit-scrollbar-thumb:hover {
@@ -440,6 +440,7 @@
       #f5a8fc
     );
     background-clip: padding-box;
+    box-shadow: 0 0 20px rgba(240, 147, 251, 0.8);
   }
 
   .aboutus-container::-webkit-scrollbar-thumb:active {
@@ -450,5 +451,6 @@
       #d77ee6
     );
     background-clip: padding-box;
+    box-shadow: 0 0 25px rgba(118, 75, 162, 0.9);
   }
 }
