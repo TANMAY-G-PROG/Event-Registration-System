@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import ProfileCard from './ProfileCard';
 import './Aboutus.css';
 
@@ -8,6 +8,9 @@ import member3 from './assets/member3.jpg';
 import member4 from './assets/member4.jpg';
 
 const AboutUs = () => {
+  // State to track if the device is mobile
+  const [isMobile, setIsMobile] = useState(false);
+
   const teamMembers = [
     {
       name: "Tanmay",
@@ -51,6 +54,19 @@ const AboutUs = () => {
       isEmail: true,
     },
   ];
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    // Initial check
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleContactClick = (linkedin) => {
     if (linkedin) {
@@ -115,7 +131,8 @@ const AboutUs = () => {
                 contactText="Contact"
                 avatarUrl={member.avatarUrl}
                 showUserInfo={true}
-                enableTilt={true}
+                // Disable tilt completely on mobile
+                enableTilt={!isMobile}
                 enableMobileTilt={false}
                 onContactClick={() => handleContactClick(member.linkedin)}
               />
