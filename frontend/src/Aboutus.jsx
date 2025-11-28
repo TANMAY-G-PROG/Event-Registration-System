@@ -31,7 +31,7 @@ const AboutUs = () => {
       handle: "yashwanth",
       status: "Available",
       avatarUrl: member3,
-      linkedin: "linkedin.com/in/yashwanth-hv-403ba932b",
+      linkedin: "https://www.linkedin.com/in/yashwanth-hv-403ba932b/",
     },
     {
       name: "Suchith N",
@@ -148,6 +148,7 @@ const AboutUs = () => {
 };
 
 export default AboutUs;
+
 
 
 
