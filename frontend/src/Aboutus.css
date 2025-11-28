@@ -406,24 +406,16 @@
   .social-link i { font-size: 1.2rem; }
 }
 
-/* FORCE VISIBLE SCROLLBAR ON MOBILE */
+/* VISIBLE SCROLLBAR ON MOBILE */
 @media (max-width: 768px) {
-  .aboutus-container {
-    height: 100vh;
-    overflow-y: scroll;
-    overflow-x: hidden;
-    padding-right: 4px; /* Offset for scrollbar spacing */
-  }
-
   /* WebKit Browsers (Chrome, Safari, Android) */
   .aboutus-container::-webkit-scrollbar {
-    width: 14px; /* Wider for easier grabbing */
+    width: 20px; /* Wider for easier finger access */
   }
 
   .aboutus-container::-webkit-scrollbar-track {
-    background: rgba(69, 64, 161, 0.285);
-    border-radius: 10px;
-    margin: 10px 0; /* Reduce scrollbar length - adds gap at top/bottom */
+    background: transparent; /* Hide the track */
+    margin: 15px 0;
   }
 
   .aboutus-container::-webkit-scrollbar-thumb {
@@ -434,9 +426,10 @@
       #f093fb
     );
     border-radius: 10px;
-    border: 3px solid transparent; /* Creates visual spacing from edge */
+    border: 5px solid transparent; /* Creates space from all edges, especially right */
+    border-left: 2px solid transparent; /* Less space on left */
     background-clip: padding-box;
-    min-height: 60px; /* Prevents thumb from being too small */
+    min-height: 80px;
   }
 
   .aboutus-container::-webkit-scrollbar-thumb:hover {
