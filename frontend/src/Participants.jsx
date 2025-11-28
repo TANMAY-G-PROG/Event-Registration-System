@@ -118,7 +118,7 @@ const Participants = () => {
       }
       
       const t = new Date().getTime();
-      const existingPdfBytes = await fetch(`/certificate-template.pdf?v=${t}`).then(res => {
+      const existingPdfBytes = await fetch(`/hod_certificate.pdf?v=${t}`).then(res => {
         if (!res.ok) throw new Error('Template not found');
         return res.arrayBuffer();
       });
@@ -135,13 +135,17 @@ const Participants = () => {
       } catch { nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold); }
 
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
-      const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
+      // const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold); // Bold font no longer needed for date
       
       const nameText = userInfo.userName;
       const nameWidth = nameFont.widthOfTextAtSize(nameText, 38);
       page.drawText(nameText, { x: (width - nameWidth) / 2, y: 250, size: 38, font: nameFont, color: rgb(0.97, 0.85, 0.57) });
+      
+      // USN is printed here
       page.drawText(userInfo.userUSN, { x: 170, y: 160, size: 19, font, color: rgb(1,1,1) });
-      page.drawText(formatDate(event.eventDate), { x: 510, y: 160, size: 16, font: boldFont, color: rgb(1,1,1) });
+      
+      // --- DATE PRINTING REMOVED HERE ---
+      // The line that drew the date has been deleted per request.
 
       const descFont = font; 
       
