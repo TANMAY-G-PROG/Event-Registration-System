@@ -373,11 +373,25 @@
   }
 }
 
-/* --- REPLACE THE BOTTOM MOBILE MEDIA QUERY WITH THIS --- */
-
+/* MOBILE VIEW - SCROLLBAR LOGIC UPDATED HERE */
 @media (max-width: 768px) {
   
-  /* 1. Make the container scrollable */
+  /* 1. Layout Adjustments */
+  .aboutus-hero { padding: 80px 20px 60px; }
+  .team-section { padding: 40px 15px 60px; }
+  .section-title { margin-bottom: 40px; }
+  .team-grid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  .connect-section { padding: 60px 20px 80px; }
+  .social-links { gap: 20px; }
+  .social-link { padding: 18px 35px; font-size: 1.1rem; }
+  .social-link i { font-size: 1.5rem; }
+
+  /* 2. Scrollbar Container Setup */
   .aboutus-container {
     height: 100vh;
     overflow-y: auto;
@@ -385,43 +399,49 @@
     scroll-behavior: smooth;
   }
 
-  /* 2. The Hit Area (Invisible width) */
+  /* 3. The Hit Area */
   .aboutus-container::-webkit-scrollbar {
-    width: 14px; /* We need width to grab it, but we hide half of it below */
+    width: 14px; 
   }
 
-  /* 3. The Track - INVISIBLE & SHORTENED */
+  /* 4. The Invisible Track with Margin (Reduces Scroll Length) */
   .aboutus-container::-webkit-scrollbar-track {
-    background: transparent; /* No color */
-    margin-block: 20vh; /* Pushes the scrollbar away from top/bottom edges */
+    background: transparent;
+    margin-block: 20vh; /* Keeps scrollbar in the middle */
   }
 
-  /* 4. The Thumb - MOVED LEFT */
+  /* 5. The Thumb (Bar) - Positioned Left away from edge */
   .aboutus-container::-webkit-scrollbar-thumb {
-    /* The visible color */
     background-color: rgba(240, 147, 251, 0.6); 
-    
-    /* This clips the color so it doesn't paint over the border area */
     background-clip: content-box; 
-    
     border-radius: 10px;
-
-    /* KEY SETTING: Transparent borders to position it */
-    /* 8px transparent on the right -> Pushes the bar 8px to the LEFT */
+    /* Pushes the bar 8px to the LEFT (away from bezel) */
     border-right: 8px solid transparent; 
-    /* 2px transparent on the left -> Defines the thickness */
     border-left: 2px solid transparent;
-    
     border-top: 0;
     border-bottom: 0;
   }
 
-  /* 5. Active State (When touching) */
   .aboutus-container::-webkit-scrollbar-thumb:active {
-    background-color: #f093fb; /* Brighter when touched */
-    
-    /* Keep the same borders so it doesn't jump */
+    background-color: #f093fb; 
     border-right: 8px solid transparent; 
     border-left: 2px solid transparent;
   }
+}
+
+@media (max-width: 480px) {
+  .aboutus-hero { padding: 60px 15px 40px; }
+  .hero-underline { width: 100px; margin-bottom: 40px; }
+  .team-section { padding: 30px 10px 40px; }
+  .connect-section { padding: 50px 15px 60px; }
+  .connect-title { margin-bottom: 35px; }
+  .social-links { gap: 15px; }
+  .social-link { padding: 16px 30px; font-size: 1rem; }
+  .social-link i { font-size: 1.4rem; }
+}
+
+@media (max-width: 320px) {
+  .hero-underline { width: 80px; margin-bottom: 30px; }
+  .social-link { padding: 12px 20px; font-size: 0.95rem; }
+  .social-link i { font-size: 1.2rem; }
 }
