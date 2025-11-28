@@ -28,7 +28,7 @@ const AboutUs = () => {
     {
       name: "Yashwanth",
       title: "Developer",
-      handle: "yashwant",
+      handle: "yashwanth",
       status: "Available",
       avatarUrl: member3,
       linkedin: "https://www.instagram.com/suchitkadidal/",
@@ -148,6 +148,7 @@ const AboutUs = () => {
 };
 
 export default AboutUs;
+
 
 
 
