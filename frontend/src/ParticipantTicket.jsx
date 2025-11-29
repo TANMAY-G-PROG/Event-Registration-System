@@ -148,7 +148,6 @@ export default function ParticipantTicket() {
               <h1 className="tk-event-title">
                 {eventData.ename || 'Untitled Event'}
               </h1>
-              <p className="tk-event-id">Event ID: {eventData.eid}</p>
               
               {/* Payment Status Badge */}
               {paymentBadge && (
@@ -263,3 +262,4 @@ export default function ParticipantTicket() {
     </div>
   );
 }
+
