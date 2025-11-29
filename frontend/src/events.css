@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css?family=Roboto+Slab:100,300,400,700');
 @import url('https://fonts.googleapis.com/css?family=Raleway:300,400,500,600,700,800,900');
 
-/* --- NEW CODE ADDED --- */
 @property --angle-1 {
   syntax: "<angle>";
   inherits: false;
@@ -18,7 +17,6 @@
   --anim--hover-time: 400ms;
   --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
 }
-/* --- END OF NEW CODE --- */
 
 /* Events Wrapper with LightRays Background */
 .events-wrapper {
@@ -55,11 +53,10 @@
 .events-wrapper .logout-container {
   position: fixed;
   top: 20px;
-  right: 20px; /* Changed from left to right */
+  right: 20px;
   z-index: 1000;
 }
 
-/* --- OLD .logout-btn STYLES REMOVED AND REPLACED WITH NEW STYLES --- */
 .events-wrapper .logout-btn {
   /* Basic Styling */
   --border-width: clamp(1px, 0.0625em, 4px);
@@ -92,11 +89,11 @@
   gap: 8px;
   font-family: "Inter", sans-serif;
   font-weight: 500;
-  font-size: 14px; /* Controls 'em' units */
-  color: white; /* Changed from dark grey */
+  font-size: 14px;
+  color: white;
   text-shadow: 0em 0.25em 0.05em rgba(0, 0, 0, 0.1);
-  padding-inline: 1.5em; /* 1.5 * 14px = 21px */
-  padding-block: 0.875em; /* 0.875 * 14px = 12.25px */
+  padding-inline: 1.5em;
+  padding-block: 0.875em;
   text-decoration: none;
 }
 
@@ -105,7 +102,7 @@
   content: "";
   display: block;
   position: absolute;
-  z-index: 3; /* Above text */
+  z-index: 3;
   width: calc(100% - var(--border-width));
   height: calc(100% - var(--border-width));
   top: calc(0% + var(--border-width) / 2);
@@ -134,7 +131,7 @@
 .events-wrapper .logout-btn::after {
   content: "";
   position: absolute;
-  z-index: 1; /* Below button */
+  z-index: 1;
   inset: 0;
   border-radius: 999vw;
   width: calc(100% + var(--border-width));
@@ -202,7 +199,7 @@
 .events-wrapper .logout-btn i {
   font-size: 16px;
   position: relative;
-  z-index: 2; /* Keep icon/text below shine */
+  z-index: 2;
 }
 
 /* Touch device fallbacks */
@@ -218,8 +215,6 @@
     --angle-1: -75deg;
   }
 }
-/* --- END OF NEW BUTTON STYLES --- */
-
 
 .events-wrapper .cards {
   display: flex;
@@ -243,7 +238,7 @@
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0, 1);
   backdrop-filter: blur(10px);
   pointer-events: auto;
-  cursor: pointer;
+  cursor: pointer; /* Makes the whole card look clickable */
 }
 
 .events-wrapper .card:hover {
@@ -253,7 +248,6 @@
 
 .events-wrapper .card__img,
 .events-wrapper .card__img--hover {
-  background-image: linear-gradient(135deg, #5EFCE8 10%, #736EFE 100%);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -261,36 +255,61 @@
   height: 235px;
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
+  /* Removed visibility: hidden so the placeholder below works */
 }
 
+/* --- PLACEHOLDER LOGIC --- */
+/* Fallback background color and icon if image fails to load */
+.events-wrapper .card__img {
+  background-color: #e2e8f0; /* Light gray-blue placeholder */
+  position: relative;
+}
+
+/* Add a FontAwesome icon as a placeholder */
+.events-wrapper .card__img::before {
+  content: '\f03e'; /* FontAwesome image icon code */
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px;
+  color: #94a3b8;
+  z-index: 0;
+}
+
+/* Specific Card Images - If they load, they cover the placeholder */
 .events-wrapper .card--1 .card__img, 
 .events-wrapper .card--1 .card__img--hover {
   background-image: url('./assets/volunteers.png');
+  z-index: 1; /* Ensures image sits on top of placeholder icon */
 }
 
 .events-wrapper .card--2 .card__img, 
 .events-wrapper .card--2 .card__img--hover {
   background-image: url('./assets/organisers.png');
+  z-index: 1;
 }
 
 .events-wrapper .card--3 .card__img, 
 .events-wrapper .card--3 .card__img--hover {
   background-image: url('https://static.vecteezy.com/system/resources/previews/007/227/562/non_2x/volunteering-and-donations-banner-template-cheerful-people-donating-toys-for-children-cartoon-characters-young-volunteers-holding-boxes-with-grocery-products-charity-organization-members-vector.jpg');
-}
-
-.events-wrapper .card__img {
-  visibility: hidden;
+  z-index: 1;
 }
 
 .events-wrapper .card__img--hover {
   position: absolute;
   top: 0;
-  z-index: 1;
+  z-index: 2; /* Hover effect sits on top of image */
   transition: 0.3s all ease-out;
+  background-image: linear-gradient(135deg, #5EFCE8 10%, #736EFE 100%);
+  opacity: 0;
+  height: 100%;
 }
 
 .events-wrapper .card__info {
-  z-index: 2;
+  z-index: 3;
   background-color: rgba(255, 255, 255, 0.95);
   border-bottom-left-radius: 16px;
   border-bottom-right-radius: 16px;
@@ -299,7 +318,6 @@
 }
 
 .events-wrapper .card:hover .card__img--hover {
-  height: 100%;
   opacity: 0.25;
 }
 
@@ -337,14 +355,7 @@
   transform: scale(1.2);
 }
 
-.events-wrapper .card_link {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-}
+/* Removed .card_link styles as it is no longer used */
 
 /* Light Rays Container */
 .events-wrapper .light-rays-container {
@@ -376,14 +387,12 @@
 
   .events-wrapper .logout-container {
     top: 15px;
-    /* left: 15px; */ /* Removed */
     right: 15px;
     display: flex;
-    justify-content: flex-end; /* Changed from flex-start */
+    justify-content: flex-end;
   }
   
   .events-wrapper .logout-btn {
-    /* Responsive adjustments */
     font-size: 13px;
     padding-inline: 1.5em;
     padding-block: 0.875em;
@@ -419,7 +428,6 @@
     padding: 15px 0 0;
   }
 
-  /* Enhanced touch interaction for mobile */
   .events-wrapper .card:active {
     transform: scale(0.98);
     box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.3);
@@ -434,12 +442,10 @@
 
   .events-wrapper .logout-container {
     top: 12px;
-    /* left: 12px; */ /* Removed */
     right: 12px;
   }
   
   .events-wrapper .logout-btn {
-    /* Responsive adjustments */
     font-size: 12px;
     gap: 6px;
   }
