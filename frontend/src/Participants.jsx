@@ -278,7 +278,7 @@ const Participants = () => {
           {/* MOBILE FLOATING ACTION BUTTON (FAB) - Hidden on Desktop */}
           <button className="mobile-fab" onClick={handleParticipateClick}>
             <i className="fas fa-plus"></i>
-            <span>Register</span>
+            <span>Participate</span>
           </button>
 
         </div>
