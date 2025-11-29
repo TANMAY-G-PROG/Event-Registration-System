@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './volunteers.css';
 import { useNavigate } from 'react-router-dom';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -15,16 +15,38 @@ const Volunteers = () => {
   const [error, setError] = useState(null);
   const [userInfo, setUserInfo] = useState({ userName: '', userUSN: '' });
 
-  // --- State Management for Certificates ---
   const [generatingIds, setGeneratingIds] = useState(new Set());
   const [downloadLinks, setDownloadLinks] = useState({});
+
+  // --- FAB Visibility Logic ---
+  const [showFab, setShowFab] = useState(true);
+  const buttonRef = useRef(null);
 
   useEffect(() => {
     fetchUserInfo();
     fetchVolunteerEvents();
   }, []);
 
-  // Cleanup object URLs
+  // Observer to hide FAB when static button is visible
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowFab(!entry.isIntersecting);
+      },
+      { root: null, threshold: 0.1 }
+    );
+
+    if (buttonRef.current) {
+      observer.observe(buttonRef.current);
+    }
+
+    return () => {
+      if (buttonRef.current) {
+        observer.unobserve(buttonRef.current);
+      }
+    };
+  }, [loading]);
+
   useEffect(() => {
     return () => {
       Object.values(downloadLinks).forEach(link => {
@@ -69,7 +91,6 @@ const Volunteers = () => {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
 
-    // Remove duplicates by EID
     const uniqueEvents = eventsList.reduce((acc, current) => {
       if (!acc.find(e => e.eid === current.eid)) acc.push(current);
       return acc;
@@ -151,7 +172,6 @@ const Volunteers = () => {
       page.drawText(formatDate(event.eventDate), { x: 510, y: 160, size: 16, font: boldFont, color: rgb(1,1,1) });
 
       const descFont = font; 
-
       const contentText = event.certificate_info || event.eventdesc || event.ename;
       const words = contentText.split(' ');
 
@@ -282,15 +302,18 @@ const Volunteers = () => {
 
           </div>
 
-          {/* DESKTOP BUTTON - Hidden on Mobile */}
-          <div className="button-container desktop-only-btn">
+          {/* STATIC BUTTON - Attached Ref */}
+          <div className="button-container static-action-btn" ref={buttonRef}>
             <button id="volunteerOtherEvent" onClick={handleVolunteerClick}>
               Volunteer in Other Event
             </button>
           </div>
 
-          {/* MOBILE FLOATING ACTION BUTTON - Hidden on Desktop */}
-          <button className="mobile-fab" onClick={handleVolunteerClick}>
+          {/* MOBILE FAB - Added .hidden class logic */}
+          <button 
+            className={`mobile-fab ${!showFab ? 'hidden' : ''}`} 
+            onClick={handleVolunteerClick}
+          >
             <i className="fas fa-hand-holding-heart"></i>
             <span>Volunteer</span>
           </button>
