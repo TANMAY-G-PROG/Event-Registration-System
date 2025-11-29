@@ -73,7 +73,7 @@ const Volunteers = () => {
     const uniqueEvents = eventsList.reduce((acc, current) => {
       if (!acc.find(e => e.eid === current.eid)) acc.push(current);
       return acc;
-    });
+    }, []);
 
     const categorized = { ongoing: [], completed: [], upcoming: [] };
 
