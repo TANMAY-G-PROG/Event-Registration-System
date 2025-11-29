@@ -238,7 +238,7 @@
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0, 1);
   backdrop-filter: blur(10px);
   pointer-events: auto;
-  cursor: pointer; /* Makes the whole card look clickable */
+  cursor: pointer;
 }
 
 .events-wrapper .card:hover {
@@ -255,57 +255,39 @@
   height: 235px;
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
-  /* Removed visibility: hidden so the placeholder below works */
 }
 
-/* --- PLACEHOLDER LOGIC --- */
-/* Fallback background color and icon if image fails to load */
+/* --- CLEANED UP IMAGE STYLES --- */
 .events-wrapper .card__img {
-  background-color: #e2e8f0; /* Light gray-blue placeholder */
+  /* Removed background-color and placeholder icon */
   position: relative;
+  z-index: 1;
 }
 
-/* Add a FontAwesome icon as a placeholder */
-.events-wrapper .card__img::before {
-  content: '\f03e'; /* FontAwesome image icon code */
-  font-family: "Font Awesome 6 Free";
-  font-weight: 900;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 40px;
-  color: #94a3b8;
-  z-index: 0;
-}
-
-/* Specific Card Images - If they load, they cover the placeholder */
-.events-wrapper .card--1 .card__img, 
-.events-wrapper .card--1 .card__img--hover {
+/* Specific Card Images */
+.events-wrapper .card--1 .card__img {
   background-image: url('./assets/volunteers.png');
-  z-index: 1; /* Ensures image sits on top of placeholder icon */
 }
 
-.events-wrapper .card--2 .card__img, 
-.events-wrapper .card--2 .card__img--hover {
+.events-wrapper .card--2 .card__img {
   background-image: url('./assets/organisers.png');
-  z-index: 1;
 }
 
-.events-wrapper .card--3 .card__img, 
-.events-wrapper .card--3 .card__img--hover {
+.events-wrapper .card--3 .card__img {
   background-image: url('https://static.vecteezy.com/system/resources/previews/007/227/562/non_2x/volunteering-and-donations-banner-template-cheerful-people-donating-toys-for-children-cartoon-characters-young-volunteers-holding-boxes-with-grocery-products-charity-organization-members-vector.jpg');
-  z-index: 1;
 }
 
+/* Disabled Hover Overlay */
 .events-wrapper .card__img--hover {
   position: absolute;
   top: 0;
-  z-index: 2; /* Hover effect sits on top of image */
-  transition: 0.3s all ease-out;
-  background-image: linear-gradient(135deg, #5EFCE8 10%, #736EFE 100%);
-  opacity: 0;
   height: 100%;
+  width: 100%;
+  /* Made transparent and non-interactive */
+  background: transparent;
+  opacity: 0;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .events-wrapper .card__info {
@@ -317,9 +299,7 @@
   position: relative;
 }
 
-.events-wrapper .card:hover .card__img--hover {
-  opacity: 0.25;
-}
+/* Removed hover opacity change for the overlay */
 
 .events-wrapper .card:hover .card__info {
   background-color: rgba(255, 255, 255, 0.15);
@@ -354,8 +334,6 @@
   color: #000000;
   transform: scale(1.2);
 }
-
-/* Removed .card_link styles as it is no longer used */
 
 /* Light Rays Container */
 .events-wrapper .light-rays-container {
