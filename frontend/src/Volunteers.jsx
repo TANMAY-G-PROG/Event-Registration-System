@@ -73,7 +73,7 @@ const Volunteers = () => {
     const uniqueEvents = eventsList.reduce((acc, current) => {
       if (!acc.find(e => e.eid === current.eid)) acc.push(current);
       return acc;
-    }, []);
+    });
 
     const categorized = { ongoing: [], completed: [], upcoming: [] };
 
@@ -152,7 +152,6 @@ const Volunteers = () => {
 
       const descFont = font; 
 
-      // --- UPDATED LOGIC HERE: Use certificate_info if available ---
       const contentText = event.certificate_info || event.eventdesc || event.ename;
       const words = contentText.split(' ');
 
@@ -283,11 +282,19 @@ const Volunteers = () => {
 
           </div>
 
-          <div className="button-container">
+          {/* DESKTOP BUTTON - Hidden on Mobile */}
+          <div className="button-container desktop-only-btn">
             <button id="volunteerOtherEvent" onClick={handleVolunteerClick}>
               Volunteer in Other Event
             </button>
           </div>
+
+          {/* MOBILE FLOATING ACTION BUTTON - Hidden on Desktop */}
+          <button className="mobile-fab" onClick={handleVolunteerClick}>
+            <i className="fas fa-hand-holding-heart"></i>
+            <span>Volunteer</span>
+          </button>
+
         </div>
       </section>
     </div>
