@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './participants.css';
 import { useNavigate } from 'react-router-dom';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -19,12 +19,39 @@ const Participants = () => {
   const [generatingIds, setGeneratingIds] = useState(new Set());
   const [downloadLinks, setDownloadLinks] = useState({});
 
+  // --- FAB Visibility Logic ---
+  const [showFab, setShowFab] = useState(true);
+  const buttonRef = useRef(null); // Ref for the static bottom button
+
   useEffect(() => {
     fetchUserInfo();
     fetchParticipantEvents();
   }, []);
 
-  // Cleanup object URLs
+  // Observer to hide FAB when static button is visible
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // If static button is visible (intersecting), hide FAB
+        setShowFab(!entry.isIntersecting);
+      },
+      {
+        root: null,
+        threshold: 0.1, // Trigger when 10% of the button is visible
+      }
+    );
+
+    if (buttonRef.current) {
+      observer.observe(buttonRef.current);
+    }
+
+    return () => {
+      if (buttonRef.current) {
+        observer.unobserve(buttonRef.current);
+      }
+    };
+  }, [loading]); // Re-run when loading finishes (content might shift)
+
   useEffect(() => {
     return () => {
       Object.values(downloadLinks).forEach(link => {
@@ -268,15 +295,18 @@ const Participants = () => {
 
           </div>
 
-          {/* DESKTOP BUTTON - Hidden on Mobile */}
-          <div className="button-container desktop-only-btn">
+          {/* STATIC BUTTON - Attached Ref here */}
+          <div className="button-container static-action-btn" ref={buttonRef}>
             <button onClick={handleParticipateClick}>
               Participate in other Event
             </button>
           </div>
 
-          {/* MOBILE FLOATING ACTION BUTTON (FAB) - Hidden on Desktop */}
-          <button className="mobile-fab" onClick={handleParticipateClick}>
+          {/* MOBILE FAB - Added .hidden class logic */}
+          <button 
+            className={`mobile-fab ${!showFab ? 'hidden' : ''}`} 
+            onClick={handleParticipateClick}
+          >
             <i className="fas fa-plus"></i>
             <span>Participate</span>
           </button>
