@@ -280,7 +280,7 @@
 }
 
 .ticket-page-wrapper .tk-ticket-card:hover {
-  transform: translateZ(20px) rotateX(5deg) rotateY(5deg);
+  /* transform: translateZ(20px) rotateX(5deg) rotateY(5deg); */
   box-shadow:
       0 20px 60px rgba(0, 0, 0, 0.4),
       inset 0 1px 0 rgba(255, 255, 255, 0.3),
@@ -763,7 +763,7 @@
 
   /* Subtle 3D on tap (for touch devices) */
   .ticket-page-wrapper .tk-ticket-card:hover {
-    transform: translateZ(15px) rotateX(4deg) rotateY(4deg);
+    /* transform: translateZ(15px) rotateX(4deg) rotateY(4deg); */
     box-shadow:
       0 20px 60px rgba(0, 0, 0, 0.4),
       inset 0 1px 0 rgba(255, 255, 255, 0.3),
@@ -848,10 +848,11 @@
     background: rgba(255, 255, 255, 0.05);
   }
   .ticket-page-wrapper .tk-ticket-card:hover {
-    transform: translateZ(15px) rotateX(4deg) rotateY(4deg);
+    /* transform: translateZ(15px) rotateX(4deg) rotateY(4deg); */
     box-shadow:
       0 20px 60px rgba(0, 0, 0, 0.4),
       inset 0 1px 0 rgba(255, 255, 255, 0.3),
       0 0 150px rgba(255, 107, 157, 0.2);
   }
 }
+
