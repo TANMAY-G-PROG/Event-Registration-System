@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
 import './events.css';
 
-// Get the base URL from environment variables
-// ❌ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// Get the base URL from environment variables if needed, currently unused in your snippet
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const DEFAULT_COLOR = '#ffffff';
 
@@ -13,8 +13,6 @@ const hexToRgb = hex => {
   return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [1, 1, 1];
 };
 
-// ... (all the LightRays component code remains unchanged) ...
-// ... (lines 14 - 510) ...
 const getAnchorAndDir = (origin, w, h) => {
   const outside = 0.2;
   switch (origin) {
@@ -64,7 +62,6 @@ const LightRays = ({
   const [isMobile, setIsMobile] = useState(false);
   const observerRef = useRef(null);
 
-  // Detect mobile device
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
@@ -112,7 +109,6 @@ const LightRays = ({
 
       if (!containerRef.current) return;
 
-      // Lower DPR for mobile devices to improve performance
       const maxDpr = isMobile ? 1.5 : 2;
 
       const renderer = new Renderer({
@@ -235,10 +231,8 @@ void main() {
       const uniforms = {
         iTime: { value: 0 },
         iResolution: { value: [1, 1] },
-
         rayPos: { value: [0, 0] },
         rayDir: { value: [0, 1] },
-
         raysColor: { value: hexToRgb(raysColor) },
         raysSpeed: { value: raysSpeed },
         lightSpread: { value: lightSpread },
@@ -456,7 +450,6 @@ export default function Events() {
 
   const checkAuth = async () => {
     try {
-      // ✅ CHANGED: Using relative path for the proxy
       const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
@@ -476,7 +469,6 @@ export default function Events() {
 
   const handleLogout = async () => {
     try {
-      // ✅ CHANGED: Using relative path for the proxy
       const response = await fetch('/api/signout', {
         method: 'POST',
         credentials: 'include',
@@ -529,11 +521,15 @@ export default function Events() {
       </div>
 
       <section className="cards">
-        <article className="card card--1">
+        {/* UPDATED: 
+          1. Moved onClick to the <article> tag.
+          2. Removed <div className="card_link"> wrapper.
+          3. Placeholder styles handled in CSS via 'card__img'.
+        */}
+        
+        <article className="card card--1" onClick={() => navigate('/participants')}>
           <div className="card__img"></div>
-          <div className="card_link" onClick={() => navigate('/participants')}>
-            <div className="card__img--hover"></div>
-          </div>
+          <div className="card__img--hover"></div>
           <div className="card__info">
             <h3 className="card__title">Events participated by you</h3>
             <div className="card__icon">
@@ -542,11 +538,9 @@ export default function Events() {
           </div>
         </article>
 
-        <article className="card card--2">
+        <article className="card card--2" onClick={() => navigate('/organisers')}>
           <div className="card__img"></div>
-          <div className="card_link" onClick={() => navigate('/organisers')}>
-            <div className="card__img--hover"></div>
-          </div>
+          <div className="card__img--hover"></div>
           <div className="card__info">
             <h3 className="card__title">Events organised by you</h3>
             <div className="card__icon">
@@ -555,11 +549,9 @@ export default function Events() {
           </div>
         </article>
 
-        <article className="card card--3">
+        <article className="card card--3" onClick={() => navigate('/volunteers')}>
           <div className="card__img"></div>
-          <div className="card_link" onClick={() => navigate('/volunteers')}>
-            <div className="card__img--hover"></div>
-          </div>
+          <div className="card__img--hover"></div>
           <div className="card__info">
             <h3 className="card__title">Events volunteered by you</h3>
             <div className="card__icon">
@@ -571,4 +563,3 @@ export default function Events() {
     </div>
   );
 }
-
