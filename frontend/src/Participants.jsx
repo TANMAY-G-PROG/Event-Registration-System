@@ -135,21 +135,15 @@ const Participants = () => {
       } catch { nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold); }
 
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
-      // const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold); // Bold font no longer needed for date
       
       const nameText = userInfo.userName;
       const nameWidth = nameFont.widthOfTextAtSize(nameText, 38);
       page.drawText(nameText, { x: (width - nameWidth) / 2, y: 250, size: 38, font: nameFont, color: rgb(0.97, 0.85, 0.57) });
       
-      // USN is printed here
       page.drawText(userInfo.userUSN, { x: 170, y: 160, size: 19, font, color: rgb(1,1,1) });
       
-      // --- DATE PRINTING REMOVED HERE ---
-      // The line that drew the date has been deleted per request.
-
       const descFont = font; 
       
-      // --- UPDATED LOGIC HERE: Use certificate_info if available ---
       const contentText = event.certificate_info || event.eventdesc || event.ename;
       const words = contentText.split(' ');
       
@@ -274,11 +268,19 @@ const Participants = () => {
 
           </div>
 
-          <div className="button-container">
+          {/* DESKTOP BUTTON - Hidden on Mobile */}
+          <div className="button-container desktop-only-btn">
             <button onClick={handleParticipateClick}>
               Participate in other Event
             </button>
           </div>
+
+          {/* MOBILE FLOATING ACTION BUTTON (FAB) - Hidden on Desktop */}
+          <button className="mobile-fab" onClick={handleParticipateClick}>
+            <i className="fas fa-plus"></i>
+            <span>Register</span>
+          </button>
+
         </div>
       </section>
     </div>
