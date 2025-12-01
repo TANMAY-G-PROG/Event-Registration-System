@@ -1,160 +1,160 @@
 /* ===================================
-   TICKET PAGE - SOLARIS VINTAGE THEME
-   =================================== */
+   TICKET PAGE - SOLARIS VINTAGE THEME
+   =================================== */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
 
 :root {
-  --paper-color: #f4f1ea;
-  --ink-color: #1a1a1a;
-  --accent-color: #c04d28; /* Burnt terracotta */
-  --gold-accent: #d4af37;
-  --soft-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  --bg-color: #e8e6df;
-  
-  /* Status Colors (Ink Style) */
-  --status-green: #2e7d32;
-  --status-orange: #e65100;
-  --status-red: #c62828;
-  --status-blue: #1565c0;
+  --paper-color: #f4f1ea;
+  --ink-color: #1a1a1a;
+  --accent-color: #c04d28; /* Burnt terracotta */
+  --gold-accent: #d4af37;
+  --soft-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --bg-color: #e8e6df;
+  
+  /* Status Colors (Ink Style) */
+  --status-green: #2e7d32;
+  --status-orange: #e65100;
+  --status-red: #c62828;
+  --status-blue: #1565c0;
 }
 
 /* === PAGE WRAPPER === */
 .ticket-page-wrapper {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Montserrat', sans-serif;
-  background-color: var(--bg-color);
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E");
-  padding: 40px 20px;
-  position: relative;
-  overflow-x: hidden;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Montserrat', sans-serif;
+  background-color: var(--bg-color);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E");
+  padding: 40px 20px;
+  position: relative;
+  overflow-x: hidden;
 }
 
 /* === NAVIGATION === */
 .tk-nav-container {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 100;
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
 }
 
 .tk-nav-btn {
-  background: transparent;
-  border: 1px solid var(--ink-color);
-  color: var(--ink-color);
-  padding: 12px 24px;
-  border-radius: 30px;
-  cursor: pointer;
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s ease;
+  background: transparent;
+  border: 1px solid var(--ink-color);
+  color: var(--ink-color);
+  padding: 12px 24px;
+  border-radius: 30px;
+  cursor: pointer;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
 }
 
 .tk-nav-btn:hover {
-  background: var(--ink-color);
-  color: var(--paper-color);
+  background: var(--ink-color);
+  color: var(--paper-color);
 }
 
 /* === TICKET CARD === */
 .tk-ticket-container {
-  position: relative;
-  filter: drop-shadow(var(--soft-shadow));
-  /* NO HOVER TRANSFORM HERE AS REQUESTED */
-  width: 100%;
-  max-width: 400px;
+  position: relative;
+  filter: drop-shadow(var(--soft-shadow));
+  /* NO HOVER TRANSFORM HERE AS REQUESTED */
+  width: 100%;
+  max-width: 400px;
 }
 
 .tk-ticket-card {
-  width: 100%;
-  min-height: 800px;
-  background-color: var(--paper-color);
-  background-image: 
-      radial-gradient(circle at 100% 0%, rgba(192, 77, 40, 0.15) 0%, transparent 40%),
-      radial-gradient(circle at 0% 80%, rgba(212, 175, 55, 0.15) 0%, transparent 50%);
-  border-radius: 20px;
-  overflow: hidden;
-  position: relative;
-  color: var(--ink-color);
-  display: flex;
-  flex-direction: column;
-  border: 1px solid rgba(0,0,0,0.05);
+  width: 100%;
+  min-height: 800px;
+  background-color: var(--paper-color);
+  background-image: 
+      radial-gradient(circle at 100% 0%, rgba(192, 77, 40, 0.15) 0%, transparent 40%),
+      radial-gradient(circle at 0% 80%, rgba(212, 175, 55, 0.15) 0%, transparent 50%);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  color: var(--ink-color);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
 .tk-texture-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.15;
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
-  mix-blend-mode: multiply;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.15;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
 }
 
 /* === TOP NOTCH === */
 .tk-top-notch {
-  position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px;
-  height: 40px;
-  background-color: var(--bg-color);
-  border-radius: 50%;
-  z-index: 10;
-  box-shadow: inset 0 -3px 5px rgba(0,0,0,0.05);
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 40px;
+  background-color: var(--bg-color);
+  border-radius: 50%;
+  z-index: 10;
+  box-shadow: inset 0 -3px 5px rgba(0,0,0,0.05);
 }
 
 /* === MAIN CONTENT === */
 .tk-main-content {
-  flex: 1;
-  padding: 60px 30px 30px 30px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  position: relative;
-  z-index: 2;
+  flex: 1;
+  padding: 60px 30px 30px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  z-index: 2;
 }
 
 .tk-event-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 38px;
-  font-weight: 800;
-  font-style: italic;
-  line-height: 1.1;
-  margin-bottom: 15px;
-  color: var(--ink-color);
-  word-wrap: break-word;
+  font-family: 'Playfair Display', serif;
+  font-size: 38px;
+  font-weight: 800;
+  font-style: italic;
+  line-height: 1.1;
+  margin-bottom: 15px;
+  color: var(--ink-color);
+  word-wrap: break-word;
 }
 
 /* Payment Badges (Stamp Style) */
 .tk-stamp-badge {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 6px 14px;
-    border-radius: 4px;
-    border: 2px solid currentColor;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    opacity: 0.8;
-    transform: rotate(-2deg);
-    margin-bottom: 10px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: 2px solid currentColor;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.8;
+    transform: rotate(-2deg);
+    margin-bottom: 10px;
 }
 
 .tk-stamp-badge.verified { color: var(--status-green); border-color: var(--status-green); }
@@ -164,189 +164,186 @@
 
 /* Divider */
 .tk-separator-dots {
-  width: 100%;
-  height: 2px;
-  border-bottom: 2px dashed #d1cdc5;
-  margin: 20px 0;
-  opacity: 0.6;
+  width: 100%;
+  height: 2px;
+  border-bottom: 2px dashed #d1cdc5;
+  margin: 20px 0;
+  opacity: 0.6;
 }
 
 /* Data Grid for Info */
 .tk-info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    width: 100%;
-    text-align: left;
-    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    width: 100%;
+    text-align: left;
+    margin-bottom: 20px;
 }
 
 .tk-info-full {
-    grid-column: span 2;
+    grid-column: span 2;
 }
 
 .tk-info-label {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: #888;
-    letter-spacing: 1.5px;
-    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #888;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
 }
 
 .tk-info-value {
-    font-family: 'Playfair Display', serif;
-    font-size: 19px;
-    font-weight: 700;
-    color: var(--ink-color);
-    line-height: 1.3;
+    font-family: 'Playfair Display', serif;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--ink-color);
+    line-height: 1.3;
 }
 
 /* Club Name Section */
 .tk-club-section {
-    width: 100%;
-    text-align: center;
-    margin-top: 10px;
-    padding: 10px;
-    background: rgba(0,0,0,0.03);
-    border-radius: 8px;
+    width: 100%;
+    text-align: center;
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 8px;
 }
 
 .tk-club-value {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--gold-accent);
-    text-transform: uppercase;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--gold-accent);
+    text-transform: uppercase;
 }
 
 /* Description Text */
 .tk-details-text {
-    font-family: 'Playfair Display', serif;
-    font-size: 16px;
-    font-style: italic;
-    line-height: 1.6;
-    color: #555;
-    margin-top: 20px;
-    text-align: center;
-    border-top: 1px solid rgba(0,0,0,0.05);
-    padding-top: 20px;
-    width: 100%;
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-style: italic;
+    line-height: 1.6;
+    color: #555;
+    margin-top: 20px;
+    text-align: center;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    padding-top: 20px;
+    width: 100%;
 }
 
 /* === DIVIDER NOTCHES === */
 .tk-notch-container {
-  position: relative;
-  height: 30px;
-  width: 100%;
-  z-index: 10;
+  position: relative;
+  height: 30px;
+  width: 100%;
+  z-index: 10;
 }
 
 .tk-notch {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 30px;
-  height: 30px;
-  background-color: var(--bg-color);
-  border-radius: 50%;
-  box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  background-color: var(--bg-color);
+  border-radius: 50%;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
 }
 
 .tk-notch-left { left: -15px; }
 .tk-notch-right { right: -15px; }
 
 .tk-notch-container::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 20px;
-  right: 20px;
-  border-top: 2px dashed #d1cdc5;
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  border-top: 2px dashed #d1cdc5;
 }
 
 /* === BOTTOM STUB (SCANNER) === */
 .tk-stub-content {
-  height: 130px; /* Reduced from 180px */
-  background-color: #ece9e2;
-  padding: 15px 20px; /* Reduced top/bottom padding */
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  z-index: 2;
+  height: 130px; /* Reduced from 180px */
+  background-color: #ece9e2;
+  padding: 15px 20px; /* Reduced top/bottom padding */
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  z-index: 2;
 }
 
 .tk-scan-btn {
-    background: transparent;
-    border: 3px solid var(--accent-color);
-    color: var(--accent-color);
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 800;
-    font-size: 16px; /* Slightly smaller text for compact area */
-    padding: 12px 30px; /* Reduced padding */
-    border-radius: 10px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    width: 100%;
+    background: transparent;
+    border: 3px solid var(--accent-color);
+    color: var(--accent-color);
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 16px; /* Slightly smaller text for compact area */
+    padding: 12px 30px; /* Reduced padding */
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
 }
 
 .tk-scan-btn i {
-    font-size: 24px; /* Slightly smaller icon */
+    font-size: 24px; /* Slightly smaller icon */
 }
 
 .tk-scan-btn:hover {
-    background: var(--accent-color);
-    color: var(--paper-color);
-    box-shadow: 0 5px 15px rgba(192, 77, 40, 0.3);
+    background: var(--accent-color);
+    color: var(--paper-color);
+    box-shadow: 0 5px 15px rgba(192, 77, 40, 0.3);
 }
 
 .tk-scan-btn:active {
-    transform: scale(0.98);
+    transform: scale(0.98);
 }
 
 /* Disabled State for Scanner */
 .tk-scan-btn.disabled {
-    border-color: #999;
-    color: #999;
-    cursor: not-allowed;
-    background: rgba(0,0,0,0.05);
+    border-color: #999;
+    color: #999;
+    cursor: not-allowed;
+    background: rgba(0,0,0,0.05);
 }
 
 .tk-scan-btn.disabled:hover {
-    background: rgba(0,0,0,0.05);
-    color: #999;
-    box-shadow: none;
+    background: rgba(0,0,0,0.05);
+    color: #999;
+    box-shadow: none;
 }
 
 .tk-lock-msg {
-    font-size: 10px;
-    text-transform: uppercase;
-    color: #ef4444;
-    font-weight: 700;
-    margin-top: 10px;
-    letter-spacing: 1px;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: #ef4444;
+    font-weight: 700;
+    margin-top: 10px;
+    letter-spacing: 1px;
 }
 
 /* === LOADING & ERROR === */
 .tk-loading-container, .tk-error-container {
-    color: var(--ink-color);
-    text-align: center;
-    background: var(--paper-color);
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: var(--soft-shadow);
-    font-size: 18px;
+    color: var(--ink-color);
+    text-align: center;
+    background: var(--paper-color);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: var(--soft-shadow);
+    font-size: 18px;
 }
-
-atleast for phone view tried to make sure the scanner is visble in one go we dont need to scool a bit down dont deacrease the size of any other componenst
-or see if u can decreaes the size of tiekcte page wrapper
