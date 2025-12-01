@@ -1,5 +1,5 @@
 /* ===================================
-   TICKET PAGE - SOLARIS VINTAGE (SMART FIT & PINNED FOOTER)
+   TICKET PAGE - SOLARIS VINTAGE (SMART FIT)
    =================================== */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
@@ -14,7 +14,7 @@
   --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
   --paper-color: #f4f1ea;
   --ink-color: #1a1a1a;
-  --accent-color: #c04d28; /* Burnt terracotta */
+  --accent-color: #c04d28;
   --gold-accent: #d4af37;
   --soft-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   --bg-color: #e8e6df;
@@ -28,8 +28,8 @@
 
 /* === PAGE WRAPPER === */
 .ticket-page-wrapper {
-  /* Use dynamic viewport height (dvh) to account for mobile browser bars */
-  height: 100vh; 
+  /* Use dynamic viewport height for mobile browsers */
+  height: 100vh;
   height: 100dvh; 
   width: 100%;
   display: flex;
@@ -39,13 +39,13 @@
   background-color: var(--bg-color);
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E");
   
-  /* Minimal padding to ensure ticket fits on small screens */
-  padding: 10px; 
+  /* Minimal padding to ensure ticket takes max space */
+  padding: 15px; 
   box-sizing: border-box;
-  overflow: hidden; /* Prevent page scrolling entirely */
+  overflow: hidden; /* Prevent page scroll, ticket handles internal scroll */
 }
 
-/* === NAVIGATION BUTTON === */
+/* === GLASSY NAVIGATION BUTTON === */
 .tk-nav-container {
   position: absolute;
   top: 15px;
@@ -95,13 +95,13 @@
 .tk-nav-btn:active::before { background-position: 50% 15%; --angle-2: -15deg; }
 .tk-nav-btn:active::after { --angle-1: -75deg; }
 
-/* === TICKET CARD CONTAINER === */
+/* === TICKET CARD LAYOUT === */
 .tk-ticket-container {
   position: relative;
   filter: drop-shadow(var(--soft-shadow));
   width: 100%;
   max-width: 380px;
-  /* Make container height match the viewport minus padding */
+  /* Ensure container doesn't overflow page */
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -109,8 +109,8 @@
 
 .tk-ticket-card {
   width: 100%;
-  height: 100%; /* Fill the container exactly */
-  /* Remove min-height so it doesn't force scrolling on small screens */
+  /* Force ticket to fill container but allow flex contents */
+  height: 100%; 
   background-color: var(--paper-color);
   background-image: 
       radial-gradient(circle at 100% 0%, rgba(192, 77, 40, 0.15) 0%, transparent 40%),
@@ -120,7 +120,7 @@
   position: relative;
   color: var(--ink-color);
   display: flex;
-  flex-direction: column; /* This is key for layout */
+  flex-direction: column; /* Key for pinning footer */
   border: 1px solid rgba(0,0,0,0.05);
 }
 
@@ -141,27 +141,25 @@
 
 /* === MAIN CONTENT (SCROLLABLE AREA) === */
 .tk-main-content {
-  flex: 1; /* This takes up all remaining space */
-  /* If content overflows this area, IT scrolls, not the whole page */
-  overflow-y: auto; 
-  /* Hide scrollbar */
-  scrollbar-width: none; 
-  
-  /* Padding adjusted for tight fit */
-  padding: 50px 25px 10px 25px; 
+  flex: 1; /* Takes all available space between top and footer */
+  padding: 50px 25px 10px 25px; /* Top padding clears notch */
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   position: relative;
   z-index: 2;
+  
+  /* CRITICAL: Allows scrolling if content is long, keeping scanner visible */
+  overflow-y: auto; 
+  /* Hide scrollbar for cleaner look */
+  scrollbar-width: none; 
 }
-/* Hide webkit scrollbar */
 .tk-main-content::-webkit-scrollbar { display: none; }
 
 .tk-event-title {
   font-family: 'Playfair Display', serif;
-  font-size: 32px;
+  font-size: 34px; /* Large font */
   font-weight: 800;
   font-style: italic;
   line-height: 1;
@@ -172,7 +170,7 @@
 
 .tk-club-name {
   font-family: 'Montserrat', sans-serif;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 2px;
   color: var(--gold-accent);
@@ -180,18 +178,19 @@
   margin-bottom: 15px;
 }
 
+/* Badges */
 .tk-stamp-badge, .tk-volunteer-badge {
     font-family: 'Montserrat', sans-serif;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
-    padding: 5px 12px;
+    padding: 6px 14px;
     border-radius: 4px;
     border: 2px solid currentColor;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     opacity: 0.8;
     transform: rotate(-2deg);
     margin-bottom: 10px;
@@ -202,10 +201,12 @@
 .tk-stamp-badge.rejected { color: var(--status-red); border-color: var(--status-red); }
 .tk-stamp-badge.required { color: var(--status-blue); border-color: var(--status-blue); }
 
+/* Divider */
 .tk-separator-dots {
   width: 100%; height: 2px; border-bottom: 2px dashed #d1cdc5; margin: 15px 0; opacity: 0.6; flex-shrink: 0;
 }
 
+/* Info Grid */
 .tk-info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -213,27 +214,28 @@
     width: 100%;
     text-align: left;
     margin-bottom: 15px;
-    flex-shrink: 0; /* Don't squash this section */
+    flex-shrink: 0;
 }
 
 .tk-info-full { grid-column: span 2; }
 
 .tk-info-label {
-    font-size: 10px; font-weight: 700; text-transform: uppercase; color: #888; letter-spacing: 1.5px; margin-bottom: 3px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; letter-spacing: 1.5px; margin-bottom: 3px;
 }
 
 .tk-info-value {
     font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--ink-color); line-height: 1.2;
 }
 
+/* Description */
 .tk-details-text {
     font-family: 'Playfair Display', serif;
-    font-size: 14px;
+    font-size: 15px;
     font-style: italic;
     line-height: 1.5;
     color: #555;
     margin-top: 10px;
-    margin-bottom: 20px; /* Add bottom margin so scrolling feels natural */
+    margin-bottom: 10px;
     text-align: center;
     border-top: 1px solid rgba(0,0,0,0.05);
     padding-top: 15px;
@@ -245,7 +247,7 @@
   height: 20px;
   width: 100%;
   z-index: 10;
-  flex-shrink: 0; /* Ensure this separator never disappears */
+  flex-shrink: 0; /* Prevents disappearing */
 }
 
 .tk-notch {
@@ -259,11 +261,9 @@
 
 /* === BOTTOM STUB (PINNED SCANNER) === */
 .tk-stub-content {
-  /* This section stays pinned to the bottom */
-  flex-shrink: 0; 
-  height: 110px; /* Reduced height to save space */
+  height: 120px; /* Fixed height for footer */
   background-color: #ece9e2;
-  padding: 10px 20px;
+  padding: 15px 20px;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -271,6 +271,7 @@
   align-items: center;
   position: relative;
   z-index: 2;
+  flex-shrink: 0; /* Ensures it never shrinks or hides */
 }
 
 .tk-scan-btn {
@@ -280,7 +281,7 @@
     font-family: 'Montserrat', sans-serif;
     font-weight: 800;
     font-size: 16px;
-    padding: 12px 35px; /* Compact padding */
+    padding: 14px 40px;
     border-radius: 12px;
     text-transform: uppercase;
     letter-spacing: 2px;
@@ -295,7 +296,7 @@
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
-.tk-scan-btn i { font-size: 20px; }
+.tk-scan-btn i { font-size: 24px; }
 
 .tk-scan-btn:hover { background: var(--accent-color); color: var(--paper-color); box-shadow: 0 5px 15px rgba(192, 77, 40, 0.3); }
 .tk-scan-btn:active { transform: scale(0.98); }
@@ -310,12 +311,15 @@
     color: var(--ink-color); text-align: center; background: var(--paper-color); padding: 2rem; border-radius: 12px; box-shadow: var(--soft-shadow); font-size: 18px;
 }
 
-/* === MEDIA QUERIES FOR SHORT SCREENS (The Fix for OnePlus 9R) === */
-@media (max-height: 850px) {
-  .tk-event-title { font-size: 26px; margin-bottom: 5px; }
-  .tk-club-name { margin-bottom: 10px; }
-  .tk-info-value { font-size: 16px; }
-  .tk-info-grid { gap: 10px; margin-bottom: 10px; }
-  .tk-scan-btn { padding: 10px 20px; font-size: 14px; }
-  .tk-stub-content { height: 90px; }
+/* === MOBILE SPECIFICS === */
+@media (max-width: 480px) {
+  .ticket-page-wrapper {
+    padding: 10px; /* Minimal padding on small phones */
+  }
+  .tk-main-content {
+    padding: 45px 20px 10px 20px;
+  }
+  .tk-event-title {
+    font-size: 28px;
+  }
 }
