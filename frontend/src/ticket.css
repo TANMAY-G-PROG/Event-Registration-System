@@ -1,5 +1,5 @@
 /* ===================================
-   TICKET PAGE - SOLARIS VINTAGE (FINAL)
+   TICKET PAGE - SOLARIS VINTAGE (LARGE FONTS)
    =================================== */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
@@ -26,7 +26,7 @@
 /* === PAGE WRAPPER === */
 .ticket-page-wrapper {
   height: 100vh;
-  height: 100dvh; /* Mobile browser fix */
+  height: 100dvh; 
   width: 100%;
   display: flex;
   align-items: center;
@@ -71,7 +71,9 @@
   width: 100%;
   height: 100%;
   background-color: var(--paper-color);
-  background-image: radial-gradient(circle at 100% 0%, rgba(192, 77, 40, 0.15) 0%, transparent 40%), radial-gradient(circle at 0% 80%, rgba(212, 175, 55, 0.15) 0%, transparent 50%);
+  background-image: 
+      radial-gradient(circle at 100% 0%, rgba(192, 77, 40, 0.15) 0%, transparent 40%),
+      radial-gradient(circle at 0% 80%, rgba(212, 175, 55, 0.15) 0%, transparent 50%);
   border-radius: 20px;
   overflow: hidden;
   position: relative;
@@ -84,9 +86,17 @@
 .tk-texture-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.15; background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E"); mix-blend-mode: multiply; }
 
 /* === TOP NOTCH === */
-.tk-top-notch { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 60px; height: 40px; background-color: var(--bg-color); border-radius: 50%; z-index: 10; box-shadow: inset 0 -3px 5px rgba(0,0,0,0.05); }
+.tk-top-notch {
+  position: absolute;
+  top: -20px; left: 50%; transform: translateX(-50%);
+  width: 60px; height: 40px;
+  background-color: var(--bg-color);
+  border-radius: 50%;
+  z-index: 10;
+  box-shadow: inset 0 -3px 5px rgba(0,0,0,0.05);
+}
 
-/* === MAIN CONTENT === */
+/* === MAIN CONTENT (SCROLLABLE) === */
 .tk-main-content {
   flex: 1;
   overflow-y: auto;
@@ -103,7 +113,7 @@
 
 .tk-event-title {
   font-family: 'Playfair Display', serif;
-  font-size: 32px;
+  font-size: 36px; /* Increased from 32px */
   font-weight: 800;
   font-style: italic;
   line-height: 1;
@@ -112,22 +122,35 @@
   word-wrap: break-word;
 }
 
-/* === CLUB NAME (YELLOW FONT) === */
+/* Club Name */
 .tk-club-name {
   font-family: 'Montserrat', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px; /* Increased from 13px */
+  font-weight: 800;
   letter-spacing: 2px;
-  color: var(--gold-accent); /* THIS MAKES IT YELLOW */
+  color: var(--gold-accent);
   text-transform: uppercase;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   text-shadow: 0 1px 1px rgba(0,0,0,0.1);
 }
 
 /* Badges */
 .tk-stamp-badge, .tk-volunteer-badge {
     font-family: 'Montserrat', sans-serif;
-    font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 5px 12px; border-radius: 4px; border: 2px solid currentColor; display: inline-flex; align-items: center; gap: 6px; opacity: 0.8; transform: rotate(-2deg); margin-bottom: 10px; background: rgba(255,255,255,0.3);
+    font-size: 12px; /* Increased from 10px */
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: 2px solid currentColor;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.8;
+    transform: rotate(-2deg);
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.3);
 }
 .tk-stamp-badge.verified { color: var(--status-green); border-color: var(--status-green); }
 .tk-stamp-badge.pending { color: var(--status-orange); border-color: var(--status-orange); }
@@ -146,19 +169,35 @@
     gap: 15px;
     width: 100%;
     text-align: left;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
     flex-shrink: 0;
 }
+
 .tk-info-full { grid-column: span 2; }
-.tk-info-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #888; letter-spacing: 1.5px; margin-bottom: 3px; }
-.tk-info-value { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; color: var(--ink-color); line-height: 1.2; }
+
+.tk-info-label {
+    font-size: 11px; /* Increased from 10px */
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #888;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+}
+
+.tk-info-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px; /* Increased from 17px */
+    font-weight: 700;
+    color: var(--ink-color);
+    line-height: 1.2;
+}
 
 /* Description */
 .tk-details-text {
     font-family: 'Playfair Display', serif;
-    font-size: 14px;
+    font-size: 16px; /* Increased from 14px */
     font-style: italic;
-    line-height: 1.4;
+    line-height: 1.5;
     color: #555;
     margin-top: 10px;
     margin-bottom: 20px;
@@ -194,8 +233,8 @@
     color: var(--accent-color);
     font-family: 'Montserrat', sans-serif;
     font-weight: 800;
-    font-size: 16px;
-    padding: 12px 35px;
+    font-size: 18px; /* Increased from 16px */
+    padding: 14px 40px;
     border-radius: 12px;
     text-transform: uppercase;
     letter-spacing: 2px;
@@ -206,20 +245,20 @@
     justify-content: center;
     gap: 10px;
     width: 100%;
-    max-width: 300px;
+    max-width: 320px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
-.tk-scan-btn i { font-size: 20px; }
+.tk-scan-btn i { font-size: 22px; }
 .tk-scan-btn:hover { background: var(--accent-color); color: var(--paper-color); box-shadow: 0 5px 15px rgba(192, 77, 40, 0.3); }
 .tk-scan-btn:active { transform: scale(0.98); }
 .tk-scan-btn.disabled { border-color: #999; color: #999; cursor: not-allowed; background: rgba(0,0,0,0.05); }
 
-.tk-lock-msg { font-size: 10px; text-transform: uppercase; color: #ef4444; font-weight: 700; margin-top: 5px; letter-spacing: 1px; }
+.tk-lock-msg { font-size: 11px; text-transform: uppercase; color: #ef4444; font-weight: 700; margin-top: 5px; letter-spacing: 1px; }
 
 /* === LOADING/ERROR === */
 .tk-loading-container, .tk-error-container { color: var(--ink-color); text-align: center; background: var(--paper-color); padding: 2rem; border-radius: 12px; box-shadow: var(--soft-shadow); font-size: 18px; }
 
 @media (max-height: 800px) {
-  .tk-event-title { font-size: 26px; margin-bottom: 5px; }
-  .tk-info-value { font-size: 15px; }
+  .tk-event-title { font-size: 30px; margin-bottom: 5px; }
+  .tk-info-value { font-size: 18px; }
 }
