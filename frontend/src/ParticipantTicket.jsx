@@ -24,6 +24,7 @@ export default function ParticipantTicket() {
   const fetchEventData = async (eventId) => {
     try {
       // Fetch event details with participant-specific payment status
+      // Using relative path for Render deployment
       const response = await fetch(`/api/events/${eventId}/participant-status`, {
         method: 'GET',
         credentials: 'include',
@@ -60,8 +61,17 @@ export default function ParticipantTicket() {
     navigate('/participants');
   };
 
+  // Determine payment status logic
+  const isPaidEvent = eventData?.regFee > 0;
+  const paymentStatus = eventData?.paymentStatus; // 'verified', 'pending_verification', or null
+  const isPaymentVerified = paymentStatus === 'verified';
+  const isPaymentPending = paymentStatus === 'pending_verification';
+  const isPaymentRejected = paymentStatus === 'rejected';
+  
+  // Can only scan if: (1) Free event, OR (2) Paid event with verified payment
+  const canScan = !isPaidEvent || (isPaidEvent && isPaymentVerified);
+
   const handleScanQR = () => {
-    // Only allow scanning if payment is verified (or event is free)
     if (!canScan) {
       alert('Your payment must be verified by the organizer before you can mark attendance.');
       return;
@@ -90,28 +100,18 @@ export default function ParticipantTicket() {
     return `${hours}:${minutes} ${ampm}`;
   };
 
-  // Determine payment status
-  const isPaidEvent = eventData?.regFee > 0;
-  const paymentStatus = eventData?.paymentStatus; // 'verified', 'pending_verification', or null
-  const isPaymentVerified = paymentStatus === 'verified';
-  const isPaymentPending = paymentStatus === 'pending_verification';
-  const isPaymentRejected = paymentStatus === 'rejected';
-  
-  // Can only scan if: (1) Free event, OR (2) Paid event with verified payment
-  const canScan = !isPaidEvent || (isPaidEvent && isPaymentVerified);
-
-  // Status badge text and class
+  // Status badge logic
   const getPaymentBadge = () => {
     if (!isPaidEvent) return null;
     
     if (isPaymentVerified) {
-      return { text: '✅ Payment Verified', className: 'verified' };
+      return { text: 'PAYMENT VERIFIED', className: 'verified', icon: 'check-circle' };
     } else if (isPaymentPending) {
-      return { text: '⏳ Payment Pending Verification', className: 'pending' };
+      return { text: 'PAYMENT PENDING', className: 'pending', icon: 'hourglass-half' };
     } else if (isPaymentRejected) {
-      return { text: '❌ Payment Rejected', className: 'rejected' };
+      return { text: 'PAYMENT REJECTED', className: 'rejected', icon: 'times-circle' };
     } else {
-      return { text: '⚠️ Payment Required', className: 'required' };
+      return { text: 'PAYMENT REQUIRED', className: 'required', icon: 'exclamation-circle' };
     }
   };
 
@@ -119,147 +119,137 @@ export default function ParticipantTicket() {
 
   return (
     <div className="ticket-page-wrapper">
-      <div className="tk-background-glow"></div>
-
+      
+      {/* Navigation */}
       <div className="tk-nav-container">
         <button onClick={handleBack} className="tk-nav-btn">
-          <i className="fas fa-arrow-left"></i>
-          Back
+          <i className="fas fa-arrow-left"></i> Back
         </button>
       </div>
 
-      <div className="tk-ticket-container">
-        {loading && (
-          <div className="tk-loading-spinner">
-            <div className="tk-spinner"></div>
-          </div>
-        )}
+      {/* Loading State */}
+      {loading && (
+        <div className="tk-loading-container">
+            <p>Loading your ticket...</p>
+        </div>
+      )}
 
-        {error && (
-          <div className="tk-error-message">
-            <h3>Error Loading Event</h3>
-            <p>{error}</p>
-          </div>
-        )}
+      {/* Error State */}
+      {error && (
+        <div className="tk-error-container">
+          <h3>Error</h3>
+          <p>{error}</p>
+        </div>
+      )}
 
-        {!loading && !error && eventData && (
+      {/* Main Ticket */}
+      {!loading && !error && eventData && (
+        <div className="tk-ticket-container">
           <div className="tk-ticket-card">
-            <div className="tk-ticket-header">
+            
+            {/* Grain/Noise Overlay */}
+            <div className="tk-texture-overlay"></div>
+            
+            <div className="tk-top-notch"></div>
+
+            <div className="tk-main-content">
+              
+              {/* Event Title */}
               <h1 className="tk-event-title">
                 {eventData.ename || 'Untitled Event'}
               </h1>
               
-              {/* Payment Status Badge */}
+              {/* Payment Status Badge (Stamp style) */}
               {paymentBadge && (
-                <p className={`tk-user-badge ${paymentBadge.className}`}>
-                  {paymentBadge.text}
-                </p>
+                 <div className={`tk-stamp-badge ${paymentBadge.className}`}>
+                    <i className={`fas fa-${paymentBadge.icon}`}></i> {paymentBadge.text}
+                 </div>
               )}
-            </div>
 
-            <div className="tk-ticket-content">
-              <div className="tk-info-section">
-                <div className="tk-info-icon">📅</div>
-                <div className="tk-info-content">
-                  <h3>Date</h3>
-                  <p>{formatDate(eventData.eventDate)}</p>
-                </div>
-              </div>
+              <div className="tk-separator-dots"></div>
 
-              <div className="tk-info-section">
-                <div className="tk-info-icon">⏰</div>
-                <div className="tk-info-content">
-                  <h3>Time</h3>
-                  <p>{formatTime(eventData.eventTime)}</p>
-                </div>
-              </div>
-
-              <div className="tk-info-section">
-                <div className="tk-info-icon">📍</div>
-                <div className="tk-info-content">
-                  <h3>Location</h3>
-                  <p>{eventData.eventLoc || 'Location TBD'}</p>
-                </div>
-              </div>
-
-              <div className="tk-info-section">
-                <div className="tk-info-icon">👥</div>
-                <div className="tk-info-content">
-                  <h3>Max Participants</h3>
-                  <p>{eventData.maxPart || 'No limit'}</p>
-                </div>
-              </div>
-
-              <div className="tk-info-section">
-                <div className="tk-info-icon">🤝</div>
-                <div className="tk-info-content">
-                  <h3>Max Volunteers</h3>
-                  <p>{eventData.maxVoln || 'No limit'}</p>
-                </div>
-              </div>
-
-              <div className="tk-info-section">
-                <div className="tk-info-icon">💰</div>
-                <div className="tk-info-content">
-                  <h3>Registration Fee</h3>
-                  <p>₹{eventData.regFee || '0'}</p>
-                </div>
-              </div>
-
-              {eventData.clubName && (
-                <div className="tk-info-section">
-                  <div className="tk-info-icon">🏛️</div>
-                  <div className="tk-info-content">
-                    <h3>Organized by</h3>
-                    <p>{eventData.clubName}</p>
+              {/* Data Grid */}
+              <div className="tk-info-grid">
+                  
+                  {/* Row 1: Date & Time */}
+                  <div>
+                    <div className="tk-info-label">Date</div>
+                    <div className="tk-info-value">{formatDate(eventData.eventDate)}</div>
                   </div>
-                </div>
+                  <div>
+                    <div className="tk-info-label">Time</div>
+                    <div className="tk-info-value">{formatTime(eventData.eventTime)}</div>
+                  </div>
+
+                  {/* Row 2: Location (Full Width) */}
+                  <div className="tk-info-full">
+                    <div className="tk-info-label">Location</div>
+                    <div className="tk-info-value">{eventData.eventLoc || 'Location TBD'}</div>
+                  </div>
+
+                  {/* Row 3: Participants & Volunteers */}
+                  <div>
+                    <div className="tk-info-label">Max Participants</div>
+                    <div className="tk-info-value">{eventData.maxPart || 'No limit'}</div>
+                  </div>
+                  <div>
+                    <div className="tk-info-label">Max Volunteers</div>
+                    <div className="tk-info-value">{eventData.maxVoln || 'No limit'}</div>
+                  </div>
+
+                  {/* Row 4: Registration Fee */}
+                  <div>
+                    <div className="tk-info-label">Reg Fee</div>
+                    <div className="tk-info-value">₹{eventData.regFee || '0'}</div>
+                  </div>
+              </div>
+
+              {/* Club Name */}
+              {eventData.clubName && (
+                  <div className="tk-club-section">
+                    <div className="tk-info-label">Organized By</div>
+                    <div className="tk-club-value">{eventData.clubName}</div>
+                  </div>
               )}
 
-              <div className="tk-description-section">
-                <h3>Event Description</h3>
-                <p>{eventData.eventdesc || 'No description available'}</p>
+              {/* Description */}
+              <div className="tk-details-text">
+                "{eventData.eventdesc || 'No description available'}"
               </div>
+
             </div>
 
-            <div className="tk-ticket-footer">
-              <button
+            {/* Divider Notches */}
+            <div className="tk-notch-container">
+              <div className="tk-notch tk-notch-left"></div>
+              <div className="tk-notch tk-notch-right"></div>
+            </div>
+
+            {/* Bottom Stub - Contains Scanner Button */}
+            <div className="tk-stub-content">
+              
+              <button 
                 onClick={handleScanQR}
-                className={`tk-qr-placeholder tk-qr-scanner ${!canScan ? 'disabled' : ''}`}
-                title={canScan ? "Open QR Scanner" : "Payment must be verified to mark attendance"}
+                className={`tk-scan-btn ${!canScan ? 'disabled' : ''}`}
+                title={canScan ? "Open Scanner" : "Payment verification required"}
                 disabled={!canScan}
               >
-                📱
-                <div className="tk-qr-text">
-                  {canScan ? 'MARK ATTENDANCE' : 'ATTENDANCE LOCKED'}
-                </div>
+                <i className="fas fa-qrcode"></i>
+                {canScan ? 'SCAN TICKET' : 'LOCKED'}
               </button>
-              
-              {/* Show appropriate message based on payment status */}
+
+              {/* Helper Message for Locked State */}
               {!canScan && (
-                <div className="tk-payment-message">
-                  {isPaymentPending && (
-                    <p className="tk-payment-pending-message">
-                      ⏳ Your payment is pending verification. Attendance can be marked once the organizer approves your payment.
-                    </p>
-                  )}
-                  {isPaymentRejected && (
-                    <p className="tk-payment-rejected-message">
-                      ❌ Your payment was rejected. Please contact the organizer or re-register for this event.
-                    </p>
-                  )}
-                  {!paymentStatus && isPaidEvent && (
-                    <p className="tk-payment-required-message">
-                      ⚠️ Payment required. Please complete your payment to mark attendance.
-                    </p>
-                  )}
-                </div>
+                 <p className="tk-lock-msg">
+                    {isPaymentPending ? "Payment Pending Verification" : "Payment Required"}
+                 </p>
               )}
+
             </div>
+
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
-
