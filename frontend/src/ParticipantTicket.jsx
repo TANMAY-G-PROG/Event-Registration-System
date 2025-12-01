@@ -4,6 +4,7 @@ import './ticket.css';
 
 export default function ParticipantTicket() {
   const [eventData, setEventData] = useState(null);
+  const [userData, setUserData] = useState(null); // State for User Data (USN)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -18,13 +19,34 @@ export default function ParticipantTicket() {
       return;
     }
 
-    fetchEventData(eventId);
+    // Fetch both Event Data and User Data
+    const fetchData = async () => {
+        await Promise.all([fetchEventData(eventId), fetchUserData()]);
+        setLoading(false);
+    };
+
+    fetchData();
   }, [searchParams]);
+
+  // Fetch User Data (USN)
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch('/api/me', {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUserData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
 
   const fetchEventData = async (eventId) => {
     try {
-      // Fetch event details with participant-specific payment status
-      // Using relative path for Render deployment
       const response = await fetch(`/api/events/${eventId}/participant-status`, {
         method: 'GET',
         credentials: 'include',
@@ -41,19 +63,15 @@ export default function ParticipantTicket() {
 
       const data = await response.json();
       
-      // Check if user is actually a participant
       if (!data.isRegistered) {
         setError("You are not registered as a participant for this event.");
-        setLoading(false);
         return;
       }
       
       setEventData(data);
-      setLoading(false);
     } catch (err) {
       console.error('Error fetching event:', err);
       setError('Unable to load event details. Please try again.');
-      setLoading(false);
     }
   };
 
@@ -61,14 +79,12 @@ export default function ParticipantTicket() {
     navigate('/participants');
   };
 
-  // Determine payment status logic
   const isPaidEvent = eventData?.regFee > 0;
-  const paymentStatus = eventData?.paymentStatus; // 'verified', 'pending_verification', or null
+  const paymentStatus = eventData?.paymentStatus;
   const isPaymentVerified = paymentStatus === 'verified';
   const isPaymentPending = paymentStatus === 'pending_verification';
   const isPaymentRejected = paymentStatus === 'rejected';
   
-  // Can only scan if: (1) Free event, OR (2) Paid event with verified payment
   const canScan = !isPaidEvent || (isPaidEvent && isPaymentVerified);
 
   const handleScanQR = () => {
@@ -80,7 +96,7 @@ export default function ParticipantTicket() {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Not specified';
+    if (!dateString) return 'TBD';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -90,7 +106,7 @@ export default function ParticipantTicket() {
   };
 
   const formatTime = (timeString) => {
-    if (!timeString) return 'Not specified';
+    if (!timeString) return 'TBD';
     const timeParts = timeString.split(':');
     let hours = parseInt(timeParts[0]);
     const minutes = timeParts[1];
@@ -100,7 +116,6 @@ export default function ParticipantTicket() {
     return `${hours}:${minutes} ${ampm}`;
   };
 
-  // Status badge logic
   const getPaymentBadge = () => {
     if (!isPaidEvent) return null;
     
@@ -120,36 +135,21 @@ export default function ParticipantTicket() {
   return (
     <div className="ticket-page-wrapper">
       
-      {/* Navigation */}
+      {/* Glassy Back Button */}
       <div className="tk-nav-container">
         <button onClick={handleBack} className="tk-nav-btn">
           <i className="fas fa-arrow-left"></i> Back
         </button>
       </div>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="tk-loading-container">
-            <p>Loading your ticket...</p>
-        </div>
-      )}
+      {loading && <div className="tk-loading-container"><p>Loading Ticket...</p></div>}
+      {error && <div className="tk-error-container"><h3>Error</h3><p>{error}</p></div>}
 
-      {/* Error State */}
-      {error && (
-        <div className="tk-error-container">
-          <h3>Error</h3>
-          <p>{error}</p>
-        </div>
-      )}
-
-      {/* Main Ticket */}
       {!loading && !error && eventData && (
         <div className="tk-ticket-container">
           <div className="tk-ticket-card">
             
-            {/* Grain/Noise Overlay */}
             <div className="tk-texture-overlay"></div>
-            
             <div className="tk-top-notch"></div>
 
             <div className="tk-main-content">
@@ -158,8 +158,22 @@ export default function ParticipantTicket() {
               <h1 className="tk-event-title">
                 {eventData.ename || 'Untitled Event'}
               </h1>
+
+              {/* CLUB NAME (Yellow Font) */}
+              {eventData.clubName && (
+                 <div className="tk-club-name">
+                    {eventData.clubName}
+                 </div>
+              )}
+
+              {/* USN Badge (Added Here) */}
+              {userData?.userUSN && (
+                 <div className="tk-volunteer-badge">
+                    Participant: {userData.userUSN}
+                 </div>
+              )}
               
-              {/* Payment Status Badge (Stamp style) */}
+              {/* Payment Status Badge */}
               {paymentBadge && (
                  <div className={`tk-stamp-badge ${paymentBadge.className}`}>
                     <i className={`fas fa-${paymentBadge.icon}`}></i> {paymentBadge.text}
@@ -168,10 +182,8 @@ export default function ParticipantTicket() {
 
               <div className="tk-separator-dots"></div>
 
-              {/* Data Grid */}
+              {/* Info Grid */}
               <div className="tk-info-grid">
-                  
-                  {/* Row 1: Date & Time */}
                   <div>
                     <div className="tk-info-label">Date</div>
                     <div className="tk-info-value">{formatDate(eventData.eventDate)}</div>
@@ -181,36 +193,20 @@ export default function ParticipantTicket() {
                     <div className="tk-info-value">{formatTime(eventData.eventTime)}</div>
                   </div>
 
-                  {/* Row 2: Location (Full Width) */}
                   <div className="tk-info-full">
                     <div className="tk-info-label">Location</div>
                     <div className="tk-info-value">{eventData.eventLoc || 'Location TBD'}</div>
                   </div>
 
-                  {/* Row 3: Participants & Volunteers */}
                   <div>
-                    <div className="tk-info-label">Max Participants</div>
+                    <div className="tk-info-label">Participants</div>
                     <div className="tk-info-value">{eventData.maxPart || 'No limit'}</div>
                   </div>
-                  <div>
-                    <div className="tk-info-label">Max Volunteers</div>
-                    <div className="tk-info-value">{eventData.maxVoln || 'No limit'}</div>
-                  </div>
-
-                  {/* Row 4: Registration Fee */}
                   <div>
                     <div className="tk-info-label">Reg Fee</div>
                     <div className="tk-info-value">₹{eventData.regFee || '0'}</div>
                   </div>
               </div>
-
-              {/* Club Name */}
-              {eventData.clubName && (
-                  <div className="tk-club-section">
-                    <div className="tk-info-label">Organized By</div>
-                    <div className="tk-club-value">{eventData.clubName}</div>
-                  </div>
-              )}
 
               {/* Description */}
               <div className="tk-details-text">
@@ -219,15 +215,12 @@ export default function ParticipantTicket() {
 
             </div>
 
-            {/* Divider Notches */}
             <div className="tk-notch-container">
               <div className="tk-notch tk-notch-left"></div>
               <div className="tk-notch tk-notch-right"></div>
             </div>
 
-            {/* Bottom Stub - Contains Scanner Button */}
             <div className="tk-stub-content">
-              
               <button 
                 onClick={handleScanQR}
                 className={`tk-scan-btn ${!canScan ? 'disabled' : ''}`}
@@ -235,16 +228,14 @@ export default function ParticipantTicket() {
                 disabled={!canScan}
               >
                 <i className="fas fa-qrcode"></i>
-                {canScan ? 'SCAN TICKET' : 'LOCKED'}
+                {canScan ? 'MARK ATTENDANCE' : 'LOCKED'}
               </button>
 
-              {/* Helper Message for Locked State */}
               {!canScan && (
                  <p className="tk-lock-msg">
                     {isPaymentPending ? "Payment Pending Verification" : "Payment Required"}
                  </p>
               )}
-
             </div>
 
           </div>
