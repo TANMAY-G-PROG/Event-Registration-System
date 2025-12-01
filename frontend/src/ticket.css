@@ -1,28 +1,17 @@
 /* ===================================
-   TICKET PAGE - SOLARIS VINTAGE (NO SCROLL)
+   TICKET PAGE - SOLARIS VINTAGE (SMART FIT & PINNED FOOTER)
    =================================== */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
-/* Font for Glassy Button */
 @import url('https://fonts.googleapis.com/css?family=Roboto+Slab:100,300,400,700');
 
-/* --- GLASSY BUTTON PROPERTIES (Restored from Old Code) --- */
-@property --angle-1 {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: -75deg;
-}
-
-@property --angle-2 {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: -45deg;
-}
+/* --- Glassy Button Properties --- */
+@property --angle-1 { syntax: "<angle>"; inherits: false; initial-value: -75deg; }
+@property --angle-2 { syntax: "<angle>"; inherits: false; initial-value: -45deg; }
 
 :root {
   --anim--hover-time: 400ms;
   --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
-  
   --paper-color: #f4f1ea;
   --ink-color: #1a1a1a;
   --accent-color: #c04d28; /* Burnt terracotta */
@@ -39,21 +28,24 @@
 
 /* === PAGE WRAPPER === */
 .ticket-page-wrapper {
-  min-height: 100vh;
-  /* Use 100dvh for better mobile support */
-  min-height: 100dvh; 
+  /* Use dynamic viewport height (dvh) to account for mobile browser bars */
+  height: 100vh; 
+  height: 100dvh; 
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: 'Montserrat', sans-serif;
   background-color: var(--bg-color);
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E");
-  padding: 10px; /* Minimal padding to maximize screen space */
-  position: relative;
-  overflow: hidden; /* Prevent page scrolling */
+  
+  /* Minimal padding to ensure ticket fits on small screens */
+  padding: 10px; 
+  box-sizing: border-box;
+  overflow: hidden; /* Prevent page scrolling entirely */
 }
 
-/* === GLASSY NAVIGATION BUTTON (Restored) === */
+/* === NAVIGATION BUTTON === */
 .tk-nav-container {
   position: absolute;
   top: 15px;
@@ -69,26 +61,16 @@
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
   pointer-events: auto;
   z-index: 3;
-  background: linear-gradient(
-    -75deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.2),
-    rgba(255, 255, 255, 0.05)
-  );
+  background: linear-gradient(-75deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
   border-radius: 999vw;
-  box-shadow:
-    inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05),
-    inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5),
-    0 0.25em 0.125em -0.125em rgba(0, 0, 0, 0.2),
-    0 0 0.1em 0.25em inset rgba(255, 255, 255, 0.2),
-    0 0 0 0 rgba(255, 255, 255, 1);
-  backdrop-filter: blur(clamp(1px, 0.125em, 4px));
-  -webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px));
+  box-shadow: inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05), inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5), 0 0.25em 0.125em -0.125em rgba(0, 0, 0, 0.2), 0 0 0.1em 0.25em inset rgba(255, 255, 255, 0.2), 0 0 0 0 rgba(255, 255, 255, 1);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   transition: all var(--anim--hover-time) var(--anim--hover-ease);
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: "Inter", sans-serif; /* Kept font from old code for button */
+  font-family: 'Inter', sans-serif;
   font-weight: 500;
   font-size: 13px;
   color: #2c3e50;
@@ -99,90 +81,36 @@
 }
 
 .tk-nav-btn::before {
-  content: "";
-  display: block;
-  position: absolute;
-  z-index: 3;
-  width: calc(100% - var(--border-width));
-  height: calc(100% - var(--border-width));
-  top: calc(0% + var(--border-width) / 2);
-  left: calc(0% + var(--border-width) / 2);
-  box-sizing: border-box;
-  border-radius: 999vw;
-  overflow: clip;
-  background: linear-gradient(
-    var(--angle-2),
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.7) 40% 50%,
-    rgba(255, 255, 255, 0) 55%
-  );
-  mix-blend-mode: screen;
-  pointer-events: none;
-  background-size: 200% 200%;
-  background-position: 0% 50%;
-  background-repeat: no-repeat;
-  transition:
-    background-position calc(var(--anim--hover-time) * 1.25) var(--anim--hover-ease),
-    --angle-2 calc(var(--anim--hover-time) * 1.25) var(--anim--hover-ease);
+  content: ""; display: block; position: absolute; z-index: 3; width: calc(100% - var(--border-width)); height: calc(100% - var(--border-width)); top: calc(0% + var(--border-width) / 2); left: calc(0% + var(--border-width) / 2); box-sizing: border-box; border-radius: 999vw; overflow: clip; background: linear-gradient(var(--angle-2), rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.7) 40% 50%, rgba(255, 255, 255, 0) 55%); mix-blend-mode: screen; pointer-events: none; background-size: 200% 200%; background-position: 0% 50%; background-repeat: no-repeat; transition: background-position calc(var(--anim--hover-time) * 1.25) var(--anim--hover-ease), --angle-2 calc(var(--anim--hover-time) * 1.25) var(--anim--hover-ease);
 }
 
 .tk-nav-btn::after {
-  content: "";
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  border-radius: 999vw;
-  width: calc(100% + var(--border-width));
-  height: calc(100% + var(--border-width));
-  top: calc(0% - var(--border-width) / 2);
-  left: calc(0% - var(--border-width) / 2);
-  padding: var(--border-width);
-  box-sizing: border-box;
-  background: conic-gradient(
-      from var(--angle-1) at 50% 50%,
-      rgba(0, 0, 0, 0.5),
-      rgba(0, 0, 0, 0) 5% 40%,
-      rgba(0, 0, 0, 0.5) 50%,
-      rgba(0, 0, 0, 0) 60% 95%,
-      rgba(0, 0, 0, 0.5)
-    ),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3));
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  transition: all var(--anim--hover-time) var(--anim--hover-ease), --angle-1 500ms ease;
-  box-shadow: inset 0 0 0 calc(var(--border-width) / 2) rgba(0, 0, 0, 0.3);
+  content: ""; position: absolute; z-index: 1; inset: 0; border-radius: 999vw; width: calc(100% + var(--border-width)); height: calc(100% + var(--border-width)); top: calc(0% - var(--border-width) / 2); left: calc(0% - var(--border-width) / 2); padding: var(--border-width); box-sizing: border-box; background: conic-gradient(from var(--angle-1) at 50% 50%, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 5% 40%, rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0) 60% 95%, rgba(0, 0, 0, 0.5)), linear-gradient(180deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; transition: all var(--anim--hover-time) var(--anim--hover-ease), --angle-1 500ms ease; box-shadow: inset 0 0 0 calc(var(--border-width) / 2) rgba(0, 0, 0, 0.3);
 }
 
-.tk-nav-btn:hover {
-  transform: scale(0.975);
-  backdrop-filter: blur(0.01em);
-  box-shadow: inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05), inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5), 0 0.15em 0.05em -0.1em rgba(0, 0, 0, 0.25), 0 0 0.05em 0.1em inset rgba(255, 255, 255, 0.5), 0 0 0 0 rgba(255, 255, 255, 1);
-  text-shadow: 0.025em 0.025em 0.025em rgba(0, 0, 0, 0.12);
-}
-
+.tk-nav-btn:hover { transform: scale(0.975); box-shadow: inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05), inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5), 0 0.15em 0.05em -0.1em rgba(0, 0, 0, 0.25), 0 0 0.05em 0.1em inset rgba(255, 255, 255, 0.5), 0 0 0 0 rgba(255, 255, 255, 1); }
 .tk-nav-btn:hover::before { background-position: 25% 50%; }
 .tk-nav-btn:hover::after { --angle-1: -125deg; }
 .tk-nav-btn:active { transform: scale(0.96); }
 .tk-nav-btn:active::before { background-position: 50% 15%; --angle-2: -15deg; }
 .tk-nav-btn:active::after { --angle-1: -75deg; }
 
-/* === TICKET CARD === */
+/* === TICKET CARD CONTAINER === */
 .tk-ticket-container {
   position: relative;
   filter: drop-shadow(var(--soft-shadow));
   width: 100%;
   max-width: 380px;
-  /* Ensure it fits vertically without scroll */
-  max-height: 95vh;
+  /* Make container height match the viewport minus padding */
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 .tk-ticket-card {
   width: 100%;
-  /* REMOVED MIN-HEIGHT 800px to allow fitting */
-  height: auto;
-  max-height: 90vh; /* Limits height to view */
+  height: 100%; /* Fill the container exactly */
+  /* Remove min-height so it doesn't force scrolling on small screens */
   background-color: var(--paper-color);
   background-image: 
       radial-gradient(circle at 100% 0%, rgba(192, 77, 40, 0.15) 0%, transparent 40%),
@@ -192,57 +120,51 @@
   position: relative;
   color: var(--ink-color);
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* This is key for layout */
   border: 1px solid rgba(0,0,0,0.05);
 }
 
 .tk-texture-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.15;
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
-  mix-blend-mode: multiply;
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.15; background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E"); mix-blend-mode: multiply;
 }
 
 /* === TOP NOTCH === */
 .tk-top-notch {
   position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px;
-  height: 40px;
+  top: -20px; left: 50%; transform: translateX(-50%);
+  width: 60px; height: 40px;
   background-color: var(--bg-color);
   border-radius: 50%;
   z-index: 10;
   box-shadow: inset 0 -3px 5px rgba(0,0,0,0.05);
 }
 
-/* === MAIN CONTENT === */
+/* === MAIN CONTENT (SCROLLABLE AREA) === */
 .tk-main-content {
-  flex: 1; /* Takes available space */
-  /* Compact Padding to force fit */
-  padding: 40px 25px 10px 25px;
+  flex: 1; /* This takes up all remaining space */
+  /* If content overflows this area, IT scrolls, not the whole page */
+  overflow-y: auto; 
+  /* Hide scrollbar */
+  scrollbar-width: none; 
+  
+  /* Padding adjusted for tight fit */
+  padding: 50px 25px 10px 25px; 
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   position: relative;
   z-index: 2;
-  overflow-y: auto; /* Internal scroll only if ABSOLUTELY necessary on tiny screens */
 }
+/* Hide webkit scrollbar */
+.tk-main-content::-webkit-scrollbar { display: none; }
 
 .tk-event-title {
   font-family: 'Playfair Display', serif;
-  font-size: 28px; /* Slightly reduced for fit, but bold */
+  font-size: 32px;
   font-weight: 800;
   font-style: italic;
-  line-height: 1.1;
+  line-height: 1;
   margin-bottom: 5px;
   color: var(--ink-color);
   word-wrap: break-word;
@@ -255,10 +177,9 @@
   letter-spacing: 2px;
   color: var(--gold-accent);
   text-transform: uppercase;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
-/* Payment/Volunteer Badges */
 .tk-stamp-badge, .tk-volunteer-badge {
     font-family: 'Montserrat', sans-serif;
     font-size: 10px;
@@ -274,108 +195,73 @@
     opacity: 0.8;
     transform: rotate(-2deg);
     margin-bottom: 10px;
-    background: rgba(0,0,0,0.02);
+    background: rgba(255,255,255,0.3);
 }
-
 .tk-stamp-badge.verified { color: var(--status-green); border-color: var(--status-green); }
 .tk-stamp-badge.pending { color: var(--status-orange); border-color: var(--status-orange); }
 .tk-stamp-badge.rejected { color: var(--status-red); border-color: var(--status-red); }
 .tk-stamp-badge.required { color: var(--status-blue); border-color: var(--status-blue); }
 
-/* Divider */
 .tk-separator-dots {
-  width: 100%;
-  height: 2px;
-  border-bottom: 2px dashed #d1cdc5;
-  margin: 10px 0; /* Reduced margin */
-  opacity: 0.6;
+  width: 100%; height: 2px; border-bottom: 2px dashed #d1cdc5; margin: 15px 0; opacity: 0.6; flex-shrink: 0;
 }
 
-/* Data Grid for Info */
 .tk-info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px; /* Tighter gap */
+    gap: 15px;
     width: 100%;
     text-align: left;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    flex-shrink: 0; /* Don't squash this section */
 }
 
-.tk-info-full {
-    grid-column: span 2;
-}
+.tk-info-full { grid-column: span 2; }
 
 .tk-info-label {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: #888;
-    letter-spacing: 1px;
-    margin-bottom: 2px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; color: #888; letter-spacing: 1.5px; margin-bottom: 3px;
 }
 
 .tk-info-value {
-    font-family: 'Playfair Display', serif;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--ink-color);
-    line-height: 1.2;
+    font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--ink-color); line-height: 1.2;
 }
 
-/* Description Text */
 .tk-details-text {
     font-family: 'Playfair Display', serif;
-    font-size: 13px;
+    font-size: 14px;
     font-style: italic;
-    line-height: 1.4;
+    line-height: 1.5;
     color: #555;
-    margin-top: 5px;
+    margin-top: 10px;
+    margin-bottom: 20px; /* Add bottom margin so scrolling feels natural */
     text-align: center;
     border-top: 1px solid rgba(0,0,0,0.05);
-    padding-top: 10px;
-    
-    /* Clamp text to ensure it doesn't push scanner off screen */
-    display: -webkit-box;
-    -webkit-line-clamp: 2; /* Show max 2 lines */
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    padding-top: 15px;
 }
 
 /* === DIVIDER NOTCHES === */
 .tk-notch-container {
   position: relative;
-  height: 20px; /* Reduced height */
+  height: 20px;
   width: 100%;
   z-index: 10;
-  flex-shrink: 0; /* Prevent collapsing */
+  flex-shrink: 0; /* Ensure this separator never disappears */
 }
 
 .tk-notch {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
-  background-color: var(--bg-color);
-  border-radius: 50%;
-  box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+  position: absolute; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background-color: var(--bg-color); border-radius: 50%; box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
 }
-
 .tk-notch-left { left: -12px; }
 .tk-notch-right { right: -12px; }
-
 .tk-notch-container::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 15px;
-  right: 15px;
-  border-top: 2px dashed #d1cdc5;
+  content: ''; position: absolute; top: 50%; left: 15px; right: 15px; border-top: 2px dashed #d1cdc5;
 }
 
-/* === BOTTOM STUB (SCANNER) === */
+/* === BOTTOM STUB (PINNED SCANNER) === */
 .tk-stub-content {
-  height: 100px; /* VERY COMPACT STUB */
+  /* This section stays pinned to the bottom */
+  flex-shrink: 0; 
+  height: 110px; /* Reduced height to save space */
   background-color: #ece9e2;
   padding: 10px 20px;
   text-align: center;
@@ -385,18 +271,17 @@
   align-items: center;
   position: relative;
   z-index: 2;
-  flex-shrink: 0; /* Always visible */
 }
 
 .tk-scan-btn {
     background: transparent;
-    border: 2px solid var(--accent-color);
+    border: 3px solid var(--accent-color);
     color: var(--accent-color);
     font-family: 'Montserrat', sans-serif;
-    font-weight: 700;
-    font-size: 14px;
-    padding: 10px 20px; /* Compact padding */
-    border-radius: 8px;
+    font-weight: 800;
+    font-size: 16px;
+    padding: 12px 35px; /* Compact padding */
+    border-radius: 12px;
     text-transform: uppercase;
     letter-spacing: 2px;
     cursor: pointer;
@@ -404,48 +289,33 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 10px;
     width: 100%;
-    max-width: 250px;
+    max-width: 300px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
-.tk-scan-btn i {
-    font-size: 18px;
-}
+.tk-scan-btn i { font-size: 20px; }
 
-.tk-scan-btn:hover {
-    background: var(--accent-color);
-    color: var(--paper-color);
-    box-shadow: 0 5px 15px rgba(192, 77, 40, 0.3);
-}
-
-.tk-scan-btn:active {
-    transform: scale(0.98);
-}
-
-.tk-scan-btn.disabled {
-    border-color: #999;
-    color: #999;
-    cursor: not-allowed;
-    background: rgba(0,0,0,0.05);
-}
+.tk-scan-btn:hover { background: var(--accent-color); color: var(--paper-color); box-shadow: 0 5px 15px rgba(192, 77, 40, 0.3); }
+.tk-scan-btn:active { transform: scale(0.98); }
+.tk-scan-btn.disabled { border-color: #999; color: #999; cursor: not-allowed; background: rgba(0,0,0,0.05); }
 
 .tk-lock-msg {
-    font-size: 9px;
-    text-transform: uppercase;
-    color: #ef4444;
-    font-weight: 700;
-    margin-top: 5px;
-    letter-spacing: 1px;
+    font-size: 10px; text-transform: uppercase; color: #ef4444; font-weight: 700; margin-top: 8px; letter-spacing: 1px;
 }
 
 /* === LOADING & ERROR === */
 .tk-loading-container, .tk-error-container {
-    color: var(--ink-color);
-    text-align: center;
-    background: var(--paper-color);
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: var(--soft-shadow);
-    font-size: 16px;
+    color: var(--ink-color); text-align: center; background: var(--paper-color); padding: 2rem; border-radius: 12px; box-shadow: var(--soft-shadow); font-size: 18px;
+}
+
+/* === MEDIA QUERIES FOR SHORT SCREENS (The Fix for OnePlus 9R) === */
+@media (max-height: 850px) {
+  .tk-event-title { font-size: 26px; margin-bottom: 5px; }
+  .tk-club-name { margin-bottom: 10px; }
+  .tk-info-value { font-size: 16px; }
+  .tk-info-grid { gap: 10px; margin-bottom: 10px; }
+  .tk-scan-btn { padding: 10px 20px; font-size: 14px; }
+  .tk-stub-content { height: 90px; }
 }
