@@ -1,32 +1,22 @@
 /* ===================================
-   TICKET PAGE - SOLARIS VINTAGE (COMPACT)
+   TICKET PAGE - SOLARIS VINTAGE THEME
    =================================== */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
 
-/* --- Glassy Button Properties (For Back Button) --- */
-@property --angle-1 {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: -75deg;
-}
-
-@property --angle-2 {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: -45deg;
-}
-
 :root {
-  --anim--hover-time: 400ms;
-  --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
-  
   --paper-color: #f4f1ea;
   --ink-color: #1a1a1a;
   --accent-color: #c04d28; /* Burnt terracotta */
   --gold-accent: #d4af37;
   --soft-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   --bg-color: #e8e6df;
+  
+  /* Status Colors (Ink Style) */
+  --status-green: #2e7d32;
+  --status-orange: #e65100;
+  --status-red: #c62828;
+  --status-blue: #1565c0;
 }
 
 /* === PAGE WRAPPER === */
@@ -38,12 +28,12 @@
   font-family: 'Montserrat', sans-serif;
   background-color: var(--bg-color);
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E");
-  padding: 20px; /* Reduced padding to fit screen better */
+  padding: 40px 20px;
   position: relative;
   overflow-x: hidden;
 }
 
-/* === GLASS NAVIGATION BUTTON (RESTORED) === */
+/* === NAVIGATION === */
 .tk-nav-container {
   position: absolute;
   top: 20px;
@@ -52,63 +42,40 @@
 }
 
 .tk-nav-btn {
-  --border-width: clamp(1px, 0.0625em, 4px);
-  all: unset;
+  background: transparent;
+  border: 1px solid var(--ink-color);
+  color: var(--ink-color);
+  padding: 12px 24px;
+  border-radius: 30px;
   cursor: pointer;
-  position: relative;
-  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
-  pointer-events: auto;
-  z-index: 3;
-  background: linear-gradient(-75deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
-  border-radius: 999vw;
-  box-shadow: inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05), inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5), 0 0.25em 0.125em -0.125em rgba(0, 0, 0, 0.2), 0 0 0.1em 0.25em inset rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  transition: all var(--anim--hover-time) var(--anim--hover-ease);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 600;
-  font-size: 13px;
-  color: #2c3e50;
-  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.2);
-  padding-inline: 1.2em;
-  padding-block: 0.6em;
+  transition: all 0.3s ease;
 }
 
-.tk-nav-btn::before {
-  content: "";
-  display: block;
-  position: absolute;
-  z-index: 3;
-  width: calc(100% - var(--border-width));
-  height: calc(100% - var(--border-width));
-  top: calc(0% + var(--border-width) / 2);
-  left: calc(0% + var(--border-width) / 2);
-  border-radius: 999vw;
-  background: linear-gradient(var(--angle-2), rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.7) 40% 50%, rgba(255, 255, 255, 0) 55%);
-  mix-blend-mode: screen;
-  pointer-events: none;
-  background-size: 200% 200%;
-  background-position: 0% 50%;
-  transition: background-position 1s ease;
+.tk-nav-btn:hover {
+  background: var(--ink-color);
+  color: var(--paper-color);
 }
-
-.tk-nav-btn:hover { transform: scale(0.975); }
-.tk-nav-btn:active { transform: scale(0.96); }
 
 /* === TICKET CARD === */
 .tk-ticket-container {
   position: relative;
   filter: drop-shadow(var(--soft-shadow));
+  /* NO HOVER TRANSFORM HERE AS REQUESTED */
   width: 100%;
-  max-width: 380px;
+  max-width: 400px;
 }
 
 .tk-ticket-card {
   width: 100%;
-  /* Removed fixed min-height to let content dictate size, prevents empty scrolling */
+  min-height: 800px;
   background-color: var(--paper-color);
   background-image: 
       radial-gradient(circle at 100% 0%, rgba(192, 77, 40, 0.15) 0%, transparent 40%),
@@ -152,8 +119,7 @@
 /* === MAIN CONTENT === */
 .tk-main-content {
   flex: 1;
-  /* Reduced padding for compactness */
-  padding: 45px 25px 15px 25px;
+  padding: 60px 30px 30px 30px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -164,43 +130,44 @@
 
 .tk-event-title {
   font-family: 'Playfair Display', serif;
-  font-size: 32px; /* Balanced size */
+  font-size: 38px;
   font-weight: 800;
   font-style: italic;
-  line-height: 1;
-  margin-bottom: 5px;
+  line-height: 1.1;
+  margin-bottom: 15px;
   color: var(--ink-color);
   word-wrap: break-word;
 }
 
-.tk-club-name {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--gold-accent);
-  text-transform: uppercase;
-  margin-bottom: 15px;
+/* Payment Badges (Stamp Style) */
+.tk-stamp-badge {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: 2px solid currentColor;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.8;
+    transform: rotate(-2deg);
+    margin-bottom: 10px;
 }
 
-/* Volunteer Badge Style */
-.tk-volunteer-badge {
-  font-size: 12px;
-  background: rgba(0,0,0,0.05);
-  padding: 5px 15px;
-  border-radius: 15px;
-  font-weight: 600;
-  margin-bottom: 10px;
-  border: 1px solid rgba(0,0,0,0.1);
-  color: #555;
-}
+.tk-stamp-badge.verified { color: var(--status-green); border-color: var(--status-green); }
+.tk-stamp-badge.pending { color: var(--status-orange); border-color: var(--status-orange); }
+.tk-stamp-badge.rejected { color: var(--status-red); border-color: var(--status-red); }
+.tk-stamp-badge.required { color: var(--status-blue); border-color: var(--status-blue); }
 
 /* Divider */
 .tk-separator-dots {
   width: 100%;
   height: 2px;
   border-bottom: 2px dashed #d1cdc5;
-  margin: 15px 0;
+  margin: 20px 0;
   opacity: 0.6;
 }
 
@@ -208,10 +175,10 @@
 .tk-info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 15px; /* Reduced gap */
+    gap: 20px;
     width: 100%;
     text-align: left;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 .tk-info-full {
@@ -219,39 +186,53 @@
 }
 
 .tk-info-label {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     color: #888;
-    letter-spacing: 1px;
-    margin-bottom: 2px;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
 }
 
 .tk-info-value {
     font-family: 'Playfair Display', serif;
-    font-size: 17px;
+    font-size: 19px;
     font-weight: 700;
     color: var(--ink-color);
-    line-height: 1.2;
+    line-height: 1.3;
+}
+
+/* Club Name Section */
+.tk-club-section {
+    width: 100%;
+    text-align: center;
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 8px;
+}
+
+.tk-club-value {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--gold-accent);
+    text-transform: uppercase;
 }
 
 /* Description Text */
 .tk-details-text {
     font-family: 'Playfair Display', serif;
-    font-size: 14px;
+    font-size: 16px;
     font-style: italic;
-    line-height: 1.4;
+    line-height: 1.6;
     color: #555;
-    margin-top: 10px;
+    margin-top: 20px;
     text-align: center;
     border-top: 1px solid rgba(0,0,0,0.05);
-    padding-top: 15px;
-    
-    /* Clamp text to 3 lines to save space */
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    padding-top: 20px;
+    width: 100%;
 }
 
 /* === DIVIDER NOTCHES === */
@@ -287,10 +268,9 @@
 
 /* === BOTTOM STUB (SCANNER) === */
 .tk-stub-content {
-  /* Reduced height */
-  height: 130px; 
+  height: 180px;
   background-color: #ece9e2;
-  padding: 20px;
+  padding: 30px 20px;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -302,27 +282,26 @@
 
 .tk-scan-btn {
     background: transparent;
-    border: 2px solid var(--accent-color); /* Thinner border for compact look */
+    border: 3px solid var(--accent-color);
     color: var(--accent-color);
     font-family: 'Montserrat', sans-serif;
-    font-weight: 700;
-    font-size: 14px; /* Reduced font size */
-    padding: 12px 25px; /* Reduced padding */
-    border-radius: 8px;
+    font-weight: 800;
+    font-size: 18px;
+    padding: 18px 40px;
+    border-radius: 12px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 3px;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-    max-width: 280px; /* Limit width */
 }
 
 .tk-scan-btn i {
-    font-size: 20px; /* Smaller Icon */
+    font-size: 32px;
 }
 
 .tk-scan-btn:hover {
@@ -335,7 +314,7 @@
     transform: scale(0.98);
 }
 
-/* Disabled State */
+/* Disabled State for Scanner */
 .tk-scan-btn.disabled {
     border-color: #999;
     color: #999;
@@ -343,17 +322,22 @@
     background: rgba(0,0,0,0.05);
 }
 
-/* Payment Messages */
+.tk-scan-btn.disabled:hover {
+    background: rgba(0,0,0,0.05);
+    color: #999;
+    box-shadow: none;
+}
+
 .tk-lock-msg {
     font-size: 10px;
     text-transform: uppercase;
     color: #ef4444;
     font-weight: 700;
-    margin-top: 8px;
+    margin-top: 10px;
     letter-spacing: 1px;
 }
 
-/* Loading/Error */
+/* === LOADING & ERROR === */
 .tk-loading-container, .tk-error-container {
     color: var(--ink-color);
     text-align: center;
@@ -361,5 +345,5 @@
     padding: 2rem;
     border-radius: 12px;
     box-shadow: var(--soft-shadow);
-    font-size: 16px;
+    font-size: 18px;
 }
