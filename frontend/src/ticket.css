@@ -268,7 +268,7 @@
 
 /* === BOTTOM STUB (SCANNER) === */
 .tk-stub-content {
-  height: 180px;
+  height: 150px;
   background-color: #ece9e2;
   padding: 30px 20px;
   text-align: center;
@@ -347,3 +347,4 @@
     box-shadow: var(--soft-shadow);
     font-size: 18px;
 }
+
