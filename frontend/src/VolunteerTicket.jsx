@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom'; // Import useSearchParams
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import './ticket.css';
-
-// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function VolunteerTicket() {
   const [eventData, setEventData] = useState(null);
@@ -10,10 +8,10 @@ export default function VolunteerTicket() {
   const [error, setError] = useState(null);
   const [userUSN, setUserUSN] = useState(null);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams(); // Use searchParams hook
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const eventId = searchParams.get('eventId'); // Get eventId from URL
+    const eventId = searchParams.get('eventId');
 
     if (!eventId) {
       setError('No event ID provided in the URL');
@@ -22,11 +20,10 @@ export default function VolunteerTicket() {
     }
 
     fetchEventData(eventId);
-  }, [searchParams]); // Rerun if searchParams change
+  }, [searchParams]);
 
   const fetchUserData = async () => {
     try {
-      // ✅ CHANGED: Using relative path
       const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
@@ -53,14 +50,13 @@ export default function VolunteerTicket() {
       }
       setUserUSN(usn);
 
-      // ✅ CHANGED: Using relative path
       const response = await fetch('/api/my-volunteer-events', {
         credentials: 'include',
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          navigate('/'); // Redirect if not logged in
+          navigate('/');
         }
         throw new Error('Failed to fetch volunteer events');
       }
@@ -68,19 +64,14 @@ export default function VolunteerTicket() {
       const data = await response.json();
       let foundEvent = null;
 
-      // Search in array format
+      // Search logic (Array or Object format)
       if (data.volunteerEvents && Array.isArray(data.volunteerEvents)) {
         foundEvent = data.volunteerEvents.find(
           (event) => event.eid == eventId || event.id == eventId
         );
-      }
-      // Search in object format with categories
-      else if (data.volunteerEvents && typeof data.volunteerEvents === 'object') {
+      } else if (data.volunteerEvents && typeof data.volunteerEvents === 'object') {
         for (const category of ['ongoing', 'completed', 'upcoming']) {
-          if (
-            data.volunteerEvents[category] &&
-            Array.isArray(data.volunteerEvents[category])
-          ) {
+          if (data.volunteerEvents[category] && Array.isArray(data.volunteerEvents[category])) {
             foundEvent = data.volunteerEvents[category].find(
               (event) => event.eid == eventId || event.id == eventId
             );
@@ -104,26 +95,23 @@ export default function VolunteerTicket() {
   };
 
   const handleBack = () => {
-    navigate('/volunteers'); // Use navigate
+    navigate('/volunteers');
   };
 
   const handleScanQR = () => {
-    // Volunteer scans organizer's QR code to mark attendance
     navigate(`/scanner?role=volunteer`);
   };
 
+  // Helper formats
   const formatDate = (dateString) => {
-    if (!dateString) return 'Not specified';
+    if (!dateString) return 'TBD';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
   };
 
   const formatTime = (timeString) => {
-    if (!timeString) return 'Not specified';
+    if (!timeString) return 'TBD';
     const timeParts = timeString.split(':');
     let hours = parseInt(timeParts[0]);
     const minutes = timeParts[1];
@@ -135,121 +123,110 @@ export default function VolunteerTicket() {
 
   return (
     <div className="ticket-page-wrapper">
-      <div className="tk-background-glow"></div>
-
+      
+      {/* Glassy Back Button */}
       <div className="tk-nav-container">
         <button onClick={handleBack} className="tk-nav-btn">
-          <i className="fas fa-arrow-left"></i>
-          Back
+          <i className="fas fa-arrow-left"></i> Back
         </button>
       </div>
 
-      <div className="tk-ticket-container">
-        {loading && (
-          <div className="tk-loading-spinner">
-            <div className="tk-spinner"></div>
-          </div>
-        )}
+      {/* Loading State */}
+      {loading && (
+        <div className="tk-loading-container">
+            <p>Loading Ticket...</p>
+        </div>
+      )}
 
-        {error && (
-          <div className="tk-error-message">
-            <h3>Error Loading Event</h3>
-            <p>{error}</p>
-          </div>
-        )}
+      {/* Error State */}
+      {error && (
+        <div className="tk-error-container">
+          <h3>Error</h3>
+          <p>{error}</p>
+        </div>
+      )}
 
-        {!loading && !error && eventData && (
+      {/* Main Ticket */}
+      {!loading && !error && eventData && (
+        <div className="tk-ticket-container">
           <div className="tk-ticket-card">
-            <div className="tk-ticket-header">
+            
+            {/* Texture Overlay */}
+            <div className="tk-texture-overlay"></div>
+            
+            <div className="tk-top-notch"></div>
+
+            <div className="tk-main-content">
+              
+              {/* Title & Organization */}
               <h1 className="tk-event-title">
                 {eventData.ename || eventData.name || 'Untitled Event'}
               </h1>
-              <p className="tk-event-id">Event ID: {eventData.eid || eventData.id}</p>
-              {userUSN && <p className="tk-user-badge">🤝 Volunteer: {userUSN}</p>}
-            </div>
+              
+              {/* User Badge */}
+              {userUSN && <div className="tk-volunteer-badge">Volunteer: {userUSN}</div>}
 
-            <div className="tk-ticket-content">
-              {/* ... (all tk-info-section divs remain the same) ... */}
-              <div className="tk-info-section">
-                <div className="tk-info-icon">📅</div>
-                <div className="tk-info-content">
-                  <h3>Date</h3>
-                  <p>{formatDate(eventData.eventDate || eventData.date)}</p>
-                </div>
+              {/* Club Name */}
+              <div className="tk-club-name">
+                 {eventData.clubName || eventData.club || 'Event Organizer'}
               </div>
 
-              <div className="tk-info-section">
-                <div className="tk-info-icon">⏰</div>
-                <div className="tk-info-content">
-                  <h3>Time</h3>
-                  <p>{formatTime(eventData.eventTime || eventData.time)}</p>
-                </div>
-              </div>
+              <div className="tk-separator-dots"></div>
 
-              <div className="tk-info-section">
-                <div className="tk-info-icon">📍</div>
-                <div className="tk-info-content">
-                  <h3>Location</h3>
-                  <p>{eventData.eventLoc || eventData.location || 'Location TBD'}</p>
-                </div>
-              </div>
-
-              <div className="tk-info-section">
-                <div className="tk-info-icon">👥</div>
-                <div className="tk-info-content">
-                  <h3>Max Participants</h3>
-                  <p>{eventData.maxPart || eventData.maxParticipants || 'No limit'}</p>
-                </div>
-              </div>
-
-              <div className="tk-info-section">
-                <div className="tk-info-icon">🤝</div>
-                <div className="tk-info-content">
-                  <h3>Max Volunteers</h3>
-                  <p>{eventData.maxVoln || eventData.maxVolunteers || 'No limit'}</p>
-                </div>
-              </div>
-
-              <div className="tk-info-section">
-                <div className="tk-info-icon">💰</div>
-                <div className="tk-info-content">
-                  <h3>Registration Fee</h3>
-                  <p>₹{eventData.regFee || eventData.registrationFee || '0'}</p>
-                </div>
-              </div>
-
-              {(eventData.clubName || eventData.club) && (
-                <div className="tk-info-section">
-                  <div className="tk-info-icon">🏛️</div>
-                  <div className="tk-info-content">
-                    <h3>Organized by</h3>
-                    <p>{eventData.clubName || eventData.club}</p>
+              {/* Info Grid */}
+              <div className="tk-info-grid">
+                  <div>
+                    <div className="tk-info-label">Date</div>
+                    <div className="tk-info-value">{formatDate(eventData.eventDate || eventData.date)}</div>
                   </div>
-                </div>
-              )}
+                  <div>
+                    <div className="tk-info-label">Time</div>
+                    <div className="tk-info-value">{formatTime(eventData.eventTime || eventData.time)}</div>
+                  </div>
 
-              <div className="tk-description-section">
-                <h3>Event Description</h3>
-                <p>{eventData.eventdesc || eventData.description || 'No description available'}</p>
+                  <div className="tk-info-full">
+                    <div className="tk-info-label">Location</div>
+                    <div className="tk-info-value">{eventData.eventLoc || eventData.location || 'Location TBD'}</div>
+                  </div>
+
+                  <div>
+                    <div className="tk-info-label">Max Participants</div>
+                    <div className="tk-info-value">{eventData.maxPart || eventData.maxParticipants || 'No limit'}</div>
+                  </div>
+                  <div>
+                    <div className="tk-info-label">Max Volunteers</div>
+                    <div className="tk-info-value">{eventData.maxVoln || eventData.maxVolunteers || 'No limit'}</div>
+                  </div>
               </div>
+
+              {/* Description */}
+              <div className="tk-details-text">
+                "{eventData.eventdesc || eventData.description || 'No description available'}"
+              </div>
+
             </div>
 
-            <div className="tk-ticket-footer">
-              <button
-                onClick={handleScanQR}
-                className="tk-qr-placeholder tk-qr-scanner"
-                title="Scan Event QR Code"
-              >
-                📱
-                <div className="tk-qr-text">MARK ATTENDANCE</div>
-              </button>
-              <p style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
-                Scan the organizer's QR code to mark your attendance
-              </p>
+            {/* Divider Notches */}
+            <div className="tk-notch-container">
+              <div className="tk-notch tk-notch-left"></div>
+              <div className="tk-notch tk-notch-right"></div>
             </div>
+
+            {/* Bottom Stub - Compact Scanner */}
+            <div className="tk-stub-content">
+              <button 
+                onClick={handleScanQR}
+                className="tk-scan-btn"
+                title="Scan Attendee QR"
+              >
+                <i className="fas fa-qrcode"></i>
+                SCAN ATTENDEES
+              </button>
+            </div>
+
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
