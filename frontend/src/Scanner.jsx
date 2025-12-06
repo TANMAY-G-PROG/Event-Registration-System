@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Scan, Upload, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import './scanner.css'; // Make sure this is imported
+import './Scanner.css'; // Make sure this is imported
 
 export default function Scanner() {
   // ---------------------------------------------------------------------------
@@ -416,3 +416,4 @@ export default function Scanner() {
     </div>
   );
 }
+
