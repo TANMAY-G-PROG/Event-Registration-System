@@ -1,6 +1,6 @@
 "use client"
 import { motion } from "framer-motion"
-// Removed useNavigate import since the button handling navigation is gone
+import { useNavigate } from "react-router-dom"
 import "./LandingPage.css"
 import Prism from './Prism';
 import { useEffect } from "react";
@@ -9,9 +9,10 @@ const HeroGeometric = ({
   title1 = "Welcome to",
   title2 = "F l o",
 }) => {
-  // Removed navigation hook and handleEnter function
+  const navigate = useNavigate()
 
   useEffect(() => {
+    // Reset body margin for this page
     document.body.style.margin = '0';
     return () => {
       document.body.style.margin = '';
@@ -31,39 +32,64 @@ const HeroGeometric = ({
     }),
   }
 
-  return (
-    <div className="hero-geometric-container">
-      {/* Prism Background */}
-      <div className="hero-prism-background">
-        <Prism
-          animationType="rotate"
-          timeScale={0.5}
-          height={3.5}
-          baseWidth={5.5}
-          scale={3.6}
-          hueShift={0}
-          colorFrequency={1}
-          noise={0.5}
-          glow={1}
-        />
-      </div>
-      
-      {/* Content */}
-      <div className="hero-content-wrapper">
-        <div className="hero-content">
-          {/* Title */}
-          <motion.div custom={0} variants={fadeUpVariants} initial="hidden" animate="visible">
-            <h1 className="hero-title">
-              <span className="title-part-1">{title1}</span>
-              <br />
-              <span className="title-part-2">{title2}</span>
-            </h1>
-          </motion.div>
-        </div>
-      </div>
+  const handleEnter = () => {
+    navigate("/login")
+  }
 
-      {/* Overlay gradient */}
-      <div className="hero-overlay" />
+  return (
+    /* Root Wrapper for CSS Scoping */
+    <div className="landing-page-root">
+      <div className="hero-geometric-container">
+        
+        {/* Prism Background */}
+        <div className="hero-prism-background">
+          <Prism
+            animationType="rotate"
+            timeScale={0.5}
+            height={3.5}
+            baseWidth={5.5}
+            scale={3.6}
+            hueShift={0}
+            colorFrequency={1}
+            noise={0.5}
+            glow={1}
+          />
+        </div>
+        
+        {/* Content */}
+        <div className="hero-content-wrapper">
+          <div className="hero-content">
+            
+            {/* Title */}
+            <motion.div custom={0} variants={fadeUpVariants} initial="hidden" animate="visible">
+              <h1 className="hero-title">
+                <span className="title-part-1">{title1}</span>
+                <br />
+                <span className="title-part-2">{title2}</span>
+              </h1>
+            </motion.div>
+
+            {/* Enter Button (Restored) */}
+            <motion.div custom={3} variants={fadeUpVariants} initial="hidden" animate="visible" style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
+              <button type="button" className="btn" onClick={handleEnter}>
+                <strong>ENTER</strong>
+                <div id="container-stars">
+                  <div id="stars"></div>
+                </div>
+
+                <div id="glow">
+                  <div className="circle"></div>
+                  <div className="circle"></div>
+                </div>
+              </button>
+            </motion.div>
+
+          </div>
+        </div>
+
+        {/* Overlay gradient */}
+        <div className="hero-overlay" />
+      </div>
     </div>
   )
 }
