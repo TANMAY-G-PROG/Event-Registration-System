@@ -199,6 +199,8 @@ export default function Login() {
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
       />
+      
+      {/* TOP NAV BUTTONS */}
       <div className="top-nav-buttons">
         <button className="button" onClick={handleAboutUsClick}>
           <div className="bubble-layer bubble-1"></div>
@@ -221,11 +223,15 @@ export default function Login() {
           <span>Contact Us</span>
         </button>
       </div>
+
+      {/* TOAST MESSAGE */}
       {message.show && (
         <div className={`message ${message.isError ? 'error' : 'success'}`}>
           {message.text}
         </div>
       )}
+
+      {/* DESKTOP/TABLET VIEW - Original Design */}
       <div className={`container ${isActive ? 'active' : ''}`} id="container">
         <div className="form-container sign-up">
           <form onKeyPress={handleKeyPress}>
@@ -361,6 +367,177 @@ export default function Login() {
           <div className="glass-glider"></div>
         </div>
       </div>
+
+      {/* MOBILE VIEW ONLY - New Design */}
+      <div className="mobile-only-wrapper">
+        {/* Hero Section */}
+        <div className="hero-section">
+          <div className="hero-content">
+            <h1 className="hero-title">FLO.</h1>
+            <div className="hero-divider"></div>
+            <p className="hero-subtitle">The Pulse of Campus</p>
+          </div>
+        </div>
+
+        {/* Interaction Sheet */}
+        <div className="interaction-sheet">
+          {/* Toggle Header */}
+          <div className="sheet-header">
+            <div>
+              <h2 className="sheet-title">
+                {isActive ? 'New Account' : 'Welcome Back'}
+              </h2>
+            </div>
+            <button 
+              onClick={() => setIsActive(!isActive)}
+              className="toggle-button"
+            >
+              {isActive ? 'Log In Instead' : 'Create Account'}
+            </button>
+          </div>
+
+          {/* Scrollable Form Area */}
+          <div className="form-area">
+            <form onSubmit={(e) => { e.preventDefault(); isActive ? handleSignUp() : handleSignIn(); }}>
+              
+              {!isActive ? (
+                /* SIGN IN FORM */
+                <div className="form-content">
+                  <MobileInputField 
+                    label="University Serial No." 
+                    name="usn" 
+                    value={signInData.usn} 
+                    onChange={handleSignInChange} 
+                    placeholder="USN" 
+                  />
+                  <MobileInputField 
+                    label="Password" 
+                    name="password" 
+                    value={signInData.password} 
+                    onChange={handleSignInChange} 
+                    placeholder="Password" 
+                    isPassword={true}
+                    isVisible={showPassword.signIn}
+                    onToggleVisibility={() => togglePasswordVisibility('signIn')}
+                  />
+                  <div className="forgot-password-container">
+                    <a 
+                      href="#" 
+                      onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }} 
+                      className="forgot-password-link-new"
+                    >
+                      Forgot Your Password?
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                /* SIGN UP FORM */
+                <div className="form-content signup-form">
+                  <MobileInputField 
+                    label="Name" 
+                    name="name" 
+                    value={signUpData.name} 
+                    onChange={handleSignUpChange} 
+                    placeholder="Name" 
+                  />
+                  <MobileInputField 
+                    label="USN" 
+                    name="usn" 
+                    value={signUpData.usn} 
+                    onChange={handleSignUpChange} 
+                    placeholder="USN" 
+                  />
+                  
+                  <div className="form-row">
+                    <MobileInputField 
+                      label="Semester" 
+                      name="sem" 
+                      value={signUpData.sem} 
+                      onChange={handleSignUpChange} 
+                      placeholder="Semester" 
+                      half={true} 
+                      type="number" 
+                    />
+                    <MobileInputField 
+                      label="Mobile Number" 
+                      name="mobno" 
+                      value={signUpData.mobno} 
+                      onChange={handleSignUpChange} 
+                      placeholder="Mobile Number" 
+                      half={true} 
+                      type="tel" 
+                    />
+                  </div>
+                  
+                  <MobileInputField 
+                    label="Email ID" 
+                    name="email" 
+                    value={signUpData.email} 
+                    onChange={handleSignUpChange} 
+                    placeholder="Email ID" 
+                    type="email" 
+                  />
+                  <MobileInputField 
+                    label="Password" 
+                    name="password" 
+                    value={signUpData.password} 
+                    onChange={handleSignUpChange} 
+                    placeholder="Password"
+                    isPassword={true}
+                    isVisible={showPassword.signUp}
+                    onToggleVisibility={() => togglePasswordVisibility('signUp')}
+                  />
+                </div>
+              )}
+
+              {/* ACTION BUTTON */}
+              <button
+                type="submit"
+                className="submit-button"
+              >
+                {isActive ? 'SIGN UP' : 'SIGN IN'}
+                <span className="button-arrow">→</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+
+// Mobile Input Field Component
+const MobileInputField = ({ label, name, value, onChange, placeholder, half, type = "text", isPassword, isVisible, onToggleVisibility }) => {
+  const inputType = isPassword ? (isVisible ? 'text' : 'password') : type;
+
+  return (
+    <div className={`input-group ${half ? 'half-width' : 'full-width'}`}>
+      <label className="input-label">
+        {label}
+      </label>
+      <div className="input-wrapper">
+        <input
+          type={inputType}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="input-field"
+        />
+        {isPassword && (
+          <button 
+            type="button"
+            onClick={onToggleVisibility}
+            className="password-toggle-btn"
+          >
+            {isVisible ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
