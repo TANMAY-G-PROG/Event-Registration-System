@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Scan, Upload, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import './Scanner.css';
 
@@ -68,10 +67,8 @@ export default function Scanner() {
   useEffect(() => {
     let timer;
     if (pageState === 'scanning') {
-      // FIX: Increased delay to 500ms to allow Framer Motion animation to complete
-      // and added a retry check in initScanner
       console.log('⏳ Waiting for DOM to mount...');
-      timer = setTimeout(() => initScanner(), 500); 
+      timer = setTimeout(() => initScanner(), 800);
     }
     if (pageState !== 'scanning') {
       cleanupScanner();
@@ -111,7 +108,6 @@ export default function Scanner() {
   };
 
   const initScanner = () => {
-    // Debugging checks
     if (!window.Html5QrcodeScanner) {
       console.log('❌ Library not found');
       return;
@@ -121,11 +117,10 @@ export default function Scanner() {
       return;
     }
     
-    // FIX: Explicitly check for the DOM element by ID if ref is missing
     const element = document.getElementById('reader');
     if (!element) {
       console.log('⚠️ DOM element #reader not found yet. Retrying in 200ms...');
-      setTimeout(initScanner, 200); // Retry logic
+      setTimeout(initScanner, 200);
       return;
     }
 
@@ -141,10 +136,8 @@ export default function Scanner() {
           showTorchButtonIfSupported: true,
           rememberLastUsedCamera: true,
           videoConstraints: {
-            facingMode: { ideal: 'environment' }, // Back camera preferred
+            facingMode: { ideal: 'environment' },
           },
-          supportedScanTypes: [0, 1],
-          formatsToSupport: [0, 1],
         },
         false
       );
@@ -154,7 +147,6 @@ export default function Scanner() {
       console.log('✅ Scanner started successfully');
     } catch (err) {
       console.error('Scanner initialization error:', err);
-      // Don't kill the page immediately, let it try to handle file uploads at least
       setErrorMsg('Camera failed. You can still upload an image.');
     }
   };
@@ -184,9 +176,8 @@ export default function Scanner() {
     console.log('📁 File selected:', file.name);
     
     if (!window.Html5Qrcode) {
-        // Fallback if library didn't load for camera but might work for file
-        setErrorMsg('Library not ready.');
-        return;
+      setErrorMsg('Library not ready.');
+      return;
     }
 
     try {
@@ -214,14 +205,19 @@ export default function Scanner() {
       return;
     }
     try {
-      const endpoint = userRole === 'volunteer' ? '/api/mark-volunteer-attendance' : '/api/mark-participant-attendance';
+      const endpoint = userRole === 'volunteer' 
+        ? '/api/mark-volunteer-attendance' 
+        : '/api/mark-participant-attendance';
+      
       const response = await fetch(endpoint, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventId: eventId, usn: userUSN }),
       });
+      
       const data = await response.json();
+      
       if (response.ok && data.success) {
         setPageState('success');
         setErrorMsg(null);
@@ -230,14 +226,15 @@ export default function Scanner() {
         setPageState('error');
       }
     } catch (err) {
+      console.error('Attendance marking error:', err);
       setErrorMsg('Network error. Please try again.');
       setPageState('error');
     }
   };
 
   const onScanError = (errorMessage) => {
-    // Ignore common scan errors to keep console clean
-    if (errorMessage.includes('NotFoundException') || errorMessage.includes('No MultiFormat Readers')) return;
+    if (errorMessage.includes('NotFoundException') || 
+        errorMessage.includes('No MultiFormat Readers')) return;
   };
 
   const scanAgain = () => {
@@ -268,186 +265,128 @@ export default function Scanner() {
       <div className="ambient-orb orb-2" />
       <div id="file-reader" style={{ display: 'none' }} />
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="scanner-container"
-      >
+      <div className="scanner-container">
         <div className="glass-card">
           
           <div className="scanner-header">
-            <motion.div 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="scanner-icon-box"
-            >
+            <div className="scanner-icon-box">
               <Scan className="icon-main" />
-            </motion.div>
+            </div>
             <h1 className="scanner-title">Mark Attendance</h1>
             <div className="user-info-pill">
-                <span className={`role-badge ${userRole === 'volunteer' ? 'role-vol' : 'role-part'}`}>
-                    {userRole === 'volunteer' ? 'Volunteer' : 'Participant'}
-                </span>
-                {userUSN && <span className="usn-text">{userUSN}</span>}
+              <span className={`role-badge ${userRole === 'volunteer' ? 'role-vol' : 'role-part'}`}>
+                {userRole === 'volunteer' ? 'Volunteer' : 'Participant'}
+              </span>
+              {userUSN && <span className="usn-text">{userUSN}</span>}
             </div>
           </div>
 
           <div className="scanner-content">
-            <AnimatePresence mode="wait">
-              
-              {/* LOADING */}
-              {pageState === 'loading' && (
-                <motion.div 
-                  key="loading"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="state-box"
-                >
-                  <div className="loader-container">
-                    <Loader2 className="spinner-icon" />
-                  </div>
-                  <p className="status-text pulse">Authenticating...</p>
-                </motion.div>
-              )}
+            
+            {/* LOADING */}
+            {pageState === 'loading' && (
+              <div className="state-box">
+                <div className="loader-container">
+                  <Loader2 className="spinner-icon" />
+                </div>
+                <p className="status-text pulse">Authenticating...</p>
+              </div>
+            )}
 
-              {/* SCANNING */}
-              {(pageState === 'scanning' || pageState === 'processing') && (
-                <motion.div
-                  key="scanning"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="scan-wrapper"
-                >
-                  <div className="camera-frame">
-                    {/* The critical div for camera */}
-                    <div id="reader" className="camera-view" />
-                    
-                    {isScanning && (
-                      <div className="scan-overlay">
-                        <div className="corner tl" />
-                        <div className="corner tr" />
-                        <div className="corner bl" />
-                        <div className="corner br" />
-                        <motion.div 
-                          className="scan-line"
-                          animate={{ top: ['10%', '90%', '10%'] }}
-                          transition={{ duration: 3, ease: "linear", repeat: Infinity }}
-                        />
-                      </div>
-                    )}
-
-                    {pageState === 'processing' && (
-                        <div className="processing-overlay">
-                            <Loader2 className="spinner-icon small" />
-                            <span>Verifying...</span>
-                        </div>
-                    )}
-                  </div>
-
-                  <p className="instruction-text">Align QR code within the frame</p>
-
-                  <div className="action-grid">
-                      <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFileUpload}
-                          style={{ display: 'none' }}
-                          id="qr-file-input"
-                      />
-                      <label htmlFor="qr-file-input" className="btn-secondary">
-                          <Upload className="btn-icon" /> Upload Image
-                      </label>
-                      <button onClick={goBack} className="btn-secondary">
-                          <ArrowLeft className="btn-icon" /> Cancel
-                      </button>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* SUCCESS */}
-              {pageState === 'success' && (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="state-box success-state"
-                >
-                  <motion.div 
-                    initial={{ scale: 0 }} 
-                    animate={{ scale: 1 }} 
-                    transition={{ type: "spring", stiffness: 200 }}
-                    className="success-icon-circle"
-                  >
-                    <CheckCircle2 className="success-icon" />
-                  </motion.div>
+            {/* SCANNING */}
+            {(pageState === 'scanning' || pageState === 'processing') && (
+              <div className="scan-wrapper">
+                <div className="camera-frame">
+                  <div id="reader" className="camera-view" />
                   
-                  <h2>Verified</h2>
-                  <p className="result-text">
-                    Attendance recorded for<br/>
-                    <span className="highlight">Event ID: {lastResult.replace('eventId:', '')}</span>
-                  </p>
+                  {isScanning && (
+                    <div className="scan-overlay">
+                      <div className="corner tl" />
+                      <div className="corner tr" />
+                      <div className="corner bl" />
+                      <div className="corner br" />
+                      <div className="scan-line" />
+                    </div>
+                  )}
 
-                  <div className="btn-stack">
-                    <button onClick={scanAgain} className="btn-primary">
-                        <Scan className="btn-icon" /> Scan Another
-                    </button>
-                    <button onClick={goBack} className="btn-ghost">
-                        Back to Dashboard
-                    </button>
-                  </div>
-                </motion.div>
-              )}
+                  {pageState === 'processing' && (
+                    <div className="processing-overlay">
+                      <Loader2 className="spinner-icon small" />
+                      <span>Verifying...</span>
+                    </div>
+                  )}
+                </div>
 
-              {/* ERROR */}
-              {pageState === 'error' && (
-                <motion.div
-                  key="error"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="state-box error-state"
-                >
-                  <div className="error-icon-circle">
-                    <AlertCircle className="error-icon" />
-                  </div>
-                  
-                  <h2>Scan Failed</h2>
-                  <p className="error-msg">{errorMsg}</p>
+                <p className="instruction-text">Align QR code within the frame</p>
 
-                  <div className="action-grid">
-                    <button onClick={goBack} className="btn-secondary">
-                        Exit
-                    </button>
-                    <button onClick={restartScanner} className="btn-danger">
-                        <RefreshCw className="btn-icon" /> Retry
-                    </button>
-                  </div>
-                </motion.div>
-              )}
+                <div className="action-grid">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    style={{ display: 'none' }}
+                    id="qr-file-input"
+                  />
+                  <label htmlFor="qr-file-input" className="btn-secondary">
+                    <Upload className="btn-icon" /> Upload Image
+                  </label>
+                  <button onClick={goBack} className="btn-secondary">
+                    <ArrowLeft className="btn-icon" /> Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
-            </AnimatePresence>
+            {/* SUCCESS */}
+            {pageState === 'success' && (
+              <div className="state-box success-state">
+                <div className="success-icon-circle">
+                  <CheckCircle2 className="success-icon" />
+                </div>
+                
+                <h2>Verified</h2>
+                <p className="result-text">
+                  Attendance recorded for<br/>
+                  <span className="highlight">Event ID: {lastResult.replace('eventId:', '')}</span>
+                </p>
+
+                <div className="btn-stack">
+                  <button onClick={scanAgain} className="btn-primary">
+                    <Scan className="btn-icon" /> Scan Another
+                  </button>
+                  <button onClick={goBack} className="btn-ghost">
+                    Back to Dashboard
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ERROR */}
+            {pageState === 'error' && (
+              <div className="state-box error-state">
+                <div className="error-icon-circle">
+                  <AlertCircle className="error-icon" />
+                </div>
+                
+                <h2>Scan Failed</h2>
+                <p className="error-msg">{errorMsg}</p>
+
+                <div className="action-grid">
+                  <button onClick={goBack} className="btn-secondary">
+                    Exit
+                  </button>
+                  <button onClick={restartScanner} className="btn-danger">
+                    <RefreshCw className="btn-icon" /> Retry
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
         <p className="footer-text">Secured Attendance System</p>
-      </motion.div>
-
-      <style>{`
-        #reader__dashboard_section_csr button { display: none !important; }
-        #reader__status_span { display: none !important; }
-        #reader__dashboard_section_csr select {
-            background: #18181b;
-            color: #a1a1aa;
-            border: 1px solid #3f3f46;
-            padding: 4px;
-            border-radius: 6px;
-            font-size: 12px;
-            margin-bottom: 10px;
-            width: 100%;
-        }
-      `}</style>
+      </div>
     </div>
   );
 }
