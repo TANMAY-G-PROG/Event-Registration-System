@@ -185,7 +185,7 @@ export default function Registerevent() {
     }
   }, [])
 
-  // --- UPDATED: Load team status for both UPCOMING and ONGOING events ---
+  // Load team status for both UPCOMING and ONGOING events
   useEffect(() => {
     const activeEvents = [
       ...(eventsData.upcoming || []),
@@ -196,7 +196,6 @@ export default function Registerevent() {
       loadTeamStatus(event.eid)
     })
   }, [eventsData.upcoming, eventsData.ongoing]) 
-  // ----------------------------------------------------------------------
 
   const allEvents = useMemo(() => {
     return [
@@ -557,10 +556,10 @@ export default function Registerevent() {
                 </button>
               ) : (
                 <div style={{color: 'var(--re-accent-warning)', fontSize: '0.85rem', padding: '8px', background: 'rgba(255,189,0,0.1)', borderRadius: '6px'}}>
-                   {isLeader 
-                     ? `Need ${teamState.minSize - teamState.joinedCount} more to confirm`
-                     : `Waiting for Leader (${teamState.leaderName || teamState.leaderUSN})`
-                   }
+                    {isLeader 
+                      ? `Need ${teamState.minSize - teamState.joinedCount} more to confirm`
+                      : `Waiting for Leader (${teamState.leaderName || teamState.leaderUSN})`
+                    }
                 </div>
               )}
             </div>
@@ -594,11 +593,13 @@ export default function Registerevent() {
   }
 
   return (
+    // Updated Root Structure for Digital Rain
     <main className="registerevent-page">
       
-      {/* Background Elements */}
-      <div className="registerevent-hero-bg" aria-hidden="true" />
+      {/* 1. Fixed Digital Rain Background */}
+      <div className="registerevent-rain-bg" aria-hidden="true" />
 
+      {/* 2. Scrollable Content Container */}
       <div className="registerevent-container">
         {flash.message && (
           <div
@@ -715,7 +716,7 @@ export default function Registerevent() {
                     </div>
                   </div>
 
-                  {/* --- UPDATED: Allow registration for UPCOMING and ONGOING --- */}
+                  {/* Render Controls/Buttons in Footer */}
                   {(event.status === "upcoming" || event.status === "ongoing") && renderTeamControls(event)}
                 </article>
               )
