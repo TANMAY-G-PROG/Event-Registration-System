@@ -1,197 +1,462 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import './style.css'; // ← This is now SAFE
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import "./style.css"; // make sure this file exists
 
 export default function Login() {
   const navigate = useNavigate();
 
-  const [isActive, setIsActive] = useState(false);
-  const [message, setMessage] = useState({ text: '', isError: false, show: false });
+  // ── State ─────────────────────────────────────
+  const [isActive, setIsActive] = useState(false); // true → sign-up panel active
+  const [message, setMessage] = useState({ text: "", isError: false, show: false });
   const [showPassword, setShowPassword] = useState({ signIn: false, signUp: false });
 
-  const [signInData, setSignInData] = useState({ usn: '', password: '' });
+  // Form data
+  const [signInData, setSignInData] = useState({ usn: "", password: "" });
   const [signUpData, setSignUpData] = useState({
-    name: '', usn: '', sem: '', mobno: '', email: '', password: ''
+    name: "",
+    usn: "",
+    sem: "",
+    mobno: "",
+    email: "",
+    password: "",
   });
 
-  useEffect(() => { checkAuthStatus(); }, []);
+  // ── Effects ───────────────────────────────────
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
 
   useEffect(() => {
     if (message.show) {
-      const t = setTimeout(() => setMessage(p => ({ ...p, show: false })), 5000);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setMessage((prev) => ({ ...prev, show: false })), 5000);
+      return () => clearTimeout(timer);
     }
   }, [message.show]);
 
+  // ── API Helpers ───────────────────────────────
   const checkAuthStatus = async () => {
     try {
-      const res = await fetch('/api/me', { method: 'GET', credentials: 'include' });
+      const res = await fetch("/api/me", {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
       if (res.ok) {
         const data = await res.json();
         showMessage(`Already logged in as ${data.userName}. Redirecting...`);
-        setTimeout(() => navigate('/events'), 1500);
+        setTimeout(() => navigate("/events"), 1500);
       }
-    } catch (_) { }
+    } catch (err) {
+      console.log("Not authenticated");
+    }
   };
 
   const showMessage = (text, isError = false) => {
     setMessage({ text, isError, show: true });
   };
 
+  // ── Handlers ───────────────────────────────────
   const handleSignIn = async (e) => {
-    if (e) e.preventDefault();
+    e?.preventDefault();
     const { usn, password } = signInData;
-    if (!usn || !password) return showMessage('Please fill in all fields', true);
+    if (!usn || !password) return showMessage("Please fill in all fields", true);
 
     try {
-      const res = await fetch('/api/signin', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usn, password })
+      const res = await fetch("/api/signin", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usn, password }),
       });
       const data = await res.json();
+
       if (data.success) {
-        showMessage(`Welcome back, ${data.userName}!`);
-        setTimeout(() => navigate('/events'), 1500);
-      } else showMessage(data.error || 'Sign in failed', true);
-    } catch (_) {
-      showMessage('Network error', true);
+        showMessage(`Welcome back, ${data.userName || usn}!`);
+        setTimeout(() => navigate("/events"), 1500);
+      } else {
+        showMessage(data.error || "Sign in failed", true);
+      }
+    } catch (err) {
+      showMessage("Network error. Please try again.", true);
     }
   };
 
   const handleSignUp = async (e) => {
-    if (e) e.preventDefault();
+    e?.preventDefault();
     const { name, usn, sem, mobno, email, password } = signUpData;
+
     if (!name || !usn || !sem || !mobno || !email || !password)
-      return showMessage('Please fill in all fields', true);
-    if (!/\S+@\S+\.\S+/.test(email)) return showMessage('Invalid email', true);
-    if (!/^\d{10}$/.test(mobno)) return showMessage('Invalid mobile number', true);
-    const semNum = +sem;
-    if (semNum < 1 || semNum > 8) return showMessage('Semester 1–8 only', true);
+      return showMessage("Please fill in all fields", true);
+    if (!/\S+@\S+\.\S+/.test(email)) return showMessage("Invalid email address", true);
+    if (!/^\d{10}$/.test(mobno)) return showMessage("Mobile number must be 10 digits", true);
+
+    const semNum = parseInt(sem, 10);
+    if (semNum < 1 || semNum > 8) return showMessage("Semester must be 1-8", true);
 
     try {
-      const res = await fetch('/api/signup', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, usn, sem: semNum, mobno, email, password })
+      const res = await fetch("/api/signup", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, usn, sem: semNum, mobno, email, password }),
       });
+
       const data = await res.json();
-      if (data.success) {
-        showMessage(`Welcome, ${data.userName}!`);
-        setSignUpData({ name: '', usn: '', sem: '', mobno: '', email: '', password: '' });
-        setTimeout(() => navigate('/events'), 2000);
-      } else showMessage(data.error || 'Signup failed', true);
-    } catch (_) {
-      showMessage('Network error', true);
+
+      if (res.ok && data.success) {
+        showMessage(`Account created! Welcome, ${data.userName || name}!`);
+        setSignUpData({ name: "", usn: "", sem: "", mobno: "", email: "", password: "" });
+        setTimeout(() => navigate("/events"), 2000);
+      } else {
+        showMessage(data.error || "Sign-up failed", true);
+      }
+    } catch (err) {
+      showMessage("Network error during signup.", true);
     }
   };
 
-  const handleSignInChange = (e) => setSignInData({ ...signInData, [e.target.name]: e.target.value });
+  const handleSignInChange = (e) =>
+    setSignInData({ ...signInData, [e.target.name]: e.target.value });
+
   const handleSignUpChange = (e) => {
     const { name, value } = e.target;
-    setSignUpData({ ...signUpData, [name]: name === 'usn' ? value.toUpperCase() : value });
+    setSignUpData((prev) => ({
+      ...prev,
+      [name]: name === "usn" ? value.toUpperCase() : value,
+    }));
   };
 
-  const togglePasswordVisibility = (type) => {
-    setShowPassword(prev => ({ ...prev, [type]: !prev[type] }));
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      isActive ? handleSignUp() : handleSignIn();
+    }
   };
 
-  const handleAboutUsClick = () => navigate('/about-us');
-  const handleContactUsClick = () => navigate('/about-us#connect-section');
+  const togglePasswordVisibility = (form) => {
+    setShowPassword((prev) => ({ ...prev, [form]: !prev[form] }));
+  };
 
+  const goTo = (path) => () => navigate(path);
+  const goToContact = () => navigate("/about-us#connect-section");
+
+  // ── Render ─────────────────────────────────────
   return (
-    <div className="login-root"> {/* ← UNIQUE CLASS – NO LEAKAGE */}
+    <div className="login-page">
+      {/* Font Awesome */}
+      <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+      />
 
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
-
-      {/* Top Nav Buttons */}
-      <div className="login-top-nav">
-        <button className="bubble-btn" onClick={handleAboutUsClick}>
-          {[1,2,3,4,5,6,7].map(i => <div key={i} className={`bubble-layer b${i}`}></div>)}
+      {/* Top navigation buttons */}
+      <div className="top-nav-buttons">
+        <button className="button" onClick={goTo("/about-us")}>
+          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <div key={i} className={`bubble-layer bubble-${i}`} />
+          ))}
           <span>About Us</span>
         </button>
-        <button className="bubble-btn" onClick={handleContactUsClick}>
-          {[1,2,3,4,5,6,7].map(i => <div key={i} className={`bubble-layer b${i}`}></div>)}
+        <button className="button" onClick={goToContact}>
+          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <div key={i} className={`bubble-layer bubble-${i}`} />
+          ))}
           <span>Contact Us</span>
         </button>
       </div>
 
-      {/* Toast */}
+      {/* Toast message */}
       {message.show && (
-        <div className={`login-toast ${message.isError ? 'error' : 'success'}`}>
+        <div className={`message ${message.isError ? "error" : "success"}`}>
           {message.text}
         </div>
       )}
 
-      {/* Desktop View */}
-      <div className={`login-container desktop-view ${isActive ? 'active' : ''}`}>
-        {/* ... same JSX as before ... */}
-        {/* (keeping the exact same structure – only class names changed slightly where needed) */}
-
+      {/* ── Desktop View (Sliding panels) ───────────────────── */}
+      <div className={`container desktop-view ${isActive ? "active" : ""}`} id="container">
+        {/* Sign-up form */}
         <div className="form-container sign-up">
-          <form onKeyPress={e => e.key === 'Enter' && handleSignUp()}>
+          <form onKeyPress={handleKeyPress}>
             <h1>Create Account</h1>
-            <input type="text" name="name" placeholder="Name" value={signUpData.name} onChange={handleSignUpChange} />
-            <input type="text" name="usn" placeholder="USN" value={signUpData.usn} onChange={handleSignUpChange} />
-            <input type="number" name="sem" placeholder="Semester" value={signUpData.sem} onChange={handleSignUpChange} />
-            <input type="tel" name="mobno" placeholder="Mobile Number" value={signUpData.mobno} onChange={handleSignUpChange} />
-            <input type="email" name="email" placeholder="Email ID" value={signUpData.email} onChange={handleSignUpChange} />
+            <input
+              type="text"
+              name="name"
+              placeholder="Name"
+              value={signUpData.name}
+              onChange={handleSignUpChange}
+            />
+            <input
+              type="text"
+              name="usn"
+              placeholder="USN"
+              value={signUpData.usn}
+              onChange={handleSignUpChange}
+            />
+            <input
+              type="number"
+              name="sem"
+              placeholder="Semester"
+              value={signUpData.sem}
+              onChange={handleSignUpChange}
+            />
+            <input
+              type="tel"
+              name="mobno"
+              placeholder="Mobile Number"
+              value={signUpData.mobno}
+              onChange={handleSignUpChange}
+            />
+            <input
+              type="email"
+              name="email"
+              placeholder="Email ID"
+              value={signUpData.email}
+              onChange={handleSignUpChange}
+            />
             <div className="password-wrapper">
-              <input type={showPassword.signUp ? 'text' : 'password'} name="password" placeholder="Password"
-                value={signUpData.password} onChange={handleSignUpChange} />
-              <i className={`fa-solid ${showPassword.signUp ? 'fa-eye-slash' : 'fa-eye'} password-toggle-icon`}
-                onClick={() => togglePasswordVisibility('signUp')}></i>
+              <input
+                type={showPassword.signUp ? "text" : "password"}
+                name="password"
+                placeholder="Password"
+                value={signUpData.password}
+                onChange={handleSignUpChange}
+              />
+              <i
+                className={`fa-solid ${
+                  showPassword.signUp ? "fa-eye-slash" : "fa-eye"
+                } password-toggle-icon`}
+                onClick={() => togglePasswordVisibility("signUp")}
+              />
             </div>
-            <button type="button" className="login-submit-btn" onClick={handleSignUp}>Sign Up</button>
+            <button type="button" onClick={handleSignUp}>
+              Sign Up
+            </button>
           </form>
         </div>
 
+        {/* Sign-in form */}
         <div className="form-container sign-in">
-          <form onKeyPress={e => e.key === 'Enter' && handleSignIn()}>
+          <form onKeyPress={handleKeyPress}>
             <h1>Sign In</h1>
-            <input type="text" name="usn" placeholder="USN" value={signInData.usn} onChange={handleSignInChange} />
+            <input
+              type="text"
+              name="usn"
+              placeholder="USN"
+              value={signInData.usn}
+              onChange={handleSignInChange}
+            />
             <div className="password-wrapper">
-              <input type={showPassword.signIn ? 'text' : 'password'} name="password" placeholder="Password"
-                value={signInData.password} onChange={handleSignInChange} />
-              <i className={`fa-solid ${showPassword.signIn ? 'fa-eye-slash' : 'fa-eye'} password-toggle-icon`}
-                onClick={() => togglePasswordVisibility('signIn')}></i>
+              <input
+                type={showPassword.signIn ? "text" : "password"}
+                name="password"
+                placeholder="Password"
+                value={signInData.password}
+                onChange={handleSignInChange}
+              />
+              <i
+                className={`fa-solid ${
+                  showPassword.signIn ? "fa-eye-slash" : "fa-eye"
+                } password-toggle-icon`}
+                onClick={() => togglePasswordVisibility("signIn")}
+              />
             </div>
-            <a href="#" onClick={e => { e.preventDefault(); navigate('/forgot-password'); }} className="forgot-link">
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/forgot-password");
+              }}
+              className="forgot-password-link"
+            >
               Forgot Your Password?
             </a>
-            <button type="button" className="login-submit-btn" onClick={handleSignIn}>Sign In</button>
+            <button type="button" onClick={handleSignIn}>
+              Sign In
+            </button>
           </form>
         </div>
 
+        {/* Toggle overlay */}
         <div className="toggle-container">
           <div className="toggle">
             <div className="toggle-panel toggle-left">
               <h1>Welcome Back!</h1>
-              <p>Enter your details to continue</p>
-              <button className="hidden" onClick={() => setIsActive(false)}>Sign In</button>
+              <p>Enter your personal details to use all of site features</p>
+              <button className="hidden" onClick={() => setIsActive(false)}>
+                Sign In
+              </button>
             </div>
             <div className="toggle-panel toggle-right">
               <h1>Hello, Friend!</h1>
-              <p>Register to join the pulse</p>
-              <button className="hidden" onClick={() => setIsActive(true)}>Sign Up</button>
+              <p>Register with your personal details to create a new account</p>
+              <button className="hidden" onClick={() => setIsActive(true)}>
+                Sign Up
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile View – unchanged except wrapper class */}
+      {/* ── Mobile View (Premium bottom sheet) ───────────────────── */}
       <div className="mobile-view-wrapper">
-        {/* ... exact same mobile JSX ... */}
-        {/* just make sure all buttons have class "m-submit-btn" or "bubble-btn" */}
-      </div>
+        <div className="m-hero-section">
+          <div className="m-hero-content">
+            <h1 className="m-logo">FLO.</h1>
+            <div className="m-divider" />
+            <p className="m-tagline">The Pulse of Campus</p>
+          </div>
+        </div>
 
-      {/* MobileInput component stays the same */}
-      <MobileInput ... />
+        <div className="m-interaction-sheet">
+          <div className="m-sheet-header">
+            <h2 className="m-sheet-title">{isActive ? "New Account" : "Welcome Back"}</h2>
+            <button onClick={() => setIsActive(!isActive)} className="m-toggle-link">
+              {isActive ? "Log In Instead" : "Create Account"}
+            </button>
+          </div>
+
+          <div className="m-form-scroll">
+            <form onSubmit={isActive ? handleSignUp : handleSignIn}>
+              {!isActive ? (
+                // Sign-in fields
+                <div className="m-form-group">
+                  <MobileInput
+                    label="University Serial No."
+                    name="usn"
+                    value={signInData.usn}
+                    onChange={handleSignInChange}
+                    placeholder="USN"
+                  />
+                  <MobileInput
+                    label="Password"
+                    name="password"
+                    value={signInData.password}
+                    onChange={handleSignInChange}
+                    placeholder="Password"
+                    isPassword
+                    isVisible={showPassword.signIn}
+                    onToggleVisibility={() => togglePasswordVisibility("signIn")}
+                  />
+                  <div className="m-forgot-wrapper">
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate("/forgot-password");
+                      }}
+                      className="m-forgot-link"
+                    >
+                      Forgot Your Password?
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                // Sign-up fields
+                <div className="m-form-group">
+                  <MobileInput
+                    label="Name"
+                    name="name"
+                    value={signUpData.name}
+                    onChange={handleSignUpChange}
+                    placeholder="Name"
+                  />
+                  <MobileInput
+                    label="USN"
+                    name="usn"
+                    value={signUpData.usn}
+                    onChange={handleSignUpChange}
+                    placeholder="USN"
+                  />
+                  <div className="m-row">
+                    <MobileInput
+                      label="Semester"
+                      name="sem"
+                      value={signUpData.sem}
+                      onChange={handleSignUpChange}
+                      placeholder="Sem"
+                      half
+                      type="number"
+                    />
+                    <MobileInput
+                      label="Mobile"
+                      name="mobno"
+                      value={signUpData.mobno}
+                      onChange={handleSignUpChange}
+                      placeholder="Mobile"
+                      half
+                      type="tel"
+                    />
+                  </div>
+                  <MobileInput
+                    label="Email ID"
+                    name="email"
+                    value={signUpData.email}
+                    onChange={handleSignUpChange}
+                    placeholder="Email ID"
+                    type="email"
+                  />
+                  <MobileInput
+                    label="Password"
+                    name="password"
+                    value={signUpData.password}
+                    onChange={handleSignUpChange}
+                    placeholder="Password"
+                    isPassword
+                    isVisible={showPassword.signUp}
+                    onToggleVisibility={() => togglePasswordVisibility("signUp")}
+                  />
+                </div>
+              )}
+
+              <button type="submit" className="m-submit-btn">
+                {isActive ? "SIGN UP" : "SIGN IN"}
+                <span className="m-arrow">→</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-// MobileInput stays exactly the same
-const MobileInput = ({ label, name, value, onChange, placeholder, half, type = "text", isPassword, isVisible, onToggleVisibility }) => { ... };
+// ── Mobile Input Component ─────────────────────
+const MobileInput = ({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  half,
+  type = "text",
+  isPassword,
+  isVisible,
+  onToggleVisibility,
+}) => {
+  const inputType = isPassword ? (isVisible ? "text" : "password") : type;
+
+  return (
+    <div className={`m-input-wrapper ${half ? "m-half" : ""}`}>
+      <label className="m-label">{label}</label>
+      <div className="m-input-container">
+        <input
+          type={inputType}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="m-input-field"
+        />
+        {isPassword && (
+          <button type="button" onClick={onToggleVisibility} className="m-pass-toggle">
+            {isVisible ? (
+              <i className="fa-solid fa-eye-slash" />
+            ) : (
+              <i className="fa-solid fa-eye" />
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
