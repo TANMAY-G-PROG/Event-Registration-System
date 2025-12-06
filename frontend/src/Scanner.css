@@ -1,292 +1,393 @@
-/* --- SCOPED CONTAINER --- */
-.scanner-scoped-page {
-  /* Local Variables */
-  --scn-bg-color: #0d0d0d;
-  --scn-card-bg: #161616;
-  --scn-text-main: #ededed;
-  --scn-text-muted: #888888;
-  --scn-accent: #ffffff;
-  --scn-border: #333333;
-  --scn-success: #2e8b57;
-  --scn-radius: 24px;
-  --scn-radius-sm: 12px;
-  
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: var(--scn-bg-color);
-  color: var(--scn-text-main);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+/* .scanner-page {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  box-sizing: border-box;
-  z-index: 9999;
+}
+
+.scanner-container {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  margin: 0;
+}
+
+.scanner-container .header {
+  margin-bottom: 32px;
+}
+
+.scanner-container .scanner-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.scanner-container h1 {
+  color: #2c3e50;
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  padding: 0;
+}
+
+.scanner-container .subtitle {
+  color: #7f8c8d;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+}
+
+.scanner-container .scanner-frame {
+  position: relative;
+  margin: 24px 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.scanner-container #reader {
+  width: 100%;
+  min-height: 300px;
+  border-radius: 16px;
+  margin: 0;
+  padding: 0;
+}
+
+/* Override default html5-qrcode styles */
+.scanner-container #reader video {
+  border-radius: 16px;
+}
+
+.scanner-container #reader__dashboard_section {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border-radius: 0 0 16px 16px !important;
+  padding: 16px !important;
+}
+
+.scanner-container #reader__dashboard_section button {
+  background: linear-gradient(45deg, #667eea, #764ba2) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  color: white !important;
+  font-weight: 600 !important;
+  padding: 12px 24px !important;
+  margin: 4px !important;
+  transition: all 0.3s ease !important;
+  cursor: pointer !important;
+}
+
+.scanner-container #reader__dashboard_section button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4) !important;
+}
+
+.scanner-container #reader__dashboard_section select {
+  border: 2px solid #e9ecef !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  background: white !important;
+}
+
+.scanner-container .result-container {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 24px;
+  display: none;
+  animation: scannerSlideIn 0.4s ease;
+}
+
+.scanner-container .result-container.show {
+  display: block;
+}
+
+.scanner-container .result-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.scanner-container .result-title {
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  margin: 0 0 16px 0;
+  padding: 0;
+}
+
+.scanner-container .result-content {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 16px;
+  word-break: break-all;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 14px;
+  color: #2c3e50;
+  max-height: 120px;
   overflow-y: auto;
 }
 
-/* Card Interface */
-.scanner-scoped-page .scanner-card {
-  width: 100%;
-  max-width: 440px;
-  background: var(--scn-card-bg);
-  border: 1px solid var(--scn-border);
-  border-radius: var(--scn-radius);
-  padding: 32px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  position: relative;
-  overflow: hidden;
-  box-sizing: border-box;
+.scanner-container .result-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
-/* Header */
-.scanner-scoped-page .scanner-header {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.scanner-scoped-page .scanner-role-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--scn-text-muted);
-  font-weight: 700;
-  margin-bottom: 12px;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 6px 10px;
-  border-radius: 100px;
-}
-
-.scanner-scoped-page .scanner-dot {
-  width: 6px;
-  height: 6px;
-  background-color: var(--scn-success);
-  border-radius: 50%;
-}
-
-.scanner-scoped-page .scanner-title {
-  font-size: 24px;
+.scanner-container .action-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  padding: 10px 20px;
   font-weight: 600;
-  margin: 0 0 6px 0;
-  color: var(--scn-text-main);
-}
-
-.scanner-scoped-page .scanner-subtitle {
-  color: var(--scn-text-muted);
-  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 14px;
   margin: 0;
 }
 
-/* --- THE FIX FOR MOBILE VIDEO --- */
-.scanner-scoped-page .scanner-frame {
-  position: relative;
-  width: 100%;
-  /* Define aspect ratio for the box */
-  aspect-ratio: 1 / 1; 
-  background: #000;
-  border-radius: var(--scn-radius-sm);
-  overflow: hidden;
-  margin-bottom: 24px;
-  border: 1px solid var(--scn-border);
-  /* Ensure a minimum height on mobile if aspect-ratio fails */
-  min-height: 280px; 
+.scanner-container .action-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
 }
 
-/* We use !important to override the library's inline styles 
-   that set width/height to 0 on mobile errors.
-*/
-.scanner-scoped-page #reader {
-  width: 100% !important;
-  height: 100% !important;
-  border: none !important;
-  position: absolute !important;
-  top: 0;
-  left: 0;
+.scanner-container .scan-again-btn {
+  background: rgba(255, 255, 255, 0.9);
+  color: #667eea;
 }
 
-.scanner-scoped-page #reader video {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important; /* Forces video to fill box without stretching */
-  border-radius: var(--scn-radius-sm);
-  display: block !important;
+.scanner-container .instructions {
+  background: rgba(108, 117, 125, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 24px;
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-/* Hide library specific elements that clutter UI */
-.scanner-scoped-page #reader__dashboard_section_csr span, 
-.scanner-scoped-page #reader__dashboard_section_swaplink {
-  display: none !important;
+.scanner-container .instructions-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  margin: 0 0 8px 0;
+  color: #495057;
+  padding: 0;
 }
 
-/* Frame Markers (Corner pieces) */
-.scanner-scoped-page .scanner-marker {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  border-color: rgba(255, 255, 255, 0.5);
-  border-style: solid;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.scanner-scoped-page .scanner-marker.tl { top: 15px; left: 15px; border-width: 2px 0 0 2px; border-radius: 4px 0 0 0; }
-.scanner-scoped-page .scanner-marker.tr { top: 15px; right: 15px; border-width: 2px 2px 0 0; border-radius: 0 4px 0 0; }
-.scanner-scoped-page .scanner-marker.bl { bottom: 15px; left: 15px; border-width: 0 0 2px 2px; border-radius: 0 0 0 4px; }
-.scanner-scoped-page .scanner-marker.br { bottom: 15px; right: 15px; border-width: 0 2px 2px 0; border-radius: 0 0 4px 0; }
-
-/* Status Styles */
-.scanner-scoped-page .scanner-status-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 250px;
+.scanner-container .error-message {
+  background: rgba(255, 107, 107, 0.1);
+  border: 2px solid rgba(255, 107, 107, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0;
   text-align: center;
+  color: #d32f2f;
 }
 
-.scanner-scoped-page .scanner-message {
-  margin-top: 16px;
-  color: var(--scn-text-muted);
+.scanner-container .error-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.scanner-container .error-message p {
+  margin: 0;
+  padding: 0;
   font-size: 14px;
 }
 
-.scanner-scoped-page .scanner-spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-top-color: var(--scn-accent);
-  border-radius: 50%;
-  animation: scn-spin 0.8s linear infinite;
-}
-
-@keyframes scn-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Success Check */
-.scanner-scoped-page .scanner-success-check {
-  width: 50px;
-  height: 50px;
-  background: rgba(46, 139, 87, 0.15);
-  color: var(--scn-success);
-  border-radius: 50%;
+.scanner-container .scanner-start {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
+  flex-direction: column;
+  gap: 16px;
+  margin: 32px 0;
+  padding: 24px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 12px;
 }
 
-.scanner-scoped-page .scanner-success-check svg {
-  width: 28px;
-  height: 28px;
-}
-
-.scanner-scoped-page .scanner-success-title {
-  font-size: 18px;
+.scanner-container .start-btn,
+.scanner-container .file-upload-btn {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  border: none;
+  border-radius: 12px;
+  color: white;
   font-weight: 600;
-  margin: 0;
-  color: var(--scn-text-main);
+  padding: 14px 28px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 16px;
 }
 
-/* Buttons */
-.scanner-scoped-page .scanner-btn-row {
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
-  width: 100%;
-  justify-content: center;
+.scanner-container .start-btn:hover,
+.scanner-container .file-upload-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
 }
 
-.scanner-scoped-page .scanner-controls {
+.scanner-container .file-upload-btn {
+  display: inline-block;
+  text-decoration: none;
   text-align: center;
 }
 
-.scanner-scoped-page button {
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 0.2s ease;
-}
-
-.scanner-scoped-page .scanner-btn-primary {
-  background: var(--scn-accent);
-  color: black;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
+.scanner-container .or-text {
+  text-align: center;
+  color: #7f8c8d;
   font-weight: 600;
-  font-size: 13px;
+  margin: 0;
+  padding: 0;
 }
 
-.scanner-scoped-page .scanner-btn-primary:hover {
-  background: #dadada;
+.scanner-container .scanner-video {
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+  display: block;
 }
 
-.scanner-scoped-page .scanner-btn-secondary {
-  display: inline-block;
-  background: transparent;
-  border: 1px solid var(--scn-border);
-  color: var(--scn-text-main);
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.scanner-scoped-page .scanner-btn-secondary:hover {
-  border-color: var(--scn-text-muted);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.scanner-scoped-page .scanner-btn-text {
-  background: none;
+.scanner-container .stop-btn {
+  background: linear-gradient(45deg, #ff6b6b, #ee5a52);
   border: none;
-  color: var(--scn-text-muted);
-  font-size: 13px;
-  padding: 10px 16px;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  padding: 12px 24px;
+  margin-top: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  width: 100%;
 }
 
-.scanner-scoped-page .scanner-btn-text:hover {
-  color: var(--scn-text-main);
+.scanner-container .stop-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
 }
 
-.scanner-scoped-page .scanner-fade-in {
-  animation: scn-fadeIn 0.4s ease-out forwards;
-  opacity: 0;
+.scanner-container .phone-btn {
+  background: linear-gradient(45deg, #764ba2, #667eea);
 }
 
-@keyframes scn-fadeIn {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
+.scanner-container .phone-btn:hover {
+  box-shadow: 0 8px 20px rgba(118, 75, 162, 0.4);
 }
 
-/* Mobile Specific */
-@media (max-width: 480px) {
-  .scanner-scoped-page {
-    padding: 0;
-    background-color: #000;
+.scanner-container .phone-scanner {
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 12px;
+  padding: 32px 24px;
+  margin: 24px 0;
+  text-align: center;
+}
+
+.scanner-container .phone-instructions {
+  margin-bottom: 24px;
+}
+
+.scanner-container .phone-instructions p {
+  color: #2c3e50;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 8px 0;
+  padding: 0;
+}
+
+.scanner-container .phone-instructions .sub-text {
+  font-size: 14px;
+  color: #7f8c8d;
+  font-weight: 400;
+}
+
+.scanner-container .phone-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.scanner-container .phone-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: rgba(102, 126, 234, 0.02);
+}
+
+.scanner-container .phone-input::placeholder {
+  color: #adb5bd;
+}
+
+@keyframes scannerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
-  
-  .scanner-scoped-page .scanner-card {
-    border: none;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scannerPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.scanner-container .scanning-indicator {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(76, 175, 80, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  display: none;
+  animation: scannerPulse 2s infinite;
+}
+
+.scanner-container .scanning-indicator.active {
+  display: block;
+}
+
+@media (max-width: 600px) {
+  .scanner-container {
+    margin: 10px;
     padding: 24px;
-    height: 100vh; /* Fill screen */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
   }
 
-  .scanner-scoped-page .scanner-frame {
-    /* Make the video box slightly larger on phone */
-    min-height: 300px;
+  .scanner-container h1 {
+    font-size: 24px;
   }
-}
+
+  .scanner-container .scanner-icon {
+    font-size: 40px;
+  }
+} */
