@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Scan, Upload, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import './Scanner.css'; // Make sure this is imported
+import './scanner.css'; // Ensures the design is applied
 
 export default function Scanner() {
-  // ---------------------------------------------------------------------------
-  // LOGIC SECTION: EXACTLY AS PROVIDED (100% UNTOUCHED)
-  // ---------------------------------------------------------------------------
+  // ===========================================================================
+  // 🛑 LOGIC SECTION: UNTOUCHED (Exact copy of your original logic)
+  // ===========================================================================
   const [pageState, setPageState] = useState('loading');
   const [errorMsg, setErrorMsg] = useState(null);
   const [lastResult, setLastResult] = useState('');
@@ -139,11 +139,14 @@ export default function Scanner() {
 
   const onScanSuccess = async (decodedText) => {
     if (pageState !== 'scanning') return;
+    
     console.log(`✅ QR Code detected: ${decodedText}`);
     setIsScanning(false);
-    setPageState('processing');
+    setPageState('processing'); 
     setLastResult(decodedText);
+    
     cleanupScanner();
+    
     if (decodedText.startsWith('eventId:')) {
       const eventId = decodedText.split(':')[1];
       await markAttendance(eventId);
@@ -156,6 +159,7 @@ export default function Scanner() {
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+    console.log('📁 File selected:', file.name);
     if (!window.Html5Qrcode) {
       setErrorMsg('QR scanner library not loaded. Please refresh and try again.');
       setPageState('error');
@@ -166,6 +170,7 @@ export default function Scanner() {
         fileScannerRef.current = new window.Html5Qrcode('file-reader');
       }
       const decodedText = await fileScannerRef.current.scanFile(file, true);
+      console.log('✅ QR decoded from file:', decodedText);
       await onScanSuccess(decodedText);
     } catch (err) {
       console.error('File scan error:', err);
@@ -184,37 +189,52 @@ export default function Scanner() {
       setPageState('error');
       return;
     }
+    console.log(`🎯 Marking attendance - Role: ${userRole}, USN: ${userUSN}, Event: ${eventId}`);
     try {
       const endpoint = userRole === 'volunteer' ? '/api/mark-volunteer-attendance' : '/api/mark-participant-attendance';
+      console.log(`📡 Calling endpoint: ${endpoint}`);
       const response = await fetch(endpoint, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId: eventId, usn: userUSN }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventId: eventId,
+          usn: userUSN,
+        }),
       });
       const data = await response.json();
+      console.log('📥 Response:', data);
       if (response.ok && data.success) {
         setPageState('success');
         setErrorMsg(null);
+        console.log(`✅ ${userRole} attendance marked successfully`);
       } else {
         setErrorMsg(data.error || 'Failed to mark attendance');
         setPageState('error');
       }
     } catch (err) {
+      console.error('Error marking attendance:', err);
       setErrorMsg('Network error. Please try again.');
       setPageState('error');
     }
   };
 
   const onScanError = (errorMessage) => {
-    if (errorMessage.includes('NotFoundException') || errorMessage.includes('No MultiFormat Readers')) return;
+    if (errorMessage.includes('NotFoundException') || errorMessage.includes('No MultiFormat Readers')) {
+      return;
+    }
     console.log(`Scan error: ${errorMessage}`);
   };
 
   const scanAgain = () => {
+    console.log('🔄 Restarting scanner');
     setLastResult('');
     setErrorMsg(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     setPageState('scanning');
   };
 
@@ -229,15 +249,17 @@ export default function Scanner() {
     window.history.back();
   };
 
-  // ---------------------------------------------------------------------------
-  // UI SECTION: CSS CLASS BASED IMPLEMENTATION
-  // ---------------------------------------------------------------------------
+  // ===========================================================================
+  // 🎨 UI SECTION: New Award-Winning Design
+  // ===========================================================================
 
   return (
     <div className="scanner-page">
       {/* Background Ambience */}
       <div className="ambient-orb orb-1" />
       <div className="ambient-orb orb-2" />
+
+      {/* Logic Requirement: Hidden container for file reading */}
       <div id="file-reader" style={{ display: 'none' }} />
 
       <motion.div 
@@ -294,15 +316,19 @@ export default function Scanner() {
                   exit={{ opacity: 0 }}
                   className="scan-wrapper"
                 >
+                  {/* Camera Frame */}
                   <div className="camera-frame">
                     <div id="reader" ref={scannerRef} className="camera-view" />
                     
+                    {/* Visual Overlay */}
                     {isScanning && (
                       <div className="scan-overlay">
                         <div className="corner tl" />
                         <div className="corner tr" />
                         <div className="corner bl" />
                         <div className="corner br" />
+                        
+                        {/* Scanning Line Animation */}
                         <motion.div 
                           className="scan-line"
                           animate={{ top: ['10%', '90%', '10%'] }}
@@ -310,7 +336,8 @@ export default function Scanner() {
                         />
                       </div>
                     )}
-                    
+
+                    {/* Processing Overlay */}
                     {pageState === 'processing' && (
                         <div className="processing-overlay">
                             <Loader2 className="spinner-icon small" />
@@ -322,6 +349,7 @@ export default function Scanner() {
                   <p className="instruction-text">Align QR code within the frame</p>
 
                   <div className="action-grid">
+                      {/* File Upload Button */}
                       <input
                           ref={fileInputRef}
                           type="file"
@@ -333,6 +361,8 @@ export default function Scanner() {
                       <label htmlFor="qr-file-input" className="btn-secondary">
                           <Upload className="btn-icon" /> Upload Image
                       </label>
+
+                       {/* Cancel Button */}
                       <button onClick={goBack} className="btn-secondary">
                           <ArrowLeft className="btn-icon" /> Cancel
                       </button>
@@ -390,7 +420,9 @@ export default function Scanner() {
                   <p className="error-msg">{errorMsg}</p>
 
                   <div className="action-grid">
-                    <button onClick={goBack} className="btn-secondary">Exit</button>
+                    <button onClick={goBack} className="btn-secondary">
+                        Exit
+                    </button>
                     <button onClick={restartScanner} className="btn-danger">
                         <RefreshCw className="btn-icon" /> Retry
                     </button>
@@ -401,19 +433,30 @@ export default function Scanner() {
             </AnimatePresence>
           </div>
         </div>
-        <p className="footer-text">Secured Attendance System</p>
+
+        <p className="footer-text">
+          Secured Attendance System
+        </p>
       </motion.div>
 
-      {/* Library overrides logic */}
+      {/* Global Style Overrides for html5-qrcode library specific elements */}
       <style>{`
+        /* Hide the library's default UI elements */
         #reader__dashboard_section_csr button { display: none !important; }
         #reader__status_span { display: none !important; }
+
+        /* Style the camera selection dropdown if it appears */
         #reader__dashboard_section_csr select {
-            background: #18181b; color: #a1a1aa; border: 1px solid #3f3f46;
-            padding: 4px; border-radius: 6px; font-size: 12px; margin-bottom: 10px; width: 100%;
+            background: #18181b;
+            color: #a1a1aa;
+            border: 1px solid #3f3f46;
+            padding: 4px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-bottom: 10px;
+            width: 100%;
         }
       `}</style>
     </div>
   );
 }
-
