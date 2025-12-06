@@ -1,269 +1,312 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-
-export default function Login() {
-  const navigate = useNavigate();
-
-  // --- STATE ---
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [message, setMessage] = useState({ text: '', isError: false, show: false });
-  const [showPassword, setShowPassword] = useState({ signIn: false, signUp: false });
-  
-  // Database Columns
-  const [signInData, setSignInData] = useState({ usn: '', password: '' });
-  const [signUpData, setSignUpData] = useState({ 
-    name: '', 
-    usn: '', 
-    sem: '', 
-    mobno: '', 
-    email: '', 
-    password: '' 
-  });
-
-  // --- LOGIC ---
-  useEffect(() => { checkAuthStatus(); }, []);
-  useEffect(() => { 
-    if (message.show) { 
-      const timer = setTimeout(() => setMessage(prev => ({ ...prev, show: false })), 5000); 
-      return () => clearTimeout(timer); 
-    } 
-  }, [message.show]);
-
-  const checkAuthStatus = async () => {
-    try {
-      const response = await fetch('/api/me', { credentials: 'include' });
-      if (response.ok) {
-        const data = await response.json();
-        showMessage(`Logged in as ${data.userName}`);
-        setTimeout(() => navigate('/events'), 1500);
-      }
-    } catch (error) {}
-  };
-
-  const showMessage = (text, isError = false) => setMessage({ text, isError, show: true });
-
-  const handleSignIn = async (e) => {
-    if(e) e.preventDefault();
-    const { usn, password } = signInData;
-    if (!usn || !password) return showMessage("Please fill in all fields", true);
-    
-    try {
-      const response = await fetch('/api/signin', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usn, password })
-      });
-      const data = await response.json();
-      if (data.success) {
-        showMessage(`Welcome back, ${data.userName}!`);
-        setTimeout(() => navigate('/events'), 1500);
-      } else { showMessage(data.error, true); }
-    } catch (error) { showMessage('Network error. Please try again.', true); }
-  };
-
-  const handleSignUp = async (e) => {
-    if(e) e.preventDefault();
-    const { name, usn, sem, mobno, email, password } = signUpData;
-
-    // Validation
-    if (!name || !usn || !sem || !mobno || !email || !password) return showMessage("Please fill in all fields", true);
-    if (!/\S+@\S+\.\S+/.test(email)) return showMessage("Please enter a valid email address", true);
-    if (!/^\d{10}$/.test(mobno)) return showMessage("Please enter a valid 10-digit mobile number", true);
-    const semNum = parseInt(sem);
-    if (semNum < 1 || semNum > 8) return showMessage("Semester must be between 1 and 8", true);
-
-    try {
-      const response = await fetch('/api/signup', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, usn, sem: semNum, mobno, email, password })
-      });
-      const data = await response.json();
-      if (data.success) {
-        showMessage(`Account created successfully! Welcome, ${data.userName}!`);
-        setSignUpData({ name: '', usn: '', sem: '', mobno: '', email: '', password: '' });
-        setTimeout(() => navigate('/events'), 2000);
-      } else { showMessage(data.error, true); }
-    } catch (error) { showMessage('Network error during signup.', true); }
-  };
-
-  const handleSignInChange = (e) => setSignInData({ ...signInData, [e.target.name]: e.target.value });
-  const handleSignUpChange = (e) => { 
-    const { name, value } = e.target; 
-    setSignUpData({ ...signUpData, [name]: name === 'usn' ? value.toUpperCase() : value }); 
-  };
-
-  const togglePasswordVisibility = (formType) => {
-    setShowPassword(prev => ({ ...prev, [formType]: !prev[formType] }));
-  };
-
-  const handleAboutUsClick = () => navigate('/about-us');
-  const handleContactUsClick = () => navigate('/about-us#connect-section');
-
-  return (
-    // UPDATED CONTAINER: Added 'max-w-md' and 'mx-auto' to center it like a phone
-    <div className="flex flex-col h-screen supports-[height:100dvh]:h-[100dvh] w-full max-w-md mx-auto overflow-hidden relative bg-gradient-to-r from-[#E4E5E6] to-[#00416A] shadow-2xl">
-      
-      {/* TOP NAV BUTTONS */}
-      <div className="top-nav-buttons">
-        <button className="nav-bubble-btn" onClick={handleAboutUsClick}>
-          <div className="bubble-layer bubble-1"></div>
-          <div className="bubble-layer bubble-2"></div>
-          <div className="bubble-layer bubble-3"></div>
-          <div className="bubble-layer bubble-4"></div>
-          <div className="bubble-layer bubble-5"></div>
-          <div className="bubble-layer bubble-6"></div>
-          <div className="bubble-layer bubble-7"></div>
-          <span>About Us</span>
-        </button>
-        <button className="nav-bubble-btn" onClick={handleContactUsClick}>
-          <div className="bubble-layer bubble-1"></div>
-          <div className="bubble-layer bubble-2"></div>
-          <div className="bubble-layer bubble-3"></div>
-          <div className="bubble-layer bubble-4"></div>
-          <div className="bubble-layer bubble-5"></div>
-          <div className="bubble-layer bubble-6"></div>
-          <div className="bubble-layer bubble-7"></div>
-          <span>Contact Us</span>
-        </button>
-      </div>
-
-      {/* TOAST MESSAGE */}
-      {message.show && (
-        <div className={`absolute top-0 left-0 w-full p-4 text-center text-sm font-bold tracking-wide text-white transition-all z-[100] ${message.isError ? 'bg-red-500' : 'bg-emerald-500'}`}>
-          {message.text}
-        </div>
-      )}
-
-      {/* HERO SECTION */}
-      <div className="flex-none h-[25vh] flex flex-col justify-center px-8 relative z-10 shrink-0">
-        <div className="mt-16">
-          <h1 className="text-6xl font-semibold text-[#00416A] tracking-tighter leading-none">
-            FLO.
-          </h1>
-          <div className="h-1 w-20 bg-white/60 my-4 shadow-sm"></div>
-          <p className="text-[#00416A] text-xs tracking-[0.2em] uppercase font-bold opacity-80">
-            The Pulse of Campus
-          </p>
-        </div>
-      </div>
-
-      {/* INTERACTION SHEET */}
-      <div className="flex-1 bg-white/95 backdrop-blur-md rounded-t-[2.5rem] shadow-[0_-20px_60px_rgba(0,0,0,0.2)] flex flex-col relative z-20 overflow-hidden animate-[slide-up_0.5s_ease-out]">
-        
-        {/* Toggle Header */}
-        <div className="flex-none px-8 pt-8 pb-4 border-b border-gray-100 flex justify-between items-end shrink-0">
-          <div>
-            <h2 className="text-2xl font-semibold text-[#00416A]">
-              {isSignUp ? 'New Account' : 'Welcome Back'}
-            </h2>
-          </div>
-          <button 
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="text-xs font-bold uppercase tracking-widest text-[#2da0a8] hover:text-[#00416A] transition-colors border-b border-[#2da0a8] pb-1 border-dashed"
-          >
-            {isSignUp ? 'Log In Instead' : 'Create Account'}
-          </button>
-        </div>
-
-        {/* Scrollable Form Area */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 pb-24 scrollbar-hide">
-          <form onSubmit={isSignUp ? handleSignUp : handleSignIn}>
-            
-            {!isSignUp ? (
-              /* SIGN IN FORM */
-              <div className="mt-4">
-                <InputField label="University Serial No." name="usn" value={signInData.usn} onChange={handleSignInChange} placeholder="USN" />
-                <InputField 
-                    label="Password" 
-                    name="password" 
-                    value={signInData.password} 
-                    onChange={handleSignInChange} 
-                    placeholder="Password" 
-                    isPassword={true}
-                    isVisible={showPassword.signIn}
-                    onToggleVisibility={() => togglePasswordVisibility('signIn')}
-                />
-                <div className="flex justify-end mt-[-10px] mb-8">
-                  <a href="#" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }} className="text-[10px] font-bold uppercase text-gray-400 hover:text-[#00416A] tracking-wider transition-colors">
-                    Forgot Your Password?
-                  </a>
-                </div>
-              </div>
-            ) : (
-              /* SIGN UP FORM */
-              <div className="space-y-1">
-                <InputField label="Name" name="name" value={signUpData.name} onChange={handleSignUpChange} placeholder="Name" />
-                <InputField label="USN" name="usn" value={signUpData.usn} onChange={handleSignUpChange} placeholder="USN" />
-                
-                <div className="flex justify-between">
-                  <InputField label="Semester" name="sem" value={signUpData.sem} onChange={handleSignUpChange} placeholder="Semester" half={true} type="number" />
-                  <InputField label="Mobile Number" name="mobno" value={signUpData.mobno} onChange={handleSignUpChange} placeholder="Mobile Number" half={true} type="tel" />
-                </div>
-                
-                <InputField label="Email ID" name="email" value={signUpData.email} onChange={handleSignUpChange} placeholder="Email ID" type="email" />
-                <InputField 
-                    label="Password" 
-                    name="password" 
-                    value={signUpData.password} 
-                    onChange={handleSignUpChange} 
-                    placeholder="Password"
-                    isPassword={true}
-                    isVisible={showPassword.signUp}
-                    onToggleVisibility={() => togglePasswordVisibility('signUp')}
-                />
-              </div>
-            )}
-
-            {/* ACTION BUTTON */}
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-[#1A2980] to-[#26D0CE] text-white h-14 rounded-2xl font-bold text-sm tracking-[0.15em] hover:opacity-90 active:scale-[0.98] transition-all shadow-xl mt-8 mb-4 flex items-center justify-center gap-2 group"
-            >
-              {isSignUp ? 'SIGN UP' : 'SIGN IN'}
-              <span className="group-hover:translate-x-1 transition-transform">→</span>
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
+/* =========================================
+   1. GLOBAL RESET & MINIMALIST THEME
+   ========================================= */
+:root {
+  --bg-page: #000000;
+  --bg-card: #09090b; /* Zinc 950 */
+  --border-color: #27272a; /* Zinc 800 */
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa; /* Zinc 400 */
+  --accent: #ffffff;
+  --accent-fg: #000000;
+  --radius: 16px;
 }
 
-// --- FIXED COMPONENT ---
-const InputField = ({ label, name, value, onChange, placeholder, half, type = "text", isPassword, isVisible, onToggleVisibility }) => {
-    const inputType = isPassword ? (isVisible ? 'text' : 'password') : type;
+.scanner-container {
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg-page);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
 
-    return (
-      <div className={`group mb-5 relative ${half ? 'w-[48%]' : 'w-full'}`}>
-        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 group-focus-within:text-[#00416A] transition-colors">
-          {label}
-        </label>
-        <div className="relative">
-            <input
-            type={inputType}
-            name={name}
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            className="w-full bg-transparent border-b border-gray-300 py-2 font-mono text-[15px] text-gray-900 focus:outline-none focus:border-[#00416A] focus:border-b-2 transition-all placeholder-gray-300"
-            />
-            {isPassword && (
-                <button 
-                    type="button"
-                    onClick={onToggleVisibility}
-                    className="absolute right-0 top-2 text-gray-400 hover:text-[#00416A] focus:outline-none"
-                >
-                    {isVisible ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                    ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                    )}
-                </button>
-            )}
-        </div>
-      </div>
-    );
-};
+/* =========================================
+   2. CARD DESIGN (Vercel Style)
+   ========================================= */
+.scanner-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 2rem;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 10px 40px rgba(0, 0, 0, 0.5);
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* =========================================
+   3. HEADER ELEMENTS
+   ========================================= */
+.scanner-header {
+  margin-bottom: 2rem;
+}
+
+.scanner-icon {
+  font-size: 32px;
+  margin-bottom: 1rem;
+  /* Remove the old gradient text style */
+  background: none; 
+  -webkit-text-fill-color: initial;
+  color: var(--text-primary);
+}
+
+.scanner-title {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.02em;
+}
+
+.scanner-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin: 0;
+  font-weight: 400;
+}
+
+.scanner-usn {
+  display: inline-block;
+  margin-top: 1rem;
+  font-family: monospace;
+  background: #18181b;
+  color: #d4d4d8;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  border: 1px solid var(--border-color);
+}
+
+/* =========================================
+   4. STATUS BOXES (Loading/Error/Success)
+   ========================================= */
+.status-box {
+  padding: 2rem;
+  border-radius: 12px;
+  margin: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Loading */
+.loading-box {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+}
+.loading-box .status-icon {
+  font-size: 24px;
+  animation: spin 1s linear infinite;
+}
+
+/* Error */
+.error-box {
+  background: rgba(127, 29, 29, 0.1);
+  border: 1px solid rgba(127, 29, 29, 0.2);
+  color: #f87171;
+}
+
+/* Success */
+.success-box {
+  background: rgba(6, 78, 59, 0.1); /* Dark Green bg */
+  border: 1px solid rgba(6, 78, 59, 0.3);
+  color: #34d399; /* Bright Green text */
+  padding: 2rem 1.5rem;
+}
+
+.success-title {
+  color: #fff;
+  font-size: 1.25rem;
+  margin-top: 1rem;
+}
+
+.success-message {
+  color: #a1a1aa;
+  margin-bottom: 1.5rem;
+}
+
+/* =========================================
+   5. CAMERA VIDEO CONTAINER (CRITICAL FIX)
+   ========================================= */
+.scanner-video-container {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid var(--border-color);
+  /* Force a square aspect ratio to hold space for the video */
+  aspect-ratio: 1/1; 
+  width: 100%;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#reader {
+  width: 100% !important;
+  height: 100% !important;
+  /* Ensure it fills the container */
+  position: absolute; 
+  top: 0;
+  left: 0;
+}
+
+/* Force video to fit correctly */
+#reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 12px !important;
+}
+
+/* Hide the library's permission bar but keep functionality */
+#reader__dashboard_section_csr {
+  opacity: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.scanner-status-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 600;
+  z-index: 10;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* =========================================
+   6. FILE UPLOAD & INSTRUCTIONS
+   ========================================= */
+.file-upload-box {
+  margin: 1rem 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  text-align: center;
+}
+
+.file-upload-box p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.instructions-box {
+  margin-top: 1.5rem;
+  background: #18181b;
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+}
+
+.instructions-title {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.instructions-box ul {
+  padding-left: 1.25rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+.instructions-box li {
+  margin-bottom: 4px;
+}
+
+/* =========================================
+   7. BUTTONS (Premium Minimalist)
+   ========================================= */
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* Primary Action (Upload / Choose File) */
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border: none;
+}
+.btn-primary:hover {
+  background: #e4e4e7;
+  transform: translateY(-1px);
+}
+
+/* Secondary Action (Back / Cancel) */
+.btn-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+.btn-secondary:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+/* Danger Action (Retry) */
+.btn-danger {
+  background: transparent;
+  border: 1px solid #7f1d1d;
+  color: #f87171;
+}
+.btn-danger:hover {
+  background: rgba(127, 29, 29, 0.2);
+}
+
+/* Success Buttons */
+.btn-success-light {
+  background: transparent;
+  border: 1px solid #10b981;
+  color: #10b981;
+  margin-bottom: 8px;
+}
+.btn-success-dark {
+  background: #10b981;
+  color: black;
+  border: none;
+}
+
+/* Animations */
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
