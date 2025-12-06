@@ -1,1 +1,354 @@
+/* Scanner Page Scoped Styles - Prefixed with qr- to avoid conflicts */
+
+.qr-scanner-page {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.qr-scanner-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.qr-scanner-header {
+  margin-bottom: 32px;
+}
+
+.qr-scanner-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.qr-scanner-title {
+  color: #2c3e50;
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.qr-scanner-subtitle {
+  color: #7f8c8d;
+  font-size: 16px;
+  margin: 0;
+}
+
+.qr-scanner-usn {
+  color: #5a6c7d;
+  font-size: 14px;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.qr-fade-in {
+  animation: qrFadeIn 0.5s ease;
+}
+
+@keyframes qrFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.qr-status-box {
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.qr-status-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.qr-loading-box {
+  background: rgba(102, 126, 234, 0.1);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  color: #667eea;
+  font-weight: 600;
+}
+
+.qr-error-box {
+  background: rgba(255, 107, 107, 0.1);
+  border: 2px solid rgba(255, 107, 107, 0.3);
+  color: #d32f2f;
+}
+
+.qr-error-message {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.qr-success-box {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  padding: 32px 24px;
+  border-radius: 16px;
+}
+
+.qr-success-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.qr-success-message {
+  font-size: 14px;
+  margin: 0 0 24px 0;
+  opacity: 0.9;
+}
+
+.qr-button-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.qr-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.qr-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
+.qr-btn-primary {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  color: white;
+}
+
+.qr-btn-danger {
+  background: #d32f2f;
+  color: white;
+}
+
+.qr-btn-danger:hover {
+  box-shadow: 0 8px 20px rgba(211, 47, 47, 0.3);
+}
+
+.qr-btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.qr-btn-secondary:hover {
+  box-shadow: 0 8px 20px rgba(108, 117, 125, 0.3);
+}
+
+.qr-btn-success-light {
+  background: rgba(255, 255, 255, 0.9);
+  color: #667eea;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.qr-btn-success-light:hover {
+  background: white;
+  box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
+}
+
+.qr-btn-success-dark {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.qr-btn-success-dark:hover {
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
+}
+
+.qr-scanner-main {
+  margin-top: 24px;
+}
+
+.qr-scanner-video-container {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.qr-scanner-page #reader {
+  width: 100%;
+  min-height: 300px;
+  border-radius: 16px;
+}
+
+.qr-scanner-status-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(76, 175, 80, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  animation: qrPulse 2s infinite;
+  z-index: 1000;
+}
+
+.qr-file-upload-box {
+  margin: 24px 0;
+  padding: 16px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 12px;
+  border: 2px dashed rgba(102, 126, 234, 0.3);
+}
+
+.qr-file-upload-box p {
+  margin: 0 0 12px 0;
+  color: #667eea;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.qr-file-upload-box label {
+  word-wrap: break-word;
+  white-space: normal;
+  max-width: 100%;
+  display: inline-block;
+}
+
+.qr-instructions-box {
+  background: rgba(108, 117, 125, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  color: #7f8c8d;
+  font-size: 14px;
+  line-height: 1.7;
+  text-align: left;
+}
+
+.qr-instructions-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #495057;
+}
+
+.qr-instructions-box ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+/* CRITICAL: html5-qrcode library overrides - these MUST use #reader for specificity */
+.qr-scanner-page #reader video {
+  border-radius: 16px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.qr-scanner-page #reader__dashboard_section {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  border-radius: 0 0 16px 16px !important;
+  padding: 16px !important;
+}
+
+.qr-scanner-page #reader__dashboard_section button {
+  background: linear-gradient(45deg, #667eea, #764ba2) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  color: white !important;
+  font-weight: 600 !important;
+  padding: 12px 24px !important;
+  margin: 4px !important;
+  transition: all 0.3s ease !important;
+  cursor: pointer !important;
+}
+
+.qr-scanner-page #reader__dashboard_section button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4) !important;
+}
+
+.qr-scanner-page #reader__dashboard_section select {
+  border: 2px solid #e9ecef !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  background: white !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.qr-scanner-page #reader__scan_region {
+  border-radius: 16px !important;
+}
+
+@keyframes qrPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@media (max-width: 600px) {
+  .qr-scanner-card {
+    padding: 24px 16px;
+  }
+
+  .qr-scanner-title {
+    font-size: 24px;
+  }
+
+  .qr-scanner-icon {
+    font-size: 40px;
+  }
+
+  .qr-btn {
+    font-size: 13px;
+    padding: 10px 16px;
+  }
+
+  .qr-file-upload-box {
+    padding: 12px;
+  }
+
+  .qr-button-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .qr-button-group .qr-btn {
+    width: 100%;
+  }
+}
 
