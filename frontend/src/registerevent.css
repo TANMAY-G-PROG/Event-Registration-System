@@ -10,7 +10,7 @@
   --re-text-primary: #ffffff;
   --re-text-secondary: #94a3b8;
   --re-text-tertiary: #475569;
- 
+  
   /* Accents */
   --re-accent-cyan: #00f0ff;
   --re-accent-violet: #7000ff;
@@ -23,29 +23,29 @@
   --re-glass-border: rgba(255, 255, 255, 0.08);
   --re-glass-highlight: rgba(255, 255, 255, 0.15);
   --re-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
- 
+  
   /* Spacing & Layout */
   --re-container-width: 1200px;
   --re-radius-lg: 24px;
   --re-radius-md: 16px;
   --re-radius-sm: 8px;
- 
+  
   /* Animation */
   --re-ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
   --re-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* --- GLOBAL FIX (New) --- */
-/* Paints the underlying bounce dark */
+/* --- GLOBAL FIX --- */
 html, body {
   margin: 0;
   padding: 0;
-  background-color: #0b0e14;
+  background-color: #0b0e14; /* Fallback color */
   height: 100%;
   width: 100%;
+  overflow: hidden; /* Prevent double scrollbars */
 }
 
-/* 2. GLOBAL RESET & BASE - FIXED FOR MOBILE GESTURE BAR */
+/* 2. GLOBAL RESET & BASE */
 .registerevent-page {
   position: fixed;
   top: 0;
@@ -53,16 +53,12 @@ html, body {
   right: 0;
   bottom: 0;
   width: 100%;
-  
-  /* MOBILE FIX: Use Dynamic Viewport Height & Safe Area Padding */
   height: 100dvh;
-  
-  /* UPDATED FIX: Extra buffer for gesture bar */
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
-
   margin: 0;
   padding: 0;
-  background-color: var(--re-bg-deep); /* Ensures dark background if overscrolled */
+  /* Make background transparent so we see the rain behind it */
+  background-color: transparent; 
   color: var(--re-text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
@@ -70,24 +66,129 @@ html, body {
   isolation: isolate;
   -webkit-font-smoothing: antialiased;
   box-sizing: border-box;
-  
-  /* ALLOWS pull-to-refresh */
   -webkit-overflow-scrolling: touch;
+  z-index: 2; /* Sits above the rain */
 }
 
-/* 3. ATMOSPHERIC BACKGROUNDS */
-.registerevent-hero-bg {
+/* 3. DIGITAL RAIN BACKGROUND (Replaced) */
+.registerevent-rain-bg {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  width: 100%;
+  height: 100%;
+  z-index: 1; /* Sits behind the content */
   pointer-events: none;
-  background-color: #0b0e14;
-  background-image:
-    radial-gradient(60rem 60rem at 20% 20%, color-mix(in oklab, #0ea5e9 22%, transparent), transparent 55%),
-    radial-gradient(48rem 48rem at 80% 28%, color-mix(in oklab, #22d3ee 18%, transparent), transparent 52%),
-    radial-gradient(44rem 44rem at 50% 80%, color-mix(in oklab, #60a5fa 16%, transparent), transparent 50%),
-    radial-gradient(100% 100% at 50% 0%, color-mix(in oklab, black 6%, transparent), transparent 60%);
-  filter: saturate(1.05) brightness(1.02);
+  
+  /* Theme Integration */
+  --c: var(--re-accent-cyan); /* Uses your theme cyan */
+  background-color: var(--re-bg-deep); /* Uses your theme dark bg */
+  
+  /* Digital Rain Gradients */
+  background-image: 
+    radial-gradient(4px 100px at 0px 235px, var(--c), #0000),
+    radial-gradient(4px 100px at 300px 235px, var(--c), #0000),
+    radial-gradient(1.5px 1.5px at 150px 117.5px, var(--c) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 252px, var(--c), #0000),
+    radial-gradient(4px 100px at 300px 252px, var(--c), #0000),
+    radial-gradient(1.5px 1.5px at 150px 126px, var(--c) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 150px, var(--c), #0000),
+    radial-gradient(4px 100px at 300px 150px, var(--c), #0000),
+    radial-gradient(1.5px 1.5px at 150px 75px, var(--c) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 253px, var(--c), #0000),
+    radial-gradient(4px 100px at 300px 253px, var(--c), #0000),
+    radial-gradient(1.5px 1.5px at 150px 126.5px, var(--c) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 204px, var(--c), #0000),
+    radial-gradient(4px 100px at 300px 204px, var(--c), #0000),
+    radial-gradient(1.5px 1.5px at 150px 102px, var(--c) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 134px, var(--c), #0000),
+    radial-gradient(4px 100px at 300px 134px, var(--c), #0000),
+    radial-gradient(1.5px 1.5px at 150px 67px, var(--c) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 179px, var(--c), #0000),
+    radial-gradient(4px 100px at 300px 179px, var(--c), #0000),
+    radial-gradient(1.5px 1.5px at 150px 89.5px, var(--c) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 299px, var(--c), #0000),
+    radial-gradient(4px 100px at 300px 299px, var(--c), #0000),
+    radial-gradient(1.5px 1.5px at 150px 149.5px, var(--c) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 215px, var(--c), #0000),
+    radial-gradient(4px 100px at 300px 215px, var(--c), #0000),
+    radial-gradient(1.5px 1.5px at 150px 107.5px, var(--c) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 281px, var(--c), #0000),
+    radial-gradient(4px 100px at 300px 281px, var(--c), #0000),
+    radial-gradient(1.5px 1.5px at 150px 140.5px, var(--c) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 158px, var(--c), #0000),
+    radial-gradient(4px 100px at 300px 158px, var(--c), #0000),
+    radial-gradient(1.5px 1.5px at 150px 79px, var(--c) 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 210px, var(--c), #0000),
+    radial-gradient(4px 100px at 300px 210px, var(--c), #0000),
+    radial-gradient(1.5px 1.5px at 150px 105px, var(--c) 100%, #0000 150%);
+    
+  background-size:
+    300px 235px, 300px 235px, 300px 235px,
+    300px 252px, 300px 252px, 300px 252px,
+    300px 150px, 300px 150px, 300px 150px,
+    300px 253px, 300px 253px, 300px 253px,
+    300px 204px, 300px 204px, 300px 204px,
+    300px 134px, 300px 134px, 300px 134px,
+    300px 179px, 300px 179px, 300px 179px,
+    300px 299px, 300px 299px, 300px 299px,
+    300px 215px, 300px 215px, 300px 215px,
+    300px 281px, 300px 281px, 300px 281px,
+    300px 158px, 300px 158px, 300px 158px,
+    300px 210px, 300px 210px, 300px 210px;
+    
+  animation: rain-scroll 150s linear infinite;
+  
+  /* Opacity control: Keeps it premium and readable */
+  opacity: 0.4;
+}
+
+/* Vignette Overlay for the Rain */
+.registerevent-rain-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  backdrop-filter: blur(1em) brightness(1.2); /* Added slight brightness */
+  background-image: radial-gradient(
+    circle at 50% 50%,
+    transparent 0,
+    transparent 2px,
+    var(--re-bg-deep) 100%
+  );
+  background-size: 8px 8px;
+}
+
+@keyframes rain-scroll {
+  0% {
+    background-position:
+      0px 220px, 3px 220px, 151.5px 337.5px,
+      25px 24px, 28px 24px, 176.5px 150px,
+      50px 16px, 53px 16px, 201.5px 91px,
+      75px 224px, 78px 224px, 226.5px 350.5px,
+      100px 19px, 103px 19px, 251.5px 121px,
+      125px 120px, 128px 120px, 276.5px 187px,
+      150px 31px, 153px 31px, 301.5px 120.5px,
+      175px 235px, 178px 235px, 326.5px 384.5px,
+      200px 121px, 203px 121px, 351.5px 228.5px,
+      225px 224px, 228px 224px, 376.5px 364.5px,
+      250px 26px, 253px 26px, 401.5px 105px,
+      275px 75px, 278px 75px, 426.5px 180px;
+  }
+  to {
+    background-position:
+      0px 6800px, 3px 6800px, 151.5px 6917.5px,
+      25px 13632px, 28px 13632px, 176.5px 13758px,
+      50px 5416px, 53px 5416px, 201.5px 5491px,
+      75px 17175px, 78px 17175px, 226.5px 17301.5px,
+      100px 5119px, 103px 5119px, 251.5px 5221px,
+      125px 8428px, 128px 8428px, 276.5px 8495px,
+      150px 9876px, 153px 9876px, 301.5px 9965.5px,
+      175px 13391px, 178px 13391px, 326.5px 13540.5px,
+      200px 14741px, 203px 14741px, 351.5px 14848.5px,
+      225px 18770px, 228px 18770px, 376.5px 18910.5px,
+      250px 5082px, 253px 5082px, 401.5px 5161px,
+      275px 6375px, 278px 6375px, 426.5px 6480px;
+  }
 }
 
 /* 4. LAYOUT CONTAINER */
@@ -174,7 +275,7 @@ html, body {
   perspective: 1000px;
 }
 
-/* 8. HOLOGRAPHIC CARD DESIGN - FASTER ANIMATION */
+/* 8. HOLOGRAPHIC CARD DESIGN */
 .registerevent-card {
   background: var(--re-glass-surface);
   backdrop-filter: blur(20px);
@@ -402,7 +503,7 @@ html, body {
 .registerevent-status-indicator.pending { color: var(--re-accent-warning); }
 .registerevent-status-indicator.pending::before { background: var(--re-accent-warning); }
 
-/* 11. MODALS - NO BLUR ON CARD INFO */
+/* 11. MODALS */
 .registerevent-modal-overlay {
   position: fixed;
   inset: 0;
