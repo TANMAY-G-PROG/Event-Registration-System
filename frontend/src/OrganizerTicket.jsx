@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ticket.css';
 
-// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 export default function OrganizerTicket() {
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -26,7 +24,6 @@ export default function OrganizerTicket() {
 
   const fetchUserData = async () => {
     try {
-      // ✅ CHANGED: Using relative path
       const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
@@ -53,7 +50,6 @@ export default function OrganizerTicket() {
       }
       setUserUSN(usn);
 
-      // ✅ CHANGED: Using relative path
       const response = await fetch(`/api/events/${eventId}`, {
         method: 'GET',
         credentials: 'include',
@@ -90,8 +86,7 @@ export default function OrganizerTicket() {
   };
 
   const handleShowQR = () => {
-    // Generate QR code with EVENT ID ONLY (no USN)
-    // Participants/Volunteers will scan this to mark their own attendance
+    // Navigate to QR display page
     navigate(`/qr?eventId=${eventData.eid}`);
   };
 
@@ -118,8 +113,6 @@ export default function OrganizerTicket() {
 
   return (
     <div className="ticket-page-wrapper">
-      <div className="tk-background-glow"></div>
-
       <div className="tk-nav-container">
         <button onClick={handleBack} className="tk-nav-btn">
           <i className="fas fa-arrow-left"></i>
@@ -129,103 +122,93 @@ export default function OrganizerTicket() {
 
       <div className="tk-ticket-container">
         {loading && (
-          <div className="tk-loading-spinner">
+          <div className="tk-loading-container">
             <div className="tk-spinner"></div>
+            <p>Loading Ticket...</p>
           </div>
         )}
 
         {error && (
-          <div className="tk-error-message">
-            <h3>Error Loading Event</h3>
+          <div className="tk-error-container">
             <p>{error}</p>
           </div>
         )}
 
         {!loading && !error && eventData && (
           <div className="tk-ticket-card">
-            <div className="tk-ticket-header">
+            {/* Texture Overlay */}
+            <div className="tk-texture-overlay"></div>
+            
+            {/* Top Notch */}
+            <div className="tk-top-notch"></div>
+
+            <div className="tk-main-content">
+              {/* Header */}
+              <div className="tk-club-name">{eventData.clubName || 'Event Organizer'}</div>
               <h1 className="tk-event-title">{eventData.ename || 'Untitled Event'}</h1>
-              <p className="tk-event-id">Event ID: {eventData.eid}</p>
-              <p className="tk-organizer-badge">👤 Organizer View</p>
+              
+              {/* Divider */}
+              <div className="tk-separator-dots"></div>
+
+              {/* Grid Info */}
+              <div className="tk-info-grid">
+                <div>
+                  <div className="tk-info-label">DATE</div>
+                  <div className="tk-info-value">{formatDate(eventData.eventDate)}</div>
+                </div>
+                <div style={{textAlign: 'right'}}>
+                  <div className="tk-info-label">TIME</div>
+                  <div className="tk-info-value">{formatTime(eventData.eventTime)}</div>
+                </div>
+              </div>
+
+              <div className="tk-info-grid">
+                <div>
+                  <div className="tk-info-label">LOCATION</div>
+                  <div className="tk-info-value" style={{fontSize: '16px'}}>{eventData.eventLoc || 'TBD'}</div>
+                </div>
+                <div style={{textAlign: 'right'}}>
+                  <div className="tk-info-label">EVENT ID</div>
+                  <div className="tk-info-value">{eventData.eid}</div>
+                </div>
+              </div>
+
+              {/* Stats for Organizer */}
+              <div className="tk-info-grid">
+                <div>
+                  <div className="tk-info-label">CAPACITY</div>
+                  <div className="tk-info-value">{eventData.maxPart}</div>
+                </div>
+                <div style={{textAlign: 'right'}}>
+                  <div className="tk-info-label">VOLUNTEERS</div>
+                  <div className="tk-info-value">{eventData.maxVoln}</div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <p className="tk-details-text">
+                {eventData.eventdesc || 'No description provided.'}
+              </p>
             </div>
 
-            <div className="tk-ticket-content">
-              <div className="tk-info-section">
-                <div className="tk-info-icon">📅</div>
-                <div className="tk-info-content">
-                  <h3>Date</h3>
-                  <p>{formatDate(eventData.eventDate)}</p>
-                </div>
-              </div>
-
-              <div className="tk-info-section">
-                <div className="tk-info-icon">⏰</div>
-                <div className="tk-info-content">
-                  <h3>Time</h3>
-                  <p>{formatTime(eventData.eventTime)}</p>
-                </div>
-              </div>
-
-              <div className="tk-info-section">
-                <div className="tk-info-icon">📍</div>
-                <div className="tk-info-content">
-                  <h3>Location</h3>
-                  <p>{eventData.eventLoc || 'Location TBD'}</p>
-                </div>
-              </div>
-
-              <div className="tk-info-section">
-                <div className="tk-info-icon">👥</div>
-                <div className="tk-info-content">
-                  <h3>Max Participants</h3>
-                  <p>{eventData.maxPart || 'No limit'}</p>
-                </div>
-              </div>
-
-              <div className="tk-info-section">
-                <div className="tk-info-icon">🤝</div>
-                <div className="tk-info-content">
-                  <h3>Max Volunteers</h3>
-                  <p>{eventData.maxVoln || 'No limit'}</p>
-                </div>
-              </div>
-
-              <div className="tk-info-section">
-                <div className="tk-info-icon">💰</div>
-                <div className="tk-info-content">
-                  <h3>Registration Fee</h3>
-                  <p>₹{eventData.regFee || '0'}</p>
-                </div>
-              </div>
-
-              {eventData.clubName && (
-                <div className="tk-info-section">
-                  <div className="tk-info-icon">🏛️</div>
-                  <div className="tk-info-content">
-                    <h3>Organized by</h3>
-                    <p>{eventData.clubName}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="tk-description-section">
-                <h3>Event Description</h3>
-                <p>{eventData.eventdesc || 'No description available'}</p>
-              </div>
+            {/* Tear-off Notches */}
+            <div className="tk-notch-container">
+              <div className="tk-notch tk-notch-left"></div>
+              <div className="tk-notch tk-notch-right"></div>
             </div>
 
-            <div className="tk-ticket-footer">
+            {/* Footer / Stub - REPLACED WITH QR ACTION */}
+            <div className="tk-stub-content">
               <button 
                 onClick={handleShowQR}
-                className="tk-qr-placeholder tk-qr-generator"
-                title="Show Event QR Code"
+                className="tk-scan-btn tk-org-btn"
               >
-                📱
-                <div className="tk-qr-text">SHOW EVENT QR CODE</div>
+                <i className="fas fa-qrcode"></i>
+                Show Event QR
               </button>
-              <p style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
-                Display this QR code for participants and volunteers to scan for attendance
-              </p>
+              <div className="tk-lock-msg" style={{color: '#666', fontWeight: '500'}}>
+                For Attendance Scanning
+              </div>
             </div>
           </div>
         )}
