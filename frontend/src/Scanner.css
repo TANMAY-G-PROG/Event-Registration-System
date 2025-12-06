@@ -1,884 +1,269 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
-@import url('https://api.fontshare.com/v2/css?f[]=clash-display@600,700&f[]=satoshi@400,500,700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
-
-/* --- GLOBAL FIX --- */
-html, body {
-  margin: 0;
-  padding: 0;
-  background-color: #00416A; 
-  height: 100%;
-  width: 100%;
-}
-
-/* Reset and base styles */
-.login-page {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Montserrat', sans-serif;
-  background: linear-gradient(to right, #E4E5E6, #00416A);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  min-height: 100vh;
-  width: 100%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow-y: auto;
-  padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
-  -webkit-overflow-scrolling: touch;
-}
-
-.login-page * {
-  box-sizing: border-box;
-}
-
-/* Top Navigation Buttons Container */
-.login-page .top-nav-buttons {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  display: flex;
-  gap: 15px;
-  z-index: 10001;
-}
-
-/* Navigation Button Styles */
-.login-page .button {
-  position: relative;
-  padding: 12px 24px;
-  font-size: 14px;
-  font-weight: bold;
-  color: white;
-  border: none;
-  border-radius: 50px;
-  cursor: pointer;
-  overflow: hidden;
-  background: transparent;
-  display: inline-block;
-  z-index: 1;
-  transition: transform 0.2s ease;
-}
-
-.login-page .button span {
-  position: relative;
-  z-index: 15;
-}
-
-.login-page .button:active {
-  transform: scale(0.96);
-}
-
-.login-page .button::before {
-  content: "";
-  background: rgb(0, 0, 0);
-  border-radius: inherit;
-  height: calc(100% - 4px);
-  width: calc(100% - 4px);
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  z-index: 12;
-  opacity: 0;
-  transform: scale(0.95);
-  transition: all 0.5s ease;
-}
-
-.login-page .button:hover::before {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.login-page .bubble-layer {
-  position: absolute;
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  filter: blur(10px);
-  z-index: 0;
-}
-
-.login-page .bubble-1 {
-  background: #5c6bc0;
-  top: -20%;
-  left: -10%;
-  animation: moveUpRight 12s ease-in-out infinite;
-}
-
-.login-page .bubble-2 {
-  background: #2da0a8;
-  top: 0%;
-  left: 10%;
-  animation: moveDownLeft 10s ease-in-out infinite;
-  animation-delay: 1s;
-}
-
-.login-page .bubble-3 {
-  background: #1A2980;
-  top: 20%;
-  left: 50%;
-  animation: moveRight 8s ease-in-out infinite;
-  animation-delay: 2s;
-}
-
-.login-page .bubble-4 {
-  background: #00416A;
-  top: -20%;
-  left: 70%;
-  animation: moveUpLeft 14s ease-in-out infinite;
-  animation-delay: 3s;
-}
-
-.login-page .bubble-5 {
-  background: #26D0CE;
-  top: 30%;
-  left: -10%;
-  animation: moveDownRight 6s ease-in-out infinite;
-  animation-delay: 4s;
-}
-
-.login-page .bubble-6 {
-  background: #2da0a8;
-  top: -10%;
-  left: 30%;
-  animation: moveLeft 16s ease-in-out infinite;
-  animation-delay: 0.5s;
-}
-
-.login-page .bubble-7 {
-  background: #1A2980;
-  top: 40%;
-  left: 60%;
-  animation: moveUp 12s ease-in-out infinite;
-  animation-delay: 1.5s;
-}
-
-@keyframes rotate-effect {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes moveUpRight {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(100%, -100%); }
-  50% { transform: translate(-50%, 50%); }
-  75% { transform: translate(50%, -50%); }
-  100% { transform: translate(0, 0); }
-}
-
-@keyframes moveDownLeft {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(-100%, 100%); }
-  50% { transform: translate(50%, -50%); }
-  75% { transform: translate(-50%, 50%); }
-  100% { transform: translate(0, 0); }
-}
-
-@keyframes moveRight {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(100%, 0); }
-  50% { transform: translate(-100%, 50%); }
-  75% { transform: translate(50%, -50%); }
-  100% { transform: translate(0, 0); }
-}
-
-@keyframes moveUpLeft {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(-100%, -100%); }
-  50% { transform: translate(50%, 50%); }
-  75% { transform: translate(-50%, -50%); }
-  100% { transform: translate(0, 0); }
-}
-
-@keyframes moveDownRight {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(100%, 100%); }
-  50% { transform: translate(-50%, -50%); }
-  75% { transform: translate(50%, 50%); }
-  100% { transform: translate(0, 0); }
-}
-
-@keyframes moveLeft {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(-100%, 0); }
-  50% { transform: translate(100%, -50%); }
-  75% { transform: translate(-50%, 50%); }
-  100% { transform: translate(0, 0); }
-}
-
-@keyframes moveUp {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(0, -100%); }
-  50% { transform: translate(50%, 50%); }
-  75% { transform: translate(-50%, -50%); }
-  100% { transform: translate(0, 0); }
-}
-
-@keyframes slide-glider {
-  0% { transform: translateX(var(--start-x)) scaleX(1); }
-  50% { transform: translateX(var(--mid-x)) scaleX(1.1); }
-  100% { transform: translateX(var(--end-x)) scaleX(1); }
-}
-
-@keyframes slide-up {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-/* Main Container */
-.login-page .container {
-  background-color: #fff;
-  border-radius: 30px;
-  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.35);
-  position: relative;
-  overflow: hidden;
-  width: 768px;
-  max-width: 100%;
-  min-height: 480px;
-}
-
-.login-page .container p {
-  font-size: 14px;
-  line-height: 20px;
-  letter-spacing: 0.3px;
-  margin: 20px 0;
-}
-
-.login-page .container span {
-  font-size: 12px;
-}
-
-.login-page .container a {
-  color: #333;
-  font-size: 13px;
-  text-decoration: none;
-  margin: 15px 0 10px;
-  transition: color 0.3s ease;
-}
-
-.login-page .container a:hover {
-  color: #2da0a8;
-}
-
-.login-page .forgot-password-link {
-  cursor: pointer;
-}
-
-.login-page .container button {
-  background-image: linear-gradient(to right, #1A2980 0%, #26D0CE 51%, #1A2980 100%);
-  margin: 10px 0 0;
-  padding: 15px 45px;
-  font-size: 12px;
-  text-transform: uppercase;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  background-size: 200% auto;
-  transition: all 0.5s ease;
-  cursor: pointer;
-}
-
-.login-page .container button:hover {
-  background-position: right center;
-  transform: scale(1.05);
-}
-
-.login-page .container button:active {
-  transform: scale(0.98);
-}
-
-.login-page .container button.hidden {
-  background: transparent;
-  border: 2px solid #fff;
-}
-
-.login-page .container button.hidden:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* Form Styles */
-.login-page .form-container > form {
-  background-color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  padding: 0 40px;
-  height: 100%;
-}
-
-.login-page .form-container h1 {
-  margin-bottom: 20px;
-  font-size: 28px;
-  font-weight: 700;
-}
-
-.login-page .container input {
-  background-color: #eee;
-  border: none;
-  margin: 8px 0;
-  padding: 12px 15px;
-  font-size: 13px;
-  border-radius: 8px;
-  width: 100%;
-  outline: none;
-  transition: background-color 0.3s ease;
-}
-
-.login-page .container input:focus {
-  background-color: #e0e0e0;
-}
-
-/* Password toggle */
-.login-page .password-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.login-page .password-wrapper input {
-  padding-right: 45px;
-}
-
-.login-page .password-toggle-icon {
-  position: absolute;
-  top: 50%;
-  right: 15px;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: #777;
-  transition: color 0.2s ease;
-}
-
-.login-page .password-toggle-icon:hover {
-  color: #333;
-}
-
-.login-page .form-container {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  transition: all 0.6s ease-in-out;
-}
-
-.login-page .sign-in {
-  left: 0;
-  width: 50%;
-  z-index: 2;
-}
-
-.login-page .container.active .sign-in {
-  transform: translateX(100%);
-}
-
-.login-page .sign-up {
-  left: 0;
-  width: 50%;
-  opacity: 0;
-  z-index: 1;
-}
-
-.login-page .container.active .sign-up {
-  transform: translateX(100%);
-  opacity: 1;
-  z-index: 5;
-  animation: fade-in 0.6s;
-}
-
-@keyframes fade-in {
-  0%, 49.99% {
-    opacity: 0;
-    z-index: 1;
-  }
-  50%, 100% {
-    opacity: 1;
-    z-index: 5;
-  }
-}
-
-/* Toggle Container (Desktop) */
-.login-page .toggle-container {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 50%;
-  height: 100%;
-  overflow: hidden;
-  transition: all 0.6s ease-in-out;
-  border-radius: 150px 0 0 100px;
-  z-index: 1000;
-}
-
-.login-page .container.active .toggle-container {
-  transform: translateX(-100%);
-  border-radius: 0 150px 100px 0;
-}
-
-.login-page .toggle {
-  background: linear-gradient(to right, #5c6bc0, #2da0a8);
-  height: 100%;
-  color: #fff;
-  position: relative;
-  left: -100%;
-  width: 200%;
-  transform: translateX(0);
-  transition: all 0.6s ease-in-out;
-}
-
-.login-page .container.active .toggle {
-  transform: translateX(50%);
-}
-
-.login-page .toggle-panel {
-  position: absolute;
-  width: 50%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  padding: 0 30px;
-  text-align: center;
-  top: 0;
-  transform: translateX(0);
-  transition: all 0.6s ease-in-out;
-}
-
-.login-page .toggle-panel h1 {
-  font-size: 26px;
-  margin-bottom: 10px;
-}
-
-.login-page .toggle-left {
-  transform: translateX(-200%);
-}
-
-.login-page .container.active .toggle-left {
-  transform: translateX(0);
-}
-
-.login-page .toggle-right {
-  right: 0;
-  transform: translateX(0);
-}
-
-.login-page .container.active .toggle-right {
-  transform: translateX(200%);
-}
-
-/* Mobile Toggle (Hidden on Desktop) */
-.login-page .mobile-toggle {
-  display: none;
-}
-
-/* Message Notifications */
-.login-page .message {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 15px 25px;
-  border-radius: 8px;
-  color: white;
-  font-weight: 500;
-  z-index: 10000;
-  animation: slide-down 0.3s ease-out;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  max-width: 90%;
-  text-align: center;
-}
-
-.login-page .message.success {
-  background-color: #72dd9e;
-}
-
-.login-page .message.error {
-  background-color: #e16c5f;
-}
-
-@keyframes slide-down {
-  from {
-    transform: translateX(-50%) translateY(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(-50%) translateY(0);
-    opacity: 1;
-  }
-}
-
-/* Hide mobile-only wrapper on desktop/tablet */
-.login-page .mobile-only-wrapper {
-  display: none;
-}
-
-/* Tablet Styles */
-@media screen and (max-width: 768px) {
-  .login-page {
-    padding: 15px;
-  }
-  .login-page .top-nav-buttons {
-    top: 15px;
-    right: 15px;
-    gap: 10px;
-  }
-  .login-page .button {
-    padding: 10px 20px;
-    font-size: 13px;
-  }
-  .login-page .container {
-    width: calc(100% - 20px);
-    max-width: 500px;
-    min-height: 550px;
-    margin: 0 10px;
-  }
-  .login-page .toggle-container {
-    border-radius: 100px 0 0 80px;
-  }
-  .login-page .container.active .toggle-container {
-    border-radius: 0 100px 80px 0;
-  }
-  .login-page .toggle-panel h1 {
-    font-size: 22px;
-  }
-  .login-page .toggle-panel p {
-    font-size: 13px;
-  }
-}
-
-/* MOBILE STYLES - NEW DESIGN */
-@media screen and (max-width: 576px) {
-  /* Hide desktop design */
-  .login-page .container {
-    display: none !important;
-  }
-
-  /* Show mobile design */
-  .login-page .mobile-only-wrapper {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
-    width: 100%;
-    overflow: hidden;
-  }
-
-  .login-page {
-    padding: 0;
-    overflow: hidden;
-  }
-
-  /* Top nav buttons for mobile */
-  .login-page .top-nav-buttons {
-    position: fixed;
-    top: 30px;
-    right: 20px;
-    z-index: 50;
-  }
-
-  .login-page .button {
-    padding: 10px 20px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    border: 1px solid rgba(255,255,255,0.2);
-  }
-
-  /* Hero Section */
-  .login-page .hero-section {
-    flex: none;
-    height: 25vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 0 2rem;
-    position: relative;
-    z-index: 10;
-    flex-shrink: 0;
-  }
-
-  .login-page .hero-content {
-    margin-top: 4rem;
-  }
-
-  .login-page .hero-title {
-    font-family: 'Clash Display', sans-serif;
-    font-size: 3.75rem;
-    font-weight: 600;
-    color: #00416A;
-    letter-spacing: -0.05em;
-    line-height: 1;
-  }
-
-  .login-page .hero-divider {
-    height: 0.25rem;
-    width: 5rem;
-    background-color: rgba(255, 255, 255, 0.6);
-    margin: 1rem 0;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  }
-
-  .login-page .hero-subtitle {
-    color: #00416A;
-    font-size: 0.75rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    font-weight: 700;
-    opacity: 0.8;
-  }
-
-  /* Interaction Sheet */
-  .login-page .interaction-sheet {
-    flex: 1;
-    background-color: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(12px);
-    border-radius: 2.5rem 2.5rem 0 0;
-    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    z-index: 20;
-    overflow: hidden;
-    animation: slide-up 0.5s ease-out;
-  }
-
-  /* Sheet Header */
-  .login-page .sheet-header {
-    flex: none;
-    padding: 2rem 2rem 1rem;
-    border-bottom: 1px solid rgba(229, 231, 235, 1);
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    flex-shrink: 0;
-  }
-
-  .login-page .sheet-title {
-    font-family: 'Clash Display', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #00416A;
-  }
-
-  .login-page .toggle-button {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #2da0a8;
-    background: none;
-    border: none;
-    border-bottom: 1px dashed #2da0a8;
-    padding-bottom: 0.25rem;
-    cursor: pointer;
-    transition: color 0.3s ease;
-  }
-
-  .login-page .toggle-button:hover {
-    color: #00416A;
-  }
-
-  /* Form Area */
-  .login-page .form-area {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1.5rem 2rem 6rem;
-    -webkit-overflow-scrolling: touch;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .login-page .form-area::-webkit-scrollbar {
-    display: none;
-  }
-
-  .login-page .form-content {
-    margin-top: 1rem;
-  }
-
-  .login-page .form-row {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  /* Input Fields */
-  .login-page .input-group {
-    position: relative;
-    margin-bottom: 1.25rem;
-  }
-
-  .login-page .input-group.full-width {
-    width: 100%;
-  }
-
-  .login-page .input-group.half-width {
-    width: 48%;
-  }
-
-  .login-page .input-label {
-    display: block;
-    font-size: 0.625rem;
-    font-weight: 700;
-    color: rgb(107, 114, 128);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 0.5rem;
-    transition: color 0.3s ease;
-  }
-
-  .login-page .input-group:focus-within .input-label {
-    color: #00416A;
-  }
-
-  .login-page .input-wrapper {
-    position: relative;
-  }
-
-  .login-page .input-field {
-    width: 100%;
-    background-color: transparent;
-    border: none;
-    border-bottom: 1px solid rgb(209, 213, 219);
-    padding: 0.5rem 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.9375rem;
-    color: rgb(17, 24, 39);
-    outline: none;
-    transition: all 0.3s ease;
-  }
-
-  .login-page .input-field::placeholder {
-    color: rgb(209, 213, 219);
-  }
-
-  .login-page .input-field:focus {
-    border-bottom-width: 2px;
-    border-bottom-color: #00416A;
-  }
-
-  /* Password Toggle Button */
-  .login-page .password-toggle-btn {
-    position: absolute;
-    right: 0;
-    top: 0.5rem;
-    color: rgb(156, 163, 175);
-    background: none;
-    border: none;
-    cursor: pointer;
-    outline: none;
-    transition: color 0.3s ease;
-    padding: 0;
-  }
-
-  .login-page .password-toggle-btn:hover {
-    color: #00416A;
-  }
-
-  /* Forgot Password Link */
-  .login-page .forgot-password-container {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: -0.625rem;
-    margin-bottom: 2rem;
-  }
-
-  .login-page .forgot-password-link-new {
-    font-size: 0.625rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: rgb(156, 163, 175);
-    letter-spacing: 0.05em;
-    transition: color 0.3s ease;
-    text-decoration: none;
-  }
-
-  .login-page .forgot-password-link-new:hover {
-    color: #00416A;
-  }
-
-  /* Submit Button */
-  .login-page .submit-button {
-    width: 100%;
-    background: linear-gradient(to right, #1A2980, #26D0CE);
-    color: white;
-    height: 3.5rem;
-    border-radius: 1rem;
-    font-weight: 700;
-    font-size: 0.875rem;
-    letter-spacing: 0.15em;
-    border: none;
-    cursor: pointer;
-    margin-top: 2rem;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-    transition: all 0.3s ease;
-  }
-
-  .login-page .submit-button:hover {
-    opacity: 0.9;
-  }
-
-  .login-page .submit-button:active {
-    transform: scale(0.98);
-  }
-
-  .login-page .button-arrow {
-    transition: transform 0.3s ease;
-  }
-
-  .login-page .submit-button:hover .button-arrow {
-    transform: translateX(0.25rem);
-  }
-
-  /* Message adjustments for mobile */
-  .login-page .message {
-    top: 0;
-    left: 0;
-    right: 0;
-    transform: none;
-    border-radius: 0;
-    max-width: 100%;
-  }
-}
-
-/* Small Mobile Devices */
-@media screen and (max-width: 380px) {
-  .login-page .hero-title {
-    font-size: 3rem;
-  }
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+export default function Login() {
+  const navigate = useNavigate();
+
+  // --- STATE ---
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [message, setMessage] = useState({ text: '', isError: false, show: false });
+  const [showPassword, setShowPassword] = useState({ signIn: false, signUp: false });
   
-  .login-page .sheet-header {
-    padding: 1.5rem 1.5rem 0.75rem;
-  }
-  
-  .login-page .form-area {
-    padding: 1.25rem 1.5rem 5rem;
-  }
+  // Database Columns
+  const [signInData, setSignInData] = useState({ usn: '', password: '' });
+  const [signUpData, setSignUpData] = useState({ 
+    name: '', 
+    usn: '', 
+    sem: '', 
+    mobno: '', 
+    email: '', 
+    password: '' 
+  });
+
+  // --- LOGIC ---
+  useEffect(() => { checkAuthStatus(); }, []);
+  useEffect(() => { 
+    if (message.show) { 
+      const timer = setTimeout(() => setMessage(prev => ({ ...prev, show: false })), 5000); 
+      return () => clearTimeout(timer); 
+    } 
+  }, [message.show]);
+
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch('/api/me', { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        showMessage(`Logged in as ${data.userName}`);
+        setTimeout(() => navigate('/events'), 1500);
+      }
+    } catch (error) {}
+  };
+
+  const showMessage = (text, isError = false) => setMessage({ text, isError, show: true });
+
+  const handleSignIn = async (e) => {
+    if(e) e.preventDefault();
+    const { usn, password } = signInData;
+    if (!usn || !password) return showMessage("Please fill in all fields", true);
+    
+    try {
+      const response = await fetch('/api/signin', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usn, password })
+      });
+      const data = await response.json();
+      if (data.success) {
+        showMessage(`Welcome back, ${data.userName}!`);
+        setTimeout(() => navigate('/events'), 1500);
+      } else { showMessage(data.error, true); }
+    } catch (error) { showMessage('Network error. Please try again.', true); }
+  };
+
+  const handleSignUp = async (e) => {
+    if(e) e.preventDefault();
+    const { name, usn, sem, mobno, email, password } = signUpData;
+
+    // Validation
+    if (!name || !usn || !sem || !mobno || !email || !password) return showMessage("Please fill in all fields", true);
+    if (!/\S+@\S+\.\S+/.test(email)) return showMessage("Please enter a valid email address", true);
+    if (!/^\d{10}$/.test(mobno)) return showMessage("Please enter a valid 10-digit mobile number", true);
+    const semNum = parseInt(sem);
+    if (semNum < 1 || semNum > 8) return showMessage("Semester must be between 1 and 8", true);
+
+    try {
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, usn, sem: semNum, mobno, email, password })
+      });
+      const data = await response.json();
+      if (data.success) {
+        showMessage(`Account created successfully! Welcome, ${data.userName}!`);
+        setSignUpData({ name: '', usn: '', sem: '', mobno: '', email: '', password: '' });
+        setTimeout(() => navigate('/events'), 2000);
+      } else { showMessage(data.error, true); }
+    } catch (error) { showMessage('Network error during signup.', true); }
+  };
+
+  const handleSignInChange = (e) => setSignInData({ ...signInData, [e.target.name]: e.target.value });
+  const handleSignUpChange = (e) => { 
+    const { name, value } = e.target; 
+    setSignUpData({ ...signUpData, [name]: name === 'usn' ? value.toUpperCase() : value }); 
+  };
+
+  const togglePasswordVisibility = (formType) => {
+    setShowPassword(prev => ({ ...prev, [formType]: !prev[formType] }));
+  };
+
+  const handleAboutUsClick = () => navigate('/about-us');
+  const handleContactUsClick = () => navigate('/about-us#connect-section');
+
+  return (
+    // UPDATED CONTAINER: Added 'max-w-md' and 'mx-auto' to center it like a phone
+    <div className="flex flex-col h-screen supports-[height:100dvh]:h-[100dvh] w-full max-w-md mx-auto overflow-hidden relative bg-gradient-to-r from-[#E4E5E6] to-[#00416A] shadow-2xl">
+      
+      {/* TOP NAV BUTTONS */}
+      <div className="top-nav-buttons">
+        <button className="nav-bubble-btn" onClick={handleAboutUsClick}>
+          <div className="bubble-layer bubble-1"></div>
+          <div className="bubble-layer bubble-2"></div>
+          <div className="bubble-layer bubble-3"></div>
+          <div className="bubble-layer bubble-4"></div>
+          <div className="bubble-layer bubble-5"></div>
+          <div className="bubble-layer bubble-6"></div>
+          <div className="bubble-layer bubble-7"></div>
+          <span>About Us</span>
+        </button>
+        <button className="nav-bubble-btn" onClick={handleContactUsClick}>
+          <div className="bubble-layer bubble-1"></div>
+          <div className="bubble-layer bubble-2"></div>
+          <div className="bubble-layer bubble-3"></div>
+          <div className="bubble-layer bubble-4"></div>
+          <div className="bubble-layer bubble-5"></div>
+          <div className="bubble-layer bubble-6"></div>
+          <div className="bubble-layer bubble-7"></div>
+          <span>Contact Us</span>
+        </button>
+      </div>
+
+      {/* TOAST MESSAGE */}
+      {message.show && (
+        <div className={`absolute top-0 left-0 w-full p-4 text-center text-sm font-bold tracking-wide text-white transition-all z-[100] ${message.isError ? 'bg-red-500' : 'bg-emerald-500'}`}>
+          {message.text}
+        </div>
+      )}
+
+      {/* HERO SECTION */}
+      <div className="flex-none h-[25vh] flex flex-col justify-center px-8 relative z-10 shrink-0">
+        <div className="mt-16">
+          <h1 className="text-6xl font-semibold text-[#00416A] tracking-tighter leading-none">
+            FLO.
+          </h1>
+          <div className="h-1 w-20 bg-white/60 my-4 shadow-sm"></div>
+          <p className="text-[#00416A] text-xs tracking-[0.2em] uppercase font-bold opacity-80">
+            The Pulse of Campus
+          </p>
+        </div>
+      </div>
+
+      {/* INTERACTION SHEET */}
+      <div className="flex-1 bg-white/95 backdrop-blur-md rounded-t-[2.5rem] shadow-[0_-20px_60px_rgba(0,0,0,0.2)] flex flex-col relative z-20 overflow-hidden animate-[slide-up_0.5s_ease-out]">
+        
+        {/* Toggle Header */}
+        <div className="flex-none px-8 pt-8 pb-4 border-b border-gray-100 flex justify-between items-end shrink-0">
+          <div>
+            <h2 className="text-2xl font-semibold text-[#00416A]">
+              {isSignUp ? 'New Account' : 'Welcome Back'}
+            </h2>
+          </div>
+          <button 
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="text-xs font-bold uppercase tracking-widest text-[#2da0a8] hover:text-[#00416A] transition-colors border-b border-[#2da0a8] pb-1 border-dashed"
+          >
+            {isSignUp ? 'Log In Instead' : 'Create Account'}
+          </button>
+        </div>
+
+        {/* Scrollable Form Area */}
+        <div className="flex-1 overflow-y-auto px-8 py-6 pb-24 scrollbar-hide">
+          <form onSubmit={isSignUp ? handleSignUp : handleSignIn}>
+            
+            {!isSignUp ? (
+              /* SIGN IN FORM */
+              <div className="mt-4">
+                <InputField label="University Serial No." name="usn" value={signInData.usn} onChange={handleSignInChange} placeholder="USN" />
+                <InputField 
+                    label="Password" 
+                    name="password" 
+                    value={signInData.password} 
+                    onChange={handleSignInChange} 
+                    placeholder="Password" 
+                    isPassword={true}
+                    isVisible={showPassword.signIn}
+                    onToggleVisibility={() => togglePasswordVisibility('signIn')}
+                />
+                <div className="flex justify-end mt-[-10px] mb-8">
+                  <a href="#" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }} className="text-[10px] font-bold uppercase text-gray-400 hover:text-[#00416A] tracking-wider transition-colors">
+                    Forgot Your Password?
+                  </a>
+                </div>
+              </div>
+            ) : (
+              /* SIGN UP FORM */
+              <div className="space-y-1">
+                <InputField label="Name" name="name" value={signUpData.name} onChange={handleSignUpChange} placeholder="Name" />
+                <InputField label="USN" name="usn" value={signUpData.usn} onChange={handleSignUpChange} placeholder="USN" />
+                
+                <div className="flex justify-between">
+                  <InputField label="Semester" name="sem" value={signUpData.sem} onChange={handleSignUpChange} placeholder="Semester" half={true} type="number" />
+                  <InputField label="Mobile Number" name="mobno" value={signUpData.mobno} onChange={handleSignUpChange} placeholder="Mobile Number" half={true} type="tel" />
+                </div>
+                
+                <InputField label="Email ID" name="email" value={signUpData.email} onChange={handleSignUpChange} placeholder="Email ID" type="email" />
+                <InputField 
+                    label="Password" 
+                    name="password" 
+                    value={signUpData.password} 
+                    onChange={handleSignUpChange} 
+                    placeholder="Password"
+                    isPassword={true}
+                    isVisible={showPassword.signUp}
+                    onToggleVisibility={() => togglePasswordVisibility('signUp')}
+                />
+              </div>
+            )}
+
+            {/* ACTION BUTTON */}
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-[#1A2980] to-[#26D0CE] text-white h-14 rounded-2xl font-bold text-sm tracking-[0.15em] hover:opacity-90 active:scale-[0.98] transition-all shadow-xl mt-8 mb-4 flex items-center justify-center gap-2 group"
+            >
+              {isSignUp ? 'SIGN UP' : 'SIGN IN'}
+              <span className="group-hover:translate-x-1 transition-transform">→</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-/* Landscape Mobile */
-@media screen and (max-height: 600px) and (orientation: landscape) {
-  .login-page .hero-section {
-    height: 20vh;
-  }
-  
-  .login-page .hero-content {
-    margin-top: 2rem;
-  }
-  
-  .login-page .hero-title {
-    font-size: 3rem;
-  }
-}
+// --- FIXED COMPONENT ---
+const InputField = ({ label, name, value, onChange, placeholder, half, type = "text", isPassword, isVisible, onToggleVisibility }) => {
+    const inputType = isPassword ? (isVisible ? 'text' : 'password') : type;
+
+    return (
+      <div className={`group mb-5 relative ${half ? 'w-[48%]' : 'w-full'}`}>
+        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 group-focus-within:text-[#00416A] transition-colors">
+          {label}
+        </label>
+        <div className="relative">
+            <input
+            type={inputType}
+            name={name}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            className="w-full bg-transparent border-b border-gray-300 py-2 font-mono text-[15px] text-gray-900 focus:outline-none focus:border-[#00416A] focus:border-b-2 transition-all placeholder-gray-300"
+            />
+            {isPassword && (
+                <button 
+                    type="button"
+                    onClick={onToggleVisibility}
+                    className="absolute right-0 top-2 text-gray-400 hover:text-[#00416A] focus:outline-none"
+                >
+                    {isVisible ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    )}
+                </button>
+            )}
+        </div>
+      </div>
+    );
+};
