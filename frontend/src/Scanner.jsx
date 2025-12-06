@@ -65,15 +65,14 @@ export default function Scanner() {
   }, [pageState, userUSN, libraryLoaded]);
 
   useEffect(() => {
-    let timer;
     if (pageState === 'scanning') {
-      console.log('⏳ Waiting for DOM to mount...');
-      timer = setTimeout(() => initScanner(), 800);
+      const timer = setTimeout(() => initScanner(), 100);
+      return () => clearTimeout(timer);
     }
     if (pageState !== 'scanning') {
       cleanupScanner();
     }
-    return () => clearTimeout(timer);
+    return () => cleanupScanner();
   }, [pageState]);
 
   const cleanupScanner = () => {
@@ -108,23 +107,12 @@ export default function Scanner() {
   };
 
   const initScanner = () => {
-    if (!window.Html5QrcodeScanner) {
-      console.log('❌ Library not found');
-      return;
-    }
-    if (html5QrcodeScannerRef.current) {
-      console.log('⚠️ Scanner already running');
-      return;
-    }
-    
-    const element = document.getElementById('reader');
-    if (!element) {
-      console.log('⚠️ DOM element #reader not found yet. Retrying in 200ms...');
-      setTimeout(initScanner, 200);
+    if (!window.Html5QrcodeScanner || !scannerRef.current || html5QrcodeScannerRef.current) {
+      console.log('⚠️ Scanner not ready or already initialized');
       return;
     }
 
-    console.log('🎥 Initializing scanner on element:', element);
+    console.log('🎥 Initializing scanner');
     
     try {
       const scanner = new window.Html5QrcodeScanner(
@@ -144,28 +132,31 @@ export default function Scanner() {
       scanner.render(onScanSuccess, onScanError);
       html5QrcodeScannerRef.current = scanner;
       setIsScanning(true);
-      console.log('✅ Scanner started successfully');
+      console.log('✅ Scanner rendered');
     } catch (err) {
       console.error('Scanner initialization error:', err);
-      setErrorMsg('Camera failed. You can still upload an image.');
+      setErrorMsg('Failed to initialize scanner. Check camera permissions and try again.');
+      setPageState('error');
     }
   };
 
   const onScanSuccess = async (decodedText) => {
+    // Prevent multiple scans while processing
     if (pageState !== 'scanning') return;
     
     console.log(`✅ QR Code detected: ${decodedText}`);
     setIsScanning(false);
-    setPageState('processing'); 
+    setPageState('processing'); // Temporary state to prevent duplicate scans
     setLastResult(decodedText);
     
+    // Stop scanner immediately
     cleanupScanner();
     
     if (decodedText.startsWith('eventId:')) {
       const eventId = decodedText.split(':')[1];
       await markAttendance(eventId);
     } else {
-      setErrorMsg('Invalid QR code format.');
+      setErrorMsg('Invalid QR code format. Please scan the event QR code.');
       setPageState('error');
     }
   };
@@ -176,7 +167,8 @@ export default function Scanner() {
     console.log('📁 File selected:', file.name);
     
     if (!window.Html5Qrcode) {
-      setErrorMsg('Library not ready.');
+      setErrorMsg('QR scanner library not loaded. Please refresh and try again.');
+      setPageState('error');
       return;
     }
 
@@ -189,7 +181,7 @@ export default function Scanner() {
       await onScanSuccess(decodedText);
     } catch (err) {
       console.error('File scan error:', err);
-      setErrorMsg('Could not read QR code from image.');
+      setErrorMsg('Could not read QR code from image. Please try another image.');
       setPageState('error');
     } finally {
       if (fileInputRef.current) {
@@ -204,10 +196,14 @@ export default function Scanner() {
       setPageState('error');
       return;
     }
+    console.log(`🎯 Marking attendance - Role: ${userRole}, USN: ${userUSN}, Event: ${eventId}`);
+    
     try {
       const endpoint = userRole === 'volunteer' 
         ? '/api/mark-volunteer-attendance' 
         : '/api/mark-participant-attendance';
+      
+      console.log(`📡 Calling endpoint: ${endpoint}`);
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -217,16 +213,18 @@ export default function Scanner() {
       });
       
       const data = await response.json();
+      console.log('📥 Response:', data);
       
       if (response.ok && data.success) {
         setPageState('success');
         setErrorMsg(null);
+        console.log(`✅ ${userRole} attendance marked successfully`);
       } else {
         setErrorMsg(data.error || 'Failed to mark attendance');
         setPageState('error');
       }
     } catch (err) {
-      console.error('Attendance marking error:', err);
+      console.error('Error marking attendance:', err);
       setErrorMsg('Network error. Please try again.');
       setPageState('error');
     }
@@ -234,13 +232,19 @@ export default function Scanner() {
 
   const onScanError = (errorMessage) => {
     if (errorMessage.includes('NotFoundException') || 
-        errorMessage.includes('No MultiFormat Readers')) return;
+        errorMessage.includes('No MultiFormat Readers')) {
+      return;
+    }
+    console.log(`Scan error: ${errorMessage}`);
   };
 
   const scanAgain = () => {
+    console.log('🔄 Restarting scanner');
     setLastResult('');
     setErrorMsg(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     setPageState('scanning');
   };
 
@@ -297,7 +301,7 @@ export default function Scanner() {
             {(pageState === 'scanning' || pageState === 'processing') && (
               <div className="scan-wrapper">
                 <div className="camera-frame">
-                  <div id="reader" className="camera-view" />
+                  <div id="reader" ref={scannerRef} className="camera-view" />
                   
                   {isScanning && (
                     <div className="scan-overlay">
@@ -387,6 +391,52 @@ export default function Scanner() {
         </div>
         <p className="footer-text">Secured Attendance System</p>
       </div>
+
+      <style>{`
+        #reader video {
+          border-radius: 16px !important;
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+        
+        #reader__dashboard_section {
+          background: rgba(255, 255, 255, 0.95) !important;
+          backdrop-filter: blur(10px) !important;
+          border-radius: 0 0 16px 16px !important;
+          padding: 16px !important;
+        }
+        
+        #reader__dashboard_section button {
+          background: linear-gradient(45deg, #667eea, #764ba2) !important;
+          border: none !important;
+          border-radius: 12px !important;
+          color: white !important;
+          font-weight: 600 !important;
+          padding: 12px 24px !important;
+          margin: 4px !important;
+          transition: all 0.3s ease !important;
+          cursor: pointer !important;
+        }
+        
+        #reader__dashboard_section button:hover {
+          transform: translateY(-2px) !important;
+          box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4) !important;
+        }
+        
+        #reader__dashboard_section select {
+          border: 2px solid #e9ecef !important;
+          border-radius: 8px !important;
+          padding: 8px 12px !important;
+          font-size: 14px !important;
+          background: white !important;
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+        
+        #reader__scan_region {
+          border-radius: 16px !important;
+        }
+      `}</style>
     </div>
   );
 }
