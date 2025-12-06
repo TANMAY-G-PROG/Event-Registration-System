@@ -1,57 +1,63 @@
-/* Variables for a clean, premium dark mode */
-:root {
-  --bg-color: #0d0d0d;
-  --card-bg: #161616;
-  --text-main: #ededed;
-  --text-muted: #888888;
-  --accent: #ffffff; /* Pure white accent for maximum contrast */
-  --border-color: #333333;
-  --success-color: #2e8b57;
-  --error-color: #c94040;
-  --radius: 24px;
-  --radius-sm: 12px;
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-/* Base Layout */
-.minimal-layout {
-  min-height: 100vh;
-  background-color: var(--bg-color);
-  color: var(--text-main);
-  font-family: var(--font-family);
+/* --- SCOPED CONTAINER --- */
+/* Everything is inside this class to prevent affecting other pages */
+.scanner-scoped-page {
+  /* Local CSS Variables */
+  --scn-bg-color: #0d0d0d;
+  --scn-card-bg: #161616;
+  --scn-text-main: #ededed;
+  --scn-text-muted: #888888;
+  --scn-accent: #ffffff;
+  --scn-border: #333333;
+  --scn-success: #2e8b57;
+  --scn-radius: 24px;
+  --scn-radius-sm: 12px;
+  
+  /* Layout for the page */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--scn-bg-color);
+  color: var(--scn-text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  box-sizing: border-box;
+  z-index: 9999; /* Ensure it covers other content */
+  overflow-y: auto;
 }
 
-/* Floating Card */
-.card-interface {
+/* Card Interface */
+.scanner-scoped-page .scanner-card {
   width: 100%;
   max-width: 440px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
+  background: var(--scn-card-bg);
+  border: 1px solid var(--scn-border);
+  border-radius: var(--scn-radius);
   padding: 40px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
-/* Header Typography */
-.interface-header {
+/* Header */
+.scanner-scoped-page .scanner-header {
   text-align: center;
   margin-bottom: 32px;
 }
 
-.role-badge {
+.scanner-scoped-page .scanner-role-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: var(--text-muted);
+  color: var(--scn-text-muted);
   font-weight: 600;
   margin-bottom: 12px;
   background: rgba(255, 255, 255, 0.05);
@@ -59,40 +65,69 @@
   border-radius: 100px;
 }
 
-.role-badge .dot {
+.scanner-scoped-page .scanner-dot {
   width: 6px;
   height: 6px;
-  background-color: var(--success-color);
+  background-color: var(--scn-success);
   border-radius: 50%;
 }
 
-.title {
+.scanner-scoped-page .scanner-title {
   font-size: 28px;
   font-weight: 600;
   margin: 0 0 8px 0;
   letter-spacing: -0.5px;
+  color: var(--scn-text-main);
 }
 
-.subtitle {
-  color: var(--text-muted);
+.scanner-scoped-page .scanner-subtitle {
+  color: var(--scn-text-muted);
   font-size: 14px;
   margin: 0;
 }
 
-/* Scanner Frame Styling */
-.scanner-frame {
+/* Scanner Frame */
+.scanner-scoped-page .scanner-frame {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
   background: #000;
-  border-radius: var(--radius-sm);
+  border-radius: var(--scn-radius-sm);
   overflow: hidden;
   margin-bottom: 24px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--scn-border);
+  /* Fix for mobile: Ensure container has height */
+  min-height: 300px; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Frame Markers (Subtle corners) */
-.frame-marker {
+/* Fix for HTML5-QRCode Library elements */
+.scanner-scoped-page #reader {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 300px; /* Crucial for mobile */
+  border: none !important;
+}
+
+/* Force video to fill container properly on phones */
+.scanner-scoped-page #reader video {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 300px !important;
+  object-fit: cover !important;
+  border-radius: var(--scn-radius-sm);
+  display: block !important;
+}
+
+/* Hide library bloat */
+.scanner-scoped-page #reader__dashboard_section_csr span, 
+.scanner-scoped-page #reader__dashboard_section_swaplink {
+  display: none !important;
+}
+
+/* Frame Markers */
+.scanner-scoped-page .scanner-marker {
   position: absolute;
   width: 20px;
   height: 20px;
@@ -102,44 +137,13 @@
   z-index: 10;
 }
 
-.frame-marker.tl { top: 12px; left: 12px; border-width: 2px 0 0 2px; border-radius: 4px 0 0 0; }
-.frame-marker.tr { top: 12px; right: 12px; border-width: 2px 2px 0 0; border-radius: 0 4px 0 0; }
-.frame-marker.bl { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; border-radius: 0 0 0 4px; }
-.frame-marker.br { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; border-radius: 0 0 4px 0; }
+.scanner-scoped-page .scanner-marker.tl { top: 12px; left: 12px; border-width: 2px 0 0 2px; border-radius: 4px 0 0 0; }
+.scanner-scoped-page .scanner-marker.tr { top: 12px; right: 12px; border-width: 2px 2px 0 0; border-radius: 0 4px 0 0; }
+.scanner-scoped-page .scanner-marker.bl { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; border-radius: 0 0 0 4px; }
+.scanner-scoped-page .scanner-marker.br { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; border-radius: 0 0 4px 0; }
 
-/* IMPORTANT: Override the ugly library styles */
-#reader {
-  width: 100% !important;
-  height: 100% !important;
-  border: none !important;
-}
-
-#reader video {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  border-radius: var(--radius-sm);
-}
-
-/* Hide library's default chrome */
-#reader__dashboard_section_csr span, 
-#reader__dashboard_section_swaplink {
-  display: none !important;
-}
-
-/* Style the library's select dropdown if it appears */
-#reader select {
-  background: var(--bg-color);
-  color: white;
-  border: 1px solid var(--border-color);
-  padding: 8px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  width: 100%;
-}
-
-/* Status & Processing States */
-.status-container {
+/* Status Styles */
+.scanner-scoped-page .scanner-status-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -148,32 +152,31 @@
   text-align: center;
 }
 
-.message-text {
+.scanner-scoped-page .scanner-message {
   margin-top: 16px;
-  color: var(--text-muted);
+  color: var(--scn-text-muted);
   font-size: 15px;
 }
 
-/* Minimal Spinner */
-.spinner-minimal {
+.scanner-scoped-page .scanner-spinner {
   width: 24px;
   height: 24px;
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-top-color: var(--accent);
+  border-top-color: var(--scn-accent);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: scn-spin 0.8s linear infinite;
 }
 
-@keyframes spin {
+@keyframes scn-spin {
   to { transform: rotate(360deg); }
 }
 
-/* Success State */
-.success-check {
+/* Success Check */
+.scanner-scoped-page .scanner-success-check {
   width: 60px;
   height: 60px;
   background: rgba(46, 139, 87, 0.1);
-  color: var(--success-color);
+  color: var(--scn-success);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -181,19 +184,20 @@
   margin-bottom: 16px;
 }
 
-.success-check svg {
+.scanner-scoped-page .scanner-success-check svg {
   width: 32px;
   height: 32px;
 }
 
-.success-title {
+.scanner-scoped-page .scanner-success-title {
   font-size: 20px;
   font-weight: 600;
   margin: 0;
+  color: var(--scn-text-main);
 }
 
 /* Buttons */
-.button-row {
+.scanner-scoped-page .scanner-btn-row {
   display: flex;
   gap: 12px;
   margin-top: 24px;
@@ -201,18 +205,18 @@
   justify-content: center;
 }
 
-.controls {
+.scanner-scoped-page .scanner-controls {
   text-align: center;
 }
 
-button {
+.scanner-scoped-page button {
   cursor: pointer;
   font-family: inherit;
   transition: all 0.2s ease;
 }
 
-.btn-primary {
-  background: var(--accent);
+.scanner-scoped-page .scanner-btn-primary {
+  background: var(--scn-accent);
   color: black;
   border: none;
   padding: 12px 24px;
@@ -221,16 +225,16 @@ button {
   font-size: 14px;
 }
 
-.btn-primary:hover {
+.scanner-scoped-page .scanner-btn-primary:hover {
   background: #dadada;
   transform: translateY(-1px);
 }
 
-.btn-secondary {
+.scanner-scoped-page .scanner-btn-secondary {
   display: inline-block;
   background: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-main);
+  border: 1px solid var(--scn-border);
+  color: var(--scn-text-main);
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
@@ -238,40 +242,53 @@ button {
   cursor: pointer;
 }
 
-.btn-secondary:hover {
-  border-color: var(--text-muted);
+.scanner-scoped-page .scanner-btn-secondary:hover {
+  border-color: var(--scn-text-muted);
   background: rgba(255, 255, 255, 0.03);
 }
 
-.btn-text {
+.scanner-scoped-page .scanner-btn-text {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--scn-text-muted);
   font-size: 14px;
   padding: 12px 20px;
 }
 
-.btn-text:hover {
-  color: var(--text-main);
+.scanner-scoped-page .scanner-btn-text:hover {
+  color: var(--scn-text-main);
 }
 
-/* Animations */
-.fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+/* Animation */
+.scanner-scoped-page .scanner-fade-in {
+  animation: scn-fadeIn 0.4s ease-out forwards;
   opacity: 0;
 }
 
-@keyframes fadeIn {
+@keyframes scn-fadeIn {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 /* Mobile Adjustments */
 @media (max-width: 480px) {
-  .card-interface {
+  .scanner-scoped-page {
+      padding: 0;
+      background-color: #000; /* Pure black on mobile for immersiveness */
+  }
+  
+  .scanner-scoped-page .scanner-card {
     border: none;
     background: transparent;
     box-shadow: none;
-    padding: 0;
+    padding: 20px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .scanner-scoped-page .scanner-frame {
+      min-height: 350px; /* Make view larger on mobile */
   }
 }
