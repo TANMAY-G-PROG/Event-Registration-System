@@ -5,8 +5,7 @@ import './style.css';
 export default function Login() {
   const navigate = useNavigate();
 
-  // --- STATE (Merged Logic) ---
-  // isActive: false = Sign In, true = Sign Up
+  // --- STATE ---
   const [isActive, setIsActive] = useState(false);
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
   const [showPassword, setShowPassword] = useState({ signIn: false, signUp: false });
@@ -23,15 +22,11 @@ export default function Login() {
   });
 
   // --- EFFECTS ---
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
+  useEffect(() => { checkAuthStatus(); }, []);
 
   useEffect(() => {
     if (message.show) {
-      const timer = setTimeout(() => {
-        setMessage((prev) => ({ ...prev, show: false }));
-      }, 5000);
+      const timer = setTimeout(() => setMessage(prev => ({ ...prev, show: false })), 5000);
       return () => clearTimeout(timer);
     }
   }, [message.show]);
@@ -132,29 +127,26 @@ export default function Login() {
     <div className="login-page">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
       
-      {/* 1. TOP NAVIGATION (Shared) */}
+      {/* 1. TOP NAVIGATION (Reverted to Old Style) */}
       <div className="top-nav-buttons">
-        <button className="nav-bubble-btn" onClick={handleAboutUsClick}>
-            {/* Bubbles */}
+        <button className="button" onClick={handleAboutUsClick}>
             {[1,2,3,4,5,6,7].map(i => <div key={i} className={`bubble-layer bubble-${i}`}></div>)}
             <span>About Us</span>
         </button>
-        <button className="nav-bubble-btn" onClick={handleContactUsClick}>
+        <button className="button" onClick={handleContactUsClick}>
             {[1,2,3,4,5,6,7].map(i => <div key={i} className={`bubble-layer bubble-${i}`}></div>)}
             <span>Contact Us</span>
         </button>
       </div>
 
-      {/* 2. TOAST MESSAGE (Shared) */}
+      {/* 2. TOAST MESSAGE */}
       {message.show && (
         <div className={`message ${message.isError ? 'error' : 'success'}`}>
           {message.text}
         </div>
       )}
 
-      {/* ------------------------------------------------ */}
-      {/* 3. DESKTOP VIEW (The Original Sliding Design)    */}
-      {/* ------------------------------------------------ */}
+      {/* 3. DESKTOP VIEW (Original Sliding Design) */}
       <div className={`container desktop-view ${isActive ? 'active' : ''}`} id="container">
         <div className="form-container sign-up">
           <form onKeyPress={handleKeyPress}>
@@ -188,23 +180,19 @@ export default function Login() {
             <div className="toggle-panel toggle-left">
               <h1>Welcome Back!</h1>
               <p>Enter your personal details to use all of site features</p>
-              <button className="hidden-btn" onClick={() => setIsActive(false)}>Sign In</button>
+              <button className="hidden" onClick={() => setIsActive(false)}>Sign In</button>
             </div>
             <div className="toggle-panel toggle-right">
               <h1>Hello, Friend!</h1>
               <p>Register with your personal details to create a new account</p>
-              <button className="hidden-btn" onClick={() => setIsActive(true)}>Sign Up</button>
+              <button className="hidden" onClick={() => setIsActive(true)}>Sign Up</button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ------------------------------------------------ */}
-      {/* 4. MOBILE VIEW (The New Premium Design)          */}
-      {/* ------------------------------------------------ */}
+      {/* 4. MOBILE VIEW (New Premium Design) */}
       <div className="mobile-view-wrapper">
-        
-        {/* Mobile Hero (Title) */}
         <div className="m-hero-section">
             <div className="m-hero-content">
                 <h1 className="m-logo">FLO.</h1>
@@ -213,40 +201,25 @@ export default function Login() {
             </div>
         </div>
 
-        {/* Mobile Interaction Sheet */}
         <div className="m-interaction-sheet">
-            {/* Header */}
             <div className="m-sheet-header">
-                <h2 className="m-sheet-title">
-                    {isActive ? 'New Account' : 'Welcome Back'}
-                </h2>
-                <button 
-                    onClick={() => setIsActive(!isActive)}
-                    className="m-toggle-link"
-                >
+                <h2 className="m-sheet-title">{isActive ? 'New Account' : 'Welcome Back'}</h2>
+                <button onClick={() => setIsActive(!isActive)} className="m-toggle-link">
                     {isActive ? 'Log In Instead' : 'Create Account'}
                 </button>
             </div>
 
-            {/* Form Area */}
             <div className="m-form-scroll">
                 <form onSubmit={isActive ? handleSignUp : handleSignIn}>
                     {!isActive ? (
-                        /* Sign In Mobile */
                         <div className="m-form-group">
                             <MobileInput label="University Serial No." name="usn" value={signInData.usn} onChange={handleSignInChange} placeholder="USN" />
-                            <MobileInput 
-                                label="Password" name="password" value={signInData.password} onChange={handleSignInChange} placeholder="Password"
-                                isPassword={true} isVisible={showPassword.signIn} onToggleVisibility={() => togglePasswordVisibility('signIn')}
-                            />
+                            <MobileInput label="Password" name="password" value={signInData.password} onChange={handleSignInChange} placeholder="Password" isPassword={true} isVisible={showPassword.signIn} onToggleVisibility={() => togglePasswordVisibility('signIn')} />
                             <div className="m-forgot-wrapper">
-                                <a href="#" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }} className="m-forgot-link">
-                                    Forgot Your Password?
-                                </a>
+                                <a href="#" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }} className="m-forgot-link">Forgot Your Password?</a>
                             </div>
                         </div>
                     ) : (
-                        /* Sign Up Mobile */
                         <div className="m-form-group">
                             <MobileInput label="Name" name="name" value={signUpData.name} onChange={handleSignUpChange} placeholder="Name" />
                             <MobileInput label="USN" name="usn" value={signUpData.usn} onChange={handleSignUpChange} placeholder="USN" />
@@ -255,13 +228,9 @@ export default function Login() {
                                 <MobileInput label="Mobile" name="mobno" value={signUpData.mobno} onChange={handleSignUpChange} placeholder="Mobile" half={true} type="tel" />
                             </div>
                             <MobileInput label="Email ID" name="email" value={signUpData.email} onChange={handleSignUpChange} placeholder="Email ID" type="email" />
-                            <MobileInput 
-                                label="Password" name="password" value={signUpData.password} onChange={handleSignUpChange} placeholder="Password"
-                                isPassword={true} isVisible={showPassword.signUp} onToggleVisibility={() => togglePasswordVisibility('signUp')}
-                            />
+                            <MobileInput label="Password" name="password" value={signUpData.password} onChange={handleSignUpChange} placeholder="Password" isPassword={true} isVisible={showPassword.signUp} onToggleVisibility={() => togglePasswordVisibility('signUp')} />
                         </div>
                     )}
-
                     <button type="submit" className="m-submit-btn">
                         {isActive ? 'SIGN UP' : 'SIGN IN'}
                         <span className="m-arrow">→</span>
@@ -270,26 +239,17 @@ export default function Login() {
             </div>
         </div>
       </div>
-
     </div>
   );
 }
 
-// --- HELPER COMPONENT FOR MOBILE INPUTS ---
 const MobileInput = ({ label, name, value, onChange, placeholder, half, type = "text", isPassword, isVisible, onToggleVisibility }) => {
     const inputType = isPassword ? (isVisible ? 'text' : 'password') : type;
     return (
       <div className={`m-input-wrapper ${half ? 'm-half' : ''}`}>
         <label className="m-label">{label}</label>
         <div className="m-input-container">
-            <input
-                type={inputType}
-                name={name}
-                value={value}
-                onChange={onChange}
-                placeholder={placeholder}
-                className="m-input-field"
-            />
+            <input type={inputType} name={name} value={value} onChange={onChange} placeholder={placeholder} className="m-input-field" />
             {isPassword && (
                 <button type="button" onClick={onToggleVisibility} className="m-pass-toggle">
                     {isVisible ? <i className="fa-solid fa-eye-slash"></i> : <i className="fa-solid fa-eye"></i>}
