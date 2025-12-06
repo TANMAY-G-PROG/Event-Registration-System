@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import './scanner.css'; // This connects the design we created
+import './Scanner.css'; // This connects the design we created
 
 export default function Scanner() {
   const [pageState, setPageState] = useState('loading');
@@ -340,3 +340,4 @@ export default function Scanner() {
     </div>
   );
 }
+
