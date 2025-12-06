@@ -607,6 +607,7 @@ html, body {
 
   .login-page .hero-content {
     margin-top: 4rem;
+    /* Ensure content is aligned left, not centered */
   }
 
   .login-page .hero-title {
@@ -616,6 +617,7 @@ html, body {
     color: #00416A;
     letter-spacing: -0.05em;
     line-height: 1;
+    text-align: left;
   }
 
   .login-page .hero-divider {
