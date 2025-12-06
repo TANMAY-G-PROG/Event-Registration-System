@@ -158,7 +158,11 @@
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* CAMERA FRAME */
+/* CAMERA FRAME - BRUTAL FIX FOR VISIBILITY */
+.scan-wrapper {
+  width: 100%;
+}
+
 .camera-frame {
   position: relative;
   background: #000;
@@ -166,20 +170,48 @@
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   aspect-ratio: 1/1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
   margin-bottom: 1rem;
+  z-index: 15;
 }
 
 .camera-view {
   width: 100%;
   height: 100%;
+  flex-grow: 1;
+  position: relative;
+  overflow: hidden;
 }
 
-.camera-view video {
-  object-fit: cover;
+/* Override Library Defaults to force video visibility */
+#reader__scan_region {
+  width: 100% !important;
+  min-height: 100% !important;
+  height: 100% !important;
+  vertical-align: top;
+}
+
+#reader video {
   width: 100% !important;
   height: 100% !important;
-  border-radius: 16px;
+  object-fit: cover !important;
+  border-radius: 16px !important;
+  display: block !important;
+}
+
+/* Hide library permission bar but keep functionality */
+#reader__dashboard_section_csr {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100%;
+  opacity: 0;
+  z-index: 10;
+  height: 0;
+  overflow: hidden;
 }
 
 .scan-overlay {
