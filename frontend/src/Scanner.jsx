@@ -263,56 +263,55 @@ export default function Scanner() {
   const goBack = () => {
     window.history.back();
   };
+
   // --- LOGIC ENDS HERE ---
 
-  // --- NEW MINIMALIST UI ---
+  // --- UI STRUCTURE ---
   return (
-    <div className="minimal-layout">
-      {/* Hidden file reader element */}
+    <div className="scanner-scoped-page">
       <div id="file-reader" style={{ display: 'none' }} />
 
-      <main className="card-interface">
-        <header className="interface-header">
-          <div className="role-badge">
-            <span className="dot"></span>
+      <main className="scanner-card">
+        <header className="scanner-header">
+          <div className="scanner-role-badge">
+            <span className="scanner-dot"></span>
             {userRole === 'volunteer' ? 'Volunteer' : 'Participant'} Mode
           </div>
-          <h1 className="title">Scan Attendance</h1>
-          <p className="subtitle">
+          <h1 className="scanner-title">Scan Attendance</h1>
+          <p className="scanner-subtitle">
             {userUSN ? `Logged in as ${userUSN}` : 'Authenticating...'}
           </p>
         </header>
 
-        <div className="interface-body">
+        <div className="scanner-body">
           {pageState === 'loading' && (
-            <div className="status-container">
-              <div className="spinner-minimal"></div>
+            <div className="scanner-status-container">
+              <div className="scanner-spinner"></div>
             </div>
           )}
 
           {pageState === 'error' && (
-            <div className="status-container fade-in">
-              <div className="error-icon">!</div>
-              <p className="message-text">{errorMsg}</p>
-              <div className="button-row">
-                <button onClick={restartScanner} className="btn-primary">Retry</button>
-                <button onClick={goBack} className="btn-text">Cancel</button>
+            <div className="scanner-status-container scanner-fade-in">
+              <div className="scanner-error-icon">!</div>
+              <p className="scanner-message">{errorMsg}</p>
+              <div className="scanner-btn-row">
+                <button onClick={restartScanner} className="scanner-btn-primary">Retry</button>
+                <button onClick={goBack} className="scanner-btn-text">Cancel</button>
               </div>
             </div>
           )}
 
           {pageState === 'scanning' && (
-            <div className="scanner-active-wrapper fade-in">
+            <div className="scanner-active-wrapper scanner-fade-in">
               <div className="scanner-frame">
                 <div id="reader" ref={scannerRef}></div>
-                {/* Minimal corner markers */}
-                <div className="frame-marker tl"></div>
-                <div className="frame-marker tr"></div>
-                <div className="frame-marker bl"></div>
-                <div className="frame-marker br"></div>
+                <div className="scanner-marker tl"></div>
+                <div className="scanner-marker tr"></div>
+                <div className="scanner-marker bl"></div>
+                <div className="scanner-marker br"></div>
               </div>
 
-              <div className="controls">
+              <div className="scanner-controls">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -321,7 +320,7 @@ export default function Scanner() {
                   style={{ display: 'none' }}
                   id="qr-file-input"
                 />
-                <label htmlFor="qr-file-input" className="btn-secondary">
+                <label htmlFor="qr-file-input" className="scanner-btn-secondary">
                   Upload Image
                 </label>
               </div>
@@ -329,24 +328,24 @@ export default function Scanner() {
           )}
 
           {pageState === 'processing' && (
-            <div className="status-container fade-in">
-              <div className="spinner-minimal"></div>
-              <p className="message-text">Verifying...</p>
+            <div className="scanner-status-container scanner-fade-in">
+              <div className="scanner-spinner"></div>
+              <p className="scanner-message">Verifying...</p>
             </div>
           )}
 
           {pageState === 'success' && (
-            <div className="status-container fade-in">
-              <div className="success-check">
+            <div className="scanner-status-container scanner-fade-in">
+              <div className="scanner-success-check">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
               </div>
-              <h2 className="success-title">Confirmed</h2>
-              <p className="message-text">Attendance marked successfully.</p>
-              <div className="button-row">
-                <button onClick={scanAgain} className="btn-primary">Scan Next</button>
-                <button onClick={goBack} className="btn-text">Done</button>
+              <h2 className="scanner-success-title">Confirmed</h2>
+              <p className="scanner-message">Attendance marked successfully.</p>
+              <div className="scanner-btn-row">
+                <button onClick={scanAgain} className="scanner-btn-primary">Scan Next</button>
+                <button onClick={goBack} className="scanner-btn-text">Done</button>
               </div>
             </div>
           )}
