@@ -203,58 +203,6 @@
   border: none !important;
 }
 
-#reader__scan_region video {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  display: block !important;
-  border-radius: 16px !important;
-}
-
-/* Style the camera selector dashboard */
-#reader__dashboard_section {
-  position: absolute !important;
-  bottom: 8px !important;
-  left: 0 !important;
-  right: 0 !important;
-  background: rgba(0, 0, 0, 0.5) !important;
-  padding: 8px !important;
-  backdrop-filter: blur(8px);
-  border-radius: 0 0 16px 16px !important;
-}
-
-#reader__dashboard_section_csr {
-  text-align: center !important;
-}
-
-/* Hide unnecessary buttons from library */
-#reader__dashboard_section_csr button {
-  display: none !important;
-}
-
-/* Style the camera selector dropdown */
-#reader__dashboard_section_csr select {
-  background: #18181b !important;
-  color: #a1a1aa !important;
-  border: 1px solid #3f3f46 !important;
-  padding: 6px 12px !important;
-  border-radius: 8px !important;
-  font-size: 12px !important;
-  width: auto !important;
-  max-width: 200px !important;
-  cursor: pointer !important;
-}
-
-#reader__dashboard_section_csr select:focus {
-  outline: none !important;
-  border-color: #6366f1 !important;
-}
-
-/* Hide status span */
-#reader__status_span {
-  display: none !important;
-}
-
 /* Scan Overlay - Corners and Line */
 .scan-overlay {
   position: absolute;
