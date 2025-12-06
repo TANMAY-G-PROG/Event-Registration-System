@@ -1,6 +1,5 @@
 /* ===================================
-   TICKET PAGE - SOLARIS VINTAGE (HYBRID)
-   Vintage Ticket on Modern Gradient Background
+   TICKET PAGE - SOLARIS VINTAGE (COMPLETE)
    =================================== */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
@@ -24,12 +23,8 @@
   --gold-accent: #d4af37;  /* Vintage Gold (Organizer/Premium) */
   
   /* Structure */
-  --soft-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4); /* Darkened shadow for better contrast */
-  
-  /* UPDATED: Background Color Match */
-  /* This is used for the "notches" to simulate transparency. 
-     Matched to the dominant dark blue of the new background */
-  --bg-color: #00416A; 
+  --soft-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --bg-color: #e8e6df;
   
   /* Status Colors */
   --status-green: #2e7d32; 
@@ -38,7 +33,7 @@
   --status-blue: #1565c0;
 }
 
-/* === PAGE WRAPPER (UPDATED BACKGROUND) === */
+/* === PAGE WRAPPER === */
 .ticket-page-wrapper {
   height: 100vh;
   height: 100dvh; 
@@ -47,37 +42,12 @@
   align-items: center;
   justify-content: center;
   font-family: 'Montserrat', sans-serif;
-  
-  /* --- NEW GRADIENT BACKGROUND --- */
-  background: #00416A;
-  background: -webkit-linear-gradient(to right, #E4E5E6, #00416A);
-  background: linear-gradient(to right, #243B55, #00416A); /* Tweaked to be slightly darker for the vintage card */
-  
-  color: #ffffff;
+  background-color: var(--bg-color);
+  /* Noise Texture Background */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E");
   padding: 10px;
   box-sizing: border-box;
   overflow: hidden;
-  position: relative; /* Needed for the glow overlay */
-}
-
-/* === NEW BACKGROUND GLOW ANIMATION === */
-.ticket-page-wrapper .tk-background-glow {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle at 30% 20%, rgba(255, 107, 157, 0.15), transparent 50%),
-              radial-gradient(circle at 80% 80%, rgba(196, 113, 237, 0.15), transparent 50%),
-              radial-gradient(circle at 40% 40%, rgba(18, 194, 233, 0.1), transparent 50%);
-  animation: tk-backgroundShift 8s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-@keyframes tk-backgroundShift {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
 }
 
 /* === GLASSY NAVIGATION BUTTON === */
@@ -106,7 +76,6 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  z-index: 1; /* Ensure above glow */
 }
 
 .tk-ticket-card {
@@ -133,10 +102,10 @@
   position: absolute;
   top: -20px; left: 50%; transform: translateX(-50%);
   width: 60px; height: 40px;
-  background-color: var(--bg-color); /* Updated to Blue */
+  background-color: var(--bg-color);
   border-radius: 50%;
   z-index: 10;
-  box-shadow: inset 0 -3px 5px rgba(0,0,0,0.1);
+  box-shadow: inset 0 -3px 5px rgba(0,0,0,0.05);
 }
 
 /* === MAIN CONTENT (SCROLLABLE) === */
@@ -251,7 +220,7 @@
 
 /* === DIVIDER NOTCHES === */
 .tk-notch-container { position: relative; height: 20px; width: 100%; z-index: 10; flex-shrink: 0; }
-.tk-notch { position: absolute; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background-color: var(--bg-color); border-radius: 50%; box-shadow: inset 0 0 5px rgba(0,0,0,0.2); }
+.tk-notch { position: absolute; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background-color: var(--bg-color); border-radius: 50%; box-shadow: inset 0 0 5px rgba(0,0,0,0.05); }
 .tk-notch-left { left: -12px; } .tk-notch-right { right: -12px; }
 .tk-notch-container::after { content: ''; position: absolute; top: 50%; left: 15px; right: 15px; border-top: 2px dashed #d1cdc5; }
 
