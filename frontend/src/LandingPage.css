@@ -1,71 +1,140 @@
-"use client"
-import { motion } from "framer-motion"
-// Removed useNavigate import since the button handling navigation is gone
-import "./LandingPage.css"
-import Prism from './Prism';
-import { useEffect } from "react";
+@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
 
-const HeroGeometric = ({
-  title1 = "Welcome to",
-  title2 = "F l o",
-}) => {
-  // Removed navigation hook and handleEnter function
-
-  useEffect(() => {
-    document.body.style.margin = '0';
-    return () => {
-      document.body.style.margin = '';
-    };
-  }, []);
-
-  const fadeUpVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: (i) => ({
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 1,
-        delay: 0.5 + i * 0.2,
-        ease: [0.25, 0.4, 0.25, 1],
-      },
-    }),
-  }
-
-  return (
-    <div className="hero-geometric-container">
-      {/* Prism Background */}
-      <div className="hero-prism-background">
-        <Prism
-          animationType="rotate"
-          timeScale={0.5}
-          height={3.5}
-          baseWidth={5.5}
-          scale={3.6}
-          hueShift={0}
-          colorFrequency={1}
-          noise={0.5}
-          glow={1}
-        />
-      </div>
-      
-      {/* Content */}
-      <div className="hero-content-wrapper">
-        <div className="hero-content">
-          {/* Title */}
-          <motion.div custom={0} variants={fadeUpVariants} initial="hidden" animate="visible">
-            <h1 className="hero-title">
-              <span className="title-part-1">{title1}</span>
-              <br />
-              <span className="title-part-2">{title2}</span>
-            </h1>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Overlay gradient */}
-      <div className="hero-overlay" />
-    </div>
-  )
+.hero-geometric-container {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: #030303;
 }
 
-export default HeroGeometric
+/* New Prism Background Container */
+.hero-prism-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0; 
+}
+
+/* Content wrapper */
+.hero-content-wrapper {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+@media (min-width: 768px) {
+  .hero-content-wrapper {
+    padding: 0 1.5rem;
+  }
+}
+
+.hero-content {
+  max-width: 48rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* Badge */
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+  .hero-badge {
+    margin-bottom: 3rem;
+  }
+}
+
+.badge-text {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.05em;
+}
+
+/* Title */
+.hero-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+@media (min-width: 640px) {
+  .hero-title {
+    font-size: 3.75rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero-title {
+    font-size: 4.5rem;
+    margin-bottom: 2rem;
+  }
+}
+
+.title-part-1 {
+  background: linear-gradient(to bottom, white, rgba(255, 255, 255, 0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.title-part-2 {
+  background: linear-gradient(to right, rgb(165, 180, 252), rgba(255, 255, 255, 0.9), rgb(253, 164, 175));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-family: "Pacifico", cursive;
+  font-weight: 400;
+}
+
+/* Description */
+.hero-description {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 2rem;
+  line-height: 1.625;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 1rem;
+}
+
+@media (min-width: 640px) {
+  .hero-description {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero-description {
+    font-size: 1.25rem;
+  }
+}
+
+/* Overlay */
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #030303, transparent 50%, rgba(3, 3, 3, 0.8));
+  pointer-events: none;
+  z-index: 1; 
+}
