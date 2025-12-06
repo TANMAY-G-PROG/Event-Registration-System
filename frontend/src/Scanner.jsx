@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Scan, Upload, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import './Scanner.css'; // Ensures the design is applied
+import './Scanner.css';
 
 export default function Scanner() {
-  // ===========================================================================
-  // 🛑 LOGIC SECTION: UNTOUCHED (Exact copy of your original logic)
-  // ===========================================================================
+  // ---------------------------------------------------------------------------
+  // STATE & REFS
+  // ---------------------------------------------------------------------------
   const [pageState, setPageState] = useState('loading');
   const [errorMsg, setErrorMsg] = useState(null);
   const [lastResult, setLastResult] = useState('');
@@ -20,6 +20,9 @@ export default function Scanner() {
   const fileInputRef = useRef(null);
   const fileScannerRef = useRef(null);
 
+  // ---------------------------------------------------------------------------
+  // INITIALIZATION
+  // ---------------------------------------------------------------------------
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const role = urlParams.get('role');
@@ -35,9 +38,7 @@ export default function Scanner() {
       const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
       if (response.ok) {
         const data = await response.json();
@@ -49,11 +50,14 @@ export default function Scanner() {
       }
     } catch (err) {
       console.error('Error fetching user info:', err);
-      setErrorMsg('Failed to load user information. Please try again.');
+      setErrorMsg('Failed to load user information.');
       setPageState('error');
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // STATE MANAGEMENT
+  // ---------------------------------------------------------------------------
   useEffect(() => {
     if (pageState === 'loading' && userUSN && libraryLoaded) {
       console.log('🚀 Prerequisites met. Switching to scanning state.');
@@ -62,14 +66,17 @@ export default function Scanner() {
   }, [pageState, userUSN, libraryLoaded]);
 
   useEffect(() => {
+    let timer;
     if (pageState === 'scanning') {
-      const timer = setTimeout(() => initScanner(), 100);
-      return () => clearTimeout(timer);
+      // FIX: Increased delay to 500ms to allow Framer Motion animation to complete
+      // and added a retry check in initScanner
+      console.log('⏳ Waiting for DOM to mount...');
+      timer = setTimeout(() => initScanner(), 500); 
     }
     if (pageState !== 'scanning') {
       cleanupScanner();
     }
-    return () => cleanupScanner();
+    return () => clearTimeout(timer);
   }, [pageState]);
 
   const cleanupScanner = () => {
@@ -97,18 +104,33 @@ export default function Scanner() {
       setLibraryLoaded(true);
     };
     script.onerror = () => {
-      setErrorMsg('Failed to load QR scanner library. Please refresh the page.');
+      setErrorMsg('Failed to load QR scanner library.');
       setPageState('error');
     };
     document.head.appendChild(script);
   };
 
   const initScanner = () => {
-    if (!window.Html5QrcodeScanner || !scannerRef.current || html5QrcodeScannerRef.current) {
-      console.log('⚠️ Scanner not ready or already initialized');
+    // Debugging checks
+    if (!window.Html5QrcodeScanner) {
+      console.log('❌ Library not found');
       return;
     }
-    console.log('🎥 Initializing scanner');
+    if (html5QrcodeScannerRef.current) {
+      console.log('⚠️ Scanner already running');
+      return;
+    }
+    
+    // FIX: Explicitly check for the DOM element by ID if ref is missing
+    const element = document.getElementById('reader');
+    if (!element) {
+      console.log('⚠️ DOM element #reader not found yet. Retrying in 200ms...');
+      setTimeout(initScanner, 200); // Retry logic
+      return;
+    }
+
+    console.log('🎥 Initializing scanner on element:', element);
+    
     try {
       const scanner = new window.Html5QrcodeScanner(
         'reader',
@@ -119,7 +141,7 @@ export default function Scanner() {
           showTorchButtonIfSupported: true,
           rememberLastUsedCamera: true,
           videoConstraints: {
-            facingMode: { ideal: 'environment' },
+            facingMode: { ideal: 'environment' }, // Back camera preferred
           },
           supportedScanTypes: [0, 1],
           formatsToSupport: [0, 1],
@@ -129,11 +151,11 @@ export default function Scanner() {
       scanner.render(onScanSuccess, onScanError);
       html5QrcodeScannerRef.current = scanner;
       setIsScanning(true);
-      console.log('✅ Scanner rendered');
+      console.log('✅ Scanner started successfully');
     } catch (err) {
       console.error('Scanner initialization error:', err);
-      setErrorMsg('Failed to initialize scanner. Check camera permissions and try again.');
-      setPageState('error');
+      // Don't kill the page immediately, let it try to handle file uploads at least
+      setErrorMsg('Camera failed. You can still upload an image.');
     }
   };
 
@@ -151,7 +173,7 @@ export default function Scanner() {
       const eventId = decodedText.split(':')[1];
       await markAttendance(eventId);
     } else {
-      setErrorMsg('Invalid QR code format. Please scan the event QR code.');
+      setErrorMsg('Invalid QR code format.');
       setPageState('error');
     }
   };
@@ -160,11 +182,13 @@ export default function Scanner() {
     const file = event.target.files[0];
     if (!file) return;
     console.log('📁 File selected:', file.name);
+    
     if (!window.Html5Qrcode) {
-      setErrorMsg('QR scanner library not loaded. Please refresh and try again.');
-      setPageState('error');
-      return;
+        // Fallback if library didn't load for camera but might work for file
+        setErrorMsg('Library not ready.');
+        return;
     }
+
     try {
       if (!fileScannerRef.current) {
         fileScannerRef.current = new window.Html5Qrcode('file-reader');
@@ -174,7 +198,7 @@ export default function Scanner() {
       await onScanSuccess(decodedText);
     } catch (err) {
       console.error('File scan error:', err);
-      setErrorMsg('Could not read QR code from image. Please try another image.');
+      setErrorMsg('Could not read QR code from image.');
       setPageState('error');
     } finally {
       if (fileInputRef.current) {
@@ -185,56 +209,41 @@ export default function Scanner() {
 
   const markAttendance = async (eventId) => {
     if (!userUSN || !userRole) {
-      setErrorMsg('User session error. Please sign in again.');
+      setErrorMsg('User session error. Sign in again.');
       setPageState('error');
       return;
     }
-    console.log(`🎯 Marking attendance - Role: ${userRole}, USN: ${userUSN}, Event: ${eventId}`);
     try {
       const endpoint = userRole === 'volunteer' ? '/api/mark-volunteer-attendance' : '/api/mark-participant-attendance';
-      console.log(`📡 Calling endpoint: ${endpoint}`);
       const response = await fetch(endpoint, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          eventId: eventId,
-          usn: userUSN,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: eventId, usn: userUSN }),
       });
       const data = await response.json();
-      console.log('📥 Response:', data);
       if (response.ok && data.success) {
         setPageState('success');
         setErrorMsg(null);
-        console.log(`✅ ${userRole} attendance marked successfully`);
       } else {
         setErrorMsg(data.error || 'Failed to mark attendance');
         setPageState('error');
       }
     } catch (err) {
-      console.error('Error marking attendance:', err);
       setErrorMsg('Network error. Please try again.');
       setPageState('error');
     }
   };
 
   const onScanError = (errorMessage) => {
-    if (errorMessage.includes('NotFoundException') || errorMessage.includes('No MultiFormat Readers')) {
-      return;
-    }
-    console.log(`Scan error: ${errorMessage}`);
+    // Ignore common scan errors to keep console clean
+    if (errorMessage.includes('NotFoundException') || errorMessage.includes('No MultiFormat Readers')) return;
   };
 
   const scanAgain = () => {
-    console.log('🔄 Restarting scanner');
     setLastResult('');
     setErrorMsg(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setPageState('scanning');
   };
 
@@ -249,17 +258,14 @@ export default function Scanner() {
     window.history.back();
   };
 
-  // ===========================================================================
-  // 🎨 UI SECTION: New Award-Winning Design
-  // ===========================================================================
+  // ---------------------------------------------------------------------------
+  // UI RENDER
+  // ---------------------------------------------------------------------------
 
   return (
     <div className="scanner-page">
-      {/* Background Ambience */}
       <div className="ambient-orb orb-1" />
       <div className="ambient-orb orb-2" />
-
-      {/* Logic Requirement: Hidden container for file reading */}
       <div id="file-reader" style={{ display: 'none' }} />
 
       <motion.div 
@@ -270,7 +276,6 @@ export default function Scanner() {
       >
         <div className="glass-card">
           
-          {/* Header */}
           <div className="scanner-header">
             <motion.div 
               initial={{ scale: 0.8, opacity: 0 }}
@@ -291,7 +296,7 @@ export default function Scanner() {
           <div className="scanner-content">
             <AnimatePresence mode="wait">
               
-              {/* STATE: LOADING */}
+              {/* LOADING */}
               {pageState === 'loading' && (
                 <motion.div 
                   key="loading"
@@ -307,7 +312,7 @@ export default function Scanner() {
                 </motion.div>
               )}
 
-              {/* STATE: SCANNING */}
+              {/* SCANNING */}
               {(pageState === 'scanning' || pageState === 'processing') && (
                 <motion.div
                   key="scanning"
@@ -316,19 +321,16 @@ export default function Scanner() {
                   exit={{ opacity: 0 }}
                   className="scan-wrapper"
                 >
-                  {/* Camera Frame */}
                   <div className="camera-frame">
-                    <div id="reader" ref={scannerRef} className="camera-view" />
+                    {/* The critical div for camera */}
+                    <div id="reader" className="camera-view" />
                     
-                    {/* Visual Overlay */}
                     {isScanning && (
                       <div className="scan-overlay">
                         <div className="corner tl" />
                         <div className="corner tr" />
                         <div className="corner bl" />
                         <div className="corner br" />
-                        
-                        {/* Scanning Line Animation */}
                         <motion.div 
                           className="scan-line"
                           animate={{ top: ['10%', '90%', '10%'] }}
@@ -337,7 +339,6 @@ export default function Scanner() {
                       </div>
                     )}
 
-                    {/* Processing Overlay */}
                     {pageState === 'processing' && (
                         <div className="processing-overlay">
                             <Loader2 className="spinner-icon small" />
@@ -349,7 +350,6 @@ export default function Scanner() {
                   <p className="instruction-text">Align QR code within the frame</p>
 
                   <div className="action-grid">
-                      {/* File Upload Button */}
                       <input
                           ref={fileInputRef}
                           type="file"
@@ -361,8 +361,6 @@ export default function Scanner() {
                       <label htmlFor="qr-file-input" className="btn-secondary">
                           <Upload className="btn-icon" /> Upload Image
                       </label>
-
-                       {/* Cancel Button */}
                       <button onClick={goBack} className="btn-secondary">
                           <ArrowLeft className="btn-icon" /> Cancel
                       </button>
@@ -370,7 +368,7 @@ export default function Scanner() {
                 </motion.div>
               )}
 
-              {/* STATE: SUCCESS */}
+              {/* SUCCESS */}
               {pageState === 'success' && (
                 <motion.div
                   key="success"
@@ -404,7 +402,7 @@ export default function Scanner() {
                 </motion.div>
               )}
 
-              {/* STATE: ERROR */}
+              {/* ERROR */}
               {pageState === 'error' && (
                 <motion.div
                   key="error"
@@ -433,19 +431,12 @@ export default function Scanner() {
             </AnimatePresence>
           </div>
         </div>
-
-        <p className="footer-text">
-          Secured Attendance System
-        </p>
+        <p className="footer-text">Secured Attendance System</p>
       </motion.div>
 
-      {/* Global Style Overrides for html5-qrcode library specific elements */}
       <style>{`
-        /* Hide the library's default UI elements */
         #reader__dashboard_section_csr button { display: none !important; }
         #reader__status_span { display: none !important; }
-
-        /* Style the camera selection dropdown if it appears */
         #reader__dashboard_section_csr select {
             background: #18181b;
             color: #a1a1aa;
@@ -460,4 +451,3 @@ export default function Scanner() {
     </div>
   );
 }
-
