@@ -1,6 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Scan, Upload, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Loader2, Camera } from 'lucide-react';
 
 export default function Scanner() {
+  // ---------------------------------------------------------------------------
+  // LOGIC SECTION: EXACTLY AS PROVIDED (NO CHANGES)
+  // ---------------------------------------------------------------------------
   const [pageState, setPageState] = useState('loading');
   const [errorMsg, setErrorMsg] = useState(null);
   const [lastResult, setLastResult] = useState('');
@@ -134,15 +139,15 @@ export default function Scanner() {
   const onScanSuccess = async (decodedText) => {
     // Prevent multiple scans while processing
     if (pageState !== 'scanning') return;
-    
+   
     console.log(`✅ QR Code detected: ${decodedText}`);
     setIsScanning(false);
     setPageState('processing'); // Temporary state to prevent duplicate scans
     setLastResult(decodedText);
-    
+   
     // Stop scanner immediately
     cleanupScanner();
-    
+   
     if (decodedText.startsWith('eventId:')) {
       const eventId = decodedText.split(':')[1];
       await markAttendance(eventId);
@@ -245,407 +250,259 @@ export default function Scanner() {
     window.history.back();
   };
 
+  // ---------------------------------------------------------------------------
+  // UI SECTION: COMPLETELY REDESIGNED (VERCEL / STRIPE AESTHETIC)
+  // ---------------------------------------------------------------------------
+
   return (
-    <div className="scanner-container">
+    <div className="min-h-screen bg-zinc-950 text-zinc-200 font-sans selection:bg-indigo-500/30 flex items-center justify-center p-4 sm:p-6 overflow-hidden relative">
+      {/* Abstract Background Gradients */}
+      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-900/20 rounded-full blur-[128px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-blue-900/10 rounded-full blur-[128px] pointer-events-none" />
+
+      {/* Hidden container for file reading (Logic Requirement) */}
       <div id="file-reader" style={{ display: 'none' }} />
-      <div className="scanner-card">
-        <div className="scanner-header">
-          <div className="scanner-icon">📱</div>
-          <h1 className="scanner-title">Mark Attendance</h1>
-          <p className="scanner-subtitle">
-            {userRole === 'volunteer' ? '🤝 Volunteer' : '🎫 Participant'} - Scan event QR code
-          </p>
-          {userUSN && (
-            <p className="scanner-usn">
-              USN: {userUSN}
-            </p>
-          )}
-        </div>
-        {pageState === 'loading' && (
-          <div className="status-box loading-box fade-in">
-            <div className="status-icon">⏳</div>
-            <p>Loading user data...</p>
-          </div>
-        )}
-        {pageState === 'error' && (
-          <div className="status-box error-box fade-in">
-            <div className="status-icon">⚠️</div>
-            <p className="error-message">{errorMsg}</p>
-            <div className="button-group">
-              <button onClick={restartScanner} className="btn btn-danger">
-                Try Again
-              </button>
-              <button onClick={goBack} className="btn btn-secondary">
-                Go Back
-              </button>
+
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="w-full max-w-md relative z-10"
+      >
+        {/* Main Glass Card */}
+        <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/5 rounded-3xl shadow-2xl shadow-black/50 overflow-hidden ring-1 ring-white/10">
+          
+          {/* Header */}
+          <div className="px-6 pt-8 pb-2 text-center">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-blue-500/20 border border-indigo-500/30 mb-4 shadow-lg shadow-indigo-500/10"
+            >
+              <Scan className="w-6 h-6 text-indigo-400" />
+            </motion.div>
+            <h1 className="text-xl font-semibold text-white tracking-tight">Mark Attendance</h1>
+            <div className="flex items-center justify-center gap-2 mt-2">
+                <span className={`px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider rounded-full border ${userRole === 'volunteer' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
+                    {userRole === 'volunteer' ? 'Volunteer' : 'Participant'}
+                </span>
+                {userUSN && <span className="text-xs text-zinc-500 font-mono">{userUSN}</span>}
             </div>
           </div>
-        )}
-        {pageState === 'scanning' && (
-          <div className="scanner-main fade-in">
-            <div className="scanner-video-container">
-              <div id="reader" ref={scannerRef}></div>
-              {isScanning && (
-                <div className="scanner-status-badge">
-                  🔍 Scanning...
-                </div>
+
+          <div className="p-6 min-h-[400px] flex flex-col justify-center">
+            <AnimatePresence mode="wait">
+              
+              {/* STATE: LOADING */}
+              {pageState === 'loading' && (
+                <motion.div 
+                  key="loading"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col items-center justify-center space-y-4 py-12"
+                >
+                  <div className="relative">
+                    <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+                  </div>
+                  <p className="text-zinc-400 text-sm animate-pulse">Authenticating...</p>
+                </motion.div>
               )}
-            </div>
-            <div className="file-upload-box">
-              <p>Or upload QR code image</p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                style={{ display: 'none' }}
-                id="qr-file-input"
-              />
-              <label htmlFor="qr-file-input" className="btn btn-primary">
-                📁 Choose Image File
-              </label>
-            </div>
-            <div className="instructions-box">
-              <div className="instructions-title">📋 Instructions:</div>
-              <ul>
-                <li>Scan the <strong>organizer's QR code</strong> using camera</li>
-                <li>Or upload a screenshot/photo of the QR code</li>
-                <li>Your attendance will be automatically marked</li>
-                <li>Make sure you are registered for the event</li>
-              </ul>
-            </div>
+
+              {/* STATE: SCANNING */}
+              {(pageState === 'scanning' || pageState === 'processing') && (
+                <motion.div
+                  key="scanning"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col gap-6"
+                >
+                  {/* Camera Frame */}
+                  <div className="relative group rounded-2xl overflow-hidden bg-black border border-white/10 aspect-square shadow-inner">
+                    
+                    {/* The HTML5QRcode div - logic controlled */}
+                    <div id="reader" ref={scannerRef} className="w-full h-full object-cover [&>video]:object-cover" />
+                    
+                    {/* Visual Overlay (No Logic) */}
+                    {isScanning && (
+                      <div className="absolute inset-0 pointer-events-none z-20">
+                         {/* Corners */}
+                        <div className="absolute top-4 left-4 w-8 h-8 border-l-2 border-t-2 border-indigo-500 rounded-tl-lg" />
+                        <div className="absolute top-4 right-4 w-8 h-8 border-r-2 border-t-2 border-indigo-500 rounded-tr-lg" />
+                        <div className="absolute bottom-4 left-4 w-8 h-8 border-l-2 border-b-2 border-indigo-500 rounded-bl-lg" />
+                        <div className="absolute bottom-4 right-4 w-8 h-8 border-r-2 border-b-2 border-indigo-500 rounded-br-lg" />
+                        
+                        {/* Scanning Line Animation */}
+                        <motion.div 
+                          className="absolute left-4 right-4 h-[2px] bg-gradient-to-r from-transparent via-indigo-400 to-transparent shadow-[0_0_15px_rgba(99,102,241,0.6)]"
+                          animate={{ top: ['10%', '90%', '10%'] }}
+                          transition={{ duration: 3, ease: "linear", repeat: Infinity }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Processing Overlay */}
+                    {pageState === 'processing' && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 flex items-center justify-center">
+                            <div className="flex flex-col items-center">
+                                <Loader2 className="w-8 h-8 text-white animate-spin mb-2" />
+                                <span className="text-sm font-medium text-white">Verifying...</span>
+                            </div>
+                        </div>
+                    )}
+                  </div>
+
+                  {/* Manual Actions */}
+                  <div className="flex flex-col gap-3">
+                    <p className="text-center text-xs text-zinc-500 mb-1">
+                      Align QR code within the frame
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                        {/* File Upload Button */}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileUpload}
+                            style={{ display: 'none' }}
+                            id="qr-file-input"
+                        />
+                        <label 
+                            htmlFor="qr-file-input"
+                            className="cursor-pointer flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-sm font-medium text-zinc-300 group"
+                        >
+                            <Upload className="w-4 h-4 text-zinc-400 group-hover:text-indigo-400 transition-colors" />
+                            Upload Image
+                        </label>
+
+                         {/* Go Back Button (Secondary) */}
+                        <button 
+                            onClick={goBack} 
+                            className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-sm font-medium text-zinc-300"
+                        >
+                            <ArrowLeft className="w-4 h-4 text-zinc-400" />
+                            Cancel
+                        </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STATE: SUCCESS */}
+              {pageState === 'success' && (
+                <motion.div
+                  key="success"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex flex-col items-center text-center py-6"
+                >
+                  <motion.div 
+                    initial={{ scale: 0 }} 
+                    animate={{ scale: 1 }} 
+                    transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                    className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6 border border-emerald-500/20"
+                  >
+                    <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+                  </motion.div>
+                  
+                  <h2 className="text-2xl font-bold text-white mb-2">Verified</h2>
+                  <p className="text-zinc-400 text-sm mb-8 px-4">
+                    Attendance recorded successfully for<br/>
+                    <span className="text-zinc-200 font-medium">Event ID: {lastResult.replace('eventId:', '')}</span>
+                  </p>
+
+                  <div className="w-full space-y-3">
+                    <button 
+                        onClick={scanAgain}
+                        className="w-full py-3 px-4 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2"
+                    >
+                        <Scan className="w-4 h-4" />
+                        Scan Another
+                    </button>
+                    <button 
+                        onClick={goBack}
+                        className="w-full py-3 px-4 bg-transparent text-zinc-400 font-medium rounded-xl hover:text-white transition-colors"
+                    >
+                        Back to Dashboard
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STATE: ERROR */}
+              {pageState === 'error' && (
+                <motion.div
+                  key="error"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex flex-col items-center text-center py-6"
+                >
+                  <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20">
+                    <AlertCircle className="w-10 h-10 text-red-500" />
+                  </div>
+                  
+                  <h2 className="text-xl font-bold text-white mb-2">Scan Failed</h2>
+                  <p className="text-zinc-400 text-sm mb-8 px-4 leading-relaxed">
+                    {errorMsg}
+                  </p>
+
+                  <div className="w-full grid grid-cols-2 gap-3">
+                    <button 
+                        onClick={goBack}
+                        className="w-full py-3 px-4 bg-white/5 border border-white/10 text-zinc-300 font-medium rounded-xl hover:bg-white/10 transition-colors"
+                    >
+                        Exit
+                    </button>
+                    <button 
+                        onClick={restartScanner}
+                        className="w-full py-3 px-4 bg-red-600/90 hover:bg-red-600 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        Retry
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+            </AnimatePresence>
           </div>
-        )}
-        {pageState === 'success' && (
-          <div className="status-box success-box fade-in">
-            <div className="status-icon">✅</div>
-            <h2 className="success-title">
-              {userRole === 'volunteer' ? 'Volunteer' : 'Participant'} Attendance Marked!
-            </h2>
-            <p className="success-message">
-              Your attendance has been successfully recorded as a {userRole}.
-            </p>
-            <div className="button-group">
-              <button onClick={goBack} className="btn btn-success-light">
-                ← Back to Event
-              </button>
-              <button onClick={scanAgain} className="btn btn-success-dark">
-                🔄 Scan Another Event
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+
+        {/* Footer info */}
+        <p className="text-center text-[10px] text-zinc-600 mt-6 font-medium tracking-wide uppercase">
+          Secured Attendance System
+        </p>
+      </motion.div>
+
+      {/* Global Style Overrides for html5-qrcode library specific elements */}
       <style>{`
-        :root {
-          --background-gradient: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-          --card-background: rgba(255, 255, 255, 0.95);
-          --card-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-          --primary-gradient: linear-gradient(45deg, #667eea, #764ba2);
-          --primary-color: #667eea;
-          --primary-color-dark: #5a6acf;
-          --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-          --success-color-dark: #00b8d4;
-          --danger-color: #d32f2f;
-          --danger-background: rgba(255, 107, 107, 0.1);
-          --danger-border: rgba(255, 107, 107, 0.3);
-          --secondary-color: #6c757d;
-          --secondary-background: rgba(108, 117, 125, 0.1);
-          --text-primary: #2c3e50;
-          --text-secondary: #7f8c8d;
-          --text-light: #5a6c7d;
-          --text-instructions: #495057;
-          --border-radius-lg: 24px;
-          --border-radius-md: 16px;
-          --border-radius-sm: 12px;
+        /* Hide the library's default stop/start buttons as we control them via state */
+        #reader__dashboard_section_csr button { display: none !important; }
+        
+        /* Hide the status text generated by the lib */
+        #reader__status_span { display: none !important; }
+
+        /* Force video to cover area */
+        #reader video { 
+            object-fit: cover; 
+            border-radius: 1rem;
+            width: 100% !important;
+            height: 100% !important;
         }
-        .scanner-container {
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-          background: var(--background-gradient);
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          box-sizing: border-box;
-        }
-        .scanner-card {
-          background: var(--card-background);
-          backdrop-filter: blur(10px);
-          border-radius: var(--border-radius-lg);
-          padding: 32px;
-          box-shadow: var(--card-shadow);
-          max-width: 500px;
-          width: 100%;
-          text-align: center;
-          box-sizing: border-box;
-        }
-        .scanner-header {
-          margin-bottom: 32px;
-        }
-        .scanner-icon {
-          font-size: 48px;
-          margin-bottom: 16px;
-          background: var(--primary-gradient);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        .scanner-title {
-          color: var(--text-primary);
-          font-size: 28px;
-          font-weight: 700;
-          margin: 0 0 8px 0;
-        }
-        .scanner-subtitle {
-          color: var(--text-secondary);
-          font-size: 16px;
-          margin: 0;
-        }
-        .scanner-usn {
-          color: var(--text-light);
-          font-size: 14px;
-          margin-top: 8px;
-          font-weight: 600;
-        }
-        .fade-in {
-          animation: fadeIn 0.5s ease;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .status-box {
-          border-radius: var(--border-radius-sm);
-          padding: 24px;
-          margin: 24px 0;
-        }
-        .status-icon {
-          font-size: 48px;
-          margin-bottom: 16px;
-        }
-        .loading-box {
-          background: rgba(102, 126, 234, 0.1);
-          border: 2px solid rgba(102, 126, 234, 0.3);
-          color: var(--primary-color);
-          font-weight: 600;
-        }
-        .error-box {
-          background: var(--danger-background);
-          border: 2px solid var(--danger-border);
-          color: var(--danger-color);
-        }
-        .error-message {
-          margin: 0 0 16px 0;
-          font-size: 14px;
-          font-weight: 600;
-          line-height: 1.5;
-        }
-        .success-box {
-          background: var(--success-gradient);
-          color: white;
-          padding: 32px 24px;
-          border-radius: var(--border-radius-md);
-        }
-        .success-title {
-          font-size: 22px;
-          font-weight: 700;
-          margin: 0 0 8px 0;
-        }
-        .success-message {
-          font-size: 14px;
-          margin: 0 0 24px 0;
-          opacity: 0.9;
-        }
-        .button-group {
-          display: flex;
-          gap: 12px;
-          justify-content: center;
-          flex-wrap: wrap;
-          margin-top: 16px;
-        }
-        .btn {
-          border: none;
-          border-radius: 12px;
-          padding: 10px 20px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          font-size: 14px;
-          text-decoration: none;
-          display: inline-block;
-        }
-        .btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-        }
-        .btn-primary {
-          background: var(--primary-gradient);
-          color: white;
-        }
-        .btn-danger {
-          background: var(--danger-color);
-          color: white;
-        }
-        .btn-danger:hover {
-          box-shadow: 0 8px 20px rgba(211, 47, 47, 0.3);
-        }
-        .btn-secondary {
-          background: var(--secondary-color);
-          color: white;
-        }
-        .btn-secondary:hover {
-          box-shadow: 0 8px 20px rgba(108, 117, 125, 0.3);
-        }
-        .btn-success-light {
-          background: rgba(255, 255, 255, 0.9);
-          color: var(--primary-color);
-          border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-        .btn-success-light:hover {
-          background: white;
-          box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
-        }
-        .btn-success-dark {
-          background: rgba(255, 255, 255, 0.2);
-          color: white;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-        .btn-success-dark:hover {
-          background: rgba(255, 255, 255, 0.3);
-          box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
-        }
-        .scanner-main {
-          margin-top: 24px;
-        }
-        .scanner-video-container {
-          position: relative;
-          border-radius: var(--border-radius-md);
-          overflow: hidden;
-          background: #000;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-        #reader {
-          width: 100%;
-          min-height: 300px;
-          border-radius: var(--border-radius-md);
-        }
-        .scanner-status-badge {
-          position: absolute;
-          top: 16px;
-          right: 16px;
-          background: rgba(76, 175, 80, 0.9);
-          color: white;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
-          animation: pulse 2s infinite;
-          z-index: 1000;
-        }
-        .file-upload-box {
-          margin: 24px 0;
-          padding: 16px;
-          background: rgba(102, 126, 234, 0.05);
-          border-radius: var(--border-radius-sm);
-          border: 2px dashed rgba(102, 126, 234, 0.3);
-        }
-        .file-upload-box p {
-          margin: 0 0 12px 0;
-          color: var(--primary-color);
-          font-weight: 600;
-          font-size: 14px;
-        }
-        .file-upload-box label {
-          word-wrap: break-word;
-          white-space: normal;
-          max-width: 100%;
-          display: inline-block;
-        }
-        .instructions-box {
-          background: var(--secondary-background);
-          border-radius: var(--border-radius-sm);
-          padding: 16px;
-          color: var(--text-secondary);
-          font-size: 14px;
-          line-height: 1.7;
-          text-align: left;
-        }
-        .instructions-title {
-          font-weight: 600;
-          margin-bottom: 8px;
-          color: var(--text-instructions);
-        }
-        .instructions-box ul {
-          margin: 0;
-          padding-left: 20px;
-        }
-        #reader video {
-          border-radius: 16px !important;
-          width: 100% !important;
-          max-width: 100% !important;
-        }
-        #reader__dashboard_section {
-          background: rgba(255, 255, 255, 0.95) !important;
-          backdrop-filter: blur(10px) !important;
-          border-radius: 0 0 16px 16px !important;
-          padding: 16px !important;
-        }
-        #reader__dashboard_section button {
-          background: var(--primary-gradient) !important;
-          border: none !important;
-          border-radius: 12px !important;
-          color: white !important;
-          font-weight: 600 !important;
-          padding: 12px 24px !important;
-          margin: 4px !important;
-          transition: all 0.3s ease !important;
-          cursor: pointer !important;
-        }
-        #reader__dashboard_section button:hover {
-          transform: translateY(-2px) !important;
-          box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4) !important;
-        }
-        #reader__dashboard_section select {
-          border: 2px solid #e9ecef !important;
-          border-radius: 8px !important;
-          padding: 8px 12px !important;
-          font-size: 14px !important;
-          background: white !important;
-          width: 100% !important;
-          max-width: 100% !important;
-        }
-        #reader__scan_region {
-          border-radius: 16px !important;
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-        @media (max-width: 600px) {
-          .scanner-card {
-            padding: 24px 16px;
-          }
-          .scanner-title {
-            font-size: 24px;
-          }
-          .scanner-icon {
-            font-size: 40px;
-          }
-          .btn {
-            font-size: 13px;
-            padding: 10px 16px;
-          }
-          .file-upload-box {
-            padding: 12px;
-          }
-          .button-group {
-            flex-direction: column;
+
+        /* Style the camera selection dropdown if it appears */
+        #reader__dashboard_section_csr select {
+            background: #18181b;
+            color: #a1a1aa;
+            border: 1px solid #27272a;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-bottom: 10px;
             width: 100%;
-          }
-          .button-group .btn {
-            width: 100%;
-          }
+            outline: none;
         }
       `}</style>
     </div>
