@@ -4,7 +4,6 @@ import './style.css';
 
 export default function Login() {
   const navigate = useNavigate();
-  // isActive = false (Sign In), isActive = true (Sign Up)
   const [isActive, setIsActive] = useState(false);
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
   const [showPassword, setShowPassword] = useState({ signIn: false, signUp: false });
@@ -15,7 +14,7 @@ export default function Login() {
     name: '', usn: '', sem: '', mobno: '', email: '', password: '' 
   });
 
-  // --- API & LOGIC (Untouched) ---
+  // --- API & LOGIC (Kept EXACTLY as your deployed code) ---
   useEffect(() => { checkAuthStatus(); }, []);
   useEffect(() => { 
     if (message.show) { 
@@ -87,9 +86,9 @@ export default function Login() {
     <div className="login-page">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
       
-      {/* 1. TOP NAV BUTTONS (Fixed Top Right) */}
+      {/* Top Nav Buttons (Positioned by CSS: Desktop vs Mobile) */}
       <div className="top-nav-buttons">
-        <button className="nav-bubble-btn" onClick={handleAboutUsClick}>
+        <button className="button" onClick={handleAboutUsClick}>
           <div className="bubble-layer bubble-1"></div>
           <div className="bubble-layer bubble-2"></div>
           <div className="bubble-layer bubble-3"></div>
@@ -99,7 +98,7 @@ export default function Login() {
           <div className="bubble-layer bubble-7"></div>
           <span>About Us</span>
         </button>
-        <button className="nav-bubble-btn" onClick={handleContactUsClick}>
+        <button className="button" onClick={handleContactUsClick}>
           <div className="bubble-layer bubble-1"></div>
           <div className="bubble-layer bubble-2"></div>
           <div className="bubble-layer bubble-3"></div>
@@ -115,18 +114,18 @@ export default function Login() {
         <div className={`message ${message.isError ? 'error' : 'success'}`}>{message.text}</div>
       )}
 
-      {/* 2. HERO SECTION (Mobile Only) */}
+      {/* --- MOBILE HERO SECTION (Hidden on Desktop) --- */}
       <div className="mobile-hero">
         <h1>FLO.</h1>
         <div className="line"></div>
         <p>The Pulse of Campus</p>
       </div>
 
-      {/* 3. MAIN CONTAINER (Sheet on Mobile / Card on Desktop) */}
+      {/* --- MAIN CONTAINER --- */}
       <div className={`container ${isActive ? 'active' : ''}`} id="container">
         
-        {/* MOBILE SHEET HEADER (Hidden on Desktop) */}
-        <div className="mobile-sheet-header" style={{ display: window.innerWidth > 768 ? 'none' : 'flex' }}>
+        {/* --- MOBILE HEADER & TOGGLE (Hidden on Desktop) --- */}
+        <div className="mobile-sheet-header">
           <h2>{isActive ? 'New Account' : 'Welcome Back'}</h2>
           <button className="mobile-switch-btn" onClick={() => setIsActive(!isActive)}>
             {isActive ? 'Log In Instead' : 'Create Account'}
@@ -137,7 +136,6 @@ export default function Login() {
         <div className="form-container sign-up">
           <form onKeyPress={handleKeyPress}>
             <h1>Create Account</h1>
-            {/* Removed H1 on mobile via CSS, Header used instead */}
             <input type="text" name="name" placeholder="Name" value={signUpData.name} onChange={handleSignUpChange} />
             <input type="text" name="usn" placeholder="USN" value={signUpData.usn} onChange={handleSignUpChange} />
             <input type="number" name="sem" placeholder="Semester" value={signUpData.sem} onChange={handleSignUpChange} />
@@ -188,4 +186,4 @@ export default function Login() {
       </div>
     </div>
   );
-}
+}s
