@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './style.css';
+import './Login.css';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -259,3 +259,4 @@ const MobileInput = ({ label, name, value, onChange, placeholder, half, type = "
       </div>
     );
 };
+
