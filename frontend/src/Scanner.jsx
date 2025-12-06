@@ -135,7 +135,7 @@ export default function Scanner() {
   const onScanSuccess = async (decodedText) => {
     if (pageState !== 'scanning') return;
 
-    console.log(`✅ QR Code detected: ${decodedText}`);
+    console.log('✅ QR Code detected:', decodedText);
     setIsScanning(false);
     setPageState('processing');
     setLastResult(decodedText);
@@ -187,14 +187,14 @@ export default function Scanner() {
       return;
     }
 
-    console.log(`🎯 Marking attendance - Role: ${userRole}, USN: ${userUSN}, Event: ${eventId}`);
+    console.log('🎯 Marking attendance - Role:', userRole, 'USN:', userUSN, 'Event:', eventId);
 
     try {
       const endpoint = userRole === 'volunteer'
         ? '/api/mark-volunteer-attendance'
         : '/api/mark-participant-attendance';
 
-      console.log(`📡 Calling endpoint: ${endpoint}`);
+      console.log('📡 Calling endpoint:', endpoint);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -209,7 +209,7 @@ export default function Scanner() {
       if (response.ok && data.success) {
         setPageState('success');
         setErrorMsg(null);
-        console.log(`✅ ${userRole} attendance marked successfully`);
+        console.log('✅', userRole, 'attendance marked successfully');
       } else {
         setErrorMsg(data.error || 'Failed to mark attendance');
         setPageState('error');
@@ -225,7 +225,7 @@ export default function Scanner() {
     if (errorMessage.includes('NotFoundException') || errorMessage.includes('No MultiFormat Readers')) {
       return;
     }
-    console.log(`Scan error: ${errorMessage}`);
+    console.log('Scan error:', errorMessage);
   };
 
   const scanAgain = () => {
