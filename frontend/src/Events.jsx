@@ -412,11 +412,11 @@ export default function Events() {
 
       <section className="cards">
         
-        {/* Card 1: Participants - ImageKit Optimized */}
+        {/* Card 1: Participants Title -> Uses VOLUNTEERS Image */}
         <article className="card card--1" onClick={() => navigate('/participants')}>
           <div className="card__img">
             <img 
-              src="https://ik.imagekit.io/flopass/participants.png?tr=w-400,h-300,fo-auto" 
+              src="https://ik.imagekit.io/flopass/volunteers.png?tr=w-800,h-600,fo-auto" 
               alt="Participants"
               style={imgStyle}
               loading="lazy"
@@ -431,11 +431,11 @@ export default function Events() {
           </div>
         </article>
 
-        {/* Card 2: Organisers - ImageKit Optimized */}
+        {/* Card 2: Organisers -> Unchanged */}
         <article className="card card--2" onClick={() => navigate('/organisers')}>
           <div className="card__img">
             <img 
-              src="https://ik.imagekit.io/flopass/organisers.png?tr=w-400,h-300,fo-auto" 
+              src="https://ik.imagekit.io/flopass/organisers.png?tr=w-800,h-600,fo-auto" 
               alt="Organisers"
               style={imgStyle}
               loading="lazy"
@@ -450,11 +450,11 @@ export default function Events() {
           </div>
         </article>
 
-        {/* Card 3: Volunteers - ImageKit Optimized */}
+        {/* Card 3: Volunteers Title -> Uses PARTICIPANTS Image */}
         <article className="card card--3" onClick={() => navigate('/volunteers')}>
           <div className="card__img">
             <img 
-              src="https://ik.imagekit.io/flopass/volunteers.png?tr=w-400,h-300,fo-auto" 
+              src="https://ik.imagekit.io/flopass/participants.png?tr=w-800,h-600,fo-auto" 
               alt="Volunteers"
               style={imgStyle}
               loading="lazy"
