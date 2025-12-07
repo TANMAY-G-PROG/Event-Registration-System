@@ -1,5 +1,4 @@
 @import url('https://fonts.googleapis.com/css?family=Roboto+Slab:100,300,400,700');
-/* NEW FONT: Outfit */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 @property --angle-1 {
@@ -21,7 +20,7 @@
 
 .events-wrapper {
   box-sizing: border-box;
-  font-family: 'Outfit', sans-serif; /* Applied new font */
+  font-family: 'Outfit', sans-serif;
   margin: 0;
   padding: 0;
   min-height: 100vh;
@@ -213,9 +212,11 @@
   overflow: hidden;
   box-shadow: 0px 15px 30px rgba(0, 0, 0, 0.3);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0, 1);
-  backdrop-filter: blur(10px);
+  /* REMOVED backdrop-filter to prevent scaling artifacts */
   pointer-events: auto;
   cursor: pointer;
+  
+  /* --- HARDWARE ACCELERATION FIX FOR PARENT --- */
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   transform: translateZ(0);
@@ -235,10 +236,19 @@
   border-top-right-radius: 16px;
   position: relative;
   overflow: hidden;
-  /* Removed padding so image fills the edge completely */
   padding: 0;
   margin: 0;
-  background: #f8fafc;
+}
+
+/* --- NEW: IMAGE CLARITY FIX --- */
+.events-wrapper .card__img img {
+  /* This prevents the image from getting blurry during the scale transform */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  image-rendering: -webkit-optimize-contrast; /* Sharpens image on WebKit */
+  will-change: transform;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0, 1);
 }
 
 .events-wrapper .card__img--hover {
@@ -266,17 +276,15 @@
   transition: background-color 0.3s ease;
 }
 
-/* Ensure background stays opaque on hover so black text is readable */
 .events-wrapper .card:hover .card__info {
-  background-color: rgba(255, 255, 255, 0.98); 
+  background-color: rgba(255, 255, 255, 0.98);
 }
 
-/* --- TEXT STYLING --- */
 .events-wrapper .card__title {
-  font-family: 'Outfit', sans-serif; /* Premium Font */
+  font-family: 'Outfit', sans-serif;
   font-size: 1.35rem;
   font-weight: 700;
-  color: #0f172a; /* Dark Navy / Black */
+  color: #0f172a;
   text-align: center;
   line-height: 1.2;
   letter-spacing: -0.02em;
@@ -284,9 +292,8 @@
   transition: color 0.3s ease;
 }
 
-/* Keep text black on hover */
 .events-wrapper .card:hover .card__title {
-  color: #0f172a; 
+  color: #0f172a;
 }
 
 .events-wrapper .card__icon {
