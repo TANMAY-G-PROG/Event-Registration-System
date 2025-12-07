@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css?family=Roboto+Slab:100,300,400,700');
-@import url('https://fonts.googleapis.com/css?family=Raleway:300,400,500,600,700,800,900');
-/* NEW: "Syne" font for that Awwwards look */
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap');
+/* NEW FONT: Outfit (Clean, Premium, Modern) */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 @property --angle-1 {
   syntax: "<angle>";
@@ -22,7 +21,7 @@
 
 .events-wrapper {
   box-sizing: border-box;
-  font-family: 'Roboto Slab', serif;
+  font-family: 'Outfit', sans-serif; /* Changed global font */
   margin: 0;
   padding: 0;
   min-height: 100vh;
@@ -83,7 +82,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: "Syne", sans-serif; /* Applied premium font to button too */
+  font-family: "Outfit", sans-serif; /* Updated font */
   font-weight: 600;
   font-size: 14px;
   color: white;
@@ -217,8 +216,6 @@
   backdrop-filter: blur(10px);
   pointer-events: auto;
   cursor: pointer;
-  
-  /* --- FIX FOR BLURRY IMAGES --- */
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   transform: translateZ(0);
@@ -238,6 +235,8 @@
   border-top-right-radius: 16px;
   position: relative;
   overflow: hidden;
+  /* Added background so images that don't fill perfectly look intentional */
+  background-color: #f8fafc; 
 }
 
 .events-wrapper .card__img--hover {
@@ -253,38 +252,42 @@
 
 .events-wrapper .card__info {
   z-index: 3;
-  background-color: rgba(255, 255, 255, 0.98); /* Slightly more opaque for better contrast */
+  background-color: rgba(255, 255, 255, 0.98); 
   border-bottom-left-radius: 16px;
   border-bottom-right-radius: 16px;
-  padding: 24px 24px 28px 24px; /* Slightly more padding */
+  padding: 24px 24px 28px 24px;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 110px; /* Ensure consistent height */
+  min-height: 110px;
+  /* Ensure transition matches hover state */
+  transition: background-color 0.3s ease;
 }
 
 .events-wrapper .card:hover .card__info {
-  background-color: rgba(255, 255, 255, 0.15); /* Glass effect on hover */
-  backdrop-filter: blur(10px);
+  /* CHANGED: Kept white/opaque so dark text remains readable */
+  background-color: rgba(255, 255, 255, 0.98); 
+  /* Removed blur as background is opaque */
 }
 
 /* --- UPDATED PREMIUM TYPOGRAPHY --- */
 .events-wrapper .card__title {
-  font-family: 'Syne', sans-serif; /* Premium "Art House" Font */
-  font-size: 1.35rem; /* Larger and clearer */
-  font-weight: 700; /* Bold weight */
-  color: #0f172a; /* Dark Navy (sharper than #333) */
+  font-family: 'Outfit', sans-serif; /* CHANGED FONT */
+  font-size: 1.35rem;
+  font-weight: 700; 
+  color: #0f172a; 
   text-align: center;
-  line-height: 1.1; /* Tight leading looks more magazine-like */
-  letter-spacing: -0.5px; /* Negative tracking for modern feel */
+  line-height: 1.2;
+  letter-spacing: -0.02em; 
   margin-bottom: 5px;
   transition: color 0.3s ease;
 }
 
+/* CHANGED: Removed color: #ffffff rule. Text stays dark on hover. */
 .events-wrapper .card:hover .card__title {
-  color: #ffffff; /* White text on hover (since BG becomes dark/glass) */
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); /* Strong shadow for readability */
+  color: #0f172a; 
+  /* Removed text-shadow to keep it clean */
 }
 
 .events-wrapper .card__icon {
@@ -299,10 +302,10 @@
 }
 
 .events-wrapper .card:hover .card__icon {
-  color: #ffffff;
+  color: #667eea; /* Kept blue (or you can make it darker) */
   transform: scale(1.2);
   opacity: 1;
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); /* Glow effect */
+  /* Removed white glow to fit the clean style */
 }
 
 .events-wrapper .light-rays-container {
@@ -314,6 +317,7 @@
   overflow: hidden;
 }
 
+/* Media Queries (Kept same logic, updated font/layout if needed) */
 @media (max-width: 1024px) {
   .events-wrapper .cards {
     gap: 25px;
