@@ -18,7 +18,7 @@
   --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-/* Events Wrapper with LightRays Background */
+/* --- WRAPPER & BACKGROUND --- */
 .events-wrapper {
   box-sizing: border-box;
   font-family: 'Roboto Slab', serif;
@@ -37,7 +37,6 @@
   box-sizing: border-box;
 }
 
-/* Light Rays Background Container */
 .events-wrapper .light-rays-background {
   position: fixed;
   top: 0;
@@ -49,7 +48,7 @@
   pointer-events: none;
 }
 
-/* Logout Button Styles */
+/* --- LOGOUT BUTTON --- */
 .events-wrapper .logout-container {
   position: fixed;
   top: 20px;
@@ -58,7 +57,6 @@
 }
 
 .events-wrapper .logout-btn {
-  /* Basic Styling */
   --border-width: clamp(1px, 0.0625em, 4px);
   all: unset;
   cursor: pointer;
@@ -82,8 +80,6 @@
   backdrop-filter: blur(clamp(1px, 0.125em, 4px));
   -webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px));
   transition: all var(--anim--hover-time) var(--anim--hover-ease);
-
-  /* Adaptations for existing button */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -97,7 +93,6 @@
   text-decoration: none;
 }
 
-/* Inner shine effect */
 .events-wrapper .logout-btn::before {
   content: "";
   display: block;
@@ -127,7 +122,6 @@
     --angle-2 calc(var(--anim--hover-time) * 1.25) var(--anim--hover-ease);
 }
 
-/* Animated outline */
 .events-wrapper .logout-btn::after {
   content: "";
   position: absolute;
@@ -159,7 +153,6 @@
   box-shadow: inset 0 0 0 calc(var(--border-width) / 2) rgba(255, 255, 255, 0.5);
 }
 
-/* Hover states */
 .events-wrapper .logout-btn:hover {
   transform: scale(0.975);
   backdrop-filter: blur(0.01em);
@@ -181,7 +174,6 @@
   --angle-1: -125deg;
 }
 
-/* Active (click) states */
 .events-wrapper .logout-btn:active {
   transform: scale(0.96);
 }
@@ -195,27 +187,13 @@
   --angle-1: -75deg;
 }
 
-/* Icon style */
 .events-wrapper .logout-btn i {
   font-size: 16px;
   position: relative;
   z-index: 2;
 }
 
-/* Touch device fallbacks */
-@media (hover: none) and (pointer: coarse) {
-  .events-wrapper .logout-btn::before,
-  .events-wrapper .logout-btn:active::before {
-    --angle-2: -45deg;
-  }
-  
-  .events-wrapper .logout-btn::after,
-  .events-wrapper .logout-btn:hover::after,
-  .events-wrapper .logout-btn:active::after {
-    --angle-1: -75deg;
-  }
-}
-
+/* --- CARDS SECTION --- */
 .events-wrapper .cards {
   display: flex;
   justify-content: center;
@@ -233,7 +211,7 @@
   width: 300px;
   position: relative;
   border-radius: 16px;
-  overflow: hidden;
+  overflow: hidden; /* This clips the ImageKit <img> at corners */
   box-shadow: 0px 15px 30px rgba(0, 0, 0, 0.3);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0, 1);
   backdrop-filter: blur(10px);
@@ -246,19 +224,35 @@
   transform: scale(1.08) translateY(-10px);
 }
 
+/* --- CARD IMAGES --- */
 .events-wrapper .card__img {
-  /* No background-image here anymore! React IKImage fills this container. */
-  position: relative;
   width: 100%;
   height: 235px;
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
-  z-index: 1;
-  /* overflow hidden ensures the image respects the border radius */
-  overflow: hidden; 
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  overflow: hidden; /* Ensures the new <img> tag doesn't overflow */
 }
 
-/* The hover overlay */
+/* Card 1: Participants (Using local asset/GitHub) */
+.events-wrapper .card--1 .card__img {
+  background-image: url('./assets/participants.png');
+}
+
+/* Card 2: Organisers (DISABLED CSS BG -> Uses HTML <img>) */
+.events-wrapper .card--2 .card__img {
+  background-image: none; 
+}
+
+/* Card 3: Volunteers (Using local asset/GitHub) */
+.events-wrapper .card--3 .card__img {
+  background-image: url('./assets/volunteers.png');
+}
+
+/* Hover Overlay (Optional: currently transparent) */
 .events-wrapper .card__img--hover {
   position: absolute;
   top: 0;
@@ -270,6 +264,7 @@
   pointer-events: none;
 }
 
+/* --- CARD TEXT INFO --- */
 .events-wrapper .card__info {
   z-index: 3;
   background-color: rgba(255, 255, 255, 0.95);
@@ -282,7 +277,6 @@
 .events-wrapper .card:hover .card__info {
   background-color: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
-  position: relative;
 }
 
 .events-wrapper .card__title {
@@ -313,7 +307,7 @@
   transform: scale(1.2);
 }
 
-/* Light Rays Container */
+/* --- LIGHT RAYS CONTAINER --- */
 .events-wrapper .light-rays-container {
   width: 100%;
   height: 100%;
@@ -323,180 +317,147 @@
   overflow: hidden;
 }
 
-/* Tablet Responsive Design */
+/* --- RESPONSIVE STYLES --- */
 @media (max-width: 1024px) {
   .events-wrapper .cards {
     gap: 25px;
     padding: 35px 18px;
   }
-
   .events-wrapper .card {
     width: 290px;
   }
 }
 
-/* Mobile Responsive Design */
 @media (max-width: 768px) {
   .events-wrapper {
     padding-top: 70px;
   }
-
   .events-wrapper .logout-container {
     top: 15px;
     right: 15px;
     display: flex;
     justify-content: flex-end;
   }
-  
   .events-wrapper .logout-btn {
     font-size: 13px;
     padding-inline: 1.5em;
     padding-block: 0.875em;
   }
-  
   .events-wrapper .logout-btn i {
     font-size: 14px;
   }
-
   .events-wrapper .cards {
     gap: 25px;
     padding: 20px 15px 40px;
     flex-direction: column;
     align-items: center;
   }
-
   .events-wrapper .card {
     width: min(340px, calc(100vw - 40px));
     max-width: 400px;
   }
-
   .events-wrapper .card__img,
   .events-wrapper .card__img--hover {
     height: 200px;
   }
-
   .events-wrapper .card__title {
     font-size: 1.15rem;
   }
-
   .events-wrapper .card__icon {
     font-size: 22px;
     padding: 15px 0 0;
   }
-
   .events-wrapper .card:active {
     transform: scale(0.98);
     box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.3);
   }
 }
 
-/* Small Mobile Devices */
 @media (max-width: 480px) {
   .events-wrapper {
     padding-top: 65px;
   }
-
   .events-wrapper .logout-container {
     top: 12px;
     right: 12px;
   }
-  
   .events-wrapper .logout-btn {
     font-size: 12px;
     gap: 6px;
   }
-  
   .events-wrapper .logout-btn i {
     font-size: 13px;
   }
-
   .events-wrapper .cards {
     gap: 20px;
     padding: 15px 12px 35px;
   }
-
   .events-wrapper .card {
     width: min(310px, calc(100vw - 30px));
   }
-
   .events-wrapper .card__img,
   .events-wrapper .card__img--hover {
     height: 180px;
   }
-
   .events-wrapper .card__info {
     padding: 18px 20px 20px 20px;
   }
-
   .events-wrapper .card__title {
     font-size: 1.05rem;
   }
-
   .events-wrapper .card__icon {
     font-size: 20px;
     padding: 12px 0 0;
   }
 }
 
-/* Extra Small Devices */
 @media (max-width: 360px) {
   .events-wrapper .card {
     width: calc(100vw - 24px);
   }
-
   .events-wrapper .card__img,
   .events-wrapper .card__img--hover {
     height: 160px;
   }
-
   .events-wrapper .card__title {
     font-size: 1rem;
   }
 }
 
-/* Landscape Mobile Orientation */
 @media (max-height: 600px) and (orientation: landscape) {
   .events-wrapper {
     padding-top: 60px;
     min-height: auto;
   }
-
   .events-wrapper .cards {
     padding: 15px;
     gap: 20px;
     flex-direction: row;
     justify-content: center;
   }
-
   .events-wrapper .card {
     width: min(280px, calc(33vw - 20px));
   }
-
   .events-wrapper .card__img,
   .events-wrapper .card__img--hover {
     height: 140px;
   }
-
   .events-wrapper .card__info {
     padding: 15px 18px;
   }
-
   .events-wrapper .card__title {
     font-size: 0.95rem;
   }
-
   .events-wrapper .card__icon {
     padding: 10px 0 0;
     font-size: 18px;
   }
 }
 
-/* High Resolution Mobile Displays */
 @media only screen and (min-resolution: 2dppx) and (max-width: 768px) {
   .events-wrapper .card {
     box-shadow: 0px 12px 25px rgba(0, 0, 0, 0.35);
   }
-
   .events-wrapper .card:hover,
   .events-wrapper .card:active {
     box-shadow: 0px 20px 40px rgba(102, 126, 234, 0.45);
