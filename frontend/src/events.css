@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css?family=Roboto+Slab:100,300,400,700');
 @import url('https://fonts.googleapis.com/css?family=Raleway:300,400,500,600,700,800,900');
+/* NEW: "Syne" font for that Awwwards look */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap');
 
 @property --angle-1 {
   syntax: "<angle>";
@@ -81,14 +83,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: "Inter", sans-serif;
-  font-weight: 500;
+  font-family: "Syne", sans-serif; /* Applied premium font to button too */
+  font-weight: 600;
   font-size: 14px;
   color: white;
   text-shadow: 0em 0.25em 0.05em rgba(0, 0, 0, 0.1);
   padding-inline: 1.5em;
   padding-block: 0.875em;
   text-decoration: none;
+  letter-spacing: 0.5px;
 }
 
 .events-wrapper .logout-btn::before {
@@ -214,6 +217,13 @@
   backdrop-filter: blur(10px);
   pointer-events: auto;
   cursor: pointer;
+  
+  /* --- FIX FOR BLURRY IMAGES --- */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-font-smoothing: subpixel-antialiased;
+  will-change: transform;
 }
 
 .events-wrapper .card:hover {
@@ -228,7 +238,6 @@
   border-top-right-radius: 16px;
   position: relative;
   overflow: hidden;
-  /* Removed background-image properties as they are now in HTML */
 }
 
 .events-wrapper .card__img--hover {
@@ -244,29 +253,38 @@
 
 .events-wrapper .card__info {
   z-index: 3;
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: rgba(255, 255, 255, 0.98); /* Slightly more opaque for better contrast */
   border-bottom-left-radius: 16px;
   border-bottom-right-radius: 16px;
-  padding: 20px 24px 24px 24px;
+  padding: 24px 24px 28px 24px; /* Slightly more padding */
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 110px; /* Ensure consistent height */
 }
 
 .events-wrapper .card:hover .card__info {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.15); /* Glass effect on hover */
   backdrop-filter: blur(10px);
 }
 
+/* --- UPDATED PREMIUM TYPOGRAPHY --- */
 .events-wrapper .card__title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #333;
+  font-family: 'Syne', sans-serif; /* Premium "Art House" Font */
+  font-size: 1.35rem; /* Larger and clearer */
+  font-weight: 700; /* Bold weight */
+  color: #0f172a; /* Dark Navy (sharper than #333) */
   text-align: center;
+  line-height: 1.1; /* Tight leading looks more magazine-like */
+  letter-spacing: -0.5px; /* Negative tracking for modern feel */
+  margin-bottom: 5px;
   transition: color 0.3s ease;
 }
 
 .events-wrapper .card:hover .card__title {
-  color: #333;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  color: #ffffff; /* White text on hover (since BG becomes dark/glass) */
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); /* Strong shadow for readability */
 }
 
 .events-wrapper .card__icon {
@@ -275,13 +293,16 @@
   align-items: center;
   font-size: 24px;
   color: #667eea;
-  padding: 20px 0 0;
+  padding: 10px 0 0;
   transition: all 0.3s ease;
+  opacity: 0.8;
 }
 
 .events-wrapper .card:hover .card__icon {
-  color: #000000;
+  color: #ffffff;
   transform: scale(1.2);
+  opacity: 1;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); /* Glow effect */
 }
 
 .events-wrapper .light-rays-container {
@@ -336,7 +357,7 @@
     height: 200px;
   }
   .events-wrapper .card__title {
-    font-size: 1.15rem;
+    font-size: 1.25rem;
   }
   .events-wrapper .card__icon {
     font-size: 22px;
@@ -378,7 +399,7 @@
     padding: 18px 20px 20px 20px;
   }
   .events-wrapper .card__title {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
   }
   .events-wrapper .card__icon {
     font-size: 20px;
