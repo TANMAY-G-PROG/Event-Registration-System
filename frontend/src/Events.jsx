@@ -1,16 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
-import { IKContext, IKImage } from 'imagekitio-react'; // Import ImageKit SDK
 import './events.css';
-
-// --- CONFIGURATION ---
-const IMAGEKIT_URL_ENDPOINT = 'https://ik.imagekit.io/flopass';
-const IMAGEKIT_PUBLIC_KEY = 'public_BViEaqCZDJ7dIVjyJGHL9FfBF34=';
 
 const DEFAULT_COLOR = '#ffffff';
 
-// --- HELPER FUNCTIONS ---
 const hexToRgb = hex => {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [1, 1, 1];
@@ -30,7 +24,6 @@ const getAnchorAndDir = (origin, w, h) => {
   }
 };
 
-// --- LIGHTRAYS COMPONENT (BACKGROUND) ---
 const LightRays = ({
   raysOrigin = 'top-center',
   raysColor = DEFAULT_COLOR,
@@ -91,28 +84,23 @@ const LightRays = ({
       cleanupFunctionRef.current();
       cleanupFunctionRef.current = null;
     }
-
     const initializeWebGL = async () => {
       if (!containerRef.current) return;
       await new Promise(resolve => setTimeout(resolve, 10));
       if (!containerRef.current) return;
-
       const maxDpr = isMobile ? 1.5 : 2;
       const renderer = new Renderer({
         dpr: Math.min(window.devicePixelRatio, maxDpr),
         alpha: true
       });
       rendererRef.current = renderer;
-
       const gl = renderer.gl;
       gl.canvas.style.width = '100%';
       gl.canvas.style.height = '100%';
-
       while (containerRef.current.firstChild) {
         containerRef.current.removeChild(containerRef.current.firstChild);
       }
       containerRef.current.appendChild(gl.canvas);
-
       const vert = `
 attribute vec2 position;
 varying vec2 vUv;
@@ -120,7 +108,6 @@ void main() {
   vUv = position * 0.5 + 0.5;
   gl_Position = vec4(position, 0.0, 1.0);
 }`;
-
       const frag = `precision highp float;
 uniform float iTime;
 uniform vec2  iResolution;
@@ -137,13 +124,10 @@ uniform vec2  mousePos;
 uniform float mouseInfluence;
 uniform float noiseAmount;
 uniform float distortion;
-
 varying vec2 vUv;
-
 float noise(vec2 st) {
   return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
 }
-
 float rayStrength(vec2 raySource, vec2 rayRefDirection, vec2 coord,
                   float seedA, float seedB, float speed) {
   vec2 sourceToCoord = coord - raySource;
@@ -163,7 +147,6 @@ float rayStrength(vec2 raySource, vec2 rayRefDirection, vec2 coord,
   );
   return baseStrength * lengthFalloff * fadeFalloff * spreadFactor * pulse;
 }
-
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 coord = vec2(fragCoord.x, iResolution.y - fragCoord.y);
   vec2 finalRayDir = rayDir;
@@ -189,13 +172,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   }
   fragColor.rgb *= raysColor;
 }
-
 void main() {
   vec4 color;
   mainImage(color, gl_FragCoord.xy);
   gl_FragColor  = color;
 }`;
-
       const uniforms = {
         iTime: { value: 0 },
         iResolution: { value: [1, 1] },
@@ -214,7 +195,6 @@ void main() {
         distortion: { value: distortion }
       };
       uniformsRef.current = uniforms;
-
       const geometry = new Triangle(gl);
       const program = new Program(gl, {
         vertex: vert,
@@ -223,7 +203,6 @@ void main() {
       });
       const mesh = new Mesh(gl, { geometry, program });
       meshRef.current = mesh;
-
       const updatePlacement = () => {
         if (!containerRef.current || !renderer) return;
         renderer.dpr = Math.min(window.devicePixelRatio, maxDpr);
@@ -237,7 +216,6 @@ void main() {
         uniforms.rayPos.value = anchor;
         uniforms.rayDir.value = dir;
       };
-
       const loop = t => {
         if (!rendererRef.current || !uniformsRef.current || !meshRef.current) return;
         uniforms.iTime.value = t * 0.001;
@@ -254,11 +232,9 @@ void main() {
           console.warn('WebGL rendering error:', error);
         }
       };
-
       window.addEventListener('resize', updatePlacement);
       updatePlacement();
       animationIdRef.current = requestAnimationFrame(loop);
-
       cleanupFunctionRef.current = () => {
         if (animationIdRef.current) {
           cancelAnimationFrame(animationIdRef.current);
@@ -339,12 +315,10 @@ void main() {
   return <div ref={containerRef} className={`light-rays-container ${className}`.trim()} />;
 };
 
-// --- MAIN EVENTS COMPONENT ---
 export default function Events() {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
 
-  // Detect mobile device
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
@@ -354,7 +328,6 @@ export default function Events() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Check authentication on mount
   useEffect(() => {
     checkAuth();
   }, []);
@@ -364,9 +337,13 @@ export default function Events() {
       const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
-      if (!response.ok) navigate('/');
+      if (!response.ok) {
+        navigate('/');
+      }
     } catch (error) {
       console.error('Auth check failed:', error);
       navigate('/');
@@ -378,7 +355,9 @@ export default function Events() {
       const response = await fetch('/api/signout', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       const data = await response.json();
       if (data.success) {
@@ -392,16 +371,14 @@ export default function Events() {
     }
   };
 
-  // Styles for the ImageKit images so they fit exactly like CSS backgrounds
-  const imageStyle = {
+  // Inline style to ensure the <img> behaves exactly like a background image
+  const imgStyle = {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    zIndex: 1,
-    transition: 'transform 0.3s ease' // Optional: Adds smooth hover effect if you want to scale it
+    display: 'block',
+    borderTopLeftRadius: '16px',
+    borderTopRightRadius: '16px'
   };
 
   return (
@@ -434,71 +411,51 @@ export default function Events() {
         </button>
       </div>
 
-      <IKContext urlEndpoint={IMAGEKIT_URL_ENDPOINT} publicKey={IMAGEKIT_PUBLIC_KEY}>
-        <section className="cards">
-          
-          {/* Card 1: Participants */}
-          <article className="card card--1" onClick={() => navigate('/participants')}>
-            <div className="card__img">
-              <IKImage 
-                path="/participants.png" // MAKE SURE THIS FILE EXISTS IN YOUR DASHBOARD
-                transformation={[{ height: 400, width: 300 }]}
-                lqip={{ active: true }}
-                loading="lazy"
-                style={imageStyle}
-              />
+      <section className="cards">
+        
+        {/* Card 1: Participants - Standard DIV (uses GitHub CSS BG) */}
+        <article className="card card--1" onClick={() => navigate('/participants')}>
+          <div className="card__img"></div>
+          <div className="card__img--hover"></div>
+          <div className="card__info">
+            <h3 className="card__title">Events participated by you</h3>
+            <div className="card__icon">
+              <i className="fa-solid fa-plus"></i>
             </div>
-            <div className="card__img--hover"></div>
-            <div className="card__info">
-              <h3 className="card__title">Events participated by you</h3>
-              <div className="card__icon">
-                <i className="fa-solid fa-plus"></i>
-              </div>
-            </div>
-          </article>
+          </div>
+        </article>
 
-          {/* Card 2: Organisers */}
-          <article className="card card--2" onClick={() => navigate('/organisers')}>
-            <div className="card__img">
-              <IKImage 
-                path="/organisers.png" // Matches the URL you shared previously
-                transformation={[{ height: 400, width: 300 }]}
-                lqip={{ active: true }}
-                loading="lazy"
-                style={imageStyle}
-              />
+        {/* Card 2: Organisers - Optimized URL ImageKit */}
+        <article className="card card--2" onClick={() => navigate('/organisers')}>
+          <div className="card__img">
+            <img 
+              src="https://ik.imagekit.io/flopass/organisers.png?tr=w-400,h-300,fo-auto" 
+              alt="Organisers"
+              style={imgStyle}
+              loading="lazy"
+            />
+          </div>
+          <div className="card__img--hover"></div>
+          <div className="card__info">
+            <h3 className="card__title">Events organised by you</h3>
+            <div className="card__icon">
+              <i className="fa-solid fa-plus"></i>
             </div>
-            <div className="card__img--hover"></div>
-            <div className="card__info">
-              <h3 className="card__title">Events organised by you</h3>
-              <div className="card__icon">
-                <i className="fa-solid fa-plus"></i>
-              </div>
-            </div>
-          </article>
+          </div>
+        </article>
 
-          {/* Card 3: Volunteers */}
-          <article className="card card--3" onClick={() => navigate('/volunteers')}>
-            <div className="card__img">
-              <IKImage 
-                path="/volunteers.png" // MAKE SURE THIS FILE EXISTS IN YOUR DASHBOARD
-                transformation={[{ height: 400, width: 300 }]}
-                lqip={{ active: true }}
-                loading="lazy"
-                style={imageStyle}
-              />
+        {/* Card 3: Volunteers - Standard DIV (uses GitHub CSS BG) */}
+        <article className="card card--3" onClick={() => navigate('/volunteers')}>
+          <div className="card__img"></div>
+          <div className="card__img--hover"></div>
+          <div className="card__info">
+            <h3 className="card__title">Events volunteered by you</h3>
+            <div className="card__icon">
+              <i className="fa-solid fa-plus"></i>
             </div>
-            <div className="card__img--hover"></div>
-            <div className="card__info">
-              <h3 className="card__title">Events volunteered by you</h3>
-              <div className="card__icon">
-                <i className="fa-solid fa-plus"></i>
-              </div>
-            </div>
-          </article>
-
-        </section>
-      </IKContext>
+          </div>
+        </article>
+      </section>
     </div>
   );
 }
