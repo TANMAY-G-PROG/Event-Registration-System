@@ -416,7 +416,7 @@ export default function Events() {
         <article className="card card--1" onClick={() => navigate('/participants')}>
           <div className="card__img">
             <img 
-              src="https://ik.imagekit.io/flopass/volunteers.png?tr=w-800,h-600,fo-auto" 
+              src="https://ik.imagekit.io/flopass/participents.png?tr=w-800,h-600,fo-auto" 
               alt="Participants"
               style={imgStyle}
               loading="lazy"
@@ -470,3 +470,4 @@ export default function Events() {
     </div>
   );
 }
+
