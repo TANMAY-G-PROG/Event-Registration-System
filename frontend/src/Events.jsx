@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
 import './events.css';
 
-// --- LIGHTRAYS COMPONENT ---
-// (Kept in code in case you want to enable it later, but currently disabled in return)
 const DEFAULT_COLOR = '#ffffff';
 
 const hexToRgb = hex => {
@@ -317,7 +315,6 @@ void main() {
   return <div ref={containerRef} className={`light-rays-container ${className}`.trim()} />;
 };
 
-// --- MAIN COMPONENT ---
 export default function Events() {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
@@ -374,11 +371,13 @@ export default function Events() {
     }
   };
 
+  // Image style: Full width/height, crop nicely (cover), no padding
   const imgStyle = {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
     display: 'block',
+    // We remove border radius here because the parent div handles it
   };
 
   return (
@@ -389,22 +388,19 @@ export default function Events() {
       />
 
       <div className="light-rays-background">
-        {/* LightRays animation is COMMENTED OUT so the static image in CSS shows.
-           Uncomment below to bring back the animation over the image.
-        */}
-        {/* <LightRays
-            raysOrigin="top-center"
-            raysColor="#667eea"
-            raysSpeed={isMobile ? 1.0 : 1.2}
-            lightSpread={isMobile ? 0.5 : 0.6}
-            rayLength={isMobile ? 2.0 : 1.5}
-            followMouse={true}
-            mouseInfluence={isMobile ? 0.2 : 0.15}
-            noiseAmount={0.05}
-            distortion={0.03}
-            fadeDistance={isMobile ? 0.9 : 0.8}
-            saturation={isMobile ? 1.4 : 1.2}
-          /> */}
+        <LightRays
+          raysOrigin="top-center"
+          raysColor="#667eea"
+          raysSpeed={isMobile ? 1.0 : 1.2}
+          lightSpread={isMobile ? 0.5 : 0.6}
+          rayLength={isMobile ? 2.0 : 1.5}
+          followMouse={true}
+          mouseInfluence={isMobile ? 0.2 : 0.15}
+          noiseAmount={0.05}
+          distortion={0.03}
+          fadeDistance={isMobile ? 0.9 : 0.8}
+          saturation={isMobile ? 1.4 : 1.2}
+        />
       </div>
 
       <div className="logout-container">
