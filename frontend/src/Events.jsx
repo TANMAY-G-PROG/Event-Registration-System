@@ -371,7 +371,6 @@ export default function Events() {
     }
   };
 
-  // Inline style to ensure the <img> behaves exactly like a background image
   const imgStyle = {
     width: '100%',
     height: '100%',
@@ -413,9 +412,16 @@ export default function Events() {
 
       <section className="cards">
         
-        {/* Card 1: Participants - Standard DIV (uses GitHub CSS BG) */}
+        {/* Card 1: Participants - ImageKit Optimized */}
         <article className="card card--1" onClick={() => navigate('/participants')}>
-          <div className="card__img"></div>
+          <div className="card__img">
+            <img 
+              src="https://ik.imagekit.io/flopass/participants.png?tr=w-400,h-300,fo-auto" 
+              alt="Participants"
+              style={imgStyle}
+              loading="lazy"
+            />
+          </div>
           <div className="card__img--hover"></div>
           <div className="card__info">
             <h3 className="card__title">Events participated by you</h3>
@@ -425,7 +431,7 @@ export default function Events() {
           </div>
         </article>
 
-        {/* Card 2: Organisers - Optimized URL ImageKit */}
+        {/* Card 2: Organisers - ImageKit Optimized */}
         <article className="card card--2" onClick={() => navigate('/organisers')}>
           <div className="card__img">
             <img 
@@ -444,9 +450,16 @@ export default function Events() {
           </div>
         </article>
 
-        {/* Card 3: Volunteers - Standard DIV (uses GitHub CSS BG) */}
+        {/* Card 3: Volunteers - ImageKit Optimized */}
         <article className="card card--3" onClick={() => navigate('/volunteers')}>
-          <div className="card__img"></div>
+          <div className="card__img">
+            <img 
+              src="https://ik.imagekit.io/flopass/volunteers.png?tr=w-400,h-300,fo-auto" 
+              alt="Volunteers"
+              style={imgStyle}
+              loading="lazy"
+            />
+          </div>
           <div className="card__img--hover"></div>
           <div className="card__info">
             <h3 className="card__title">Events volunteered by you</h3>
@@ -455,6 +468,7 @@ export default function Events() {
             </div>
           </div>
         </article>
+
       </section>
     </div>
   );
