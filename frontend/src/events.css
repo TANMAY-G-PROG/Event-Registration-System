@@ -36,6 +36,7 @@
   box-sizing: border-box;
 }
 
+/* --- BACKGROUND (UNCHANGED) --- */
 .events-wrapper .light-rays-background {
   position: fixed;
   top: 0;
@@ -47,6 +48,7 @@
   pointer-events: none;
 }
 
+/* --- LOGOUT BUTTON (UNCHANGED) --- */
 .events-wrapper .logout-container {
   position: fixed;
   top: 20px;
@@ -192,6 +194,7 @@
   z-index: 2;
 }
 
+/* --- CARD CONTAINER --- */
 .events-wrapper .cards {
   display: flex;
   justify-content: center;
@@ -204,153 +207,126 @@
   position: relative;
 }
 
+/* --- NEW DARK GLASS CARD STYLE --- */
 .events-wrapper .card {
-  background-color: rgba(255, 255, 255, 0.95);
+  /* Dark translucent background for glass effect */
+  background: rgba(20, 30, 60, 0.6); 
+  /* Blur the background behind the card */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  /* Thin border for definition */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  
   width: 300px;
   position: relative;
-  border-radius: 16px;
+  border-radius: 24px; /* More rounded corners */
   overflow: hidden;
-  box-shadow: 0px 15px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0, 1);
-  /* REMOVED backdrop-filter to prevent scaling artifacts */
+  
   pointer-events: auto;
   cursor: pointer;
-  
-  /* --- HARDWARE ACCELERATION FIX FOR PARENT --- */
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   transform: translateZ(0);
-  -webkit-font-smoothing: subpixel-antialiased;
-  will-change: transform;
 }
 
 .events-wrapper .card:hover {
-  box-shadow: 0px 30px 60px rgba(102, 126, 234, 0.4);
-  transform: scale(1.08) translateY(-10px);
+  /* Glow stronger on hover */
+  box-shadow: 0 15px 40px rgba(100, 120, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05) translateY(-10px);
 }
 
+/* --- IMAGE SECTION --- */
 .events-wrapper .card__img {
   width: 100%;
   height: 235px;
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
   position: relative;
   overflow: hidden;
   padding: 0;
   margin: 0;
+  /* Blend image bottom with card */
+  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
 }
 
-/* --- NEW: IMAGE CLARITY FIX --- */
 .events-wrapper .card__img img {
-  /* This prevents the image from getting blurry during the scale transform */
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   transform: translateZ(0);
-  image-rendering: -webkit-optimize-contrast; /* Sharpens image on WebKit */
+  image-rendering: -webkit-optimize-contrast;
   will-change: transform;
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0, 1);
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.events-wrapper .card:hover .card__img img {
+  transform: scale(1.1);
 }
 
 .events-wrapper .card__img--hover {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  width: 100%;
-  background: transparent;
-  opacity: 0;
-  z-index: 2;
-  pointer-events: none;
+  display: none; /* Not needed for this style */
 }
 
+/* --- TEXT INFO SECTION --- */
 .events-wrapper .card__info {
   z-index: 3;
-  background-color: rgba(255, 255, 255, 0.98);
-  border-bottom-left-radius: 16px;
-  border-bottom-right-radius: 16px;
-  padding: 24px 24px 28px 24px;
+  /* Transparent background so glass effect shows through */
+  background-color: transparent;
+  padding: 10px 24px 28px 24px;
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
+  align-items: center;
   min-height: 110px;
-  transition: background-color 0.3s ease;
 }
 
-.events-wrapper .card:hover .card__info {
-  background-color: rgba(255, 255, 255, 0.98);
-}
-
+/* --- TEXT STYLE (WHITE + GLOW) --- */
 .events-wrapper .card__title {
   font-family: 'Outfit', sans-serif;
   font-size: 1.35rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #ffffff; /* White text */
   text-align: center;
   line-height: 1.2;
-  letter-spacing: -0.02em;
-  margin-bottom: 5px;
-  transition: color 0.3s ease;
+  letter-spacing: 0.5px;
+  margin-bottom: 15px;
+  /* Subtle shadow for readability */
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
-.events-wrapper .card:hover .card__title {
-  color: #0f172a;
-}
-
+/* --- NEON BUTTON STYLE --- */
 .events-wrapper .card__icon {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 24px;
-  color: #667eea;
-  padding: 10px 0 0;
+  font-size: 20px;
+  color: #ffffff;
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s ease;
-  opacity: 0.8;
+  
+  /* NEON GLOW INITIAL STATE */
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.3), inset 0 0 10px rgba(102, 126, 234, 0.1);
 }
 
 .events-wrapper .card:hover .card__icon {
-  color: #667eea;
-  transform: scale(1.2);
-  opacity: 1;
+  background: rgba(102, 126, 234, 0.8);
+  border-color: rgba(102, 126, 234, 1);
+  transform: scale(1.1);
+  /* STRONG NEON GLOW ON HOVER */
+  box-shadow: 
+    0 0 20px rgba(102, 126, 234, 0.6), 
+    0 0 40px rgba(102, 126, 234, 0.4);
 }
 
-.events-wrapper .light-rays-container {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  pointer-events: none;
-  z-index: 3;
-  overflow: hidden;
-}
-
-/* Media Queries */
-@media (max-width: 1024px) {
-  .events-wrapper .cards {
-    gap: 25px;
-    padding: 35px 18px;
-  }
-  .events-wrapper .card {
-    width: 290px;
-  }
-}
-
+/* --- MEDIA QUERIES --- */
 @media (max-width: 768px) {
-  .events-wrapper {
-    padding-top: 70px;
-  }
-  .events-wrapper .logout-container {
-    top: 15px;
-    right: 15px;
-    display: flex;
-    justify-content: flex-end;
-  }
-  .events-wrapper .logout-btn {
-    font-size: 13px;
-    padding-inline: 1.5em;
-    padding-block: 0.875em;
-  }
-  .events-wrapper .logout-btn i {
-    font-size: 14px;
-  }
+  .events-wrapper { padding-top: 70px; }
   .events-wrapper .cards {
     gap: 25px;
     padding: 20px 15px 40px;
@@ -359,112 +335,6 @@
   }
   .events-wrapper .card {
     width: min(340px, calc(100vw - 40px));
-    max-width: 400px;
   }
-  .events-wrapper .card__img,
-  .events-wrapper .card__img--hover {
-    height: 200px;
-  }
-  .events-wrapper .card__title {
-    font-size: 1.25rem;
-  }
-  .events-wrapper .card__icon {
-    font-size: 22px;
-    padding: 15px 0 0;
-  }
-  .events-wrapper .card:active {
-    transform: scale(0.98);
-    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.3);
-  }
-}
-
-@media (max-width: 480px) {
-  .events-wrapper {
-    padding-top: 65px;
-  }
-  .events-wrapper .logout-container {
-    top: 12px;
-    right: 12px;
-  }
-  .events-wrapper .logout-btn {
-    font-size: 12px;
-    gap: 6px;
-  }
-  .events-wrapper .logout-btn i {
-    font-size: 13px;
-  }
-  .events-wrapper .cards {
-    gap: 20px;
-    padding: 15px 12px 35px;
-  }
-  .events-wrapper .card {
-    width: min(310px, calc(100vw - 30px));
-  }
-  .events-wrapper .card__img,
-  .events-wrapper .card__img--hover {
-    height: 180px;
-  }
-  .events-wrapper .card__info {
-    padding: 18px 20px 20px 20px;
-  }
-  .events-wrapper .card__title {
-    font-size: 1.1rem;
-  }
-  .events-wrapper .card__icon {
-    font-size: 20px;
-    padding: 12px 0 0;
-  }
-}
-
-@media (max-width: 360px) {
-  .events-wrapper .card {
-    width: calc(100vw - 24px);
-  }
-  .events-wrapper .card__img,
-  .events-wrapper .card__img--hover {
-    height: 160px;
-  }
-  .events-wrapper .card__title {
-    font-size: 1rem;
-  }
-}
-
-@media (max-height: 600px) and (orientation: landscape) {
-  .events-wrapper {
-    padding-top: 60px;
-    min-height: auto;
-  }
-  .events-wrapper .cards {
-    padding: 15px;
-    gap: 20px;
-    flex-direction: row;
-    justify-content: center;
-  }
-  .events-wrapper .card {
-    width: min(280px, calc(33vw - 20px));
-  }
-  .events-wrapper .card__img,
-  .events-wrapper .card__img--hover {
-    height: 140px;
-  }
-  .events-wrapper .card__info {
-    padding: 15px 18px;
-  }
-  .events-wrapper .card__title {
-    font-size: 0.95rem;
-  }
-  .events-wrapper .card__icon {
-    padding: 10px 0 0;
-    font-size: 18px;
-  }
-}
-
-@media only screen and (min-resolution: 2dppx) and (max-width: 768px) {
-  .events-wrapper .card {
-    box-shadow: 0px 12px 25px rgba(0, 0, 0, 0.35);
-  }
-  .events-wrapper .card:hover,
-  .events-wrapper .card:active {
-    box-shadow: 0px 20px 40px rgba(102, 126, 234, 0.45);
-  }
+  .events-wrapper .card__title { font-size: 1.25rem; }
 }
