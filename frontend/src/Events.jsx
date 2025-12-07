@@ -372,12 +372,12 @@ export default function Events() {
   };
 
   // Image style: Full width/height, crop nicely (cover), no padding
-  // UPDATE: changed from 'cover' to 'contain' to stop cropping
   const imgStyle = {
     width: '100%',
     height: '100%',
-    objectFit: 'contain', 
+    objectFit: 'cover',
     display: 'block',
+    // We remove border radius here because the parent div handles it
   };
 
   return (
@@ -415,9 +415,8 @@ export default function Events() {
         {/* Card 1: Participants */}
         <article className="card card--1" onClick={() => navigate('/participants')}>
           <div className="card__img">
-            {/* UPDATED: Removed h-600 and fo-auto to prevent server cropping */}
             <img 
-              src="https://ik.imagekit.io/flopass/participents.png?tr=w-800" 
+              src="https://ik.imagekit.io/flopass/volunteers.png?tr=w-800,h-600,fo-auto" 
               alt="Participants"
               style={imgStyle}
               loading="lazy"
