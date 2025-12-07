@@ -18,7 +18,6 @@
   --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-/* --- WRAPPER & BACKGROUND --- */
 .events-wrapper {
   box-sizing: border-box;
   font-family: 'Roboto Slab', serif;
@@ -48,7 +47,6 @@
   pointer-events: none;
 }
 
-/* --- LOGOUT BUTTON --- */
 .events-wrapper .logout-container {
   position: fixed;
   top: 20px;
@@ -193,7 +191,6 @@
   z-index: 2;
 }
 
-/* --- CARDS SECTION --- */
 .events-wrapper .cards {
   display: flex;
   justify-content: center;
@@ -211,7 +208,7 @@
   width: 300px;
   position: relative;
   border-radius: 16px;
-  overflow: hidden; /* This clips the ImageKit <img> at corners */
+  overflow: hidden;
   box-shadow: 0px 15px 30px rgba(0, 0, 0, 0.3);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0, 1);
   backdrop-filter: blur(10px);
@@ -224,35 +221,16 @@
   transform: scale(1.08) translateY(-10px);
 }
 
-/* --- CARD IMAGES --- */
 .events-wrapper .card__img {
   width: 100%;
   height: 235px;
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   position: relative;
-  overflow: hidden; /* Ensures the new <img> tag doesn't overflow */
+  overflow: hidden;
+  /* Removed background-image properties as they are now in HTML */
 }
 
-/* Card 1: Participants (Using local asset/GitHub) */
-.events-wrapper .card--1 .card__img {
-  background-image: url('./assets/participants.png');
-}
-
-/* Card 2: Organisers (DISABLED CSS BG -> Uses HTML <img>) */
-.events-wrapper .card--2 .card__img {
-  background-image: none; 
-}
-
-/* Card 3: Volunteers (Using local asset/GitHub) */
-.events-wrapper .card--3 .card__img {
-  background-image: url('./assets/volunteers.png');
-}
-
-/* Hover Overlay (Optional: currently transparent) */
 .events-wrapper .card__img--hover {
   position: absolute;
   top: 0;
@@ -264,7 +242,6 @@
   pointer-events: none;
 }
 
-/* --- CARD TEXT INFO --- */
 .events-wrapper .card__info {
   z-index: 3;
   background-color: rgba(255, 255, 255, 0.95);
@@ -307,7 +284,6 @@
   transform: scale(1.2);
 }
 
-/* --- LIGHT RAYS CONTAINER --- */
 .events-wrapper .light-rays-container {
   width: 100%;
   height: 100%;
@@ -317,7 +293,6 @@
   overflow: hidden;
 }
 
-/* --- RESPONSIVE STYLES --- */
 @media (max-width: 1024px) {
   .events-wrapper .cards {
     gap: 25px;
