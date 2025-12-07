@@ -8,12 +8,33 @@ const cors = require('cors');
 const sgMail = require('@sendgrid/mail');
 const crypto = require('crypto');
 const ExcelJS = require('exceljs');
+const { createClient } = require('redis'); // Import Redis
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- PRODUCTION/DEVELOPMENT SETTINGS ---
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// --- Redis Client Setup ---
+// Uses env variable or falls back to your provided connection string
+const redisUrl = process.env.REDIS_URL || 'redis://default:ovBfSh1ALdigQLS0BDbJApUwTOJ6nk3i@redis-10269.c81.us-east-1-2.ec2.cloud.redislabs.com:10269';
+
+const redisClient = createClient({
+    url: redisUrl
+});
+
+redisClient.on('error', (err) => console.log('❌ Redis Client Error', err));
+redisClient.on('connect', () => console.log('✅ Connected to Redis Cloud'));
+
+// Initialize Redis connection
+(async () => {
+    try {
+        await redisClient.connect();
+    } catch (err) {
+        console.error('Failed to connect to Redis:', err);
+    }
+})();
 
 // --- Trust the proxy in production ---
 if (IS_PRODUCTION) {
@@ -28,6 +49,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['set-cookie']
 }));
+
 // Force credentials header for Safari/iOS
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Credentials", "true");
@@ -51,9 +73,9 @@ app.use(session({
     rolling: true,
     cookie: {
         httpOnly: true,
-        maxAge: 60 * 60 * 1000, // ✅ CHANGED: 1 hour (10 minutes was too short)
+        maxAge: 60 * 60 * 1000, 
         secure: IS_PRODUCTION ? true : false,  
-        sameSite: IS_PRODUCTION ? "lax" : "lax", // ✅ CHANGED: "lax" (was "none")
+        sameSite: IS_PRODUCTION ? "lax" : "lax", 
         path: '/'
     }
 }));
@@ -62,9 +84,8 @@ app.use(session({
 // Debug middleware to log all requests
 app.use((req, res, next) => {
     console.log(`\n📝 ${req.method} ${req.url}`);
-    console.log('📋 Session ID:', req.sessionID);
-    console.log('👤 User USN:', req.session.userUSN || 'Not logged in');
-    console.log('🍪 Cookies:', req.headers.cookie || 'No cookies');
+    // console.log('📋 Session ID:', req.sessionID);
+    // console.log('👤 User USN:', req.session.userUSN || 'Not logged in');
     next();
 });
 
@@ -90,9 +111,7 @@ if (process.env.SENDGRID_API_KEY) {
 
 // Middleware to check if user is authenticated
 function requireAuth(req, res, next) {
-    console.log('🔒 Auth check - Session USN:', req.session.userUSN);
     if (req.session.userUSN) {
-        console.log('✅ User authenticated:', req.session.userUSN);
         next();
     } else {
         console.log('❌ User NOT authenticated - sending 401');
@@ -105,7 +124,6 @@ app.post('/api/signup', async (req, res) => {
     try {
         const { name, usn, sem, mobno, email, password } = req.body;
         
-        // Removed specific 1BM regex check to allow any USN format (e.g., 1RV...)
         if (!usn || !name || !email || !sem || !mobno || !password) {
             return res.status(400).json({ error: 'All fields are required' });
         }
@@ -149,15 +167,11 @@ app.post('/api/signup', async (req, res) => {
         req.session.userName = name;
         req.session.userEmail = email;
         
-        // Save session explicitly
         req.session.save((err) => {
             if (err) {
                 console.error('❌ Session save error:', err);
                 return res.status(500).json({ error: 'Session error' });
             }
-            console.log('✅ Session created for:', usn);
-            console.log('🆔 Session ID:', req.sessionID);
-            
             res.status(201).json({ 
                 success: true,
                 message: 'Student registered successfully!', 
@@ -207,15 +221,12 @@ app.post('/api/signin', async (req, res) => {
         req.session.userName = student.sname;
         req.session.userEmail = student.emailid;
         
-        // Save session explicitly
         req.session.save((err) => {
             if (err) {
                 console.error('❌ Session save error:', err);
                 return res.status(500).json({ error: 'Session error' });
             }
             console.log('✅ User signed in:', student.usn);
-            console.log('🆔 Session ID:', req.sessionID);
-            
             res.json({ 
                 success: true, 
                 message: 'Signed in successfully',
@@ -274,25 +285,57 @@ app.post('/api/signout', (req, res) => {
     });
 });
 
-// Get all events
+// --- CACHED Get all events ---
 app.get('/api/events', requireAuth, async (req, res) => {
     try {
         const currentDate = new Date().toISOString().split('T')[0];
+        const cacheKey = 'events_list_raw';
         
-        const { data: rows, error } = await supabase
-            .from('event')
-            .select(`
-                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                upi_id, is_team, min_team_size, max_team_size,
-                club:orgcid(cname),
-                student:orgusn(sname)
-            `);
-        
-        if (error) {
-            console.error('Error fetching events:', error);
-            return res.status(500).json({ error: 'Database error' });
+        let rows = null;
+
+        // 1. Try to get data from Redis cache
+        try {
+            if (redisClient.isOpen) {
+                const cachedData = await redisClient.get(cacheKey);
+                if (cachedData) {
+                    console.log('⚡ Using Redis Cache for Events');
+                    rows = JSON.parse(cachedData);
+                }
+            }
+        } catch (cacheErr) {
+            console.error('Redis read error:', cacheErr);
+            // Continue to DB if cache fails
         }
 
+        // 2. If no cache, fetch from Supabase
+        if (!rows) {
+            console.log('🔍 Fetching Events from Supabase DB');
+            const { data, error } = await supabase
+                .from('event')
+                .select(`
+                    eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
+                    upi_id, is_team, min_team_size, max_team_size,
+                    club:orgcid(cname),
+                    student:orgusn(sname)
+                `);
+            
+            if (error) {
+                console.error('Error fetching events:', error);
+                return res.status(500).json({ error: 'Database error' });
+            }
+            rows = data;
+
+            // 3. Save to Redis Cache (Expire in 10 minutes = 600s)
+            try {
+                if (redisClient.isOpen) {
+                    await redisClient.set(cacheKey, JSON.stringify(rows), { EX: 600 });
+                }
+            } catch (saveErr) {
+                console.error('Redis write error:', saveErr);
+            }
+        }
+
+        // 4. Process data
         const events = {
             ongoing: [],
             completed: [],
@@ -557,8 +600,6 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             max_team_size: isTeamEvent ? (parseInt(maxTeamSize) || null) : null
         };
 
-        console.log('Creating event with data:', eventData);
-        
         const { data, error } = await supabase
             .from('event')
             .insert([eventData])
@@ -569,6 +610,16 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             return res.status(500).json({ error: `Error creating event: ${error.message}` });
         }
         
+        // --- INVALIDATE REDIS CACHE ---
+        try {
+            if (redisClient.isOpen) {
+                await redisClient.del('events_list_raw');
+                console.log('🗑️ Cache Invalidated due to New Event');
+            }
+        } catch (cacheErr) {
+            console.error('Failed to invalidate cache:', cacheErr);
+        }
+
         res.status(201).json({ 
             success: true,
             message: isTeamEvent ? 'Team event created successfully!' : 'Event created successfully!', 
@@ -831,7 +882,6 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
 
         const { data: participantCheck } = await supabase
             .from('participant')
-            // ✅ CHANGED THIS LINE: Added payment_status
             .select('partstatus, payment_status') 
             .eq('partusn', req.session.userUSN)
             .eq('parteid', eventId)
@@ -845,7 +895,6 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             .limit(1);
 
         transformedEvent.isRegistered = participantCheck && participantCheck.length > 0;
-        // ✅ ADDED THIS LINE:
         transformedEvent.paymentStatus = participantCheck?.[0]?.payment_status || null; 
         transformedEvent.isVolunteer = volunteerCheck && volunteerCheck.length > 0;
         transformedEvent.isOrganizer = event.orgusn === req.session.userUSN;
