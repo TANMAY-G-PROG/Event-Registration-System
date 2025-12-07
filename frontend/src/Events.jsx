@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
 import './events.css';
 
+// --- LIGHTRAYS COMPONENT ---
+// (Kept in code in case you want to enable it later, but currently disabled in return)
 const DEFAULT_COLOR = '#ffffff';
 
 const hexToRgb = hex => {
@@ -79,10 +81,6 @@ const LightRays = ({
   }, []);
 
   useEffect(() => {
-    // CONDITIONAL: Do NOT initialize WebGL if it's mobile (saves battery/performance)
-    // The CSS background image will take over.
-    if (isMobile) return;
-
     if (!isVisible || !containerRef.current) return;
     if (cleanupFunctionRef.current) {
       cleanupFunctionRef.current();
@@ -269,13 +267,57 @@ void main() {
     };
   }, [isVisible, isMobile, raysOrigin, raysColor, raysSpeed, lightSpread, rayLength, pulsating, fadeDistance, saturation, followMouse, mouseInfluence, noiseAmount, distortion]);
 
-  // UNCHANGED EFFECTS ...
-  
-  // ... (Same useEffects as before)
+  useEffect(() => {
+    if (!uniformsRef.current || !containerRef.current || !rendererRef.current) return;
+    const u = uniformsRef.current;
+    const renderer = rendererRef.current;
+    u.raysColor.value = hexToRgb(raysColor);
+    u.raysSpeed.value = raysSpeed;
+    u.lightSpread.value = lightSpread;
+    u.rayLength.value = rayLength;
+    u.pulsating.value = pulsating ? 1.0 : 0.0;
+    u.fadeDistance.value = fadeDistance;
+    u.saturation.value = saturation;
+    u.mouseInfluence.value = mouseInfluence;
+    u.noiseAmount.value = noiseAmount;
+    u.distortion.value = distortion;
+    const { clientWidth: wCSS, clientHeight: hCSS } = containerRef.current;
+    const dpr = renderer.dpr;
+    const { anchor, dir } = getAnchorAndDir(raysOrigin, wCSS * dpr, hCSS * dpr);
+    u.rayPos.value = anchor;
+    u.rayDir.value = dir;
+  }, [raysColor, raysSpeed, lightSpread, raysOrigin, rayLength, pulsating, fadeDistance, saturation, mouseInfluence, noiseAmount, distortion]);
+
+  useEffect(() => {
+    const handleMouseMove = e => {
+      if (!containerRef.current || !rendererRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      mouseRef.current = { x, y };
+    };
+    const handleTouchMove = e => {
+      if (!containerRef.current || !rendererRef.current || e.touches.length === 0) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = (touch.clientX - rect.left) / rect.width;
+      const y = (touch.clientY - rect.top) / rect.height;
+      mouseRef.current = { x, y };
+    };
+    if (followMouse) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('touchmove', handleTouchMove, { passive: true });
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('touchmove', handleTouchMove);
+      };
+    }
+  }, [followMouse]);
 
   return <div ref={containerRef} className={`light-rays-container ${className}`.trim()} />;
 };
 
+// --- MAIN COMPONENT ---
 export default function Events() {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
@@ -347,22 +389,22 @@ export default function Events() {
       />
 
       <div className="light-rays-background">
-        {/* CONDITIONAL RENDER: ONLY RENDER RAYS ON DESKTOP (!isMobile) */}
-        {!isMobile && (
-          <LightRays
+        {/* LightRays animation is COMMENTED OUT so the static image in CSS shows.
+           Uncomment below to bring back the animation over the image.
+        */}
+        {/* <LightRays
             raysOrigin="top-center"
             raysColor="#667eea"
-            raysSpeed={1.2}
-            lightSpread={0.6}
-            rayLength={1.5}
+            raysSpeed={isMobile ? 1.0 : 1.2}
+            lightSpread={isMobile ? 0.5 : 0.6}
+            rayLength={isMobile ? 2.0 : 1.5}
             followMouse={true}
-            mouseInfluence={0.15}
+            mouseInfluence={isMobile ? 0.2 : 0.15}
             noiseAmount={0.05}
             distortion={0.03}
-            fadeDistance={0.8}
-            saturation={1.2}
-          />
-        )}
+            fadeDistance={isMobile ? 0.9 : 0.8}
+            saturation={isMobile ? 1.4 : 1.2}
+          /> */}
       </div>
 
       <div className="logout-container">
