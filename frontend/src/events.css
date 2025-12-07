@@ -36,7 +36,7 @@
   box-sizing: border-box;
 }
 
-/* --- BACKGROUND (DESKTOP DEFAULT) --- */
+/* --- BACKGROUND UPDATED TO STATIC SPACE IMAGE --- */
 .events-wrapper .light-rays-background {
   position: fixed;
   top: 0;
@@ -44,12 +44,15 @@
   width: 100%;
   height: 100%;
   z-index: 0;
-  /* Default Desktop Gradient (Dark Blue) */
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  /* REPLACED GRADIENT WITH IMAGE URL */
+  background-image: url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5980?auto=format&fit=crop&q=80&w=2070');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   pointer-events: none;
 }
 
-/* --- LOGOUT BUTTON --- */
+/* --- LOGOUT BUTTON (UNCHANGED) --- */
 .events-wrapper .logout-container {
   position: fixed;
   top: 20px;
@@ -208,7 +211,7 @@
   position: relative;
 }
 
-/* --- DARK GLASS CARD STYLE --- */
+/* --- DARK GLASS CARD STYLE (UNCHANGED FROM PREVIOUS) --- */
 .events-wrapper .card {
   background: rgba(20, 30, 60, 0.6); 
   backdrop-filter: blur(16px);
@@ -315,14 +318,7 @@
 @media (max-width: 768px) {
   .events-wrapper { padding-top: 70px; }
   
-  /* --- NEW: MOBILE SPACE THEME BACKGROUND --- */
-  .events-wrapper .light-rays-background {
-    /* High quality Space Nebula Image */
-    background-image: url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5980?auto=format&fit=crop&q=80&w=1000');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-  }
+  /* Removed the mobile-only background switch since it's now global */
 
   .events-wrapper .cards {
     gap: 25px;
