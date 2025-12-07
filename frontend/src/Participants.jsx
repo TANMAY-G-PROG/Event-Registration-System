@@ -21,7 +21,160 @@ const Participants = () => {
 
   // --- FAB Visibility Logic ---
   const [showFab, setShowFab] = useState(true);
-  const buttonRef = useRef(null); // Ref for the static bottom button
+  const buttonRef = useRef(null);
+
+  // --- Mobile Shader Logic ---
+  const canvasRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Detect Mobile Resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // WebGL Shader Effect (Only runs if isMobile is true)
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const gl = canvas.getContext("webgl");
+    if (!gl) return;
+
+    // --- Vertex Shader ---
+    const vsSource = `
+      attribute vec2 position;
+      void main() {
+        gl_Position = vec4(position, 0.0, 1.0);
+      }
+    `;
+
+    // --- Fragment Shader (Dark Blue Fluid Logic) ---
+    const fsSource = `
+      precision highp float;
+      uniform vec2 u_resolution;
+      uniform float u_time;
+
+      // Simplex Noise Function
+      vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+      float snoise(vec2 v) {
+        const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+        vec2 i  = floor(v + dot(v, C.yy) );
+        vec2 x0 = v - i + dot(i, C.xx);
+        vec2 i1;
+        i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+        vec4 x12 = x0.xyxy + C.xxzz;
+        x12.xy -= i1;
+        i = mod289(i);
+        vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 )) + i.x + vec3(0.0, i1.x, 1.0 ));
+        vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+        m = m*m ; m = m*m ;
+        vec3 x = 2.0 * fract(p * C.www) - 1.0;
+        vec3 h = abs(x) - 0.5;
+        vec3 ox = floor(x + 0.5);
+        vec3 a0 = x - ox;
+        m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+        vec3 g;
+        g.x  = a0.x  * x0.x  + h.x  * x0.y;
+        g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+        return 130.0 * dot(m, g);
+      }
+
+      void main() {
+        vec2 st = gl_FragCoord.xy / u_resolution.xy;
+        st.x *= u_resolution.x / u_resolution.y;
+        
+        float t = u_time * 0.1; 
+        
+        float noise1 = snoise(st * 2.0 + t);
+        float noise2 = snoise(st * 4.0 - t * 1.5);
+        float fluid = smoothstep(-0.2, 0.9, noise1 + noise2 * 0.6);
+
+        // --- DARK BLUE THEME ---
+        vec3 deepColor = vec3(0.0, 0.01, 0.05);  
+        vec3 midColor  = vec3(0.02, 0.05, 0.15); 
+        vec3 lightColor = vec3(0.05, 0.15, 0.4);   
+
+        vec3 color = mix(deepColor, midColor, fluid);
+        color = mix(color, lightColor, smoothstep(0.4, 1.0, fluid) * 0.5);
+        
+        float vig = 1.0 - length(st - 0.5) * 0.5;
+        color *= vig;
+
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `;
+
+    const createShader = (gl, type, source) => {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error("Shader Compile Error:", gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    };
+
+    const vert = createShader(gl, gl.VERTEX_SHADER, vsSource);
+    const frag = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+    if (!vert || !frag) return;
+
+    const program = gl.createProgram();
+    gl.attachShader(program, vert);
+    gl.attachShader(program, frag);
+    gl.linkProgram(program);
+
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return;
+
+    const positionAttr = gl.getAttribLocation(program, "position");
+    const posBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+
+    const timeLoc = gl.getUniformLocation(program, "u_time");
+    const resLoc = gl.getUniformLocation(program, "u_resolution");
+
+    let frameId;
+    const startTime = performance.now();
+
+    const render = () => {
+      // Ensure canvas exists before trying to access dimensions
+      if (!canvas) return;
+      
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+        gl.viewport(0, 0, width, height);
+      }
+
+      gl.useProgram(program);
+      gl.enableVertexAttribArray(positionAttr);
+      gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+      gl.vertexAttribPointer(positionAttr, 2, gl.FLOAT, false, 0, 0);
+
+      gl.uniform2f(resLoc, canvas.width, canvas.height);
+      gl.uniform1f(timeLoc, (performance.now() - startTime) * 0.001);
+
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      frameId = requestAnimationFrame(render);
+    };
+
+    render();
+    return () => cancelAnimationFrame(frameId);
+  }, [isMobile]); // Re-run effect if view switches to mobile
+
+  // --- End Shader Logic ---
 
   useEffect(() => {
     fetchUserInfo();
@@ -32,13 +185,9 @@ const Participants = () => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // If static button is visible (intersecting), hide FAB
         setShowFab(!entry.isIntersecting);
       },
-      {
-        root: null,
-        threshold: 0.1, // Trigger when 10% of the button is visible
-      }
+      { root: null, threshold: 0.1 }
     );
 
     if (buttonRef.current) {
@@ -50,7 +199,7 @@ const Participants = () => {
         observer.unobserve(buttonRef.current);
       }
     };
-  }, [loading]); // Re-run when loading finishes (content might shift)
+  }, [loading]);
 
   useEffect(() => {
     return () => {
@@ -249,7 +398,27 @@ const Participants = () => {
 
   return (
     <div className="participants-page">
-      <div className="part-bg-layer"></div>
+      {/* CONDITIONAL BACKGROUND:
+        - If Mobile: Show Canvas (Shader)
+        - If Desktop: Show original CSS background div
+      */}
+      {isMobile ? (
+        <canvas 
+          ref={canvasRef} 
+          style={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            width: '100%', 
+            height: '100%', 
+            zIndex: -1, 
+            pointerEvents: 'none' 
+          }} 
+        />
+      ) : (
+        <div className="part-bg-layer"></div>
+      )}
+      
       <div className="part-noise-overlay"></div>
 
       <div className="logout-container">
