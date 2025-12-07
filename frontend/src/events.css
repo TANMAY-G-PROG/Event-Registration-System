@@ -36,7 +36,7 @@
   box-sizing: border-box;
 }
 
-/* --- BACKGROUND (UNCHANGED) --- */
+/* --- BACKGROUND (DESKTOP DEFAULT) --- */
 .events-wrapper .light-rays-background {
   position: fixed;
   top: 0;
@@ -44,11 +44,12 @@
   width: 100%;
   height: 100%;
   z-index: 0;
+  /* Default Desktop Gradient (Dark Blue) */
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   pointer-events: none;
 }
 
-/* --- LOGOUT BUTTON (UNCHANGED) --- */
+/* --- LOGOUT BUTTON --- */
 .events-wrapper .logout-container {
   position: fixed;
   top: 20px;
@@ -207,23 +208,18 @@
   position: relative;
 }
 
-/* --- NEW DARK GLASS CARD STYLE --- */
+/* --- DARK GLASS CARD STYLE --- */
 .events-wrapper .card {
-  /* Dark translucent background for glass effect */
   background: rgba(20, 30, 60, 0.6); 
-  /* Blur the background behind the card */
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  /* Thin border for definition */
   border: 1px solid rgba(255, 255, 255, 0.1);
-  
   width: 300px;
   position: relative;
-  border-radius: 24px; /* More rounded corners */
+  border-radius: 24px;
   overflow: hidden;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0, 1);
-  
   pointer-events: auto;
   cursor: pointer;
   -webkit-backface-visibility: hidden;
@@ -232,7 +228,6 @@
 }
 
 .events-wrapper .card:hover {
-  /* Glow stronger on hover */
   box-shadow: 0 15px 40px rgba(100, 120, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.3);
   transform: scale(1.05) translateY(-10px);
@@ -246,7 +241,6 @@
   overflow: hidden;
   padding: 0;
   margin: 0;
-  /* Blend image bottom with card */
   mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
 }
@@ -265,13 +259,12 @@
 }
 
 .events-wrapper .card__img--hover {
-  display: none; /* Not needed for this style */
+  display: none;
 }
 
 /* --- TEXT INFO SECTION --- */
 .events-wrapper .card__info {
   z-index: 3;
-  /* Transparent background so glass effect shows through */
   background-color: transparent;
   padding: 10px 24px 28px 24px;
   position: relative;
@@ -282,17 +275,16 @@
   min-height: 110px;
 }
 
-/* --- TEXT STYLE (WHITE + GLOW) --- */
+/* --- TEXT STYLE --- */
 .events-wrapper .card__title {
   font-family: 'Outfit', sans-serif;
   font-size: 1.35rem;
   font-weight: 700;
-  color: #ffffff; /* White text */
+  color: #ffffff;
   text-align: center;
   line-height: 1.2;
   letter-spacing: 0.5px;
   margin-bottom: 15px;
-  /* Subtle shadow for readability */
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
@@ -309,8 +301,6 @@
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s ease;
-  
-  /* NEON GLOW INITIAL STATE */
   box-shadow: 0 0 10px rgba(102, 126, 234, 0.3), inset 0 0 10px rgba(102, 126, 234, 0.1);
 }
 
@@ -318,15 +308,22 @@
   background: rgba(102, 126, 234, 0.8);
   border-color: rgba(102, 126, 234, 1);
   transform: scale(1.1);
-  /* STRONG NEON GLOW ON HOVER */
-  box-shadow: 
-    0 0 20px rgba(102, 126, 234, 0.6), 
-    0 0 40px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.6), 0 0 40px rgba(102, 126, 234, 0.4);
 }
 
 /* --- MEDIA QUERIES --- */
 @media (max-width: 768px) {
   .events-wrapper { padding-top: 70px; }
+  
+  /* --- NEW: MOBILE SPACE THEME BACKGROUND --- */
+  .events-wrapper .light-rays-background {
+    /* High quality Space Nebula Image */
+    background-image: url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5980?auto=format&fit=crop&q=80&w=1000');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
   .events-wrapper .cards {
     gap: 25px;
     padding: 20px 15px 40px;
