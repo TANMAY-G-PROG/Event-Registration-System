@@ -371,14 +371,13 @@ export default function Events() {
     }
   };
 
-  // UPDATED IMG STYLE: cover (no white space) + no padding
+  // Image style: Full width/height, crop nicely (cover), no padding
   const imgStyle = {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
     display: 'block',
-    borderTopLeftRadius: '16px',
-    borderTopRightRadius: '16px'
+    // We remove border radius here because the parent div handles it
   };
 
   return (
@@ -413,7 +412,7 @@ export default function Events() {
 
       <section className="cards">
         
-        {/* Card 1: Participants Title -> Uses VOLUNTEERS Image */}
+        {/* Card 1: Participants */}
         <article className="card card--1" onClick={() => navigate('/participants')}>
           <div className="card__img">
             <img 
@@ -423,7 +422,6 @@ export default function Events() {
               loading="lazy"
             />
           </div>
-          <div className="card__img--hover"></div>
           <div className="card__info">
             <h3 className="card__title">Events participated by you</h3>
             <div className="card__icon">
@@ -442,7 +440,6 @@ export default function Events() {
               loading="lazy"
             />
           </div>
-          <div className="card__img--hover"></div>
           <div className="card__info">
             <h3 className="card__title">Events organised by you</h3>
             <div className="card__icon">
@@ -451,7 +448,7 @@ export default function Events() {
           </div>
         </article>
 
-        {/* Card 3: Volunteers Title -> Uses PARTICIPANTS Image */}
+        {/* Card 3: Volunteers */}
         <article className="card card--3" onClick={() => navigate('/volunteers')}>
           <div className="card__img">
             <img 
@@ -461,7 +458,6 @@ export default function Events() {
               loading="lazy"
             />
           </div>
-          <div className="card__img--hover"></div>
           <div className="card__info">
             <h3 className="card__title">Events volunteered by you</h3>
             <div className="card__icon">
