@@ -371,15 +371,14 @@ export default function Events() {
     }
   };
 
-  // Image style to ensure full image fits (contain)
+  // UPDATED IMG STYLE: cover (no white space) + no padding
   const imgStyle = {
     width: '100%',
     height: '100%',
-    objectFit: 'contain',
+    objectFit: 'cover',
     display: 'block',
     borderTopLeftRadius: '16px',
-    borderTopRightRadius: '16px',
-    padding: '10px'
+    borderTopRightRadius: '16px'
   };
 
   return (
