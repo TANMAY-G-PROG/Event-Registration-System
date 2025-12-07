@@ -1,13 +1,16 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
+import { IKContext, IKImage } from 'imagekitio-react'; // Import ImageKit SDK
 import './events.css';
 
-// Get the base URL from environment variables if needed, currently unused in your snippet
-// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// --- CONFIGURATION ---
+const IMAGEKIT_URL_ENDPOINT = 'https://ik.imagekit.io/flopass';
+const IMAGEKIT_PUBLIC_KEY = 'public_BViEaqCZDJ7dIVjyJGHL9FfBF34=';
 
 const DEFAULT_COLOR = '#ffffff';
 
+// --- HELPER FUNCTIONS ---
 const hexToRgb = hex => {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [1, 1, 1];
@@ -16,25 +19,18 @@ const hexToRgb = hex => {
 const getAnchorAndDir = (origin, w, h) => {
   const outside = 0.2;
   switch (origin) {
-    case 'top-left':
-      return { anchor: [0, -outside * h], dir: [0, 1] };
-    case 'top-right':
-      return { anchor: [w, -outside * h], dir: [0, 1] };
-    case 'left':
-      return { anchor: [-outside * w, 0.5 * h], dir: [1, 0] };
-    case 'right':
-      return { anchor: [(1 + outside) * w, 0.5 * h], dir: [-1, 0] };
-    case 'bottom-left':
-      return { anchor: [0, (1 + outside) * h], dir: [0, -1] };
-    case 'bottom-center':
-      return { anchor: [0.5 * w, (1 + outside) * h], dir: [0, -1] };
-    case 'bottom-right':
-      return { anchor: [w, (1 + outside) * h], dir: [0, -1] };
-    default:
-      return { anchor: [0.5 * w, -outside * h], dir: [0, 1] };
+    case 'top-left': return { anchor: [0, -outside * h], dir: [0, 1] };
+    case 'top-right': return { anchor: [w, -outside * h], dir: [0, 1] };
+    case 'left': return { anchor: [-outside * w, 0.5 * h], dir: [1, 0] };
+    case 'right': return { anchor: [(1 + outside) * w, 0.5 * h], dir: [-1, 0] };
+    case 'bottom-left': return { anchor: [0, (1 + outside) * h], dir: [0, -1] };
+    case 'bottom-center': return { anchor: [0.5 * w, (1 + outside) * h], dir: [0, -1] };
+    case 'bottom-right': return { anchor: [w, (1 + outside) * h], dir: [0, -1] };
+    default: return { anchor: [0.5 * w, -outside * h], dir: [0, 1] };
   }
 };
 
+// --- LIGHTRAYS COMPONENT (BACKGROUND) ---
 const LightRays = ({
   raysOrigin = 'top-center',
   raysColor = DEFAULT_COLOR,
@@ -66,16 +62,13 @@ const LightRays = ({
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
     };
-    
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
-
     observerRef.current = new IntersectionObserver(
       entries => {
         const entry = entries[0];
@@ -83,9 +76,7 @@ const LightRays = ({
       },
       { threshold: 0.1 }
     );
-
     observerRef.current.observe(containerRef.current);
-
     return () => {
       if (observerRef.current) {
         observerRef.current.disconnect();
@@ -96,7 +87,6 @@ const LightRays = ({
 
   useEffect(() => {
     if (!isVisible || !containerRef.current) return;
-
     if (cleanupFunctionRef.current) {
       cleanupFunctionRef.current();
       cleanupFunctionRef.current = null;
@@ -104,13 +94,10 @@ const LightRays = ({
 
     const initializeWebGL = async () => {
       if (!containerRef.current) return;
-
       await new Promise(resolve => setTimeout(resolve, 10));
-
       if (!containerRef.current) return;
 
       const maxDpr = isMobile ? 1.5 : 2;
-
       const renderer = new Renderer({
         dpr: Math.min(window.devicePixelRatio, maxDpr),
         alpha: true
@@ -135,10 +122,8 @@ void main() {
 }`;
 
       const frag = `precision highp float;
-
 uniform float iTime;
 uniform vec2  iResolution;
-
 uniform vec2  rayPos;
 uniform vec2  rayDir;
 uniform vec3  raysColor;
@@ -164,61 +149,44 @@ float rayStrength(vec2 raySource, vec2 rayRefDirection, vec2 coord,
   vec2 sourceToCoord = coord - raySource;
   vec2 dirNorm = normalize(sourceToCoord);
   float cosAngle = dot(dirNorm, rayRefDirection);
-
   float distortedAngle = cosAngle + distortion * sin(iTime * 2.0 + length(sourceToCoord) * 0.01) * 0.2;
-
   float spreadFactor = pow(max(distortedAngle, 0.0), 1.0 / max(lightSpread, 0.001));
-
   float distance = length(sourceToCoord);
   float maxDistance = iResolution.x * rayLength;
   float lengthFalloff = clamp((maxDistance - distance) / maxDistance, 0.0, 1.0);
-
   float fadeFalloff = clamp((iResolution.x * fadeDistance - distance) / (iResolution.x * fadeDistance), 0.5, 1.0);
   float pulse = pulsating > 0.5 ? (0.8 + 0.2 * sin(iTime * speed * 3.0)) : 1.0;
-
   float baseStrength = clamp(
     (0.45 + 0.15 * sin(distortedAngle * seedA + iTime * speed)) +
     (0.3 + 0.2 * cos(-distortedAngle * seedB + iTime * speed)),
     0.0, 1.0
   );
-
   return baseStrength * lengthFalloff * fadeFalloff * spreadFactor * pulse;
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 coord = vec2(fragCoord.x, iResolution.y - fragCoord.y);
-
   vec2 finalRayDir = rayDir;
   if (mouseInfluence > 0.0) {
     vec2 mouseScreenPos = mousePos * iResolution.xy;
     vec2 mouseDirection = normalize(mouseScreenPos - rayPos);
     finalRayDir = normalize(mix(rayDir, mouseDirection, mouseInfluence));
   }
-
-  vec4 rays1 = vec4(1.0) *
-               rayStrength(rayPos, finalRayDir, coord, 36.2214, 21.11349,
-                           1.5 * raysSpeed);
-  vec4 rays2 = vec4(1.0) *
-               rayStrength(rayPos, finalRayDir, coord, 22.3991, 18.0234,
-                           1.1 * raysSpeed);
-
+  vec4 rays1 = vec4(1.0) * rayStrength(rayPos, finalRayDir, coord, 36.2214, 21.11349, 1.5 * raysSpeed);
+  vec4 rays2 = vec4(1.0) * rayStrength(rayPos, finalRayDir, coord, 22.3991, 18.0234, 1.1 * raysSpeed);
   fragColor = rays1 * 0.5 + rays2 * 0.4;
-
   if (noiseAmount > 0.0) {
     float n = noise(coord * 0.01 + iTime * 0.1);
     fragColor.rgb *= (1.0 - noiseAmount + noiseAmount * n);
   }
-
   float brightness = 1.0 - (coord.y / iResolution.y);
   fragColor.x *= 0.1 + brightness * 0.8;
   fragColor.y *= 0.3 + brightness * 0.6;
   fragColor.z *= 0.5 + brightness * 0.5;
-
   if (saturation != 1.0) {
     float gray = dot(fragColor.rgb, vec3(0.299, 0.587, 0.114));
     fragColor.rgb = mix(vec3(gray), fragColor.rgb, saturation);
   }
-
   fragColor.rgb *= raysColor;
 }
 
@@ -258,45 +226,32 @@ void main() {
 
       const updatePlacement = () => {
         if (!containerRef.current || !renderer) return;
-
         renderer.dpr = Math.min(window.devicePixelRatio, maxDpr);
-
         const { clientWidth: wCSS, clientHeight: hCSS } = containerRef.current;
         renderer.setSize(wCSS, hCSS);
-
         const dpr = renderer.dpr;
         const w = wCSS * dpr;
         const h = hCSS * dpr;
-
         uniforms.iResolution.value = [w, h];
-
         const { anchor, dir } = getAnchorAndDir(raysOrigin, w, h);
         uniforms.rayPos.value = anchor;
         uniforms.rayDir.value = dir;
       };
 
       const loop = t => {
-        if (!rendererRef.current || !uniformsRef.current || !meshRef.current) {
-          return;
-        }
-
+        if (!rendererRef.current || !uniformsRef.current || !meshRef.current) return;
         uniforms.iTime.value = t * 0.001;
-
         if (followMouse && mouseInfluence > 0.0) {
           const smoothing = 0.92;
-
           smoothMouseRef.current.x = smoothMouseRef.current.x * smoothing + mouseRef.current.x * (1 - smoothing);
           smoothMouseRef.current.y = smoothMouseRef.current.y * smoothing + mouseRef.current.y * (1 - smoothing);
-
           uniforms.mousePos.value = [smoothMouseRef.current.x, smoothMouseRef.current.y];
         }
-
         try {
           renderer.render({ scene: mesh });
           animationIdRef.current = requestAnimationFrame(loop);
         } catch (error) {
           console.warn('WebGL rendering error:', error);
-          return;
         }
       };
 
@@ -309,62 +264,35 @@ void main() {
           cancelAnimationFrame(animationIdRef.current);
           animationIdRef.current = null;
         }
-
         window.removeEventListener('resize', updatePlacement);
-
         if (renderer) {
           try {
             const canvas = renderer.gl.canvas;
             const loseContextExt = renderer.gl.getExtension('WEBGL_lose_context');
-            if (loseContextExt) {
-              loseContextExt.loseContext();
-            }
-
-            if (canvas && canvas.parentNode) {
-              canvas.parentNode.removeChild(canvas);
-            }
+            if (loseContextExt) loseContextExt.loseContext();
+            if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
           } catch (error) {
             console.warn('Error during WebGL cleanup:', error);
           }
         }
-
         rendererRef.current = null;
         uniformsRef.current = null;
         meshRef.current = null;
       };
     };
-
     initializeWebGL();
-
     return () => {
       if (cleanupFunctionRef.current) {
         cleanupFunctionRef.current();
         cleanupFunctionRef.current = null;
       }
     };
-  }, [
-    isVisible,
-    isMobile,
-    raysOrigin,
-    raysColor,
-    raysSpeed,
-    lightSpread,
-    rayLength,
-    pulsating,
-    fadeDistance,
-    saturation,
-    followMouse,
-    mouseInfluence,
-    noiseAmount,
-    distortion
-  ]);
+  }, [isVisible, isMobile, raysOrigin, raysColor, raysSpeed, lightSpread, rayLength, pulsating, fadeDistance, saturation, followMouse, mouseInfluence, noiseAmount, distortion]);
 
   useEffect(() => {
     if (!uniformsRef.current || !containerRef.current || !rendererRef.current) return;
-
     const u = uniformsRef.current;
     const renderer = rendererRef.current;
-
     u.raysColor.value = hexToRgb(raysColor);
     u.raysSpeed.value = raysSpeed;
     u.lightSpread.value = lightSpread;
@@ -375,25 +303,12 @@ void main() {
     u.mouseInfluence.value = mouseInfluence;
     u.noiseAmount.value = noiseAmount;
     u.distortion.value = distortion;
-
     const { clientWidth: wCSS, clientHeight: hCSS } = containerRef.current;
     const dpr = renderer.dpr;
     const { anchor, dir } = getAnchorAndDir(raysOrigin, wCSS * dpr, hCSS * dpr);
     u.rayPos.value = anchor;
     u.rayDir.value = dir;
-  }, [
-    raysColor,
-    raysSpeed,
-    lightSpread,
-    raysOrigin,
-    rayLength,
-    pulsating,
-    fadeDistance,
-    saturation,
-    mouseInfluence,
-    noiseAmount,
-    distortion
-  ]);
+  }, [raysColor, raysSpeed, lightSpread, raysOrigin, rayLength, pulsating, fadeDistance, saturation, mouseInfluence, noiseAmount, distortion]);
 
   useEffect(() => {
     const handleMouseMove = e => {
@@ -403,7 +318,6 @@ void main() {
       const y = (e.clientY - rect.top) / rect.height;
       mouseRef.current = { x, y };
     };
-
     const handleTouchMove = e => {
       if (!containerRef.current || !rendererRef.current || e.touches.length === 0) return;
       const rect = containerRef.current.getBoundingClientRect();
@@ -412,11 +326,9 @@ void main() {
       const y = (touch.clientY - rect.top) / rect.height;
       mouseRef.current = { x, y };
     };
-
     if (followMouse) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('touchmove', handleTouchMove, { passive: true });
-      
       return () => {
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('touchmove', handleTouchMove);
@@ -427,6 +339,7 @@ void main() {
   return <div ref={containerRef} className={`light-rays-container ${className}`.trim()} />;
 };
 
+// --- MAIN EVENTS COMPONENT ---
 export default function Events() {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
@@ -436,10 +349,8 @@ export default function Events() {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
-    
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -453,14 +364,9 @@ export default function Events() {
       const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
-
-      if (!response.ok) {
-        navigate('/');
-      }
+      if (!response.ok) navigate('/');
     } catch (error) {
       console.error('Auth check failed:', error);
       navigate('/');
@@ -472,13 +378,9 @@ export default function Events() {
       const response = await fetch('/api/signout', {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
-
       const data = await response.json();
-
       if (data.success) {
         navigate('/');
       } else {
@@ -488,6 +390,18 @@ export default function Events() {
       console.error('Logout error:', error);
       alert('Error logging out. Please try again.');
     }
+  };
+
+  // Styles for the ImageKit images so they fit exactly like CSS backgrounds
+  const imageStyle = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 1,
+    transition: 'transform 0.3s ease' // Optional: Adds smooth hover effect if you want to scale it
   };
 
   return (
@@ -520,46 +434,71 @@ export default function Events() {
         </button>
       </div>
 
-      <section className="cards">
-        {/* UPDATED: 
-          1. Moved onClick to the <article> tag.
-          2. Removed <div className="card_link"> wrapper.
-          3. Placeholder styles handled in CSS via 'card__img'.
-        */}
-        
-        <article className="card card--1" onClick={() => navigate('/participants')}>
-          <div className="card__img"></div>
-          <div className="card__img--hover"></div>
-          <div className="card__info">
-            <h3 className="card__title">Events participated by you</h3>
-            <div className="card__icon">
-              <i className="fa-solid fa-plus"></i>
+      <IKContext urlEndpoint={IMAGEKIT_URL_ENDPOINT} publicKey={IMAGEKIT_PUBLIC_KEY}>
+        <section className="cards">
+          
+          {/* Card 1: Participants */}
+          <article className="card card--1" onClick={() => navigate('/participants')}>
+            <div className="card__img">
+              <IKImage 
+                path="/participants.png" // MAKE SURE THIS FILE EXISTS IN YOUR DASHBOARD
+                transformation={[{ height: 400, width: 300 }]}
+                lqip={{ active: true }}
+                loading="lazy"
+                style={imageStyle}
+              />
             </div>
-          </div>
-        </article>
+            <div className="card__img--hover"></div>
+            <div className="card__info">
+              <h3 className="card__title">Events participated by you</h3>
+              <div className="card__icon">
+                <i className="fa-solid fa-plus"></i>
+              </div>
+            </div>
+          </article>
 
-        <article className="card card--2" onClick={() => navigate('/organisers')}>
-          <div className="card__img"></div>
-          <div className="card__img--hover"></div>
-          <div className="card__info">
-            <h3 className="card__title">Events organised by you</h3>
-            <div className="card__icon">
-              <i className="fa-solid fa-plus"></i>
+          {/* Card 2: Organisers */}
+          <article className="card card--2" onClick={() => navigate('/organisers')}>
+            <div className="card__img">
+              <IKImage 
+                path="/organisers.png" // Matches the URL you shared previously
+                transformation={[{ height: 400, width: 300 }]}
+                lqip={{ active: true }}
+                loading="lazy"
+                style={imageStyle}
+              />
             </div>
-          </div>
-        </article>
+            <div className="card__img--hover"></div>
+            <div className="card__info">
+              <h3 className="card__title">Events organised by you</h3>
+              <div className="card__icon">
+                <i className="fa-solid fa-plus"></i>
+              </div>
+            </div>
+          </article>
 
-        <article className="card card--3" onClick={() => navigate('/volunteers')}>
-          <div className="card__img"></div>
-          <div className="card__img--hover"></div>
-          <div className="card__info">
-            <h3 className="card__title">Events volunteered by you</h3>
-            <div className="card__icon">
-              <i className="fa-solid fa-plus"></i>
+          {/* Card 3: Volunteers */}
+          <article className="card card--3" onClick={() => navigate('/volunteers')}>
+            <div className="card__img">
+              <IKImage 
+                path="/volunteers.png" // MAKE SURE THIS FILE EXISTS IN YOUR DASHBOARD
+                transformation={[{ height: 400, width: 300 }]}
+                lqip={{ active: true }}
+                loading="lazy"
+                style={imageStyle}
+              />
             </div>
-          </div>
-        </article>
-      </section>
+            <div className="card__img--hover"></div>
+            <div className="card__info">
+              <h3 className="card__title">Events volunteered by you</h3>
+              <div className="card__icon">
+                <i className="fa-solid fa-plus"></i>
+              </div>
+            </div>
+          </article>
+
+        </section>
+      </IKContext>
     </div>
   );
 }
