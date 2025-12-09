@@ -67,7 +67,7 @@ const TicketAnimation = ({ onClose, eventName, eventDate, userUSN }) => {
                           </div>
                         </div>
                         <div className="ticket-usn">
-                          {userUSN || "OPERATIVE"}
+                          {userUSN || "AUTHORIZED"}
                         </div>
                       </header>
                       
@@ -105,5 +105,6 @@ const TicketAnimation = ({ onClose, eventName, eventDate, userUSN }) => {
     </div>
   );
 };
+
 
 export default TicketAnimation;
