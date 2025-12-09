@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom"
 import QRCode from "qrcode"
 import "./registerevent.css"
 
+// --- IMPORT TICKET ANIMATION ---
+import TicketAnimation from './TicketAnimation';
+
 function formatTime12h(timeString) {
   if (!timeString) return "Time TBA"
   const [hours, minutes] = String(timeString).split(":")
@@ -38,6 +41,9 @@ export default function Registerevent() {
   const [transactionId, setTransactionId] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("")
+
+  // --- TICKET ANIMATION STATE ---
+  const [ticketInfo, setTicketInfo] = useState(null); // { eventName, eventDate, userUSN }
 
   function showFlash(type, message) {
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -251,6 +257,14 @@ export default function Registerevent() {
       
       showFlash("success", data?.message || "Successfully registered for the event!")
       setRegisteredEvents(prev => new Set(prev).add(eventId))
+      
+      // --- TRIGGER TICKET ANIMATION (FREE EVENT) ---
+      setTicketInfo({
+        eventName: event.ename,
+        eventDate: event.eventDate,
+        userUSN: data?.userUSN || "" // Backend might not return USN, fallback in component
+      });
+
       await loadEvents()
     } catch (err) {
       console.error("Registration error:", err)
@@ -390,6 +404,14 @@ export default function Registerevent() {
       }
 
       showFlash('success', data?.message || 'Team registered successfully!')
+      
+      // --- TRIGGER TICKET ANIMATION (FREE TEAM EVENT) ---
+      setTicketInfo({
+        eventName: event.ename,
+        eventDate: event.eventDate,
+        userUSN: data?.userUSN || ""
+      });
+
       await loadTeamStatus(eventId)
       await loadEvents()
       await fetchMyRegistrations()
@@ -463,6 +485,14 @@ export default function Registerevent() {
         setShowUpiModal(null)
         setTransactionId("")
         showFlash('success', successMsg)
+        
+        // --- TRIGGER TICKET ANIMATION (PAID/UPI SUCCESS) ---
+        setTicketInfo({
+            eventName: event.ename,
+            eventDate: event.eventDate,
+            userUSN: data?.userUSN || "" 
+        });
+
         await loadEvents()
         await loadTeamStatus(eventId)
         await fetchMyRegistrations()
@@ -598,6 +628,16 @@ export default function Registerevent() {
       
       {/* Background Elements */}
       <div className="registerevent-hero-bg" aria-hidden="true" />
+
+      {/* --- RENDER TICKET ANIMATION IF STATE IS SET --- */}
+      {ticketInfo && (
+        <TicketAnimation 
+          onClose={() => setTicketInfo(null)}
+          eventName={ticketInfo.eventName}
+          eventDate={ticketInfo.eventDate}
+          userUSN={ticketInfo.userUSN}
+        />
+      )}
 
       <div className="registerevent-container">
         {flash.message && (
@@ -928,23 +968,23 @@ export default function Registerevent() {
 
                 <div style={{borderTop: '1px solid var(--re-glass-border)', paddingTop: '24px', textAlign: 'left'}}>
                     <div className="registerevent-form-group">
-                     <label className="registerevent-form-label">Transaction ID (UTR)</label>
-                     <input
-                       type="text"
-                       className="registerevent-form-input"
-                       value={transactionId}
-                       onChange={(e) => setTransactionId(e.target.value)}
-                       placeholder="Enter Transaction ID after payment"
-                       disabled={isSubmitting}
-                     />
+                      <label className="registerevent-form-label">Transaction ID (UTR)</label>
+                      <input
+                        type="text"
+                        className="registerevent-form-input"
+                        value={transactionId}
+                        onChange={(e) => setTransactionId(e.target.value)}
+                        placeholder="Enter Transaction ID after payment"
+                        disabled={isSubmitting}
+                      />
                     </div>
                     <button
-                     type="button"
-                     className="registerevent-modal-submit-btn"
-                     onClick={handleSubmitUpiPayment}
-                     disabled={isSubmitting}
+                      type="button"
+                      className="registerevent-modal-submit-btn"
+                      onClick={handleSubmitUpiPayment}
+                      disabled={isSubmitting}
                     >
-                     {isSubmitting ? "Verifying..." : "Submit & Complete Registration"}
+                      {isSubmitting ? "Verifying..." : "Submit & Complete Registration"}
                     </button>
                 </div>
               </div>
