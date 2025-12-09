@@ -1,6 +1,6 @@
 /* ticket_animation.css */
 
-/* Overlay */
+/* Overlay - UPDATED ANIMATION */
 .ticket-overlay {
   position: fixed;
   inset: 0;
@@ -10,12 +10,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: ticket-fade-in 0.4s ease-out;
+  /* Controls the full lifecycle of the overlay (fade in AND fade out) */
+  animation: overlay-lifecycle 5.8s ease-in-out forwards;
 }
 
-@keyframes ticket-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes overlay-lifecycle {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  /* Stay fully visible while ticket moves/hovers */
+  90% { opacity: 1; }
+  /* Fade out simultaneously with the ticket flying away */
+  100% { opacity: 0; }
 }
 
 /* --- TICKET ANIMATION --- */
@@ -60,19 +65,16 @@
   min-width: 350px;
   position: relative;
   top: -140px;
-  
-  /* UPDATED: Animation to fade out exactly when ticket flies away */
   transform: scale(0.9);
+  /* Syncs with overlay fade out */
   animation: output-exit 5.8s ease-in-out forwards;
 }
 
 @keyframes output-exit {
-  /* Stay visible and scaled for the first 90% (while ticket is hovering) */
   0%, 90% { 
     opacity: 1; 
     transform: scale(0.9); 
   }
-  /* Fade out and drift up slightly during the exit phase */
   100% { 
     opacity: 0; 
     transform: scale(0.9) translateY(-20px); 
