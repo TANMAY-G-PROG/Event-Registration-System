@@ -712,7 +712,7 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
         
-        res.json({ success: true, message: 'Successfully joined event!' ,usnUSN:userUSN});
+        res.json({ success: true, message: 'Successfully joined event!' ,userUSN:userUSN});
     } catch (err) {
         console.error('Error joining event:', err);
         res.status(500).json({ error: 'Error joining event' });
