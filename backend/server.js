@@ -712,7 +712,7 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
         
-        res.json({ success: true, message: 'Successfully joined event!' ,usn:userUSN});
+        res.json({ success: true, message: 'Successfully joined event!' ,usnUSN:userUSN});
     } catch (err) {
         console.error('Error joining event:', err);
         res.status(500).json({ error: 'Error joining event' });
@@ -1438,7 +1438,8 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
         console.log(`✅ UPI registration submitted: ${userUSN} for event ${eventId}`);
         res.json({ 
             success: true, 
-            message: 'Registration submitted! Your payment is pending verification by the organizer.' 
+            message: 'Registration submitted! Your payment is pending verification by the organizer.',
+            userUSN: userUSN
         });
     } catch (err) {
         console.error('Error in UPI registration:', err);
@@ -2162,7 +2163,8 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
         res.json({
             success: true,
             message: 'Team registered successfully!',
-            teamId
+            teamId,
+            userUSN: userUSN
         });
     } catch (err) {
         console.error('Error registering team:', err);
@@ -2288,7 +2290,8 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
 
         res.json({
             success: true,
-            message: 'Team registration submitted! Your payment is pending verification.'
+            message: 'Team registration submitted! Your payment is pending verification.',
+            userUSN: userUSN
         });
     } catch (err) {
         console.error('Error registering team with UPI:', err);
