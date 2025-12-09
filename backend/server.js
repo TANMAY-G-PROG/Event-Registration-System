@@ -712,7 +712,7 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
         
-        res.json({ success: true, message: 'Successfully joined event!' });
+        res.json({ success: true, message: 'Successfully joined event!' ,usn:userUSN});
     } catch (err) {
         console.error('Error joining event:', err);
         res.status(500).json({ error: 'Error joining event' });
@@ -738,7 +738,7 @@ app.post('/api/events/:eventId/volunteer', requireAuth, async (req, res) => {
         }
         
         if (existing && existing.length > 0) {
-            return res.status(400).json({ error: 'Already volunteered for this event' });
+            return res.status(400).json({ error: 'Already volunteered for this event'});
         }
         
         const { data: event, error: eventError } = await supabase
