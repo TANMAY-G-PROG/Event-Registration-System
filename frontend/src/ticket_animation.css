@@ -22,14 +22,14 @@
 
 .ticket {
   float: left;
-  /* NEW Total Duration: 3.74s + 1.5s + 0.55s = ~5.8s */
+  /* Total Duration: 5.8s */
   animation: ticket-move 5.8s ease-in-out forwards; 
   transform: translateY(50px);
   perspective: 3000px;
 }
 
 @keyframes ticket-move {
-  /* PHASE 1: ENTRY (0% to 65%) -> Approx 3.74s */
+  /* PHASE 1: ENTRY */
   0% { transform: translateY(-300px); }
   13% { transform: translateY(-250px); }
   23% { transform: translateY(-200px); }
@@ -38,20 +38,18 @@
   52% { transform: translateY(-40px); }
   65% { transform: translateY(45px); }
 
-  /* PHASE 2: HOVER (65% to 90%) -> Approx 1.5s */
-  /* Quick gentle bob before leaving */
+  /* PHASE 2: HOVER (Wait here until 90%) */
   77% { transform: translateY(55px); }
   90% { transform: translateY(45px); opacity: 1; }
 
-  /* PHASE 3: EXIT (90% to 100%) -> Approx 0.55s */
-  /* Fast fly off */
+  /* PHASE 3: EXIT (Fly away) */
   100% { 
     transform: translateY(100%) rotateX(160deg) scale(5); 
     opacity: 0;
   }
 }
 
-/* --- REST OF THE UIVERSE CSS (Unchanged) --- */
+/* --- TICKET OUTPUT (THE TOP BAR) --- */
 
 .ticket-output {
   align-self: center;
@@ -62,8 +60,26 @@
   min-width: 350px;
   position: relative;
   top: -140px;
+  
+  /* UPDATED: Animation to fade out exactly when ticket flies away */
   transform: scale(0.9);
+  animation: output-exit 5.8s ease-in-out forwards;
 }
+
+@keyframes output-exit {
+  /* Stay visible and scaled for the first 90% (while ticket is hovering) */
+  0%, 90% { 
+    opacity: 1; 
+    transform: scale(0.9); 
+  }
+  /* Fade out and drift up slightly during the exit phase */
+  100% { 
+    opacity: 0; 
+    transform: scale(0.9) translateY(-20px); 
+  }
+}
+
+/* --- DECORATIVE ELEMENTS (Unchanged) --- */
 
 .ticket-output .cover {
   position: absolute;
@@ -203,10 +219,6 @@
   transition: 0.6s;
   transform-style: preserve-3d;
   position: relative;
-}
-
-.ticket:hover .ticket-flip-container {
-  transform: rotateY(180deg);
 }
 
 .float {
