@@ -7,10 +7,13 @@ const TicketAnimation = ({ onClose, eventName, eventDate, userUSN }) => {
     : "DATE TBA";
 
   useEffect(() => {
-    // Automatically close after the 5.8s animation completes
+    // --- KEY LOGIC: AUTOMATIC CLOSE ---
+    // This timer matches the 5.8s CSS animation. 
+    // Once the time is up, it triggers onClose(), removing this component 
+    // and "returning" you to the RegisterEvent page instantly.
     const timer = setTimeout(() => {
       onClose();
-    }, 5800); // 5800ms matches the 5.8s CSS animation duration
+    }, 5800); 
 
     return () => clearTimeout(timer);
   }, [onClose]);
@@ -18,7 +21,7 @@ const TicketAnimation = ({ onClose, eventName, eventDate, userUSN }) => {
   return (
     <div className="ticket-overlay">
       
-      {/* Decorative Top (Uiverse output) */}
+      {/* Decorative Top (Uiverse output) - Animations handled in CSS */}
       <div className="ticket-output">
         <div className="wrap-colors-1"><div className="bg-colors"></div></div>
         <div className="wrap-colors-2"><div className="bg-colors"></div></div>
@@ -67,6 +70,7 @@ const TicketAnimation = ({ onClose, eventName, eventDate, userUSN }) => {
                           </div>
                         </div>
                         <div className="ticket-usn">
+                          {/* UPDATED: Displays AUTHORIZED if no USN is provided */}
                           {userUSN || "AUTHORIZED"}
                         </div>
                       </header>
@@ -105,6 +109,5 @@ const TicketAnimation = ({ onClose, eventName, eventDate, userUSN }) => {
     </div>
   );
 };
-
 
 export default TicketAnimation;
