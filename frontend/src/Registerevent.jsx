@@ -259,10 +259,13 @@ export default function Registerevent() {
       setRegisteredEvents(prev => new Set(prev).add(eventId))
       
       // --- TRIGGER TICKET ANIMATION (FREE EVENT) ---
+      // Fix: Check API -> Check LocalStorage -> Default to AUTHORIZED
+      const usn = data?.userUSN || localStorage.getItem("userUSN") || "AUTHORIZED";
+      
       setTicketInfo({
         eventName: event.ename,
         eventDate: event.eventDate,
-        userUSN: data?.userUSN || "" // Backend might not return USN, fallback in component
+        userUSN: usn
       });
 
       await loadEvents()
@@ -406,10 +409,13 @@ export default function Registerevent() {
       showFlash('success', data?.message || 'Team registered successfully!')
       
       // --- TRIGGER TICKET ANIMATION (FREE TEAM EVENT) ---
+      // Fix: Check API -> Check LocalStorage -> Default to AUTHORIZED
+      const usn = data?.userUSN || localStorage.getItem("userUSN") || "AUTHORIZED";
+
       setTicketInfo({
         eventName: event.ename,
         eventDate: event.eventDate,
-        userUSN: data?.userUSN || ""
+        userUSN: usn
       });
 
       await loadTeamStatus(eventId)
@@ -487,10 +493,13 @@ export default function Registerevent() {
         showFlash('success', successMsg)
         
         // --- TRIGGER TICKET ANIMATION (PAID/UPI SUCCESS) ---
+        // Fix: Check API -> Check LocalStorage -> Default to AUTHORIZED
+        const usn = data?.userUSN || localStorage.getItem("userUSN") || "AUTHORIZED";
+
         setTicketInfo({
             eventName: event.ename,
             eventDate: event.eventDate,
-            userUSN: data?.userUSN || "" 
+            userUSN: usn 
         });
 
         await loadEvents()
