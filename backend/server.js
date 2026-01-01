@@ -10,6 +10,7 @@ const ExcelJS = require('exceljs');
 const { createClient } = require('redis'); // Import Redis
 const { Resend } = require('resend');
 
+const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -101,13 +102,6 @@ async function testSupabaseConnection() {
 }
 testSupabaseConnection();
 
-// SendGrid configuration
-if (process.env.SENDGRID_API_KEY) {
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    console.log('✅ SendGrid email configured.');
-} else {
-    console.error('❌ SENDGRID_API_KEY not found. Email will not work.');
-}
 
 // Middleware to check if user is authenticated
 function requireAuth(req, res, next) {
@@ -1155,6 +1149,7 @@ app.get('/api/scan-qr', async (req, res) => {
 // ==================== PASSWORD RESET ENDPOINTS ====================
 
 // Forgot Password - Send reset email
+// Forgot Password - Send reset email (UPDATED FOR RESEND)
 app.post('/api/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
@@ -1204,81 +1199,48 @@ app.post('/api/forgot-password', async (req, res) => {
 
         // Create reset link
         const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-        const fromEmail = process.env.SENDGRID_FROM_EMAIL;
-
-        if (!fromEmail) {
-            console.error('❌ SENDGRID_FROM_EMAIL is not set. Cannot send email.');
-            return res.status(500).json({ error: 'Email server not configured.' });
-        }
         
-        // Send email using SendGrid
-        const mailOptions = {
-            from: `"E-Pass Event System" <${fromEmail}>`,
-            to: email,
+        // --- RESEND EMAIL LOGIC ---
+        const emailHtml = `
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family: Arial, sans-serif; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #1A2980;">Password Reset Request</h2>
+                    <p>Hello <strong>${user[0].sname}</strong>,</p>
+                    <p>Click the link below to reset your password:</p>
+                    <p>
+                        <a href="${resetLink}" style="background-color: #1A2980; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
+                    </p>
+                    <p>Or copy this link: <br/>${resetLink}</p>
+                    <p>This link expires in 1 hour.</p>
+                </div>
+            </body>
+            </html>
+        `;
+
+        // 👇 THIS IS THE NEW PART THAT REPLACES sgMail.send()
+        const { data, error } = await resend.emails.send({
+            from: 'E-Pass Security <onboarding@resend.dev>', // Use this exact email if you don't have a custom domain
+            to: [email],
             subject: 'Password Reset Request - E-Pass',
-            html: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                        .header { background: linear-gradient(to right, #1A2980, #26D0CE); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-                        .button { display: inline-block; padding: 15px 30px; background: linear-gradient(to right, #1A2980, #26D0CE); color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
-                        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-                        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="header">
-                            <h1>🔒 Password Reset Request</h1>
-                        </div>
-                        <div class="content">
-                            <p>Hello <strong>${user[0].sname}</strong>,</p>
-                            <p>We received a request to reset the password for your account associated with <strong>${email}</strong>.</p>
-                            <p>Click the button below to reset your password:</p>
-                            <center>
-                                <a href="${resetLink}" class="button">Reset Password</a>
-                            </center>
-                            <p>Or copy and paste this link into your browser:</p>
-                            <p style="background: #fff; padding: 10px; border: 1px solid #ddd; word-break: break-all;">
-                                ${resetLink}
-                            </p>
-                            <div class="warning">
-                                <strong>⚠️ Important:</strong>
-                                <ul>
-                                    <li>This link will expire in <strong>1 hour</strong></li>
-                                    <li>If you didn't request this reset, please ignore this email</li>
-                                    <li>Your password won't change until you create a new one</li>
-                                </ul>
-                            </div>
-                            <p>Your USN: <strong>${user[0].usn}</strong></p>
-                        </div>
-                        <div class="footer">
-                            <p>E-Pass Event Management System</p>
-                            <p>This is an automated email. Please do not reply.</p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-            `
-        };
+            html: emailHtml,
+        });
 
-        await sgMail.send(mailOptions);
+        if (error) {
+            console.error('❌ Resend API Error:', error);
+            return res.status(500).json({ error: 'Failed to send email via Resend' });
+        }
+
+        console.log('✅ Password reset email sent via Resend to:', email);
         
-        console.log('✅ Password reset email sent via SendGrid to:', email);
         res.json({
             success: true,
             message: 'If an account exists with this email, you will receive a password reset link.'
         });
 
     } catch (err) {
-        console.error('Error in forgot password (SendGrid):', err);
-        if (err.response) {
-            console.error('SendGrid error body:', err.response.body);
-        }
+        console.error('Error in forgot password:', err);
         res.status(500).json({ error: 'Failed to process password reset request' });
     }
 });
