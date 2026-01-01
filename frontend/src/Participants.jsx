@@ -145,7 +145,8 @@ const Participants = () => {
       }
       
       const t = new Date().getTime();
-      const existingPdfBytes = await fetch(`/hod_certificate.pdf?v=${t}`).then(res => {
+      // UPDATED: Using certificate-template.pdf
+      const existingPdfBytes = await fetch(`/certificate-template.pdf?v=${t}`).then(res => {
         if (!res.ok) throw new Error('Template not found');
         return res.arrayBuffer();
       });
@@ -162,15 +163,22 @@ const Participants = () => {
       } catch { nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold); }
 
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
+      // UPDATED: Included Bold Font
+      const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
       
       const nameText = userInfo.userName;
       const nameWidth = nameFont.widthOfTextAtSize(nameText, 38);
+      
+      // Draw Name
       page.drawText(nameText, { x: (width - nameWidth) / 2, y: 250, size: 38, font: nameFont, color: rgb(0.97, 0.85, 0.57) });
       
+      // Draw USN
       page.drawText(userInfo.userUSN, { x: 170, y: 160, size: 19, font, color: rgb(1,1,1) });
       
+      // UPDATED: Draw Date with specific coordinates
+      page.drawText(formatDate(event.eventDate), { x: 510, y: 160, size: 16, font: boldFont, color: rgb(1,1,1) });
+
       const descFont = font; 
-      
       const contentText = event.certificate_info || event.eventdesc || event.ename;
       const words = contentText.split(' ');
       
