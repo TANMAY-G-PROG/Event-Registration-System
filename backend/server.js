@@ -5,10 +5,10 @@ const supabase = require('./lib/supabase');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
-const sgMail = require('@sendgrid/mail');
 const crypto = require('crypto');
 const ExcelJS = require('exceljs');
 const { createClient } = require('redis'); // Import Redis
+const { Resend } = require('resend');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
