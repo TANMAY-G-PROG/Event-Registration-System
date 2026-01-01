@@ -8,7 +8,7 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
 
-  // Helper to show temporary messages
+  // Helper function to show messages that disappear after 5 seconds
   const showMessage = (text, isError = false) => {
     setMessage({ text, isError, show: true });
     setTimeout(() => {
@@ -19,12 +19,13 @@ export default function ForgotPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Basic validation
+    // 1. Validation
     if (!email) {
       showMessage('Please enter your email address', true);
       return;
     }
 
+    // Simple email regex check
     if (!/\S+@\S+\.\S+/.test(email)) {
       showMessage('Please enter a valid email address', true);
       return;
@@ -33,31 +34,29 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      // NOTE: If your frontend and backend are on different domains (e.g. on Render),
-      // ensure you have a proxy set up or use the full backend URL here.
-      // e.g., `${import.meta.env.VITE_API_URL}/api/forgot-password`
+      // 2. Send request to backend
       const response = await fetch('/api/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', 
+        credentials: 'include', // Important for cookies/sessions if needed
         body: JSON.stringify({ email })
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Success: Show message and redirect
+        // 3. Success handling
         showMessage(data.message || 'Link sent! Check your email (and Spam folder).');
         setEmail('');
         
-        // Redirect to login after 3 seconds so they can read the message
+        // Redirect to login after 3 seconds so user can read the message
         setTimeout(() => {
           navigate('/');
         }, 3000);
       } else {
-        // Error from backend
+        // 4. Error handling (e.g. database error)
         showMessage(data.error || 'Failed to send reset link', true);
       }
     } catch (error) {
@@ -75,6 +74,7 @@ export default function ForgotPassword() {
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
       />
 
+      {/* Message Notification Banner */}
       {message.show && (
         <div className={`message ${message.isError ? 'error' : 'success'}`}>
           {message.text}
@@ -122,7 +122,7 @@ export default function ForgotPassword() {
             </button>
             
             <div className="info-tip">
-              <strong>💡 Tip:</strong> Use the email address you registered with (e.g., yourname@bmsce.ac.in)
+              <strong>💡 Tip:</strong> Use the email address you registered with.
             </div>
           </form>
         </div>
