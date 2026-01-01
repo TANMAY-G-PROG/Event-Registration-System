@@ -8,9 +8,13 @@ const cors = require('cors');
 const crypto = require('crypto');
 const ExcelJS = require('exceljs');
 const { createClient } = require('redis'); // Import Redis
-const { Resend } = require('resend');
+const Brevo = require('@getbrevo/brevo');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// --- Brevo Configuration ---
+const apiInstance = new Brevo.TransactionalEmailsApi();
+const apiKey = apiInstance.authentications['apiKey'];
+apiKey.apiKey = process.env.BREVO_API_KEY; 
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -1148,17 +1152,14 @@ app.get('/api/scan-qr', async (req, res) => {
 
 // ==================== PASSWORD RESET ENDPOINTS ====================
 
-// Forgot Password - Send reset email
-// Forgot Password - Send reset email (UPDATED FOR RESEND)
+// Forgot Password - Send reset email (BREVO VERSION)
 app.post('/api/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
         
-        if (!email) {
-            return res.status(400).json({ error: 'Email is required' });
-        }
+        if (!email) return res.status(400).json({ error: 'Email is required' });
 
-        // Check if user exists
+        // 1. Check if user exists in Supabase
         const { data: user, error: userError } = await supabase
             .from('student')
             .select('usn, sname, emailid')
@@ -1170,20 +1171,20 @@ app.post('/api/forgot-password', async (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
 
-        // Always return success (don't reveal if email exists for security)
+        // Security: Don't reveal if user exists
         if (!user || user.length === 0) {
-            console.log('Password reset requested for non-existent email:', email);
+            console.log('Reset requested for non-existent email:', email);
             return res.json({
                 success: true,
-                message: 'If an account exists with this email, you will receive a password reset link.'
+                message: 'If an account exists, you will receive a reset link.'
             });
         }
 
-        // Generate secure reset token
+        // 2. Generate Token
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
 
-        // Save token to database
+        // 3. Save Token to DB
         const { error: updateError } = await supabase
             .from('student')
             .update({
@@ -1193,55 +1194,48 @@ app.post('/api/forgot-password', async (req, res) => {
             .eq('emailid', email);
         
         if (updateError) {
-            console.error('Error saving reset token:', updateError);
-            return res.status(500).json({ error: 'Failed to generate reset link' });
+            console.error('Error saving token:', updateError);
+            return res.status(500).json({ error: 'Failed to generate link' });
         }
 
-        // Create reset link
         const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
         
-        // --- RESEND EMAIL LOGIC ---
-        const emailHtml = `
-            <!DOCTYPE html>
+        // 4. Send Email via Brevo
+        const sendSmtpEmail = new Brevo.SendSmtpEmail();
+
+        sendSmtpEmail.subject = "Password Reset Request - E-Pass";
+        sendSmtpEmail.sender = { "name": "E-Pass System", "email": "flopass333@gmail.com" }; // MUST be your verified sender in Brevo
+        sendSmtpEmail.to = [{ "email": email, "name": user[0].sname }];
+        sendSmtpEmail.htmlContent = `
             <html>
-            <body style="font-family: Arial, sans-serif; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h2 style="color: #1A2980;">Password Reset Request</h2>
-                    <p>Hello <strong>${user[0].sname}</strong>,</p>
-                    <p>Click the link below to reset your password:</p>
-                    <p>
-                        <a href="${resetLink}" style="background-color: #1A2980; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
-                    </p>
-                    <p>Or copy this link: <br/>${resetLink}</p>
-                    <p>This link expires in 1 hour.</p>
-                </div>
-            </body>
+                <body style="font-family: Arial, sans-serif; color: #333;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #1A2980;">Password Reset</h2>
+                        <p>Hello <strong>${user[0].sname}</strong>,</p>
+                        <p>Click below to reset your password:</p>
+                        <p>
+                            <a href="${resetLink}" style="background-color: #1A2980; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
+                        </p>
+                        <p>Or copy this link: <br/>${resetLink}</p>
+                        <p><i>This link expires in 1 hour.</i></p>
+                    </div>
+                </body>
             </html>
         `;
 
-        // 👇 THIS IS THE NEW PART THAT REPLACES sgMail.send()
-        const { data, error } = await resend.emails.send({
-            from: 'E-Pass Security <onboarding@resend.dev>', // Use this exact email if you don't have a custom domain
-            to: [email],
-            subject: 'Password Reset Request - E-Pass',
-            html: emailHtml,
-        });
-
-        if (error) {
-            console.error('❌ Resend API Error:', error);
-            return res.status(500).json({ error: 'Failed to send email via Resend' });
-        }
-
-        console.log('✅ Password reset email sent via Resend to:', email);
+        const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
+        console.log('✅ Email sent via Brevo. Message ID:', data.messageId);
         
         res.json({
             success: true,
-            message: 'If an account exists with this email, you will receive a password reset link.'
+            message: 'If an account exists, you will receive a reset link.'
         });
 
     } catch (err) {
         console.error('Error in forgot password:', err);
-        res.status(500).json({ error: 'Failed to process password reset request' });
+        // Log detailed Brevo error if available
+        if (err.body) console.error('Brevo Error Body:', err.body);
+        res.status(500).json({ error: 'Failed to process request' });
     }
 });
 
