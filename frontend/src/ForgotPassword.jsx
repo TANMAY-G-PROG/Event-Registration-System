@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './style.css';
 
-// ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
 
+  // Helper to show temporary messages
   const showMessage = (text, isError = false) => {
     setMessage({ text, isError, show: true });
     setTimeout(() => {
@@ -20,6 +19,7 @@ export default function ForgotPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Basic validation
     if (!email) {
       showMessage('Please enter your email address', true);
       return;
@@ -33,7 +33,9 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      // ✅ CHANGED: Using relative path
+      // NOTE: If your frontend and backend are on different domains (e.g. on Render),
+      // ensure you have a proxy set up or use the full backend URL here.
+      // e.g., `${import.meta.env.VITE_API_URL}/api/forgot-password`
       const response = await fetch('/api/forgot-password', {
         method: 'POST',
         headers: {
@@ -46,15 +48,16 @@ export default function ForgotPassword() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // ✅ UPDATED: Added spam folder instruction to the success message
+        // Success: Show message and redirect
         showMessage(data.message || 'Link sent! Check your email (and Spam folder).');
         setEmail('');
         
-        // Redirect to login after 3 seconds
+        // Redirect to login after 3 seconds so they can read the message
         setTimeout(() => {
           navigate('/');
         }, 3000);
       } else {
+        // Error from backend
         showMessage(data.error || 'Failed to send reset link', true);
       }
     } catch (error) {
@@ -84,11 +87,10 @@ export default function ForgotPassword() {
             <i className="fa-solid fa-lock forgot-password-icon"></i>
             <h1>Forgot Password?</h1>
             
-            {/* ✅ UPDATED: Added a visual note in the description text */}
             <p className="forgot-password-description">
               Enter your email address and we'll send you a link to reset your password.
               <br />
-              <span style={{ fontSize: '0.9em', opacity: 0.8 }}>
+              <span style={{ fontSize: '0.9em', opacity: 0.8, color: '#e67e22' }}>
                 (Please check your Spam/Junk folder if not found)
               </span>
             </p>
