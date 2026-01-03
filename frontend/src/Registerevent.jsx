@@ -112,9 +112,9 @@ export default function Registerevent() {
 
   const allEvents = useMemo(() => {
     return [
-      ...(eventsData.upcoming || []).map((e) => ({ ...e, status: "upcoming", upiId: e.upiId, posterUrl: e.posterUrl, bannerUrl: e.bannerUrl })), 
-      ...(eventsData.ongoing || []).map((e) => ({ ...e, status: "ongoing", posterUrl: e.posterUrl, bannerUrl: e.bannerUrl })),
-      ...(eventsData.completed || []).map((e) => ({ ...e, status: "completed", posterUrl: e.posterUrl, bannerUrl: e.bannerUrl })),
+      ...(eventsData.upcoming || []).map((e) => ({ ...e, status: "upcoming", upiId: e.upiId, posterUrl: e.posterUrl })), 
+      ...(eventsData.ongoing || []).map((e) => ({ ...e, status: "ongoing", posterUrl: e.posterUrl })),
+      ...(eventsData.completed || []).map((e) => ({ ...e, status: "completed", posterUrl: e.posterUrl })),
     ]
   }, [eventsData])
 
@@ -289,32 +289,16 @@ export default function Registerevent() {
               const dateStr = event?.eventDate ? new Date(event.eventDate) : null
               const formattedDate = dateStr ? dateStr.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "Date TBA"
               const fee = event?.regFee || 0; const feeText = fee > 0 ? `₹${fee}` : "Free"
-              
-              // YOUTUBE STYLE SPLIT: BANNER IMAGE DISPLAY LOGIC
-              let backgroundStyle = {};
-              if (event.bannerUrl) {
-                backgroundStyle = { backgroundImage: `url(${event.bannerUrl})` };
-              } else if (event.posterUrl) {
-                backgroundStyle = { backgroundImage: `url(${event.posterUrl})` };
-              } else {
-                // Default gradient if no image
-                backgroundStyle = { background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' };
-              }
 
               return (
                 <article key={event.eid} className="registerevent-card">
-                  {/* SPLIT: TOP BANNER SECTION */}
-                  <div className="registerevent-card-banner" style={backgroundStyle}>
-                     <div className="registerevent-badges-overlay">
-                        <span className={`registerevent-badge registerevent-badge-${event.status}`}>{event.status}</span>
-                        {event.is_team && <span className="registerevent-badge registerevent-badge-team">Team Event</span>}
-                     </div>
-                  </div>
-
-                  {/* SPLIT: BOTTOM CONTENT SECTION */}
                   <div className="registerevent-card-content">
                     <div className="registerevent-card-header">
-                      <div className="registerevent-card-title-row">
+                      <div className="registerevent-badges">
+                        <span className={`registerevent-badge registerevent-badge-${event.status}`}>{event.status}</span>
+                        {event.is_team && <span className="registerevent-badge registerevent-badge-team">Team Event</span>}
+                      </div>
+                      <div className="registerevent-card-title-row" style={{marginTop: '16px'}}>
                         <h2 className="registerevent-card-title">{event.ename}</h2>
                       </div>
                       {event.eventdesc && <p className="registerevent-card-desc">{event.eventdesc}</p>}
