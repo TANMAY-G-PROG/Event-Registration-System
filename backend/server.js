@@ -283,7 +283,7 @@ app.post('/api/signout', (req, res) => {
     });
 });
 
-// --- CACHED Get all events ---
+// --- CACHED Get all events (UPDATED WITH POSTER URL) ---
 app.get('/api/events', requireAuth, async (req, res) => {
     try {
         const currentDate = new Date().toISOString().split('T')[0];
@@ -312,7 +312,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 .from('event')
                 .select(`
                     eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                    upi_id, is_team, min_team_size, max_team_size,
+                    upi_id, is_team, min_team_size, max_team_size, poster_url,
                     club:orgcid(cname),
                     student:orgusn(sname)
                 `);
@@ -350,6 +350,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 maxVoln: event.maxvoln,
                 regFee: event.regfee,
                 upiId: event.upi_id,
+                posterUrl: event.poster_url, // Added
                 is_team: event.is_team,
                 min_team_size: event.min_team_size,
                 max_team_size: event.max_team_size,
@@ -373,7 +374,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
     }
 });
 
-// Get user's participant events only
+// Get user's participant events only (UPDATED)
 app.get('/api/my-participant-events', requireAuth, async (req, res) => {
     try {
         const { data: participantEvents, error } = await supabase
@@ -381,7 +382,7 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             .select(`
                 partstatus, partusn,
                 event:parteid (
-                    eid, ename, eventdesc,certificate_info, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
+                    eid, ename, eventdesc, certificate_info, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, poster_url,
                     club:orgcid(cname)
                 )
             `)
@@ -400,6 +401,7 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             maxPart: p.event?.maxpart,
             maxVoln: p.event?.maxvoln,
             regFee: p.event?.regfee,
+            posterUrl: p.event?.poster_url, // Added
             clubName: p.event?.club?.cname,
             PartStatus: p.partstatus==true,
             PartUSN: p.partusn,
@@ -458,14 +460,14 @@ app.get('/api/my-volunteer-events', requireAuth, async (req, res) => {
     }
 });
 
-// Get user's organized events only
+// Get user's organized events only (UPDATED)
 app.get('/api/my-organized-events', requireAuth, async (req, res) => {
     try {
         const { data: organizerEvents, error } = await supabase
             .from('event')
             .select(`
                 eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                upi_id,
+                upi_id, poster_url,
                 club:orgcid(cname)
             `)
             .eq('orgusn', req.session.userUSN);
@@ -484,6 +486,7 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
             maxVoln: e.maxvoln,
             regFee: e.regfee,
             upiId: e.upi_id,
+            posterUrl: e.poster_url, // Added
             clubName: e.club?.cname,
             role: 'organizer'
         }));
@@ -498,7 +501,7 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
     }
 });
 
-// Create/Organize a new event
+// Create/Organize a new event (UPDATED WITH POSTER URL)
 app.post('/api/events/create', requireAuth, async (req, res) => {
     try {
         const { 
@@ -516,7 +519,8 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             upiId,
             isTeamEvent,
             minTeamSize,
-            maxTeamSize
+            maxTeamSize,
+            posterUrl // NEW FIELD
         } = req.body;
         
         const organizedClubId = clubId || OrgCid;
@@ -584,6 +588,7 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             ename: eventName,
             eventdesc: eventDescription,
             certificate_info: certificate_info || null,
+            poster_url: posterUrl || null, // Added
             eventdate: eventDate,
             eventtime: eventTime,
             eventloc: eventLocation,
@@ -835,7 +840,7 @@ app.get('/api/events/:eventId/participant-count', requireAuth, async (req, res) 
     }
 });
 
-// Individual Event Details Route (for organizer ticket page)
+// Individual Event Details Route (for organizer ticket page) (UPDATED)
 app.get('/api/events/:eventId', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
@@ -847,7 +852,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
         const { data: rows, error } = await supabase
             .from('event')
             .select(`
-                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn,
+                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url,
                 club:orgcid(cname),
                 student:orgusn(sname)
             `)
@@ -873,6 +878,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             maxPart: event.maxpart,
             maxVoln: event.maxvoln,
             regFee: event.regFee,
+            posterUrl: event.poster_url, // Added
             clubName: event.club?.cname,
             organizerName: event.student?.sname,
             OrgUsn: event.orgusn
@@ -2673,7 +2679,7 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
             .from('event')
             .select(`
                 eid, ename, eventdesc, eventdate, eventtime, eventloc, 
-                maxpart, maxvoln, regfee, orgusn,
+                maxpart, maxvoln, regfee, orgusn, poster_url,
                 club:orgcid(cname),
                 student:orgusn(sname)
             `)
@@ -2700,6 +2706,7 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
             maxPart: event.maxpart,
             maxVoln: event.maxvoln,
             regFee: event.regfee,
+            posterUrl: event.poster_url, // Added
             clubName: event.club?.cname,
             organizerName: event.student?.sname,
             OrgUsn: event.orgusn
