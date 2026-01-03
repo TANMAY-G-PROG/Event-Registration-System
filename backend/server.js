@@ -22,7 +22,6 @@ const PORT = process.env.PORT || 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // --- Redis Client Setup ---
-// Uses env variable or falls back to your provided connection string
 const redisUrl = process.env.REDIS_URL || 'redis://default:ovBfSh1ALdigQLS0BDbJApUwTOJ6nk3i@redis-10269.c81.us-east-1-2.ec2.cloud.redislabs.com:10269';
 
 const redisClient = createClient({
@@ -61,7 +60,6 @@ app.use((req, res, next) => {
   next();
 });
 
-
 app.use(express.json());
 
 // Health check route for UptimeRobot
@@ -85,12 +83,9 @@ app.use(session({
     }
 }));
 
-
 // Debug middleware to log all requests
 app.use((req, res, next) => {
     console.log(`\n📝 ${req.method} ${req.url}`);
-    // console.log('📋 Session ID:', req.sessionID);
-    // console.log('👤 User USN:', req.session.userUSN || 'Not logged in');
     next();
 });
 
@@ -106,7 +101,6 @@ async function testSupabaseConnection() {
 }
 testSupabaseConnection();
 
-
 // Middleware to check if user is authenticated
 function requireAuth(req, res, next) {
     if (req.session.userUSN) {
@@ -116,6 +110,32 @@ function requireAuth(req, res, next) {
         res.status(401).json({ error: 'Please sign in first' });
     }
 }
+
+// --- HELPER: Find lowest available Event ID (Gap Filling) ---
+async function getNextAvailableEventId() {
+    try {
+        const { data, error } = await supabase
+            .from('event')
+            .select('eid')
+            .order('eid', { ascending: true });
+
+        if (error) throw error;
+        if (!data || data.length === 0) return 1;
+
+        // Loop to find the first gap in sequence (1, 2, 4 -> returns 3)
+        for (let i = 0; i < data.length; i++) {
+            if (data[i].eid !== i + 1) {
+                return i + 1;
+            }
+        }
+        return data.length + 1;
+    } catch (err) {
+        console.error('Error calculating next ID:', err);
+        return null; // Fallback
+    }
+}
+
+// ==================== AUTH ROUTES ====================
 
 // Sign up endpoint
 app.post('/api/signup', async (req, res) => {
@@ -283,7 +303,9 @@ app.post('/api/signout', (req, res) => {
     });
 });
 
-// --- CACHED Get all events (UPDATED WITH POSTER URL) ---
+// ==================== EVENT ENDPOINTS (UPDATED) ====================
+
+// --- CACHED Get all events (UPDATED WITH POSTER & BANNER) ---
 app.get('/api/events', requireAuth, async (req, res) => {
     try {
         const currentDate = new Date().toISOString().split('T')[0];
@@ -302,7 +324,6 @@ app.get('/api/events', requireAuth, async (req, res) => {
             }
         } catch (cacheErr) {
             console.error('Redis read error:', cacheErr);
-            // Continue to DB if cache fails
         }
 
         // 2. If no cache, fetch from Supabase
@@ -312,7 +333,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 .from('event')
                 .select(`
                     eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                    upi_id, is_team, min_team_size, max_team_size, poster_url,
+                    upi_id, is_team, min_team_size, max_team_size, poster_url, banner_url,
                     club:orgcid(cname),
                     student:orgusn(sname)
                 `);
@@ -323,7 +344,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
             }
             rows = data;
 
-            // 3. Save to Redis Cache (Expire in 10 minutes = 600s)
+            // 3. Save to Redis Cache
             try {
                 if (redisClient.isOpen) {
                     await redisClient.set(cacheKey, JSON.stringify(rows), { EX: 600 });
@@ -350,7 +371,8 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 maxVoln: event.maxvoln,
                 regFee: event.regfee,
                 upiId: event.upi_id,
-                posterUrl: event.poster_url, // Added
+                posterUrl: event.poster_url, // Info Link
+                bannerUrl: event.banner_url, // Visual Link
                 is_team: event.is_team,
                 min_team_size: event.min_team_size,
                 max_team_size: event.max_team_size,
@@ -382,7 +404,7 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             .select(`
                 partstatus, partusn,
                 event:parteid (
-                    eid, ename, eventdesc, certificate_info, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, poster_url,
+                    eid, ename, eventdesc, certificate_info, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, poster_url, banner_url,
                     club:orgcid(cname)
                 )
             `)
@@ -401,7 +423,8 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             maxPart: p.event?.maxpart,
             maxVoln: p.event?.maxvoln,
             regFee: p.event?.regfee,
-            posterUrl: p.event?.poster_url, // Added
+            posterUrl: p.event?.poster_url,
+            bannerUrl: p.event?.banner_url,
             clubName: p.event?.club?.cname,
             PartStatus: p.partstatus==true,
             PartUSN: p.partusn,
@@ -467,7 +490,7 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
             .from('event')
             .select(`
                 eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                upi_id, poster_url,
+                upi_id, poster_url, banner_url,
                 club:orgcid(cname)
             `)
             .eq('orgusn', req.session.userUSN);
@@ -486,7 +509,8 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
             maxVoln: e.maxvoln,
             regFee: e.regfee,
             upiId: e.upi_id,
-            posterUrl: e.poster_url, // Added
+            posterUrl: e.poster_url, 
+            bannerUrl: e.banner_url,
             clubName: e.club?.cname,
             role: 'organizer'
         }));
@@ -501,26 +525,16 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
     }
 });
 
-// Create/Organize a new event (UPDATED WITH POSTER URL)
+// Create/Organize a new event (UPDATED WITH POSTER/BANNER & ID Logic)
 app.post('/api/events/create', requireAuth, async (req, res) => {
     try {
         const { 
-            eventName, 
-            eventDescription, 
-            certificate_info,
-            eventDate, 
-            eventTime, 
-            eventLocation, 
-            maxParticipants, 
-            maxVolunteers, 
-            registrationFee,
-            clubId,
-            OrgCid,
-            upiId,
-            isTeamEvent,
-            minTeamSize,
-            maxTeamSize,
-            posterUrl // NEW FIELD
+            eventName, eventDescription, certificate_info, eventDate, 
+            eventTime, eventLocation, maxParticipants, maxVolunteers, 
+            registrationFee, clubId, OrgCid, upiId, isTeamEvent, 
+            minTeamSize, maxTeamSize, 
+            posterUrl,  // Brochure/Info Link
+            bannerUrl   // Visual Image Link
         } = req.body;
         
         const organizedClubId = clubId || OrgCid;
@@ -541,28 +555,15 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Event date must be in the future' });
         }
 
-        // Validate team event fields if it's a team event
+        // Validate team event fields
         if (isTeamEvent) {
             if (!minTeamSize || !maxTeamSize) {
-                return res.status(400).json({ 
-                    error: 'Minimum and maximum team size are required for team events' 
-                });
+                return res.status(400).json({ error: 'Minimum and maximum team size are required for team events' });
             }
-            
             const minSize = parseInt(minTeamSize);
             const maxSize = parseInt(maxTeamSize);
-            
-            if (minSize < 2) {
-                return res.status(400).json({ 
-                    error: 'Minimum team size must be at least 2' 
-                });
-            }
-            
-            if (maxSize < minSize) {
-                return res.status(400).json({ 
-                    error: 'Maximum team size must be greater than or equal to minimum team size' 
-                });
-            }
+            if (minSize < 2) return res.status(400).json({ error: 'Minimum team size must be at least 2' });
+            if (maxSize < minSize) return res.status(400).json({ error: 'Maximum team size must be greater than or equal to minimum team size' });
         }
         
         if (organizedClubId) {
@@ -577,18 +578,23 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
                 console.error('Error checking club membership:', membershipError);
                 return res.status(500).json({ error: 'Database error' });
             }
-            
             if (!clubMembership || clubMembership.length === 0) {
                 return res.status(403).json({ error: 'You must be a member of the club to organize events for it' });
             }
         }
         
+        // --- ID Calculation ---
+        const nextId = await getNextAvailableEventId();
+        if (!nextId) return res.status(500).json({ error: 'ID generation failed' });
+
         // Prepare event data
         const eventData = {
+            eid: nextId,
             ename: eventName,
             eventdesc: eventDescription,
             certificate_info: certificate_info || null,
-            poster_url: posterUrl || null, // Added
+            poster_url: posterUrl || null, // Info Link
+            banner_url: bannerUrl || null, // Visual Link
             eventdate: eventDate,
             eventtime: eventTime,
             eventloc: eventLocation,
@@ -626,7 +632,7 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
         res.status(201).json({ 
             success: true,
             message: isTeamEvent ? 'Team event created successfully!' : 'Event created successfully!', 
-            eventId: data[0]?.eid,
+            eventId: nextId,
             organizerUSN: req.session.userUSN,
             isTeamEvent: isTeamEvent || false
         });
@@ -676,7 +682,6 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
 
         const regFee = event[0].regfee || 0;
         
-        // THIS ENDPOINT IS NOW ONLY FOR FREE EVENTS
         if (regFee > 0) {
             return res.status(400).json({ 
                 error: 'This is a paid event. Please use the UPI payment flow.',
@@ -695,7 +700,6 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
                 console.error('Error counting participants:', countError);
                 return res.status(500).json({ error: 'Database error' });
             }
-
             if (count >= maxPart) {
                 return res.status(400).json({ error: 'No more participant slots available' });
             }
@@ -800,7 +804,6 @@ app.post('/api/events/:eventId/volunteer', requireAuth, async (req, res) => {
 app.get('/api/events/:eventId/volunteer-count', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
-        
         const { count, error } = await supabase
             .from('volunteer')
             .select('*', { count: 'exact', head: true })
@@ -810,7 +813,6 @@ app.get('/api/events/:eventId/volunteer-count', requireAuth, async (req, res) =>
             console.error('Error fetching volunteer count:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-        
         res.json({ count: count || 0 });
     } catch (err) {
         console.error('Error fetching volunteer count:', err);
@@ -822,7 +824,6 @@ app.get('/api/events/:eventId/volunteer-count', requireAuth, async (req, res) =>
 app.get('/api/events/:eventId/participant-count', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
-        
         const { count, error } = await supabase
             .from('participant')
             .select('*', { count: 'exact', head: true })
@@ -832,7 +833,6 @@ app.get('/api/events/:eventId/participant-count', requireAuth, async (req, res) 
             console.error('Error fetching participant count:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-        
         res.json({ count: count || 0 });
     } catch (err) {
         console.error('Error fetching participant count:', err);
@@ -844,15 +844,12 @@ app.get('/api/events/:eventId/participant-count', requireAuth, async (req, res) 
 app.get('/api/events/:eventId', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
-
-        if (!eventId || isNaN(eventId)) {
-            return res.status(400).json({ error: 'Invalid event ID' });
-        }
+        if (!eventId || isNaN(eventId)) return res.status(400).json({ error: 'Invalid event ID' });
 
         const { data: rows, error } = await supabase
             .from('event')
             .select(`
-                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url,
+                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url, banner_url,
                 club:orgcid(cname),
                 student:orgusn(sname)
             `)
@@ -864,9 +861,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
 
-        if (!rows || rows.length === 0) {
-            return res.status(404).json({ error: 'Event not found' });
-        }
+        if (!rows || rows.length === 0) return res.status(404).json({ error: 'Event not found' });
 
         const event = rows[0];
         
@@ -877,8 +872,9 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             eventLoc: event.eventloc,
             maxPart: event.maxpart,
             maxVoln: event.maxvoln,
-            regFee: event.regFee,
+            regFee: event.regfee,
             posterUrl: event.poster_url, // Added
+            bannerUrl: event.banner_url, // Added
             clubName: event.club?.cname,
             organizerName: event.student?.sname,
             OrgUsn: event.orgusn
@@ -906,11 +902,10 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
         res.json(transformedEvent);
     } catch (err) {
         console.error('Error fetching event details:', err);
-        res.status(500).json({
-            error: 'Error fetching event details: ' + err.message 
-        });
+        res.status(500).json({ error: 'Error fetching event details: ' + err.message });
     }
 });
+
 // Get all clubs
 app.get('/api/clubs', requireAuth, async (req, res) => {
     try {
@@ -923,10 +918,7 @@ app.get('/api/clubs', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
         
-        res.json({
-            clubs: rows || [],
-            userUSN: req.session.userUSN
-        });
+        res.json({ clubs: rows || [], userUSN: req.session.userUSN });
     } catch (err) {
         console.error('Error fetching clubs:', err);
         res.status(500).json({ error: 'Error fetching clubs' });
@@ -939,12 +931,7 @@ app.get('/api/my-clubs', requireAuth, async (req, res) => {
         const { data: rows, error } = await supabase
             .from('memberof')
             .select(`
-                club:clubid (
-                    cid,
-                    cname,
-                    clubdesc,
-                    maxmembers
-                )
+                club:clubid ( cid, cname, clubdesc, maxmembers )
             `)
             .eq('studentusn', req.session.userUSN);
         
@@ -955,10 +942,7 @@ app.get('/api/my-clubs', requireAuth, async (req, res) => {
         
         const clubs = (rows || []).map(row => row.club).filter(club => club);
         
-        res.json({
-            clubs: clubs,
-            userUSN: req.session.userUSN
-        });
+        res.json({ clubs: clubs, userUSN: req.session.userUSN });
     } catch (err) {
         console.error('Error fetching user clubs:', err);
         res.status(500).json({ error: 'Error fetching clubs' });
@@ -977,10 +961,7 @@ app.get('/api/students', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
         
-        res.json({
-            students: rows || [],
-            currentUser: req.session.userUSN
-        });
+        res.json({ students: rows || [], currentUser: req.session.userUSN });
     } catch (err) {
         console.error('Error fetching students:', err);
         res.status(500).json({ error: 'Error fetching students: ' + err.message });
@@ -994,7 +975,6 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
     try {
         const { eventId, usn } = req.body;
         
-        // Verify the USN matches the logged-in user
         if (usn !== req.session.userUSN) {
             return res.status(403).json({ error: 'Unauthorized: USN mismatch' });
         }
@@ -1003,7 +983,6 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'USN and Event ID are required' });
         }
 
-        // Check if participant is registered for this event
         const { data: existing, error: existingError } = await supabase
             .from('participant')
             .select('*')
@@ -1024,7 +1003,6 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Attendance already marked' });
         }
 
-        // Mark attendance
         const { error: updateError } = await supabase
             .from('participant')
             .update({ partstatus: true })
@@ -1054,7 +1032,6 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
     try {
         const { eventId, usn } = req.body;
         
-        // Verify the USN matches the logged-in user
         if (usn !== req.session.userUSN) {
             return res.status(403).json({ error: 'Unauthorized: USN mismatch' });
         }
@@ -1063,7 +1040,6 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'USN and Event ID are required' });
         }
 
-        // Check if volunteer is registered for this event
         const { data: existing, error: existingError } = await supabase
             .from('volunteer')
             .select('*')
@@ -1084,7 +1060,6 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Attendance already marked' });
         }
 
-        // Mark attendance
         const { error: updateError } = await supabase
             .from('volunteer')
             .update({ volnstatus: true })
@@ -1109,7 +1084,7 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
     }
 });
 
-// OLD scan-qr endpoint (DEPRECATED - kept for backward compatibility)
+// OLD scan-qr endpoint
 app.get('/api/scan-qr', async (req, res) => {
     try {
         const { usn, eid } = req.query;
@@ -1158,45 +1133,27 @@ app.get('/api/scan-qr', async (req, res) => {
 
 // ==================== PASSWORD RESET ENDPOINTS ====================
 
-// Forgot Password - Send reset email (BREVO VERSION)
 app.post('/api/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
-        
         if (!email) return res.status(400).json({ error: 'Email is required' });
 
-        // 1. Check if user exists in Supabase
-        const { data: user, error: userError } = await supabase
-            .from('student')
-            .select('usn, sname, emailid')
-            .eq('emailid', email)
-            .limit(1);
+        const { data: user, error: userError } = await supabase.from('student').select('usn, sname, emailid').eq('emailid', email).limit(1);
         
         if (userError) {
             console.error('Error finding user:', userError);
             return res.status(500).json({ error: 'Database error' });
         }
 
-        // Security: Don't reveal if user exists
         if (!user || user.length === 0) {
-            console.log('Reset requested for non-existent email:', email);
-            return res.json({
-                success: true,
-                message: 'If an account exists, you will receive a reset link.'
-            });
+            return res.json({ success: true, message: 'If an account exists, you will receive a reset link.' });
         }
 
-        // 2. Generate Token
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+        const resetTokenExpiry = new Date(Date.now() + 3600000); 
 
-        // 3. Save Token to DB
-        const { error: updateError } = await supabase
-            .from('student')
-            .update({
-                reset_token: resetToken,
-                reset_token_expiry: resetTokenExpiry.toISOString()
-            })
+        const { error: updateError } = await supabase.from('student')
+            .update({ reset_token: resetToken, reset_token_expiry: resetTokenExpiry.toISOString() })
             .eq('emailid', email);
         
         if (updateError) {
@@ -1206,85 +1163,43 @@ app.post('/api/forgot-password', async (req, res) => {
 
         const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
         
-        // 4. Send Email via Brevo
         const sendSmtpEmail = new Brevo.SendSmtpEmail();
-
         sendSmtpEmail.subject = "Password Reset Request - E-Pass";
-        sendSmtpEmail.sender = { "name": "E-Pass System", "email": "flopass333@gmail.com" }; // MUST be your verified sender in Brevo
+        sendSmtpEmail.sender = { "name": "E-Pass System", "email": "flopass333@gmail.com" }; 
         sendSmtpEmail.to = [{ "email": email, "name": user[0].sname }];
-        sendSmtpEmail.htmlContent = `
-            <html>
-                <body style="font-family: Arial, sans-serif; color: #333;">
-                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                        <h2 style="color: #1A2980;">Password Reset</h2>
-                        <p>Hello <strong>${user[0].sname}</strong>,</p>
-                        <p>Click below to reset your password:</p>
-                        <p>
-                            <a href="${resetLink}" style="background-color: #1A2980; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
-                        </p>
-                        <p>Or copy this link: <br/>${resetLink}</p>
-                        <p><i>This link expires in 1 hour.</i></p>
-                    </div>
-                </body>
-            </html>
-        `;
+        sendSmtpEmail.htmlContent = `<html><body style="font-family: Arial, sans-serif; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h2 style="color: #1A2980;">Password Reset</h2><p>Hello <strong>${user[0].sname}</strong>,</p><p>Click below to reset your password:</p><p><a href="${resetLink}" style="background-color: #1A2980; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></p><p>Or copy this link: <br/>${resetLink}</p><p><i>This link expires in 1 hour.</i></p></div></body></html>`;
 
-        const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
-        console.log('✅ Email sent via Brevo. Message ID:', data.messageId);
+        await apiInstance.sendTransacEmail(sendSmtpEmail);
+        console.log('✅ Email sent via Brevo.');
         
-        res.json({
-            success: true,
-            message: 'If an account exists, you will receive a reset link.'
-        });
+        res.json({ success: true, message: 'If an account exists, you will receive a reset link.' });
 
     } catch (err) {
         console.error('Error in forgot password:', err);
-        // Log detailed Brevo error if available
-        if (err.body) console.error('Brevo Error Body:', err.body);
         res.status(500).json({ error: 'Failed to process request' });
     }
 });
 
-// Reset Password - Update password with token
 app.post('/api/reset-password', async (req, res) => {
     try {
         const { token, newPassword } = req.body;
+        if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password are required' });
+        if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters long' });
         
-        if (!token || !newPassword) {
-            return res.status(400).json({ error: 'Token and new password are required' });
-        }
-        if (newPassword.length < 6) {
-            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
-        }
-        // Find user with valid token
-        const { data: user, error: userError } = await supabase
-            .from('student')
-            .select('usn, sname, emailid, reset_token_expiry')
-            .eq('reset_token', token)
-            .limit(1);
+        const { data: user, error: userError } = await supabase.from('student').select('usn, sname, emailid, reset_token_expiry').eq('reset_token', token).limit(1);
         
         if (userError) {
             console.error('Error finding user with token:', userError);
             return res.status(500).json({ error: 'Database error' });
         }
-        if (!user || user.length === 0) {
-            return res.status(400).json({ error: 'Invalid or expired reset link' });
-        }
-        // Check if token is expired
+        if (!user || user.length === 0) return res.status(400).json({ error: 'Invalid or expired reset link' });
+        
         const tokenExpiry = new Date(user[0].reset_token_expiry);
-        if (tokenExpiry < new Date()) {
-            return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
-        }
-        // Hash new password
+        if (tokenExpiry < new Date()) return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
+        
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        // Update password and clear reset token
-        const { error: updateError } = await supabase
-            .from('student')
-            .update({
-                password: hashedPassword,
-                reset_token: null,
-                reset_token_expiry: null
-            })
+        const { error: updateError } = await supabase.from('student')
+            .update({ password: hashedPassword, reset_token: null, reset_token_expiry: null })
             .eq('reset_token', token);
         
         if (updateError) {
@@ -1292,11 +1207,7 @@ app.post('/api/reset-password', async (req, res) => {
             return res.status(500).json({ error: 'Failed to reset password' });
         }
         console.log('✅ Password reset successful for:', user[0].usn);
-        res.json({
-            success: true,
-            message: 'Password reset successfully! You can now sign in with your new password.',
-            userName: user[0].sname
-        });
+        res.json({ success: true, message: 'Password reset successfully! You can now sign in with your new password.', userName: user[0].sname });
     } catch (err) {
         console.error('Error in reset password:', err);
         res.status(500).json({ error: 'Failed to reset password' });
@@ -1305,303 +1216,108 @@ app.post('/api/reset-password', async (req, res) => {
 
 // ==================== UPI PAYMENT ENDPOINTS ====================
 
-// Register for a paid event with UPI
 app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
         const { transaction_id } = req.body;
 
-        if (!transaction_id) {
-            return res.status(400).json({ error: 'Transaction ID is required' });
-        }
+        if (!transaction_id) return res.status(400).json({ error: 'Transaction ID is required' });
 
-        // Check if already registered
-        const { data: existing, error: existingError } = await supabase
-            .from('participant')
-            .select('*')
-            .eq('partusn', userUSN)
-            .eq('parteid', eventId)
-            .limit(1);
-
-        if (existingError) {
-            console.error('Error checking existing participant:', existingError);
-            return res.status(500).json({ error: 'Database error' });
-        }
-
-        if (existing && existing.length > 0) {
-            return res.status(400).json({ error: 'You are already registered for this event' });
-        }
+        const { data: existing, error: existingError } = await supabase.from('participant').select('*').eq('partusn', userUSN).eq('parteid', eventId).limit(1);
+        if (existingError) return res.status(500).json({ error: 'Database error' });
+        if (existing && existing.length > 0) return res.status(400).json({ error: 'You are already registered for this event' });
         
-        // Get event fee
-        const { data: eventData, error: eventError } = await supabase
-            .from('event')
-            .select('regfee, maxpart')
-            .eq('eid', eventId)
-            .limit(1);
-
-        if (eventError) {
-            console.error('Error fetching event fee:', eventError);
-            return res.status(500).json({ error: 'Database error' });
-        }
+        const { data: eventData, error: eventError } = await supabase.from('event').select('regfee, maxpart').eq('eid', eventId).limit(1);
+        if (eventError) return res.status(500).json({ error: 'Database error' });
 
         const amount = eventData?.[0]?.regfee || 0;
         const maxPart = eventData?.[0]?.maxpart || 0;
         
-        if (amount <= 0) {
-            return res.status(400).json({ error: 'This is not a paid event' });
-        }
+        if (amount <= 0) return res.status(400).json({ error: 'This is not a paid event' });
         
-        // Check participant limit
         if (maxPart > 0) {
-            const { count, error: countError } = await supabase
-                .from('participant')
-                .select('*', { count: 'exact', head: true })
-                .eq('parteid', eventId);
-
-            if (countError) {
-                console.error('Error counting participants:', countError);
-                return res.status(500).json({ error: 'Database error' });
-            }
-            if (count >= maxPart) {
-                return res.status(400).json({ error: 'Event is full' });
-            }
+            const { count, error: countError } = await supabase.from('participant').select('*', { count: 'exact', head: true }).eq('parteid', eventId);
+            if (countError) return res.status(500).json({ error: 'Database error' });
+            if (count >= maxPart) return res.status(400).json({ error: 'Event is full' });
         }
 
-        // Insert payment record
-        const { error: paymentError } = await supabase.from('payment').insert([{
-            usn: userUSN,
-            event_id: eventId,
-            amount,
-            status: 'pending_verification',
-            upi_transaction_id: transaction_id
-        }]);
+        const { error: paymentError } = await supabase.from('payment').insert([{ usn: userUSN, event_id: eventId, amount, status: 'pending_verification', upi_transaction_id: transaction_id }]);
+        if (paymentError) return res.status(500).json({ error: 'Failed to save payment' });
 
-        if (paymentError) {
-            console.error('Error saving payment record:', paymentError);
-            return res.status(500).json({ error: 'Failed to save payment' });
-        }
-
-        // Insert participant record
-        const { error: insertError } = await supabase
-            .from('participant')
-            .insert([{
-                partusn: userUSN,
-                parteid: eventId,
-                partstatus: false,
-                payment_status: 'pending_verification'
-            }]);
-
-        if (insertError) {
-            console.error('Error inserting participant after UPI:', insertError);
-            return res.status(500).json({ error: 'Failed to register participant' });
-        }
+        const { error: insertError } = await supabase.from('participant').insert([{ partusn: userUSN, parteid: eventId, partstatus: false, payment_status: 'pending_verification' }]);
+        if (insertError) return res.status(500).json({ error: 'Failed to register participant' });
 
         console.log(`✅ UPI registration submitted: ${userUSN} for event ${eventId}`);
-        res.json({ 
-            success: true, 
-            message: 'Registration submitted! Your payment is pending verification by the organizer.',
-            userUSN: userUSN
-        });
+        res.json({ success: true, message: 'Registration submitted! Your payment is pending verification by the organizer.', userUSN: userUSN });
     } catch (err) {
         console.error('Error in UPI registration:', err);
         res.status(500).json({ error: 'Error submitting registration' });
     }
 });
 
-// ==================== PAYMENT VERIFICATION ENDPOINTS (NEW) ====================
-// Verify/Approve a payment (organizer only)
+// ==================== PAYMENT VERIFICATION ENDPOINTS ====================
 app.post('/api/payments/verify', requireAuth, async (req, res) => {
     try {
         const { participantUSN, eventId } = req.body;
         const organizerUSN = req.session.userUSN;
 
-        if (!participantUSN || !eventId) {
-            return res.status(400).json({ error: 'Participant USN and Event ID are required' });
-        }
+        if (!participantUSN || !eventId) return res.status(400).json({ error: 'Participant USN and Event ID are required' });
 
-        // Verify organizer
-        const { data: event, error: eventError } = await supabase
-            .from('event')
-            .select('orgusn, is_team')
-            .eq('eid', eventId)
-            .limit(1);
-
-        if (eventError || !event || event.length === 0) {
-            return res.status(404).json({ error: 'Event not found' });
-        }
-
-        if (event[0].orgusn !== organizerUSN) {
-            return res.status(403).json({ error: 'Not authorized to verify payments for this event' });
-        }
+        const { data: event, error: eventError } = await supabase.from('event').select('orgusn, is_team').eq('eid', eventId).limit(1);
+        if (eventError || !event || event.length === 0) return res.status(404).json({ error: 'Event not found' });
+        if (event[0].orgusn !== organizerUSN) return res.status(403).json({ error: 'Not authorized to verify payments for this event' });
 
         const isTeamEvent = event[0].is_team;
 
-        // Check if this participant is a team leader
         if (isTeamEvent) {
-            const { data: teamData } = await supabase
-                .from('team')
-                .select('id')
-                .eq('event_id', eventId)
-                .eq('leader_usn', participantUSN)
-                .limit(1);
-
+            const { data: teamData } = await supabase.from('team').select('id').eq('event_id', eventId).eq('leader_usn', participantUSN).limit(1);
             const teamId = teamData?.[0]?.id;
 
-            // If it's a team event and participant is a team leader
             if (teamId) {
-                // Get all team members
-                const { data: teamMembers, error: teamMembersError } = await supabase
-                    .from('team_members')
-                    .select('student_usn')
-                    .eq('team_id', teamId)
-                    .eq('join_status', true);
-
-                if (teamMembersError) {
-                    console.error('Error fetching team members:', teamMembersError);
-                    return res.status(500).json({ error: 'Failed to fetch team members' });
-                }
+                const { data: teamMembers, error: teamMembersError } = await supabase.from('team_members').select('student_usn').eq('team_id', teamId).eq('join_status', true);
+                if (teamMembersError) return res.status(500).json({ error: 'Failed to fetch team members' });
 
                 const allTeamUSNs = teamMembers.map(m => m.student_usn);
-
-                // Update payment status for team leader (only leader has payment record)
-                const { error: paymentUpdateError } = await supabase
-                    .from('payment')
-                    .update({ status: 'verified' })
-                    .eq('event_id', eventId)
-                    .eq('usn', participantUSN)
-                    .eq('status', 'pending_verification');
-
-                if (paymentUpdateError) {
-                    console.error('Error updating payment status:', paymentUpdateError);
-                    return res.status(500).json({ error: 'Failed to update payment status' });
-                }
-
-                // Update participant payment status for ALL team members
-                const { error: participantUpdateError } = await supabase
-                    .from('participant')
-                    .update({ payment_status: 'verified' })
-                    .in('partusn', allTeamUSNs)
-                    .eq('parteid', eventId);
-
-                if (participantUpdateError) {
-                    console.error('Error updating participant status:', participantUpdateError);
-                    return res.status(500).json({ error: 'Failed to update participant status' });
-                }
+                await supabase.from('payment').update({ status: 'verified' }).eq('event_id', eventId).eq('usn', participantUSN).eq('status', 'pending_verification');
+                await supabase.from('participant').update({ payment_status: 'verified' }).in('partusn', allTeamUSNs).eq('parteid', eventId);
 
                 console.log(`✅ Payment verified for entire team (${allTeamUSNs.length} members): Team ID ${teamId} for event ${eventId} by ${organizerUSN}`);
-                
-                return res.json({
-                    success: true,
-                    message: `Payment verified for entire team (${allTeamUSNs.length} members)!`,
-                    verifiedCount: allTeamUSNs.length
-                });
+                return res.json({ success: true, message: `Payment verified for entire team (${allTeamUSNs.length} members)!`, verifiedCount: allTeamUSNs.length });
             }
         }
 
-        // Single participant (not a team event or not a team leader)
-        const { error: paymentUpdateError } = await supabase
-            .from('payment')
-            .update({ status: 'verified' })
-            .eq('usn', participantUSN)
-            .eq('event_id', eventId)
-            .eq('status', 'pending_verification');
-
-        if (paymentUpdateError) {
-            console.error('Error updating payment status:', paymentUpdateError);
-            return res.status(500).json({ error: 'Failed to update payment status' });
-        }
-
-        const { error: participantUpdateError } = await supabase
-            .from('participant')
-            .update({ payment_status: 'verified' })
-            .eq('partusn', participantUSN)
-            .eq('parteid', eventId);
-
-        if (participantUpdateError) {
-            console.error('Error updating participant status:', participantUpdateError);
-            return res.status(500).json({ error: 'Failed to update participant status' });
-        }
+        await supabase.from('payment').update({ status: 'verified' }).eq('usn', participantUSN).eq('event_id', eventId).eq('status', 'pending_verification');
+        await supabase.from('participant').update({ payment_status: 'verified' }).eq('partusn', participantUSN).eq('parteid', eventId);
 
         console.log(`✅ Payment verified: ${participantUSN} for event ${eventId} by ${organizerUSN}`);
-        
-        return res.json({
-            success: true,
-            message: 'Payment verified successfully!'
-        });
+        return res.json({ success: true, message: 'Payment verified successfully!' });
     } catch (err) {
         console.error('Error verifying payment:', err);
         res.status(500).json({ error: 'Error verifying payment' });
     }
 });
 
-// Get pending payments for an event (organizer only)
 app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
+        const { data: event, error: eventError } = await supabase.from('event').select('orgusn, ename, is_team').eq('eid', eventId).limit(1);
 
-        // Verify organizer
-        const { data: event, error: eventError } = await supabase
-            .from('event')
-            .select('orgusn, ename, is_team')
-            .eq('eid', eventId)
-            .limit(1);
-
-        if (eventError || !event || event.length === 0) {
-            return res.status(404).json({ error: 'Event not found' });
-        }
-
-        if (event[0].orgusn !== userUSN) {
-            return res.status(403).json({ error: 'Not authorized to view payments for this event' });
-        }
+        if (eventError || !event || event.length === 0) return res.status(404).json({ error: 'Event not found' });
+        if (event[0].orgusn !== userUSN) return res.status(403).json({ error: 'Not authorized to view payments for this event' });
 
         const isTeamEvent = event[0].is_team;
-
         let paymentsToShow = [];
 
         if (isTeamEvent) {
-            // For team events, ONLY show team leaders who have actually made payments
-            const { data: pendingPayments, error: paymentsError } = await supabase
-                .from('payment')
-                .select(`
-                    usn,
-                    amount,
-                    upi_transaction_id,
-                    created_at,
-                    status,
-                    student:usn (
-                        sname,
-                        emailid,
-                        mobno
-                    )
-                `)
-                .eq('event_id', eventId)
-                .eq('status', 'pending_verification');
+            const { data: pendingPayments, error: paymentsError } = await supabase.from('payment').select('usn, amount, upi_transaction_id, created_at, status, student:usn (sname, emailid, mobno)').eq('event_id', eventId).eq('status', 'pending_verification');
+            if (paymentsError) return res.status(500).json({ error: 'Database error' });
 
-            if (paymentsError) {
-                console.error('Error fetching payments:', paymentsError);
-                return res.status(500).json({ error: 'Database error' });
-            }
-
-            // For each payment, check if this person is a team leader
             for (const payment of pendingPayments || []) {
-                const { data: teamData } = await supabase
-                    .from('team')
-                    .select('id, team_name, leader_usn')
-                    .eq('event_id', eventId)
-                    .eq('leader_usn', payment.usn)
-                    .limit(1);
-
-                // Only include if this person is a team leader
+                const { data: teamData } = await supabase.from('team').select('id, team_name, leader_usn').eq('event_id', eventId).eq('leader_usn', payment.usn).limit(1);
                 if (teamData && teamData.length > 0) {
-                    // Count team members
-                    const { count: memberCount } = await supabase
-                        .from('team_members')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('team_id', teamData[0].id)
-                        .eq('join_status', true);
-
+                    const { count: memberCount } = await supabase.from('team_members').select('*', { count: 'exact', head: true }).eq('team_id', teamData[0].id).eq('join_status', true);
                     paymentsToShow.push({
                         partusn: payment.usn,
                         studentName: payment.student?.sname || 'Unknown',
@@ -1617,28 +1333,8 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
                 }
             }
         } else {
-            // For non-team events, show all participants with pending payments
-            const { data: pendingPayments, error: paymentsError } = await supabase
-                .from('payment')
-                .select(`
-                    usn,
-                    amount,
-                    upi_transaction_id,
-                    created_at,
-                    status,
-                    student:usn (
-                        sname,
-                        emailid,
-                        mobno
-                    )
-                `)
-                .eq('event_id', eventId)
-                .eq('status', 'pending_verification');
-
-            if (paymentsError) {
-                console.error('Error fetching payments:', paymentsError);
-                return res.status(500).json({ error: 'Database error' });
-            }
+            const { data: pendingPayments, error: paymentsError } = await supabase.from('payment').select('usn, amount, upi_transaction_id, created_at, status, student:usn (sname, emailid, mobno)').eq('event_id', eventId).eq('status', 'pending_verification');
+            if (paymentsError) return res.status(500).json({ error: 'Database error' });
 
             paymentsToShow = (pendingPayments || []).map(payment => ({
                 partusn: payment.usn,
@@ -1652,1110 +1348,285 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
                 isTeamLeader: false
             }));
         }
-
-        console.log(`✅ Found ${paymentsToShow.length} pending payments for event ${eventId}`);
-        res.json({
-            success: true,
-            pendingPayments: paymentsToShow,
-            isTeamEvent
-        });
+        res.json({ success: true, pendingPayments: paymentsToShow, isTeamEvent });
     } catch (err) {
         console.error('Error fetching pending payments:', err);
         res.status(500).json({ error: 'Error fetching pending payments' });
     }
 });
 
-
-
 // ==================== TEAM EVENTS ENDPOINTS ====================
 
-// Create a team for an event
 app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
         const { teamName, memberUSNs } = req.body;
 
-        if (!teamName || !Array.isArray(memberUSNs)) {
-            return res.status(400).json({ error: 'Team name and member USNs are required' });
-        }
+        if (!teamName || !Array.isArray(memberUSNs)) return res.status(400).json({ error: 'Team name and member USNs are required' });
 
-        // Check if event exists and is a team event
-        const { data: event, error: eventError } = await supabase
-            .from('event')
-            .select('eid, ename, is_team, min_team_size, max_team_size, regfee')
-            .eq('eid', eventId)
-            .limit(1);
+        const { data: event, error: eventError } = await supabase.from('event').select('eid, ename, is_team, min_team_size, max_team_size, regfee').eq('eid', eventId).limit(1);
+        if (eventError || !event || event.length === 0) return res.status(404).json({ error: 'Event not found' });
+        if (!event[0].is_team) return res.status(400).json({ error: 'This is not a team event' });
 
-        if (eventError || !event || event.length === 0) {
-            return res.status(404).json({ error: 'Event not found' });
-        }
-
-        if (!event[0].is_team) {
-            return res.status(400).json({ error: 'This is not a team event' });
-        }
-
-        const minSize = event[0].min_team_size;
         const maxSize = event[0].max_team_size;
+        if (maxSize && (memberUSNs.length + 1) > maxSize) return res.status(400).json({ error: `Team size cannot exceed ${maxSize} members (including leader)` });
 
-        // Validate team size (including leader)
-        const totalMembers = memberUSNs.length + 1;
-        if (maxSize && totalMembers > maxSize) {
-            return res.status(400).json({ 
-                error: `Team size cannot exceed ${maxSize} members (including leader)` 
-            });
-        }
-
-        // Check if leader already has a team with join_status = true for this event
-        const { data: existingTeam } = await supabase
-            .from('team_members')
-            .select('team_id, join_status, team:team_id(event_id, leader_usn)')
-            .eq('student_usn', userUSN);
-
+        const { data: existingTeam } = await supabase.from('team_members').select('team_id, join_status, team:team_id(event_id, leader_usn)').eq('student_usn', userUSN);
         if (existingTeam && existingTeam.length > 0) {
-            const joinedTeam = existingTeam.find(tm => 
-                tm.join_status === true && 
-                tm.team?.event_id === parseInt(eventId)
-            );
-            
-            if (joinedTeam) {
-                return res.status(400).json({ 
-                    error: 'You have already joined a team for this event. Leave that team first to create a new one.' 
-                });
-            }
+            const joinedTeam = existingTeam.find(tm => tm.join_status === true && tm.team?.event_id === parseInt(eventId));
+            if (joinedTeam) return res.status(400).json({ error: 'You have already joined a team for this event.' });
         }
 
-        // Validate all member USNs exist in student table
         if (memberUSNs.length > 0) {
-            const { data: students, error: studentError } = await supabase
-                .from('student')
-                .select('usn, sname')
-                .in('usn', memberUSNs);
-
-            if (studentError || !students || students.length !== memberUSNs.length) {
-                return res.status(400).json({ 
-                    error: 'One or more member USNs are invalid' 
-                });
-            }
-
-            // Check if any member has ACTUALLY JOINED another team for this event
-            const { data: memberTeamCheck } = await supabase
-                .from('team_members')
-                .select('student_usn, join_status, team:team_id(event_id)')
-                .in('student_usn', memberUSNs)
-                .eq('join_status', true);
-
+            const { data: students, error: studentError } = await supabase.from('student').select('usn, sname').in('usn', memberUSNs);
+            if (studentError || !students || students.length !== memberUSNs.length) return res.status(400).json({ error: 'One or more member USNs are invalid' });
+            
+            const { data: memberTeamCheck } = await supabase.from('team_members').select('student_usn, join_status, team:team_id(event_id)').in('student_usn', memberUSNs).eq('join_status', true);
             if (memberTeamCheck && memberTeamCheck.length > 0) {
-                const conflicts = memberTeamCheck.filter(m => 
-                    m.team?.event_id === parseInt(eventId)
-                );
-                if (conflicts.length > 0) {
-                    return res.status(400).json({ 
-                        error: `Member ${conflicts[0].student_usn} has already joined another team for this event` 
-                    });
-                }
+                const conflicts = memberTeamCheck.filter(m => m.team?.event_id === parseInt(eventId));
+                if (conflicts.length > 0) return res.status(400).json({ error: `Member ${conflicts[0].student_usn} has already joined another team for this event` });
             }
         }
 
-        // Create team
-        const { data: teamData, error: teamError } = await supabase
-            .from('team')
-            .insert([{
-                team_name: teamName,
-                leader_usn: userUSN,
-                event_id: eventId,
-                registration_complete: false
-            }])
-            .select('id');
-
-        if (teamError || !teamData || teamData.length === 0) {
-            console.error('Error creating team:', teamError);
-            return res.status(500).json({ error: 'Failed to create team' });
-        }
+        const { data: teamData, error: teamError } = await supabase.from('team').insert([{ team_name: teamName, leader_usn: userUSN, event_id: eventId, registration_complete: false }]).select('id');
+        if (teamError || !teamData || teamData.length === 0) return res.status(500).json({ error: 'Failed to create team' });
 
         const teamId = teamData[0].id;
-
-        // Add leader as team member with join_status = true
-        const teamMembersToInsert = [{
-            team_id: teamId,
-            student_usn: userUSN,
-            join_status: true
-        }];
-
-        // Add other members with join_status = false (pending invites)
-        memberUSNs.forEach(usn => {
-            teamMembersToInsert.push({
-                team_id: teamId,
-                student_usn: usn,
-                join_status: false
-            });
-        });
-
-        const { error: membersError } = await supabase
-            .from('team_members')
-            .insert(teamMembersToInsert);
-
+        const teamMembersToInsert = [{ team_id: teamId, student_usn: userUSN, join_status: true }];
+        memberUSNs.forEach(usn => teamMembersToInsert.push({ team_id: teamId, student_usn: usn, join_status: false }));
+        
+        const { error: membersError } = await supabase.from('team_members').insert(teamMembersToInsert);
         if (membersError) {
-            console.error('Error adding team members:', membersError);
             await supabase.from('team').delete().eq('id', teamId);
             return res.status(500).json({ error: 'Failed to add team members' });
         }
 
-        console.log(`✅ Team created: ${teamName} (ID: ${teamId}) by ${userUSN}`);
-
-        res.json({
-            success: true,
-            message: 'Team created successfully! Invitations sent to members.',
-            teamId,
-            minSize,
-            currentSize: 1,
-            canRegister: minSize <= 1
-        });
+        res.json({ success: true, message: 'Team created successfully! Invitations sent to members.', teamId, minSize: event[0].min_team_size, currentSize: 1, canRegister: event[0].min_team_size <= 1 });
     } catch (err) {
         console.error('Error creating team:', err);
         res.status(500).json({ error: 'Error creating team' });
     }
 });
 
-// Join a team
 app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
     try {
-        const eventId = req.params.eventId;
-        const userUSN = req.session.userUSN;
         const { leaderUSN } = req.body;
-
-        if (!leaderUSN) {
-            return res.status(400).json({ error: 'Team leader USN is required' });
-        }
-
-        // Check if user is already in any team for this event
-        const { data: existingMembership } = await supabase
-            .from('team_members')
-            .select('team_id, team:team_id(event_id, registration_complete)')
-            .eq('student_usn', userUSN);
-
+        const eventId = req.params.eventId;
+        
+        if (!leaderUSN) return res.status(400).json({ error: 'Team leader USN is required' });
+        
+        const { data: existingMembership } = await supabase.from('team_members').select('team_id, team:team_id(event_id, registration_complete)').eq('student_usn', req.session.userUSN);
         if (existingMembership && existingMembership.length > 0) {
-            const inEventTeam = existingMembership.find(m => 
-                m.team?.event_id === parseInt(eventId)
-            );
+            const inEventTeam = existingMembership.find(m => m.team?.event_id === parseInt(eventId));
             if (inEventTeam) {
-                if (inEventTeam.team.registration_complete) {
-                    return res.status(400).json({ 
-                        error: 'Your team is already registered for this event' 
-                    });
-                }
-                return res.status(400).json({ 
-                    error: 'You are already part of a team for this event' 
-                });
+                if (inEventTeam.team.registration_complete) return res.status(400).json({ error: 'Your team is already registered for this event' });
+                return res.status(400).json({ error: 'You are already part of a team for this event' });
             }
         }
 
-        // Find the team by leader USN and event ID
-        const { data: team, error: teamError } = await supabase
-            .from('team')
-            .select('id, team_name, registration_complete, max_team_size:event_id(max_team_size)')
-            .eq('leader_usn', leaderUSN)
-            .eq('event_id', eventId)
-            .limit(1);
+        const { data: team } = await supabase.from('team').select('id, team_name, registration_complete').eq('leader_usn', leaderUSN).eq('event_id', eventId).limit(1);
+        if (!team || team.length === 0) return res.status(404).json({ error: 'Team not found. Please check the team leader USN.' });
+        if (team[0].registration_complete) return res.status(400).json({ error: 'This team has already completed registration' });
 
-        if (teamError || !team || team.length === 0) {
-            return res.status(404).json({ 
-                error: 'Team not found. Please check the team leader USN.' 
-            });
-        }
+        const { data: membership } = await supabase.from('team_members').select('join_status').eq('team_id', team[0].id).eq('student_usn', req.session.userUSN).limit(1);
+        if (!membership || membership.length === 0) return res.status(403).json({ error: 'You are not invited to this team' });
+        if (membership[0].join_status) return res.status(400).json({ error: 'You have already joined this team' });
 
-        const teamId = team[0].id;
-
-        if (team[0].registration_complete) {
-            return res.status(400).json({ 
-                error: 'This team has already completed registration' 
-            });
-        }
-
-        // Check if user is in the team members list
-        const { data: membership, error: membershipError } = await supabase
-            .from('team_members')
-            .select('join_status')
-            .eq('team_id', teamId)
-            .eq('student_usn', userUSN)
-            .limit(1);
-
-        if (membershipError || !membership || membership.length === 0) {
-            return res.status(403).json({ 
-                error: 'You are not invited to this team' 
-            });
-        }
-
-        if (membership[0].join_status) {
-            return res.status(400).json({ 
-                error: 'You have already joined this team' 
-            });
-        }
-
-        // Update join status
-        const { error: updateError } = await supabase
-            .from('team_members')
-            .update({ join_status: true })
-            .eq('team_id', teamId)
-            .eq('student_usn', userUSN);
-
-        if (updateError) {
-            console.error('Error updating join status:', updateError);
-            return res.status(500).json({ error: 'Failed to join team' });
-        }
-
-        res.json({
-            success: true,
-            message: `Successfully joined team "${team[0].team_name}"!`,
-            teamId
-        });
+        await supabase.from('team_members').update({ join_status: true }).eq('team_id', team[0].id).eq('student_usn', req.session.userUSN);
+        res.json({ success: true, message: `Successfully joined team "${team[0].team_name}"!`, teamId: team[0].id });
     } catch (err) {
         console.error('Error joining team:', err);
         res.status(500).json({ error: 'Error joining team' });
     }
 });
 
-// Get team status for current user and event
 app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
+        const { data: event } = await supabase.from('event').select('is_team, min_team_size, max_team_size, regfee').eq('eid', eventId).limit(1);
+        if (!event || event.length === 0) return res.status(404).json({ error: 'Event not found' });
+        if (!event[0].is_team) return res.json({ isTeamEvent: false });
 
-        // Check if event is a team event
-        const { data: event } = await supabase
-            .from('event')
-            .select('is_team, min_team_size, max_team_size, regfee')
-            .eq('eid', eventId)
-            .limit(1);
-
-        if (!event || event.length === 0) {
-            return res.status(404).json({ error: 'Event not found' });
-        }
-
-        if (!event[0].is_team) {
-            return res.json({ 
-                isTeamEvent: false 
-            });
-        }
-
-        // Check if user is a team leader for this event
-        const { data: leaderTeam } = await supabase
-            .from('team')
-            .select('id, team_name, registration_complete')
-            .eq('leader_usn', userUSN)
-            .eq('event_id', eventId)
-            .limit(1);
-
+        const { data: leaderTeam } = await supabase.from('team').select('id, team_name, registration_complete').eq('leader_usn', userUSN).eq('event_id', eventId).limit(1);
         if (leaderTeam && leaderTeam.length > 0) {
-            const teamId = leaderTeam[0].id;
-
-            // Get team members and their join status
-            const { data: members } = await supabase
-                .from('team_members')
-                .select('student_usn, join_status, student:student_usn(sname)')
-                .eq('team_id', teamId);
-
+            const { data: members } = await supabase.from('team_members').select('student_usn, join_status, student:student_usn(sname)').eq('team_id', leaderTeam[0].id);
             const joinedCount = members?.filter(m => m.join_status).length || 0;
-            const canRegister = joinedCount >= event[0].min_team_size;
-
-            return res.json({
-                isTeamEvent: true,
-                isLeader: true,
-                hasJoinedTeam: true,
-                teamId,
-                teamName: leaderTeam[0].team_name,
-                members: members || [],
-                joinedCount,
-                minSize: event[0].min_team_size,
-                maxSize: event[0].max_team_size,
-                canRegister,
-                registrationComplete: leaderTeam[0].registration_complete,
-                regFee: event[0].regfee
+            return res.json({ 
+                isTeamEvent: true, isLeader: true, hasJoinedTeam: true, teamId: leaderTeam[0].id, teamName: leaderTeam[0].team_name, members: members || [], 
+                joinedCount, minSize: event[0].min_team_size, maxSize: event[0].max_team_size, canRegister: joinedCount >= event[0].min_team_size, registrationComplete: leaderTeam[0].registration_complete, regFee: event[0].regfee 
             });
         }
 
-        // Check if user has ACTUALLY JOINED any team for this event
-        const { data: memberTeam } = await supabase
-            .from('team_members')
-            .select(`
-                team_id,
-                join_status,
-                team:team_id(
-                    id,
-                    team_name,
-                    leader_usn,
-                    registration_complete,
-                    event_id,
-                    leader:leader_usn(sname)
-                )
-            `)
-            .eq('student_usn', userUSN)
-            .eq('join_status', true);
-
+        const { data: memberTeam } = await supabase.from('team_members').select('team_id, join_status, team:team_id(id, team_name, leader_usn, registration_complete, event_id, leader:leader_usn(sname))').eq('student_usn', userUSN).eq('join_status', true);
         if (memberTeam && memberTeam.length > 0) {
-            const teamInEvent = memberTeam.find(m => 
-                m.team?.event_id === parseInt(eventId)
-            );
-
+            const teamInEvent = memberTeam.find(m => m.team?.event_id === parseInt(eventId));
             if (teamInEvent) {
-                const { data: teamDetails } = await supabase
-                    .from('team_members')
-                    .select('student_usn, join_status, student:student_usn(sname)')
-                    .eq('team_id', teamInEvent.team.id);
-
-                return res.json({
-                    isTeamEvent: true,
-                    isLeader: false,
-                    isMember: true,
-                    hasJoinedTeam: true,
-                    teamId: teamInEvent.team.id,
-                    teamName: teamInEvent.team.team_name,
-                    leaderUSN: teamInEvent.team.leader_usn,
-                    leaderName: teamInEvent.team.leader?.sname,
-                    registrationComplete: teamInEvent.team.registration_complete,
-                    minSize: event[0].min_team_size,
-                    maxSize: event[0].max_team_size,
-                    members: teamDetails || [],
-                    joinedCount: teamDetails?.filter(m => m.join_status).length || 0
+                const { data: teamDetails } = await supabase.from('team_members').select('student_usn, join_status, student:student_usn(sname)').eq('team_id', teamInEvent.team.id);
+                return res.json({ 
+                    isTeamEvent: true, isLeader: false, isMember: true, hasJoinedTeam: true, teamId: teamInEvent.team.id, teamName: teamInEvent.team.team_name, leaderUSN: teamInEvent.team.leader_usn, leaderName: teamInEvent.team.leader?.sname, registrationComplete: teamInEvent.team.registration_complete, minSize: event[0].min_team_size, maxSize: event[0].max_team_size, members: teamDetails || [], joinedCount: teamDetails?.filter(m => m.join_status).length || 0 
                 });
             }
         }
-
-        // User has NO JOINED team
-        res.json({
-            isTeamEvent: true,
-            isLeader: false,
-            isMember: false,
-            hasJoinedTeam: false,
-            minSize: event[0].min_team_size,
-            maxSize: event[0].max_team_size,
-            regFee: event[0].regfee
-        });
+        res.json({ isTeamEvent: true, isLeader: false, isMember: false, hasJoinedTeam: false, minSize: event[0].min_team_size, maxSize: event[0].max_team_size, regFee: event[0].regfee });
     } catch (err) {
         console.error('Error getting team status:', err);
         res.status(500).json({ error: 'Error getting team status' });
     }
 });
 
-// Register team for event (only for team leader) - ONLY FOR FREE EVENTS
 app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
-
-        // Check if user is team leader for this event
-        const { data: team, error: teamError } = await supabase
-            .from('team')
-            .select('id, registration_complete, event:event_id(regfee, min_team_size)')
-            .eq('leader_usn', userUSN)
-            .eq('event_id', eventId)
-            .limit(1);
-
-        if (teamError || !team || team.length === 0) {
-            return res.status(404).json({ 
-                error: 'Team not found or you are not the team leader' 
-            });
-        }
-
-        if (team[0].registration_complete) {
-            return res.status(400).json({ 
-                error: 'Team is already registered for this event' 
-            });
-        }
+        
+        const { data: team } = await supabase.from('team').select('id, registration_complete, event:event_id(regfee, min_team_size)').eq('leader_usn', userUSN).eq('event_id', eventId).limit(1);
+        if (!team || team.length === 0) return res.status(404).json({ error: 'Team not found or you are not the team leader' });
+        if (team[0].registration_complete) return res.status(400).json({ error: 'Team is already registered for this event' });
 
         const teamId = team[0].id;
         const regFee = team[0].event?.regfee || 0;
         const minSize = team[0].event?.min_team_size || 2;
+        
+        const { data: members } = await supabase.from('team_members').select('student_usn, join_status').eq('team_id', teamId).eq('join_status', true);
+        if (members.length < minSize) return res.status(400).json({ error: `Minimum ${minSize} members must join before registration.` });
+        
+        if (regFee > 0) return res.json({ success: true, requiresPayment: true, message: 'Payment required', teamId, regFee });
 
-        // Count joined members
-        const { data: members } = await supabase
-            .from('team_members')
-            .select('student_usn, join_status')
-            .eq('team_id', teamId)
-            .eq('join_status', true);
-
-        const joinedCount = members?.length || 0;
-
-        if (joinedCount < minSize) {
-            return res.status(400).json({ 
-                error: `Minimum ${minSize} members must join before registration. Currently ${joinedCount} members have joined.` 
-            });
-        }
-
-        // If event has fee, tell frontend to show UPI modal
-        if (regFee > 0) {
-            return res.json({
-                success: true,
-                requiresPayment: true,
-                message: 'Payment required for team registration',
-                teamId,
-                regFee
-            });
-        }
-
-        // For free events, complete registration
-        const { error: updateError } = await supabase
-            .from('team')
-            .update({ registration_complete: true })
-            .eq('id', teamId);
-
-        if (updateError) {
-            console.error('Error completing team registration:', updateError);
-            return res.status(500).json({ error: 'Failed to complete registration' });
-        }
-
-        // Add all team members to participant table
-        const participantsToInsert = members.map(m => ({
-            partusn: m.student_usn,
-            parteid: eventId,
-            partstatus: false,
-            payment_status: 'free',
-            team_id: teamId
-        }));
-
-        const { error: participantError } = await supabase
-            .from('participant')
-            .insert(participantsToInsert);
-
-        if (participantError) {
-            console.error('Error adding participants:', participantError);
-            return res.status(500).json({ error: 'Failed to add team members as participants' });
-        }
-
-        res.json({
-            success: true,
-            message: 'Team registered successfully!',
-            teamId,
-            userUSN: userUSN
-        });
+        await supabase.from('team').update({ registration_complete: true }).eq('id', teamId);
+        const participantsToInsert = members.map(m => ({ partusn: m.student_usn, parteid: eventId, partstatus: false, payment_status: 'free', team_id: teamId }));
+        await supabase.from('participant').insert(participantsToInsert);
+        res.json({ success: true, message: 'Team registered successfully!', teamId, userUSN });
     } catch (err) {
         console.error('Error registering team:', err);
         res.status(500).json({ error: 'Error registering team' });
     }
 });
 
-// Register a paid team with UPI
 app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res) => {
     try {
-        const eventId = req.params.eventId;
-        const userUSN = req.session.userUSN;
         const { transaction_id } = req.body;
-
-        if (!transaction_id) {
-            return res.status(400).json({ error: 'Transaction ID is required' });
-        }
-
-        // Check if user is team leader for this event
-        const { data: team, error: teamError } = await supabase
-            .from('team')
-            .select('id, registration_complete, event:event_id(regfee, min_team_size, maxpart)')
-            .eq('leader_usn', userUSN)
-            .eq('event_id', eventId)
-            .limit(1);
-
-        if (teamError || !team || team.length === 0) {
-            return res.status(404).json({ 
-                error: 'Team not found or you are not the team leader' 
-            });
-        }
-
-        if (team[0].registration_complete) {
-            return res.status(400).json({ 
-                error: 'Team is already registered for this event' 
-            });
-        }
+        if (!transaction_id) return res.status(400).json({ error: 'Transaction ID is required' });
+        
+        const { data: team } = await supabase.from('team').select('id, registration_complete, event:event_id(regfee, min_team_size, maxpart)').eq('leader_usn', req.session.userUSN).eq('event_id', req.params.eventId).limit(1);
+        if (!team || team.length === 0) return res.status(404).json({ error: 'Team not found' });
+        if (team[0].registration_complete) return res.status(400).json({ error: 'Team is already registered' });
 
         const teamId = team[0].id;
         const regFee = team[0].event?.regfee || 0;
-        const minSize = team[0].event?.min_team_size || 2;
         const maxPart = team[0].event?.maxpart || 0;
+        
+        if (regFee <= 0) return res.status(400).json({ error: 'This is not a paid event' });
+        
+        const { data: members } = await supabase.from('team_members').select('student_usn').eq('team_id', teamId).eq('join_status', true);
+        if (members.length < (team[0].event?.min_team_size || 2)) return res.status(400).json({ error: 'Minimum team size not met' });
 
-        if (regFee <= 0) {
-            return res.status(400).json({ error: 'This is not a paid event' });
-        }
-
-        // Count joined members
-        const { data: members, error: memberError } = await supabase
-            .from('team_members')
-            .select('student_usn, join_status')
-            .eq('team_id', teamId)
-            .eq('join_status', true);
-
-        if (memberError) {
-            return res.status(500).json({ error: 'Failed to get team members' });
-        }
-
-        const joinedCount = members?.length || 0;
-
-        if (joinedCount < minSize) {
-            return res.status(400).json({ 
-                error: `Minimum ${minSize} members must join before registration.` 
-            });
-        }
-
-        // Check event "team" limit
         if (maxPart > 0) {
-            const { count, error: countError } = await supabase
-                .from('team')
-                .select('*', { count: 'exact', head: true })
-                .eq('event_id', eventId)
-                .eq('registration_complete', true);
-
-            if (countError) {
-                return res.status(500).json({ error: 'Database error' });
-            }
-            if (count >= maxPart) {
-                return res.status(400).json({ error: 'Event is full (no more teams)' });
-            }
+            const { count } = await supabase.from('team').select('*', { count: 'exact', head: true }).eq('event_id', req.params.eventId).eq('registration_complete', true);
+            if (count >= maxPart) return res.status(400).json({ error: 'Event is full' });
         }
 
-        // Insert payment record (for the leader)
-        const { error: paymentError } = await supabase.from('payment').insert([{
-            usn: userUSN,
-            event_id: eventId,
-            amount: regFee,
-            status: 'pending_verification',
-            upi_transaction_id: transaction_id
-        }]);
-
-        if (paymentError) {
-            console.error('Error saving payment record:', paymentError);
-            return res.status(500).json({ error: 'Failed to save payment' });
-        }
-
-        // Mark team registration complete
-        const { error: updateError } = await supabase
-            .from('team')
-            .update({ registration_complete: true })
-            .eq('id', teamId);
-
-        if (updateError) {
-            return res.status(500).json({ error: 'Failed to update team status' });
-        }
-
-        // Insert all team members as participants
-        const participantsToInsert = members.map(m => ({
-            partusn: m.student_usn,
-            parteid: eventId,
-            partstatus: false,
-            payment_status: 'pending_verification',
-            team_id: teamId
-        }));
-
-        const { error: participantError } = await supabase
-            .from('participant')
-            .insert(participantsToInsert);
-
-        if (participantError) {
-            return res.status(500).json({ error: 'Failed to register team members' });
-        }
-
-        res.json({
-            success: true,
-            message: 'Team registration submitted! Your payment is pending verification.',
-            userUSN: userUSN
-        });
+        await supabase.from('payment').insert([{ usn: req.session.userUSN, event_id: req.params.eventId, amount: regFee, status: 'pending_verification', upi_transaction_id: transaction_id }]);
+        await supabase.from('team').update({ registration_complete: true }).eq('id', teamId);
+        
+        const participantsToInsert = members.map(m => ({ partusn: m.student_usn, parteid: req.params.eventId, partstatus: false, payment_status: 'pending_verification', team_id: teamId }));
+        await supabase.from('participant').insert(participantsToInsert);
+        res.json({ success: true, message: 'Team registration submitted! Payment pending verification.', userUSN: req.session.userUSN });
     } catch (err) {
         console.error('Error registering team with UPI:', err);
         res.status(500).json({ error: 'Error registering team' });
     }
 });
 
-// Add team members to existing team
 app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
     try {
-        const teamId = req.params.teamId;
-        const userUSN = req.session.userUSN;
         const { memberUSNs } = req.body;
+        const { data: team } = await supabase.from('team').select('leader_usn, registration_complete, event:event_id(max_team_size)').eq('id', req.params.teamId).limit(1);
+        if (!team || team.length === 0) return res.status(404).json({ error: 'Team not found' });
+        if (team[0].leader_usn !== req.session.userUSN) return res.status(403).json({ error: 'Only leader can add members' });
+        if (team[0].registration_complete) return res.status(400).json({ error: 'Cannot add to registered team' });
 
-        if (!Array.isArray(memberUSNs) || memberUSNs.length === 0) {
-            return res.status(400).json({ error: 'Member USNs are required' });
-        }
+        const { count: currentSize } = await supabase.from('team_members').select('*', { count: 'exact', head: true }).eq('team_id', req.params.teamId);
+        if ((currentSize + memberUSNs.length) > team[0].event?.max_team_size) return res.status(400).json({ error: 'Exceeds max team size' });
 
-        // Verify user is team leader
-        const { data: team } = await supabase
-            .from('team')
-            .select('leader_usn, event_id, registration_complete, event:event_id(max_team_size)')
-            .eq('id', teamId)
-            .limit(1);
-
-        if (!team || team.length === 0) {
-            return res.status(404).json({ error: 'Team not found' });
-        }
-
-        if (team[0].leader_usn !== userUSN) {
-            return res.status(403).json({ error: 'Only team leader can add members' });
-        }
-
-        if (team[0].registration_complete) {
-            return res.status(400).json({ 
-                error: 'Cannot add members to a registered team' 
-            });
-        }
-
-        // Check current team size
-        const { count: currentSize } = await supabase
-            .from('team_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('team_id', teamId);
-
-        const maxSize = team[0].event?.max_team_size;
-        if (maxSize && (currentSize + memberUSNs.length) > maxSize) {
-            return res.status(400).json({ 
-                error: `Cannot exceed maximum team size of ${maxSize}` 
-            });
-        }
-
-        // Validate USNs
-        const { data: students } = await supabase
-            .from('student')
-            .select('usn')
-            .in('usn', memberUSNs);
-
-        if (!students || students.length !== memberUSNs.length) {
-            return res.status(400).json({ 
-                error: 'One or more member USNs are invalid' 
-            });
-        }
-
-        // Check if members are already in another team for this event
-        const { data: conflictCheck } = await supabase
-            .from('team_members')
-            .select('student_usn, team:team_id(event_id)')
-            .in('student_usn', memberUSNs);
-
-        if (conflictCheck && conflictCheck.length > 0) {
-            const conflicts = conflictCheck.filter(m => 
-                m.team?.event_id === team[0].event_id
-            );
-            if (conflicts.length > 0) {
-                return res.status(400).json({ 
-                    error: `Member ${conflicts[0].student_usn} is already in another team` 
-                });
-            }
-        }
-
-        // Add members
-        const membersToInsert = memberUSNs.map(usn => ({
-            team_id: teamId,
-            student_usn: usn,
-            join_status: false
-        }));
-
-        const { error: insertError } = await supabase
-            .from('team_members')
-            .insert(membersToInsert);
-
-        if (insertError) {
-            console.error('Error adding members:', insertError);
-            return res.status(500).json({ error: 'Failed to add members' });
-        }
-
-        res.json({
-            success: true,
-            message: 'Members added successfully!'
-        });
-    } catch (err) {
-        console.error('Error adding members:', err);
-        res.status(500).json({ error: 'Error adding members' });
-    }
+        const membersToInsert = memberUSNs.map(usn => ({ team_id: req.params.teamId, student_usn: usn, join_status: false }));
+        await supabase.from('team_members').insert(membersToInsert);
+        res.json({ success: true, message: 'Members added!' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Get team invites for current user for a specific event
 app.get('/api/events/:eventId/my-invites', requireAuth, async (req, res) => {
     try {
-        const eventId = req.params.eventId;
-        const userUSN = req.session.userUSN;
-
-        // Find all teams for this event where user is invited
-        const { data: invites, error } = await supabase
-            .from('team_members')
-            .select(`
-                team_id,
-                join_status,
-                team:team_id (
-                    id,
-                    team_name,
-                    leader_usn,
-                    event_id,
-                    registration_complete,
-                    leader:leader_usn(sname)
-                )
-            `)
-            .eq('student_usn', userUSN)
-            .eq('join_status', false);
-
-        if (error) {
-            console.error('Error fetching invites:', error);
-            return res.status(500).json({ error: 'Database error' });
-        }
-
-        // Filter for this specific event
-        const eventInvites = (invites || [])
-            .filter(invite => invite.team?.event_id === parseInt(eventId))
-            .map(invite => ({
-                teamId: invite.team.id,
-                teamName: invite.team.team_name,
-                leaderUSN: invite.team.leader_usn,
-                leaderName: invite.team.leader?.sname || 'Unknown',
-                joinStatus: invite.join_status,
-                registrationComplete: invite.team.registration_complete
-            }));
-
-        res.json({
-            success: true,
-            invites: eventInvites
-        });
-    } catch (err) {
-        console.error('Error fetching invites:', err);
-        res.status(500).json({ error: 'Error fetching invites' });
-    }
+        const { data } = await supabase.from('team_members').select('team_id, join_status, team:team_id(id, team_name, leader_usn, event_id, registration_complete, leader:leader_usn(sname))').eq('student_usn', req.session.userUSN).eq('join_status', false);
+        const eventInvites = (data || []).filter(i => i.team?.event_id === parseInt(req.params.eventId)).map(i => ({ teamId: i.team.id, teamName: i.team.team_name, leaderUSN: i.team.leader_usn, leaderName: i.team.leader?.sname, joinStatus: i.join_status, registrationComplete: i.team.registration_complete }));
+        res.json({ success: true, invites: eventInvites });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Confirm join team (accept invite)
 app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
     try {
-        const teamId = req.params.teamId;
-        const userUSN = req.session.userUSN;
+        const { data: membership } = await supabase.from('team_members').select('join_status, team:team_id(event_id, registration_complete, team_name)').eq('team_id', req.params.teamId).eq('student_usn', req.session.userUSN).limit(1);
+        if (!membership || membership.length === 0) return res.status(404).json({ error: 'Invite not found' });
+        if (membership[0].join_status) return res.status(400).json({ error: 'Already joined' });
+        if (membership[0].team.registration_complete) return res.status(400).json({ error: 'Team registration closed' });
 
-        console.log(`Confirming join for user ${userUSN} to team ${teamId}`);
-
-        // Verify user is a member of this team
-        const { data: membership, error: membershipError } = await supabase
-            .from('team_members')
-            .select('join_status, team:team_id(event_id, registration_complete, team_name)')
-            .eq('team_id', teamId)
-            .eq('student_usn', userUSN)
-            .limit(1);
-
-        if (membershipError) {
-            console.error('Error checking membership:', membershipError);
-            return res.status(500).json({ error: 'Database error' });
-        }
-
-        if (!membership || membership.length === 0) {
-            return res.status(404).json({ 
-                error: 'You are not invited to this team' 
-            });
-        }
-
-        if (membership[0].join_status) {
-            return res.status(400).json({ 
-                error: 'You have already joined this team' 
-            });
-        }
-
-        if (membership[0].team.registration_complete) {
-            return res.status(400).json({ 
-                error: 'This team has already completed registration' 
-            });
-        }
-
-        // Check if user has already joined another team for this event
-        const { data: otherTeams } = await supabase
-            .from('team_members')
-            .select('team_id, team:team_id(event_id)')
-            .eq('student_usn', userUSN)
-            .eq('join_status', true);
-
-        if (otherTeams && otherTeams.length > 0) {
-            const conflictTeam = otherTeams.find(t => 
-                t.team?.event_id === membership[0].team.event_id
-            );
-            if (conflictTeam) {
-                return res.status(400).json({ 
-                    error: 'You have already joined another team for this event' 
-                });
-            }
-        }
-
-        // Update join status to true
-        const { error: updateError } = await supabase
-            .from('team_members')
-            .update({ join_status: true })
-            .eq('team_id', teamId)
-            .eq('student_usn', userUSN);
-
-        if (updateError) {
-            console.error('Error updating join status:', updateError);
-            return res.status(500).json({ error: 'Failed to join team' });
-        }
-
-        console.log(`✅ User ${userUSN} successfully joined team ${teamId}`);
-
-        res.json({
-            success: true,
-            message: `Successfully joined team "${membership[0].team.team_name}"!`,
-            teamId
-        });
-    } catch (err) {
-        console.error('Error confirming join:', err);
-        res.status(500).json({ error: 'Error confirming join' });
-    }
+        await supabase.from('team_members').update({ join_status: true }).eq('team_id', req.params.teamId).eq('student_usn', req.session.userUSN);
+        res.json({ success: true, message: `Joined ${membership[0].team.team_name}!` });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ==================== EXCEL GENERATION ====================
 app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) => {
     try {
-        const eventId = req.params.eventId;
-        const userUSN = req.session.userUSN;
+        const { data: event } = await supabase.from('event').select('eid, ename, eventdate, eventtime, eventloc, orgusn, student:orgusn(sname, usn)').eq('eid', req.params.eventId).limit(1);
+        if (!event || event.length === 0) return res.status(404).json({ error: 'Not found' });
+        if (event[0].orgusn !== req.session.userUSN) return res.status(403).json({ error: 'Unauthorized' });
 
-        // Verify organizer
-        const { data: event, error: eventError } = await supabase
-            .from('event')
-            .select(`
-                eid, ename, eventdate, eventtime, eventloc, orgusn,
-                student:orgusn(sname, usn)
-            `)
-            .eq('eid', eventId)
-            .limit(1);
+        const { data: participants } = await supabase.from('participant').select('partusn, partstatus, payment_status, student:partusn(sname, sem, mobno, emailid, payment!payment_usn_fkey(upi_transaction_id, amount)), team:team_id(team_name)').eq('parteid', req.params.eventId);
+        const { data: volunteers } = await supabase.from('volunteer').select('volnusn, volnstatus, student:volnusn(sname)').eq('volneid', req.params.eventId);
 
-        if (eventError || !event?.[0]) return res.status(404).json({ error: 'Event not found' });
-        if (event[0].orgusn !== userUSN) return res.status(403).json({ error: 'Not authorized' });
-
-        const eventData = event[0];
-
-        // Participants (with nested student → payment)
-        const { data: participants, error: participantError } = await supabase
-            .from('participant')
-            .select(`
-                partusn,
-                partstatus,
-                payment_status,
-                team_id,
-                student:partusn (
-                    sname, sem, mobno, emailid,
-                    payment!payment_usn_fkey (upi_transaction_id, amount)
-                ),
-                team:team_id (team_name)
-            `)
-            .eq('parteid', eventId);
-
-        if (participantError) {
-            console.error('Error fetching participants:', participantError);
-            return res.status(500).json({ error: 'Database error (participants)' });
-        }
-
-        // Volunteers
-        const { data: volunteers, error: volunteerError } = await supabase
-            .from('volunteer')
-            .select(`
-                volnusn,
-                volnstatus,
-                student:volnusn (sname)
-            `)
-            .eq('volneid', eventId);
-
-        if (volunteerError) {
-            console.error('Error fetching volunteers:', volunteerError);
-            return res.status(500).json({ error: 'Database error (volunteers)' });
-        }
-
-        // Build Excel
         const workbook = new ExcelJS.Workbook();
-        const ws = workbook.addWorksheet('Event Details');
-
-        ws.columns = [
-            { width: 15 }, { width: 25 }, { width: 10 }, { width: 15 }, { width: 30 },
-            { width: 15 }, { width: 20 }, { width: 20 },
-            { width: 30 }, { width: 15 }
-        ];
-
-        // Event Header
-        const hdr = ws.addRow(['EVENT DETAILS']);
-        hdr.font = { size: 16, bold: true };
-        hdr.alignment = { horizontal: 'center' };
-        ws.mergeCells('A1:J1');
-
+        const ws = workbook.addWorksheet('Details');
+        ws.addRow(['EVENT DETAILS']);
+        ws.addRow(['Name:', event[0].ename]);
+        ws.addRow(['Date:', event[0].eventdate]);
         ws.addRow([]);
-        ws.addRow(['Event Name:', eventData.ename]);
-        ws.addRow(['Event Date:', eventData.eventdate]);
-        ws.addRow(['Event Time:', eventData.eventtime]);
-        ws.addRow(['Event Location:', eventData.eventloc]);
-        ws.addRow(['Organiser USN:', eventData.student.usn]);
-        ws.addRow(['Organiser Name:', eventData.student.sname]);
-
-        for (let i = 3; i <= 8; i++) {
-            ws.getRow(i).font = { bold: true };
-            ws.getRow(i).getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
-        }
-
-        // Participants Section
-        ws.addRow([]);
-        const partHdr = ws.addRow(['PARTICIPANTS']);
-        partHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
-        partHdr.alignment = { horizontal: 'center' };
-        ws.mergeCells(`A${partHdr.number}:J${partHdr.number}`);
-        partHdr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
-
-        const partCols = ws.addRow([
-            'USN', 'Name', 'Semester', 'Mobile No', 'Email',
-            'Participation Status', 'Payment Status', 'Team Name',
-            'UPI Transaction ID', 'Payment Amount'
-        ]);
-        partCols.font = { bold: true };
-        partCols.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
-
+        ws.addRow(['PARTICIPANTS']);
+        ws.addRow(['USN', 'Name', 'Semester', 'Mobile', 'Email', 'Status', 'Payment', 'Team', 'UPI Ref', 'Amount']);
         (participants || []).forEach(p => {
-            const payment = Array.isArray(p.student?.payment) ? 
-                p.student.payment.find(pay => pay.upi_transaction_id) : p.student?.payment;
-            
-            ws.addRow([
-                p.partusn || 'N/A',
-                p.student?.sname || 'N/A',
-                p.student?.sem || 'N/A',
-                p.student?.mobno || 'N/A',
-                p.student?.emailid || 'N/A',
-                p.partstatus ? 'Present' : 'Absent',
-                p.payment_status || 'N/A',
-                p.team?.team_name || 'N/A',
-                payment?.upi_transaction_id || 'N/A',
-                payment?.amount ?? (p.payment_status === 'free' ? '0' : 'N/A')
-            ]);
+            const pay = Array.isArray(p.student?.payment) ? p.student.payment.find(x => x.upi_transaction_id) : p.student?.payment;
+            ws.addRow([p.partusn, p.student?.sname, p.student?.sem, p.student?.mobno, p.student?.emailid, p.partstatus?'Present':'Absent', p.payment_status, p.team?.team_name, pay?.upi_transaction_id, pay?.amount]);
         });
-
-        // Volunteers Section
         ws.addRow([]);
-        const volHdr = ws.addRow(['VOLUNTEERS']);
-        volHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
-        volHdr.alignment = { horizontal: 'center' };
-        ws.mergeCells(`A${volHdr.number}:C${volHdr.number}`);
-        volHdr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF70AD47' } };
+        ws.addRow(['VOLUNTEERS']);
+        ws.addRow(['USN', 'Name', 'Status']);
+        (volunteers || []).forEach(v => ws.addRow([v.volnusn, v.student?.sname, v.volnstatus?'Present':'Absent']));
 
-        const volCols = ws.addRow(['USN', 'Name', 'Volunteer Status']);
-        volCols.font = { bold: true };
-        volCols.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
-
-        (volunteers || []).forEach(v => {
-            ws.addRow([
-                v.volnusn || 'N/A',
-                v.student?.sname || 'N/A',
-                v.volnstatus ? 'Present' : 'Absent'
-            ]);
-        });
-
-        // Borders
-        ws.eachRow(row => {
-            row.eachCell(cell => {
-                cell.border = { 
-                    top: { style: 'thin' }, 
-                    left: { style: 'thin' }, 
-                    bottom: { style: 'thin' }, 
-                    right: { style: 'thin' } 
-                };
-            });
-        });
-
-        // Send file
-        res.setHeader(
-            'Content-Type',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        );
-        res.setHeader(
-            'Content-Disposition',
-            `attachment; filename=Event_${eventData.ename.replace(/\s+/g, '_')}_Details.xlsx`
-        );
-
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=Event_${req.params.eventId}.xlsx`);
         await workbook.xlsx.write(res);
         res.end();
-
-        console.log(`✅ Excel generated for event ${eventId} by ${userUSN}`);
-    } catch (err) {
-        console.error('Excel generation error:', err);
-        res.status(500).json({ error: 'Error generating Excel file' });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
 app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res) => {
     try {
-        const eventId = req.params.eventId;
-        const userUSN = req.session.userUSN;
-
-        if (!eventId || isNaN(eventId)) {
-            return res.status(400).json({ error: 'Invalid event ID' });
-        }
-
-        // Fetch event details
-        const { data: eventRows, error: eventError } = await supabase
-            .from('event')
-            .select(`
-                eid, ename, eventdesc, eventdate, eventtime, eventloc, 
-                maxpart, maxvoln, regfee, orgusn, poster_url,
-                club:orgcid(cname),
-                student:orgusn(sname)
-            `)
-            .eq('eid', eventId)
-            .limit(1);
-
-        if (eventError) {
-            console.error('Error fetching event details:', eventError);
-            return res.status(500).json({ error: 'Database error' });
-        }
-
-        if (!eventRows || eventRows.length === 0) {
-            return res.status(404).json({ error: 'Event not found' });
-        }
-
-        const event = eventRows[0];
+        const { data: event } = await supabase.from('event').select('eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url, banner_url, club:orgcid(cname), student:orgusn(sname)').eq('eid', req.params.eventId).limit(1);
+        if (!event || event.length === 0) return res.status(404).json({ error: 'Not found' });
         
-        // Transform event data
-        const transformedEvent = {
-            ...event,
-            eventDate: event.eventdate,
-            eventTime: event.eventtime,
-            eventLoc: event.eventloc,
-            maxPart: event.maxpart,
-            maxVoln: event.maxvoln,
-            regFee: event.regfee,
-            posterUrl: event.poster_url, // Added
-            clubName: event.club?.cname,
-            organizerName: event.student?.sname,
-            OrgUsn: event.orgusn
-        };
-
-        // Check if user is registered as participant
-        const { data: participantCheck, error: participantError } = await supabase
-            .from('participant')
-            .select('partstatus, payment_status')
-            .eq('partusn', userUSN)
-            .eq('parteid', eventId)
-            .limit(1);
-
-        if (participantError) {
-            console.error('Error checking participant status:', participantError);
-            return res.status(500).json({ error: 'Database error' });
+        const transformed = { ...event[0], eventDate: event[0].eventdate, eventTime: event[0].eventtime, posterUrl: event[0].poster_url, bannerUrl: event[0].banner_url, clubName: event[0].club?.cname, organizerName: event[0].student?.sname, OrgUsn: event[0].orgusn };
+        const { data: pCheck } = await supabase.from('participant').select('partstatus, payment_status').eq('partusn', req.session.userUSN).eq('parteid', req.params.eventId).limit(1);
+        
+        if (pCheck && pCheck.length > 0) {
+            transformed.isRegistered = true;
+            transformed.paymentStatus = pCheck[0].payment_status;
+            transformed.attendanceMarked = pCheck[0].partstatus;
+            return res.json(transformed);
         }
-
-        // User is registered as participant
-        if (participantCheck && participantCheck.length > 0) {
-            transformedEvent.isRegistered = true;
-            transformedEvent.paymentStatus = participantCheck[0].payment_status || null;
-            transformedEvent.attendanceMarked = participantCheck[0].partstatus || false;
-
-            console.log(`✅ Participant status for ${userUSN} on event ${eventId}:`, {
-                isRegistered: true,
-                paymentStatus: transformedEvent.paymentStatus,
-                attendanceMarked: transformedEvent.attendanceMarked
-            });
-
-            return res.json(transformedEvent);
-        }
-
-        // User is not registered
-        console.log(`ℹ️ User ${userUSN} is not registered for event ${eventId}`);
-        return res.status(403).json({ 
-            error: 'You are not registered for this event',
-            isRegistered: false 
-        });
-
-    } catch (err) {
-        console.error('Error fetching participant event status:', err);
-        res.status(500).json({
-            error: 'Error fetching event details: ' + err.message 
-        });
-    }
+        return res.status(403).json({ error: 'Not registered', isRegistered: false });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Start server
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Server running on port ${PORT}`);
     console.log(`📡 CORS enabled for ${process.env.FRONTEND_URL}`);
