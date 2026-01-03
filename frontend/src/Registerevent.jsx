@@ -18,31 +18,30 @@ function formatTime12h(timeString) {
 export default function Registerevent() {
   const navigate = useNavigate()
   
-  // Data States
+  // --- Data States ---
   const [eventsData, setEventsData] = useState({ upcoming: [], ongoing: [], completed: [] })
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
   const [filter, setFilter] = useState("all")
   const [teamStates, setTeamStates] = useState({})
+  const [registeredEvents, setRegisteredEvents] = useState(new Set())
   
-  // UI States
+  // --- UI & Modal States ---
   const [flash, setFlash] = useState({ type: "", message: "" })
   const [modalFlash, setModalFlash] = useState({ type: "", message: "" })
-  const [selectedEvent, setSelectedEvent] = useState(null) // Controls the Split View Overlay
+  const [selectedEvent, setSelectedEvent] = useState(null) // Controls the Overlay
   const [ticketInfo, setTicketInfo] = useState(null);
   
-  // Modal States
+  // Team Modal
   const [showTeamModal, setShowTeamModal] = useState(null)
   const [teamFormData, setTeamFormData] = useState({ teamName: '', memberUSNs: [''] })
   const [teamInvites, setTeamInvites] = useState([])
   
+  // UPI Modal
   const [showUpiModal, setShowUpiModal] = useState(null)
   const [transactionId, setTransactionId] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("")
   
-  // Cache/Refs
-  const [registeredEvents, setRegisteredEvents] = useState(new Set())
   const timerRef = useRef(null)
   const modalTimerRef = useRef(null)
 
@@ -64,49 +63,22 @@ export default function Registerevent() {
     return `upi://pay?${params.toString()}`
   }
 
-  async function generateQRCode(upiUrl) {
-    try {
-      const qrDataUrl = await QRCode.toDataURL(upiUrl, { width: 280, margin: 2, color: { dark: '#000000', light: '#ffffff' }, errorCorrectionLevel: 'M' })
-      setQrCodeDataUrl(qrDataUrl)
-    } catch (err) {
-      showModalFlash('error', 'Failed to generate QR code')
-    }
-  }
-
-  // --- Loaders ---
-  useEffect(() => {
-    if (showUpiModal) {
-      const { event } = showUpiModal
-      const upiUrl = generateUpiUrl(event.upiId, event.ename, event.regFee, event.eid)
-      generateQRCode(upiUrl)
-    } else {
-      setQrCodeDataUrl("")
-    }
-  }, [showUpiModal])
-
+  // --- Initial Loaders ---
+  useEffect(() => { loadEvents(); fetchMyRegistrations(); }, [])
+  
   async function loadEvents() {
     try {
       setLoading(true)
       const response = await fetch('/api/events', { method: "GET", credentials: "include" })
       if (response.status === 401) { navigate('/'); return }
-      if (!response.ok) throw new Error("Failed")
+      if (!response.ok) throw new Error("Failed to load")
       const data = await response.json()
       setEventsData({ upcoming: data?.events?.upcoming || [], ongoing: data?.events?.ongoing || [], completed: data?.events?.completed || [] })
     } catch (err) {
-      setError("Failed to load events")
+      showFlash("error", "Failed to load events")
     } finally {
       setLoading(false)
     }
-  }
-
-  async function loadTeamStatus(eventId) {
-    try {
-      const response = await fetch(`/api/events/${eventId}/team-status`, { method: 'GET', credentials: 'include' })
-      if (response.ok) {
-        const data = await response.json()
-        setTeamStates(prev => ({ ...prev, [eventId]: data }))
-      }
-    } catch (err) { console.error(err) }
   }
 
   async function fetchMyRegistrations() {
@@ -120,55 +92,69 @@ export default function Registerevent() {
     } catch (err) { console.error(err) }
   }
 
-  useEffect(() => { loadEvents(); fetchMyRegistrations(); return () => { if (timerRef.current) clearTimeout(timerRef.current); if (modalTimerRef.current) clearTimeout(modalTimerRef.current) } }, [])
-  
+  async function loadTeamStatus(eventId) {
+    try {
+      const response = await fetch(`/api/events/${eventId}/team-status`, { credentials: 'include' })
+      if (response.ok) {
+        const data = await response.json()
+        setTeamStates(prev => ({ ...prev, [eventId]: data }))
+      }
+    } catch (err) { console.error(err) }
+  }
+
   useEffect(() => { 
     const activeEvents = [...(eventsData.upcoming || []), ...(eventsData.ongoing || [])]; 
     activeEvents.forEach(event => { loadTeamStatus(event.eid) }) 
   }, [eventsData])
 
-  const allEvents = useMemo(() => {
-    return [
-      ...(eventsData.upcoming || []).map((e) => ({ ...e, status: "upcoming" })), 
-      ...(eventsData.ongoing || []).map((e) => ({ ...e, status: "ongoing" })),
-      ...(eventsData.completed || []).map((e) => ({ ...e, status: "completed" })),
-    ]
-  }, [eventsData])
-
   const filteredEvents = useMemo(() => {
-    if (filter === "all") return allEvents
-    return allEvents.filter((e) => e.status === filter)
-  }, [allEvents, filter])
+    const all = [
+      ...(eventsData.upcoming || []).map(e => ({ ...e, status: "upcoming" })), 
+      ...(eventsData.ongoing || []).map(e => ({ ...e, status: "ongoing" })),
+      ...(eventsData.completed || []).map(e => ({ ...e, status: "completed" })),
+    ]
+    return filter === "all" ? all : all.filter(e => e.status === filter)
+  }, [eventsData, filter])
 
-  // --- Action Handlers ---
+  // --- Generate QR Code ---
+  useEffect(() => {
+    if (showUpiModal) {
+      const { event } = showUpiModal
+      const upiUrl = generateUpiUrl(event.upiId, event.ename, event.regFee, event.eid)
+      QRCode.toDataURL(upiUrl, { width: 280, margin: 2, color: { dark: '#000000', light: '#ffffff' } }).then(setQrCodeDataUrl)
+    } else { setQrCodeDataUrl("") }
+  }, [showUpiModal])
+
+  // ================= ACTION HANDLERS =================
 
   async function handleRegister(event) {
     const hasFee = (event.regFee || 0) > 0; const eventId = event.eid
     if (hasFee) {
-      if (!event.upiId) { showFlash("error", "Organizer has not set up payments."); return }
+      if (!event.upiId) { showFlash("error", "Organizer hasn't set up payments."); return }
       setTransactionId(""); setModalFlash({ type: "", message: "" }); setShowUpiModal({ event, isTeam: false }); return
     }
     try {
       const response = await fetch(`/api/events/${eventId}/join`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" } })
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) { showFlash("error", data?.error || "Registration failed"); return }
-      
-      showFlash("success", "Successfully registered!")
+      const data = await response.json()
+      if (!response.ok) { showFlash("error", data.error || "Failed"); return }
+      showFlash("success", "Registered successfully!")
       setRegisteredEvents(prev => new Set(prev).add(eventId))
-      setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data?.userUSN || "AUTHORIZED" }); 
+      setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data.userUSN || "AUTHORIZED" })
       await loadEvents()
-    } catch (err) { showFlash("error", "Registration failed.") }
+    } catch (err) { showFlash("error", "Network error") }
   }
 
-  // Team Handlers (Create, Join, Register Team)
   async function handleCreateTeam(eventId) {
     try {
       const { teamName, memberUSNs } = teamFormData
-      if (!teamName.trim()) { showModalFlash('error', 'Enter team name'); return }
+      if (!teamName.trim()) { showModalFlash('error', 'Team name required'); return }
       const validUSNs = memberUSNs.filter(usn => usn.trim() !== '')
-      const response = await fetch(`/api/events/${eventId}/create-team`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teamName: teamName.trim(), memberUSNs: validUSNs }) })
+      const response = await fetch(`/api/events/${eventId}/create-team`, { 
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ teamName: teamName.trim(), memberUSNs: validUSNs }) 
+      })
       const data = await response.json()
-      if (!response.ok) { showModalFlash('error', data?.error || 'Failed'); return }
+      if (!response.ok) { showModalFlash('error', data.error); return }
       showModalFlash('success', 'Team created!'); showFlash('success', 'Team created!')
       setTimeout(() => { setShowTeamModal(null); setTeamFormData({ teamName: '', memberUSNs: [''] }); loadTeamStatus(eventId) }, 1500)
     } catch (err) { showModalFlash('error', 'Error creating team') }
@@ -178,8 +164,8 @@ export default function Registerevent() {
     try {
       const response = await fetch(`/api/events/${eventId}/my-invites`, { credentials: 'include' })
       const data = await response.json()
-      if (!response.ok) { showFlash('error', data?.error); return }
-      if (!data.invites?.length) { showFlash('error', 'No invites'); setTeamInvites([]) } 
+      if (!response.ok) { showFlash('error', data.error); return }
+      if (!data.invites?.length) { showFlash('error', 'No pending invites'); setTeamInvites([]) } 
       else { setTeamInvites(data.invites); setShowTeamModal({ eventId, mode: 'invites' }) }
     } catch (err) { showFlash('error', 'Error loading invites') }
   }
@@ -188,7 +174,8 @@ export default function Registerevent() {
     try {
       const response = await fetch(`/api/teams/${teamId}/confirm-join`, { method: 'POST', credentials: 'include' })
       if (!response.ok) { showModalFlash('error', 'Failed to join'); return }
-      showModalFlash('success', 'Joined team!'); setTimeout(() => { setShowTeamModal(null); setTeamInvites([]); loadTeamStatus(eventId) }, 1500)
+      showModalFlash('success', 'Joined team!'); 
+      setTimeout(() => { setShowTeamModal(null); setTeamInvites([]); loadTeamStatus(eventId) }, 1500)
     } catch (err) { showModalFlash('error', 'Error') }
   }
 
@@ -197,13 +184,13 @@ export default function Registerevent() {
     try {
       const response = await fetch(`/api/events/${eventId}/register-team`, { method: 'POST', credentials: 'include' })
       const data = await response.json()
-      if (!response.ok) { showFlash('error', data?.error); return }
+      if (!response.ok) { showFlash('error', data.error); return }
       if (data.requiresPayment) {
         if (!event.upiId) { showFlash("error", "Payment not setup"); return }
         setTransactionId(""); setShowUpiModal({ event, isTeam: true, teamId: teamState.teamId }); return
       }
       showFlash('success', 'Team registered!'); 
-      setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data?.userUSN });
+      setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data.userUSN });
       await loadTeamStatus(eventId); await loadEvents(); await fetchMyRegistrations()
     } catch (err) { showFlash('error', 'Error registering team') }
   }
@@ -214,36 +201,53 @@ export default function Registerevent() {
     const { event, isTeam } = showUpiModal; const eventId = event.eid; 
     const url = isTeam ? `/api/events/${eventId}/register-team-upi` : `/api/events/${eventId}/register-upi`
     try {
-      const response = await fetch(url, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transaction_id: transactionId.trim() }) })
+      const response = await fetch(url, { 
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ transaction_id: transactionId.trim() }) 
+      })
       const data = await response.json()
-      if (!response.ok) { showModalFlash('error', data?.error); return }
+      if (!response.ok) { showModalFlash('error', data.error); return }
       showModalFlash('success', 'Submitted for verification!'); 
-      setTimeout(async () => { setShowUpiModal(null); setTransactionId(""); showFlash('success', 'Submitted!'); setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data?.userUSN }); await loadEvents(); await loadTeamStatus(eventId); await fetchMyRegistrations() }, 1500)
-    } catch (err) { showModalFlash('error', 'Error') } finally { setIsSubmitting(false) }
+      setTimeout(async () => { 
+        setShowUpiModal(null); setTransactionId(""); showFlash('success', 'Submitted!'); 
+        setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data.userUSN || "PENDING" }); 
+        await loadEvents(); await loadTeamStatus(eventId); await fetchMyRegistrations() 
+      }, 1500)
+    } catch (err) { showModalFlash('error', 'Error submitting') } finally { setIsSubmitting(false) }
   }
 
-  // --- Render Controls Logic (Used in Detail View) ---
+  // --- Dynamic Button Rendering ---
   function renderControls(event) {
     const teamState = teamStates[event.eid]
-    // 1. Loading
-    if (!teamState && (event.status !== 'completed')) return <button className="re-btn disabled">Loading Status...</button>
-    // 2. Completed
+    const aboutBtn = event.posterUrl ? (
+      <a href={event.posterUrl} target="_blank" rel="noopener noreferrer" className="re-btn about">
+        About
+      </a>
+    ) : null;
+
+    if (!teamState && (event.status !== 'completed')) return <div className="re-btn-group"><button className="re-btn disabled">Loading...</button>{aboutBtn}</div>
     if (event.status === 'completed') return <button className="re-btn disabled">Event Completed</button>
 
-    // 3. Individual Event
+    // Individual Event
     if (!teamState?.isTeamEvent) {
-      if (registeredEvents.has(event.eid)) return <button className="re-btn success" disabled>✓ Registered</button>
+      if (registeredEvents.has(event.eid)) {
+        return <div className="re-btn-group"><button className="re-btn success" disabled>✓ Registered</button>{aboutBtn}</div>
+      }
       return (
-        <button className="re-btn primary" onClick={() => handleRegister(event)}>
-          { (event.regFee || 0) > 0 ? `Pay & Register (₹${event.regFee})` : "Register (Free)" }
-        </button>
+        <div className="re-btn-group">
+          <button className="re-btn primary" onClick={() => handleRegister(event)}>
+            { (event.regFee || 0) > 0 ? `Pay & Register (₹${event.regFee})` : "Register (Free)" }
+          </button>
+          {aboutBtn}
+        </div>
       )
     }
 
-    // 4. Team Event
-    if (teamState.registrationComplete) return <button className="re-btn success" disabled>✓ Team Registered</button>
+    // Team Event
+    if (teamState.registrationComplete) {
+      return <div className="re-btn-group"><button className="re-btn success" disabled>✓ Team Registered</button>{aboutBtn}</div>
+    }
 
-    // 4a. Already in a team
     if (teamState.hasJoinedTeam) {
       const isLeader = teamState.isLeader
       return (
@@ -254,31 +258,33 @@ export default function Registerevent() {
                {teamState.joinedCount}/{teamState.minSize} Members
              </span>
           </div>
-          {isLeader ? (
-            <button 
-              className={`re-btn ${teamState.canRegister ? "primary" : "disabled"}`} 
-              onClick={() => teamState.canRegister && handleRegisterTeam(event, teamState)}
-              disabled={!teamState.canRegister}
-            >
-              { (teamState.regFee || 0) > 0 ? `Pay & Register Team (₹${teamState.regFee})` : "Finalize Registration" }
-            </button>
-          ) : (
-            <button className="re-btn disabled">Waiting for Leader to Register</button>
-          )}
+          <div className="re-btn-group">
+            {isLeader ? (
+              <button 
+                className={`re-btn ${teamState.canRegister ? "primary" : "disabled"}`} 
+                onClick={() => teamState.canRegister && handleRegisterTeam(event, teamState)}
+                disabled={!teamState.canRegister}
+              >
+                { (teamState.regFee || 0) > 0 ? `Pay (₹${teamState.regFee})` : "Finalize" }
+              </button>
+            ) : (
+              <button className="re-btn disabled">Waiting for Leader</button>
+            )}
+            {aboutBtn}
+          </div>
         </div>
       )
     }
 
-    // 4b. Not in a team
     return (
-      <div className="re-action-row">
+      <div className="re-btn-group">
         <button className="re-btn secondary" onClick={() => setShowTeamModal({ eventId: event.eid, mode: 'create' })}>Create Team</button>
-        <button className="re-btn ghost" onClick={() => handleViewInvites(event.eid)}>View Invites</button>
+        <button className="re-btn ghost" onClick={() => handleViewInvites(event.eid)}>Invites</button>
+        {aboutBtn}
       </div>
     )
   }
 
-  // --- Render Main UI ---
   return (
     <main className="re-page">
       <div className="re-bg-glow" />
@@ -298,14 +304,14 @@ export default function Registerevent() {
           </div>
         </header>
 
-        {loading ? <div className="re-loader">Loading events...</div> : (
+        {loading ? <div className="re-loader">Loading...</div> : (
           <div className="re-grid">
             {filteredEvents.map(event => (
               <article key={event.eid} className="re-card" onClick={() => setSelectedEvent(event)}>
                 <div className="re-card-media">
-                  {/* Using Cloudinary Poster URL with fallback */}
+                  {/* UPDATE: Use bannerUrl ONLY for visual thumbnail */}
                   <img 
-                    src={event.posterUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80"} 
+                    src={event.bannerUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80"} 
                     alt={event.ename} 
                     loading="lazy"
                   />
@@ -334,12 +340,12 @@ export default function Registerevent() {
         <div className="re-overlay-container">
           <div className="re-overlay-split">
             
-            {/* TOP 40%: POSTER IMAGE */}
+            {/* TOP 40%: BANNER (Cloudinary bannerUrl) */}
             <div className="re-split-top">
               <button className="re-close-btn" onClick={() => setSelectedEvent(null)}>×</button>
               <div className="re-image-wrapper">
                 <img 
-                  src={selectedEvent.posterUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80"} 
+                  src={selectedEvent.bannerUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80"} 
                   alt={selectedEvent.ename} 
                 />
                 <div className="re-image-gradient"></div>
@@ -367,24 +373,15 @@ export default function Registerevent() {
                 </div>
 
                 <div className="re-detail-section info-grid">
-                  <div className="re-info-item">
-                    <label>Venue</label>
-                    <span>{selectedEvent.eventLoc}</span>
-                  </div>
-                  <div className="re-info-item">
-                    <label>Organizer</label>
-                    <span>{selectedEvent.organizerName || "Club"}</span>
-                  </div>
+                  <div className="re-info-item"><label>Venue</label><span>{selectedEvent.eventLoc}</span></div>
+                  <div className="re-info-item"><label>Organizer</label><span>{selectedEvent.organizerName || "Club"}</span></div>
                   {selectedEvent.is_team && (
-                    <div className="re-info-item">
-                      <label>Team Size</label>
-                      <span>{selectedEvent.min_team_size} - {selectedEvent.max_team_size} members</span>
-                    </div>
+                    <div className="re-info-item"><label>Team Size</label><span>{selectedEvent.min_team_size}-{selectedEvent.max_team_size} members</span></div>
                   )}
                 </div>
                 
                 {/* Spacer for fixed bottom bar */}
-                <div style={{height: '80px'}}></div>
+                <div style={{height: '100px'}}></div>
               </div>
 
               {/* FIXED ACTION BAR */}
@@ -396,7 +393,7 @@ export default function Registerevent() {
         </div>
       )}
 
-      {/* --- MODALS (Team & UPI) --- */}
+      {/* --- MODALS --- */}
       {showTeamModal && (
         <div className="re-modal-overlay" onClick={() => setShowTeamModal(null)}>
           <div className="re-modal" onClick={e => e.stopPropagation()}>
@@ -409,7 +406,7 @@ export default function Registerevent() {
               {showTeamModal.mode === 'create' ? (
                 <>
                   <input className="re-input" placeholder="Team Name" value={teamFormData.teamName} onChange={e => setTeamFormData({...teamFormData, teamName: e.target.value})} />
-                  <p className="re-hint">Add Member USNs (You are leader)</p>
+                  <p className="re-hint">Add Members (USNs)</p>
                   {teamFormData.memberUSNs.map((usn, i) => (
                     <div key={i} className="re-input-group">
                       <input className="re-input" placeholder="Member USN" value={usn} onChange={e => {
@@ -425,7 +422,7 @@ export default function Registerevent() {
                 </>
               ) : (
                 <div className="re-invites-list">
-                  {!teamInvites.length ? <p>No invites found.</p> : teamInvites.map((inv, i) => (
+                  {!teamInvites.length ? <p>No invites.</p> : teamInvites.map((inv, i) => (
                     <div key={i} className="re-invite-card">
                        <div><strong>{inv.teamName}</strong><br/><small>Leader: {inv.leaderName}</small></div>
                        {!inv.registrationComplete && !inv.joinStatus && <button className="re-btn primary small" onClick={() => handleConfirmJoin(inv.teamId, showTeamModal.eventId)}>Join</button>}
@@ -444,11 +441,11 @@ export default function Registerevent() {
           <div className="re-modal" onClick={e => e.stopPropagation()}>
             <div className="re-modal-header"><h3>Pay & Register</h3><button disabled={isSubmitting} onClick={() => setShowUpiModal(null)}>×</button></div>
             <div className="re-modal-body center">
-               <div className="re-qr-wrap">{qrCodeDataUrl ? <img src={qrCodeDataUrl} alt="QR" /> : <div className="loader"></div>}</div>
-               <p>Scan to pay <strong>₹{showUpiModal.event.regFee}</strong></p>
+               <div className="re-qr-wrap">{qrCodeDataUrl ? <img src={qrCodeDataUrl} alt="QR" /> : <div className="re-loader-mini"></div>}</div>
+               <p>Pay <strong>₹{showUpiModal.event.regFee}</strong></p>
                <div className="re-upi-info">UPI: {showUpiModal.event.upiId}</div>
-               <input className="re-input" placeholder="Enter Transaction ID (UTR)" value={transactionId} onChange={e => setTransactionId(e.target.value)} disabled={isSubmitting} />
-               <button className="re-btn primary full" onClick={handleSubmitUpiPayment} disabled={isSubmitting}>{isSubmitting ? "Verifying..." : "Submit Payment"}</button>
+               <input className="re-input" placeholder="Transaction ID (UTR)" value={transactionId} onChange={e => setTransactionId(e.target.value)} disabled={isSubmitting} />
+               <button className="re-btn primary full" onClick={handleSubmitUpiPayment} disabled={isSubmitting}>{isSubmitting ? "Verifying..." : "Submit"}</button>
             </div>
           </div>
         </div>
