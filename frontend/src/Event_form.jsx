@@ -8,8 +8,8 @@ const EventForm = () => {
     eventName: '',
     eventDescription: '',
     certificateInfo: '',
-    posterUrl: '',
-    bannerUrl: '', // NEW FIELD
+    posterUrl: '', 
+    bannerUrl: '', // NEW: Banner URL
     eventDate: '',
     eventTime: '',
     eventLocation: '',
@@ -17,7 +17,7 @@ const EventForm = () => {
     maxVolunteers: '',
     OrgCid: '',
     registrationFee: '',
-    upiId: '',
+    upiId: '', 
     isTeamEvent: false,
     minTeamSize: '',
     maxTeamSize: ''
@@ -42,6 +42,7 @@ const EventForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const regFee = parseFloat(formData.registrationFee) || 0;
 
     const data = {
@@ -49,7 +50,7 @@ const EventForm = () => {
       eventDescription: formData.eventDescription,
       certificate_info: formData.certificateInfo || null,
       posterUrl: formData.posterUrl || null,
-      bannerUrl: formData.bannerUrl || null, // SEND BANNER TO BACKEND
+      bannerUrl: formData.bannerUrl || null, // Include Banner URL
       eventDate: formData.eventDate,
       eventTime: formData.eventTime,
       eventLocation: formData.eventLocation,
@@ -57,7 +58,7 @@ const EventForm = () => {
       maxVolunteers: parseInt(formData.maxVolunteers) || null,
       OrgCid: parseInt(formData.OrgCid) || null,
       registrationFee: regFee,
-      upiId: regFee > 0 ? formData.upiId : null,
+      upiId: regFee > 0 ? formData.upiId : null, 
       isTeamEvent: formData.isTeamEvent,
       minTeamSize: formData.isTeamEvent ? (parseInt(formData.minTeamSize) || null) : null,
       maxTeamSize: formData.isTeamEvent ? (parseInt(formData.maxTeamSize) || null) : null
@@ -68,10 +69,12 @@ const EventForm = () => {
       showMessage('Please fill in all required fields.', true);
       return;
     }
+
     if (data.registrationFee > 0 && !data.upiId) {
       showMessage('Please enter a valid UPI ID for paid events.', true);
       return;
     }
+
     if (data.OrgCid <= 0) {
       showMessage('Club ID must be a positive number.', true);
       return;
@@ -106,14 +109,15 @@ const EventForm = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
+
       const result = await res.json();
 
       if (res.ok) {
         showMessage('Event created successfully!');
         setFormData({
           eventName: '', eventDescription: '', certificateInfo: '', posterUrl: '', bannerUrl: '',
-          eventDate: '', eventTime: '', eventLocation: '', maxParticipants: '',
-          maxVolunteers: '', OrgCid: '', registrationFee: '', upiId: '',
+          eventDate: '', eventTime: '', eventLocation: '', maxParticipants: '', 
+          maxVolunteers: '', OrgCid: '', registrationFee: '', upiId: '', 
           isTeamEvent: false, minTeamSize: '', maxTeamSize: ''
         });
         setTimeout(() => navigate('/organisers'), 2000);
@@ -131,205 +135,227 @@ const EventForm = () => {
   };
 
   return (
-   <div className="event-form-container">
+    <div className="event-form-container">
       {message.show && (
-       <div className={`event-form-message ${message.isError ? 'event-form-message-error' : 'event-form-message-success'}`}>
+        <div className={`event-form-message ${message.isError ? 'event-form-message-error' : 'event-form-message-success'}`}>
           {message.text}
-       </div>
+        </div>
       )}
       
-     <div className="event-form-wrap">
-       <div className="event-form-card event-form-registration">
+      <div className="event-form-wrap event-form-registration">
+        <div className="event-form-card">
+
           {/* DESKTOP HEADER */}
-         <div className="event-form-card-side event-form-left event-form-desktop-header">
-           <div className="event-form-logo-text">
-              Hey<br />Organisers
-           </div>
-         </div>
+          <div className="event-form-card-side event-form-left event-form-desktop-header">
+            <div className="event-form-logo-text" data-text="Hey Organisers">
+              Hey Organisers
+            </div>
+          </div>
 
           {/* MOBILE HEADER */}
-         <div className="event-form-mobile-header">
-           <div className="event-form-left-header">
-             <div className="event-form-glow-text">
-               <span className="event-form-neon">Hey</span>
-               <span className="event-form-neon-alt">Organisers</span>
-             </div>
-           </div>
-         </div>
+          <div className="event-form-card-side event-form-left event-form-mobile-header">
+            <div className="event-form-left-header">
+              <div className="event-form-glow-text">
+                <span className="event-form-neon">Hey</span>
+                <span className="event-form-neon event-form-neon-alt">Organisers</span>
+              </div>
+            </div>
+          </div>
 
           {/* FORM */}
-         <div className="event-form-card-side event-form-right">
-           <h2 className="event-form-title">Create Event</h2>
-           <form className="event-form-form" onSubmit={handleSubmit}>
-              <input
-                className="event-form-input"
-                type="text"
-                name="eventName"
-                placeholder="Event Name"
-                value={formData.eventName}
-                onChange={handleChange}
-                required
+          <div className="event-form-card-side event-form-right">
+            <h2 className="event-form-title">Create Event</h2>
+            <form className="event-form-form" onSubmit={handleSubmit}>
+              <input 
+                className="event-form-input" 
+                type="text" 
+                name="eventName" 
+                placeholder="Event Name" 
+                value={formData.eventName} 
+                onChange={handleChange} 
+                required 
               />
-              <textarea
-                className="event-form-textarea"
-                name="eventDescription"
-                placeholder="Event Description"
-                value={formData.eventDescription}
-                onChange={handleChange}
-                required
-              />
-              <input
-                className="event-form-input"
-                type="text"
-                name="certificateInfo"
-                placeholder="Certificate Information (Optional)"
-                value={formData.certificateInfo}
-                onChange={handleChange}
+              
+              <textarea 
+                className="event-form-textarea" 
+                name="eventDescription" 
+                placeholder="What's this event about?" 
+                value={formData.eventDescription} 
+                onChange={handleChange} 
+                rows="3" 
+                required 
               />
 
-              {/* POSTER URL INPUT */}
-              <input
-                className="event-form-input"
-                type="url"
-                name="posterUrl"
-                placeholder="Poster URL (Optional - Google Drive link)"
-                value={formData.posterUrl}
-                onChange={handleChange}
-              />
-              <div style={{ fontSize: '12px', color: '#666', marginTop: '-16px', marginBottom: '8px' }}>
-                Upload to Drive > Right Click > Share > Copy Link (Anyone with link)
+              {/* BANNER LINK INPUT */}
+              <div style={{marginBottom: '10px'}}>
+                <input 
+                  className="event-form-input" 
+                  type="url" 
+                  name="bannerUrl" 
+                  placeholder="Banner Image URL (Landscape)" 
+                  value={formData.bannerUrl} 
+                  onChange={handleChange} 
+                  style={{marginBottom: '5px'}}
+                />
+                 <small style={{fontSize: '11px', color: '#666', display: 'block', lineHeight: '1.2'}}>
+                  Recommended for YouTube-style display (e.g., 1280x720)
+                </small>
               </div>
 
-              {/* BANNER URL INPUT - NEW */}
-              <input
-                className="event-form-input"
-                type="url"
-                name="bannerUrl"
-                placeholder="Banner Image URL (Optional - Google Drive link)"
-                value={formData.bannerUrl}
-                onChange={handleChange}
-              />
-              <div style={{ fontSize: '12px', color: '#666', marginTop: '-16px', marginBottom: '8px' }}>
-                Banner will be displayed at the top of event registration page
+              {/* POSTER LINK INPUT */}
+              <div style={{marginBottom: '22px'}}>
+                <input 
+                  className="event-form-input" 
+                  type="url" 
+                  name="posterUrl" 
+                  placeholder="Poster Image URL (Optional)" 
+                  value={formData.posterUrl} 
+                  onChange={handleChange} 
+                  style={{marginBottom: '5px'}}
+                />
+                {/* UPDATED PLACEHOLDER TEXT */}
+                <small style={{fontSize: '11px', color: '#666', display: 'block', lineHeight: '1.2'}}>
+                  Optional: Upload to Drive &gt; Right Click &gt; Share &gt; Copy Link (Anyone with link)
+                </small>
               </div>
 
-              <input
-                className="event-form-input"
-                type="date"
-                name="eventDate"
-                value={formData.eventDate}
-                onChange={handleChange}
-                required
+              <textarea 
+                className="event-form-textarea" 
+                name="certificateInfo" 
+                placeholder="Certificate Text (Optional)" 
+                value={formData.certificateInfo} 
+                onChange={handleChange} 
+                rows="2" 
               />
-              <input
-                className="event-form-input"
-                type="time"
-                name="eventTime"
-                value={formData.eventTime}
-                onChange={handleChange}
-                required
+              
+              <input 
+                className="event-form-input" 
+                type="date" 
+                name="eventDate" 
+                placeholder="Select Date"
+                value={formData.eventDate} 
+                onChange={handleChange} 
+                required 
               />
-              <input
-                className="event-form-input"
-                type="text"
-                name="eventLocation"
-                placeholder="Event Location"
-                value={formData.eventLocation}
-                onChange={handleChange}
-                required
+              <input 
+                className="event-form-input" 
+                type="time" 
+                name="eventTime" 
+                placeholder="Select Time"
+                value={formData.eventTime} 
+                onChange={handleChange} 
+                required 
               />
-              <input
-                className="event-form-input"
-                type="number"
-                name="maxParticipants"
-                placeholder="Max Participants (Optional)"
-                value={formData.maxParticipants}
-                onChange={handleChange}
-              />
-              <input
-                className="event-form-input"
-                type="number"
-                name="maxVolunteers"
-                placeholder="Max Volunteers (Optional)"
-                value={formData.maxVolunteers}
-                onChange={handleChange}
-              />
-              <input
-                className="event-form-input"
-                type="number"
-                name="OrgCid"
-                placeholder="Club ID"
-                value={formData.OrgCid}
-                onChange={handleChange}
-                required
+              
+              <input 
+                className="event-form-input" 
+                type="text" 
+                name="eventLocation" 
+                placeholder="Location" 
+                value={formData.eventLocation} 
+                onChange={handleChange} 
+                required 
               />
 
               <div className="event-form-checkbox-group">
                 <label className="event-form-checkbox-label">
                   <span className="event-form-checkbox-text">This is a Team Event</span>
-                  <input
-                    className="event-form-checkbox"
-                    type="checkbox"
-                    name="isTeamEvent"
-                    checked={formData.isTeamEvent}
-                    onChange={handleChange}
-                  />
+                  <input type="checkbox" name="isTeamEvent" checked={formData.isTeamEvent} onChange={handleChange} className="event-form-checkbox" />
                 </label>
               </div>
-
-              {formData.isTeamEvent && (
-               <div className="event-form-row">
-                  <input
-                    className="event-form-input"
-                    type="number"
-                    name="minTeamSize"
-                    placeholder="Min Team Size"
-                    value={formData.minTeamSize}
-                    onChange={handleChange}
-                    min="2"
-                  />
-                  <input
-                    className="event-form-input"
-                    type="number"
-                    name="maxTeamSize"
-                    placeholder="Max Team Size"
-                    value={formData.maxTeamSize}
-                    onChange={handleChange}
-                    min="2"
-                  />
-               </div>
-              )}
 
               <input
                 className="event-form-input"
                 type="number"
-                name="registrationFee"
-                placeholder="Registration Fee (0 for Free)"
-                value={formData.registrationFee}
+                inputMode="numeric"
+                name="maxParticipants"
+                placeholder={formData.isTeamEvent ? "Max Teams Capacity" : "Max Participants Capacity"}
+                value={formData.maxParticipants}
                 onChange={handleChange}
-                step="0.01"
+                min="1"
+              />
+
+              {formData.isTeamEvent && (
+                <div className="event-form-row">
+                  <input 
+                    className="event-form-input" 
+                    type="number" 
+                    inputMode="numeric" 
+                    name="minTeamSize" 
+                    placeholder="Min Team Size" 
+                    value={formData.minTeamSize} 
+                    onChange={handleChange} 
+                    min="2" 
+                    required 
+                  />
+                  <input 
+                    className="event-form-input" 
+                    type="number" 
+                    inputMode="numeric" 
+                    name="maxTeamSize" 
+                    placeholder="Max Team Size" 
+                    value={formData.maxTeamSize} 
+                    onChange={handleChange} 
+                    min="2" 
+                    required 
+                  />
+                </div>
+              )}
+
+              <input 
+                className="event-form-input" 
+                type="number" 
+                inputMode="numeric" 
+                name="maxVolunteers" 
+                placeholder="Max Volunteers Required" 
+                value={formData.maxVolunteers} 
+                onChange={handleChange} 
+                min="1" 
+              />
+              
+              <input 
+                className="event-form-input" 
+                type="number" 
+                inputMode="numeric" 
+                name="OrgCid" 
+                placeholder="Club ID" 
+                value={formData.OrgCid} 
+                onChange={handleChange} 
+                min="1" 
+                required 
+              />
+              
+              <input 
+                className="event-form-input" 
+                type="number" 
+                inputMode="decimal" 
+                name="registrationFee" 
+                placeholder="Registration Fee (₹)" 
+                value={formData.registrationFee} 
+                onChange={handleChange} 
+                step="0.01" 
+                min="0" 
+                required 
               />
 
               {parseFloat(formData.registrationFee) > 0 && (
-                <input
-                  className="event-form-input"
-                  type="text"
-                  name="upiId"
-                  placeholder="UPI ID (Required for paid events)"
-                  value={formData.upiId}
-                  onChange={handleChange}
-                  required
+                <input 
+                  className="event-form-input" 
+                  type="text" 
+                  name="upiId" 
+                  placeholder="Organizer UPI ID (e.g. name@okhdfcbank)" 
+                  value={formData.upiId} 
+                  onChange={handleChange} 
+                  required 
                 />
               )}
-
-              <button className="event-form-button" type="submit">
-                Publish Event
-              </button>
-           </form>
-         </div>
-       </div>
-     </div>
-   </div>
+              
+              <button className="event-form-button" type="submit">Publish Event</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
