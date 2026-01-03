@@ -7,7 +7,8 @@ const EventForm = () => {
   const [formData, setFormData] = useState({
     eventName: '',
     eventDescription: '',
-    certificateInfo: '', // Added new state
+    certificateInfo: '',
+    posterUrl: '', // NEW FIELD
     eventDate: '',
     eventTime: '',
     eventLocation: '',
@@ -46,7 +47,8 @@ const EventForm = () => {
     const data = {
       eventName: formData.eventName,
       eventDescription: formData.eventDescription,
-      certificate_info: formData.certificateInfo || null, // Map to DB column
+      certificate_info: formData.certificateInfo || null,
+      posterUrl: formData.posterUrl || null, // SEND TO BACKEND
       eventDate: formData.eventDate,
       eventTime: formData.eventTime,
       eventLocation: formData.eventLocation,
@@ -111,9 +113,10 @@ const EventForm = () => {
       if (res.ok) {
         showMessage('Event created successfully!');
         setFormData({
-          eventName: '', eventDescription: '', certificateInfo: '', eventDate: '', eventTime: '',
-          eventLocation: '', maxParticipants: '', maxVolunteers: '', OrgCid: '',
-          registrationFee: '', upiId: '', isTeamEvent: false, minTeamSize: '', maxTeamSize: ''
+          eventName: '', eventDescription: '', certificateInfo: '', posterUrl: '',
+          eventDate: '', eventTime: '', eventLocation: '', maxParticipants: '', 
+          maxVolunteers: '', OrgCid: '', registrationFee: '', upiId: '', 
+          isTeamEvent: false, minTeamSize: '', maxTeamSize: ''
         });
         setTimeout(() => navigate('/organisers'), 2000);
       } else {
@@ -181,11 +184,26 @@ const EventForm = () => {
                 required 
               />
 
-              {/* NEW FIELD: Certificate Info */}
+              {/* NEW POSTER LINK INPUT */}
+              <div style={{marginBottom: '22px'}}>
+                <input 
+                  className="event-form-input" 
+                  type="url" 
+                  name="posterUrl" 
+                  placeholder="Drive Link for Poster (Optional)" 
+                  value={formData.posterUrl} 
+                  onChange={handleChange} 
+                  style={{marginBottom: '5px'}}
+                />
+                <small style={{fontSize: '11px', color: '#666', display: 'block', lineHeight: '1.2'}}>
+                  Upload to Drive &gt; Right Click &gt; Share &gt; Copy Link (Anyone with link)
+                </small>
+              </div>
+
               <textarea 
                 className="event-form-textarea" 
                 name="certificateInfo" 
-                placeholder="Certificate Text (Optional: What do you want displayed on the certificate?)" 
+                placeholder="Certificate Text (Optional)" 
                 value={formData.certificateInfo} 
                 onChange={handleChange} 
                 rows="2" 
@@ -243,7 +261,7 @@ const EventForm = () => {
                   <input 
                     className="event-form-input" 
                     type="number" 
-                    inputMode="numeric"
+                    inputMode="numeric" 
                     name="minTeamSize" 
                     placeholder="Min Team Size" 
                     value={formData.minTeamSize} 
@@ -254,7 +272,7 @@ const EventForm = () => {
                   <input 
                     className="event-form-input" 
                     type="number" 
-                    inputMode="numeric"
+                    inputMode="numeric" 
                     name="maxTeamSize" 
                     placeholder="Max Team Size" 
                     value={formData.maxTeamSize} 
@@ -268,7 +286,7 @@ const EventForm = () => {
               <input 
                 className="event-form-input" 
                 type="number" 
-                inputMode="numeric"
+                inputMode="numeric" 
                 name="maxVolunteers" 
                 placeholder="Max Volunteers Required" 
                 value={formData.maxVolunteers} 
@@ -279,7 +297,7 @@ const EventForm = () => {
               <input 
                 className="event-form-input" 
                 type="number" 
-                inputMode="numeric"
+                inputMode="numeric" 
                 name="OrgCid" 
                 placeholder="Club ID" 
                 value={formData.OrgCid} 
@@ -291,7 +309,7 @@ const EventForm = () => {
               <input 
                 className="event-form-input" 
                 type="number" 
-                inputMode="decimal"
+                inputMode="decimal" 
                 name="registrationFee" 
                 placeholder="Registration Fee (₹)" 
                 value={formData.registrationFee} 
