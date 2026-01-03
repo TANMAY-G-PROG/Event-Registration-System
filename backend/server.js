@@ -504,15 +504,15 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
 // Create/Organize a new event (UPDATED WITH POSTER URL)
 app.post('/api/events/create', requireAuth, async (req, res) => {
     try {
-        const { 
-            eventName, 
-            eventDescription, 
+        const {
+            eventName,
+            eventDescription,
             certificate_info,
-            eventDate, 
-            eventTime, 
-            eventLocation, 
-            maxParticipants, 
-            maxVolunteers, 
+            eventDate,
+            eventTime,
+            eventLocation,
+            maxParticipants,
+            maxVolunteers,
             registrationFee,
             clubId,
             OrgCid,
@@ -520,7 +520,8 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             isTeamEvent,
             minTeamSize,
             maxTeamSize,
-            posterUrl // NEW FIELD
+            posterUrl,
+            bannerUrl // NEW FIELD
         } = req.body;
         
         const organizedClubId = clubId || OrgCid;
@@ -530,7 +531,6 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Event name, description, date, time, and location are required' });
         }
         
-        // UPI Validation
         if (fee > 0 && (!upiId || upiId.trim() === '')) {
             return res.status(400).json({ error: 'UPI ID is required for paid events' });
         }
@@ -540,12 +540,11 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
         if (eventDateObj <= currentDate) {
             return res.status(400).json({ error: 'Event date must be in the future' });
         }
-
-        // Validate team event fields if it's a team event
+        
         if (isTeamEvent) {
             if (!minTeamSize || !maxTeamSize) {
-                return res.status(400).json({ 
-                    error: 'Minimum and maximum team size are required for team events' 
+                return res.status(400).json({
+                    error: 'Minimum and maximum team size are required for team events'
                 });
             }
             
@@ -553,14 +552,14 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             const maxSize = parseInt(maxTeamSize);
             
             if (minSize < 2) {
-                return res.status(400).json({ 
-                    error: 'Minimum team size must be at least 2' 
+                return res.status(400).json({
+                    error: 'Minimum team size must be at least 2'
                 });
             }
             
             if (maxSize < minSize) {
-                return res.status(400).json({ 
-                    error: 'Maximum team size must be greater than or equal to minimum team size' 
+                return res.status(400).json({
+                    error: 'Maximum team size must be greater than or equal to minimum team size'
                 });
             }
         }
@@ -583,12 +582,12 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             }
         }
         
-        // Prepare event data
         const eventData = {
             ename: eventName,
             eventdesc: eventDescription,
             certificate_info: certificate_info || null,
-            poster_url: posterUrl || null, // Added
+            poster_url: posterUrl || null,
+            banner_url: bannerUrl || null, // Added banner
             eventdate: eventDate,
             eventtime: eventTime,
             eventloc: eventLocation,
@@ -602,7 +601,6 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             min_team_size: isTeamEvent ? (parseInt(minTeamSize) || null) : null,
             max_team_size: isTeamEvent ? (parseInt(maxTeamSize) || null) : null
         };
-
         const { data, error } = await supabase
             .from('event')
             .insert([eventData])
@@ -613,7 +611,6 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             return res.status(500).json({ error: `Error creating event: ${error.message}` });
         }
         
-        // --- INVALIDATE REDIS CACHE ---
         try {
             if (redisClient.isOpen) {
                 await redisClient.del('events_list_raw');
@@ -622,10 +619,9 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
         } catch (cacheErr) {
             console.error('Failed to invalidate cache:', cacheErr);
         }
-
-        res.status(201).json({ 
+        res.status(201).json({
             success: true,
-            message: isTeamEvent ? 'Team event created successfully!' : 'Event created successfully!', 
+            message: isTeamEvent ? 'Team event created successfully!' : 'Event created successfully!',
             eventId: data[0]?.eid,
             organizerUSN: req.session.userUSN,
             isTeamEvent: isTeamEvent || false
@@ -635,7 +631,6 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
         res.status(500).json({ error: `Error creating event: ${err.message}` });
     }
 });
-
 // Join event as participant (ONLY FOR FREE EVENTS)
 app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
     try {
@@ -844,30 +839,26 @@ app.get('/api/events/:eventId/participant-count', requireAuth, async (req, res) 
 app.get('/api/events/:eventId', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
-
         if (!eventId || isNaN(eventId)) {
             return res.status(400).json({ error: 'Invalid event ID' });
         }
-
         const { data: rows, error } = await supabase
             .from('event')
             .select(`
-                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url,
+                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, 
+                poster_url, banner_url,
                 club:orgcid(cname),
                 student:orgusn(sname)
             `)
             .eq('eid', eventId)
             .limit(1);
-
         if (error) {
             console.error('Error fetching event details:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-
         if (!rows || rows.length === 0) {
             return res.status(404).json({ error: 'Event not found' });
         }
-
         const event = rows[0];
         
         const transformedEvent = {
@@ -877,40 +868,38 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             eventLoc: event.eventloc,
             maxPart: event.maxpart,
             maxVoln: event.maxvoln,
-            regFee: event.regFee,
-            posterUrl: event.poster_url, // Added
+            regFee: event.regfee,
+            posterUrl: event.poster_url,
+            bannerUrl: event.banner_url, // Added banner
             clubName: event.club?.cname,
             organizerName: event.student?.sname,
             OrgUsn: event.orgusn
         };
-
         const { data: participantCheck } = await supabase
             .from('participant')
-            .select('partstatus, payment_status') 
+            .select('partstatus, payment_status')
             .eq('partusn', req.session.userUSN)
             .eq('parteid', eventId)
             .limit(1);
-
         const { data: volunteerCheck } = await supabase
             .from('volunteer')
             .select('volnstatus')
             .eq('volnusn', req.session.userUSN)
             .eq('volneid', eventId)
             .limit(1);
-
         transformedEvent.isRegistered = participantCheck && participantCheck.length > 0;
-        transformedEvent.paymentStatus = participantCheck?.[0]?.payment_status || null; 
+        transformedEvent.paymentStatus = participantCheck?.[0]?.payment_status || null;
         transformedEvent.isVolunteer = volunteerCheck && volunteerCheck.length > 0;
         transformedEvent.isOrganizer = event.orgusn === req.session.userUSN;
-
         res.json(transformedEvent);
     } catch (err) {
         console.error('Error fetching event details:', err);
         res.status(500).json({
-            error: 'Error fetching event details: ' + err.message 
+            error: 'Error fetching event details: ' + err.message
         });
     }
 });
+
 // Get all clubs
 app.get('/api/clubs', requireAuth, async (req, res) => {
     try {
