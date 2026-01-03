@@ -18,14 +18,14 @@ function formatTime12h(timeString) {
 export default function Registerevent() {
   const navigate = useNavigate()
   
-  // --- Data States ---
+  // Data States
   const [eventsData, setEventsData] = useState({ upcoming: [], ongoing: [], completed: [] })
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState("all")
   const [teamStates, setTeamStates] = useState({})
   const [registeredEvents, setRegisteredEvents] = useState(new Set())
   
-  // --- UI & Modal States ---
+  // UI States
   const [flash, setFlash] = useState({ type: "", message: "" })
   const [modalFlash, setModalFlash] = useState({ type: "", message: "" })
   const [selectedEvent, setSelectedEvent] = useState(null)
@@ -209,8 +209,8 @@ export default function Registerevent() {
     } catch (err) { showModalFlash('error', 'Error submitting') } finally { setIsSubmitting(false) }
   }
 
-  // --- Controls Render (Used in Card & Overlay) ---
-  function renderControls(event) {
+  // --- Dynamic Button Logic (Returns just the main action button) ---
+  function getActionButtons(event, isCardView = false) {
     const teamState = teamStates[event.eid]
     const aboutBtn = event.posterUrl ? (
       <a 
@@ -218,67 +218,57 @@ export default function Registerevent() {
         target="_blank" 
         rel="noopener noreferrer" 
         className="registerevent-btn about"
-        onClick={(e) => e.stopPropagation()} // Stop click bubbling
+        onClick={(e) => e.stopPropagation()}
       >
         About
       </a>
     ) : null;
 
-    if (!teamState && (event.status !== 'completed')) return <div className="registerevent-btn-group"><button className="registerevent-btn disabled">Loading...</button>{aboutBtn}</div>
-    if (event.status === 'completed') return <button className="registerevent-btn disabled">Event Completed</button>
+    // 1. Loading
+    if (!teamState && (event.status !== 'completed')) return <button className="registerevent-btn disabled">Loading...</button>
+    // 2. Completed
+    if (event.status === 'completed') return <button className="registerevent-btn disabled">Closed</button>
 
-    // Individual Event
+    // 3. Individual Event
     if (!teamState?.isTeamEvent) {
       if (registeredEvents.has(event.eid)) {
-        return <div className="registerevent-btn-group"><button className="registerevent-btn success" disabled>✓ Registered</button>{aboutBtn}</div>
+        return <button className="registerevent-btn success" disabled>✓ Registered</button>
       }
       return (
-        <div className="registerevent-btn-group">
-          <button 
-            className="registerevent-btn primary" 
-            onClick={(e) => { e.stopPropagation(); handleRegister(event); }}
-          >
-            { (event.regFee || 0) > 0 ? `Pay ₹${event.regFee}` : "Register" }
-          </button>
-          {aboutBtn}
-        </div>
+        <button 
+          className="registerevent-btn primary" 
+          onClick={(e) => { e.stopPropagation(); handleRegister(event); }}
+        >
+          { (event.regFee || 0) > 0 ? `Pay ₹${event.regFee}` : "Register" }
+        </button>
       )
     }
 
-    // Team Event
-    if (teamState.registrationComplete) {
-      return <div className="registerevent-btn-group"><button className="registerevent-btn success" disabled>✓ Team Registered</button>{aboutBtn}</div>
-    }
+    // 4. Team Event
+    if (teamState.registrationComplete) return <button className="registerevent-btn success" disabled>✓ Team Reg.</button>
 
     if (teamState.hasJoinedTeam) {
       const isLeader = teamState.isLeader
-      return (
-        <div className="registerevent-team-controls-group">
-          {/* Status Text (Only in overlay, hidden in card via CSS if needed, or small) */}
-          <div className="registerevent-btn-group">
-            {isLeader ? (
-              <button 
-                className={`registerevent-btn ${teamState.canRegister ? "primary" : "disabled"}`} 
-                onClick={(e) => { e.stopPropagation(); teamState.canRegister && handleRegisterTeam(event, teamState); }}
-                disabled={!teamState.canRegister}
-              >
-                { (teamState.regFee || 0) > 0 ? `Pay ₹${teamState.regFee}` : "Finalize" }
-              </button>
-            ) : (
-              <button className="registerevent-btn disabled">Waiting...</button>
-            )}
-            {aboutBtn}
-          </div>
-        </div>
-      )
+      if (isLeader) {
+        return (
+          <button 
+            className={`registerevent-btn ${teamState.canRegister ? "primary" : "disabled"}`} 
+            onClick={(e) => { e.stopPropagation(); teamState.canRegister && handleRegisterTeam(event, teamState); }}
+            disabled={!teamState.canRegister}
+          >
+            { (teamState.regFee || 0) > 0 ? `Pay ₹${teamState.regFee}` : "Finalize" }
+          </button>
+        )
+      } else {
+        return <button className="registerevent-btn disabled">Waiting</button>
+      }
     }
 
+    // Not joined yet
     return (
-      <div className="registerevent-btn-group">
-        <button className="registerevent-btn secondary" onClick={(e) => { e.stopPropagation(); setShowTeamModal({ eventId: event.eid, mode: 'create' }) }}>Create Team</button>
-        <button className="registerevent-btn ghost" onClick={(e) => { e.stopPropagation(); handleViewInvites(event.eid) }}>Invites</button>
-        {aboutBtn}
-      </div>
+      <button className="registerevent-btn secondary" onClick={(e) => { e.stopPropagation(); setShowTeamModal({ eventId: event.eid, mode: 'create' }) }}>
+        Create Team
+      </button>
     )
   }
 
@@ -293,7 +283,7 @@ export default function Registerevent() {
         <header className="registerevent-header">
           <div className="registerevent-header-text">
             <h1 className="registerevent-title">Events</h1>
-            <p className="registerevent-subtitle">Discover and join events happening around you.</p>
+            <p className="registerevent-subtitle">Discover and join events.</p>
           </div>
           <div className="registerevent-filters">
             {["all", "upcoming", "ongoing", "completed"].map(k => (
@@ -309,7 +299,6 @@ export default function Registerevent() {
             {filteredEvents.map(event => (
               <article key={event.eid} className="registerevent-card" onClick={() => setSelectedEvent(event)}>
                 <div className="registerevent-card-media">
-                  {/* Thumbnail: Uses BannerUrl (Cloudinary) */}
                   <img 
                     src={event.bannerUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80"} 
                     alt={event.ename} 
@@ -319,14 +308,22 @@ export default function Registerevent() {
                   {event.is_team && <span className="registerevent-badge registerevent-badge-team">Team</span>}
                 </div>
                 <div className="registerevent-card-content">
-                  <h2 className="registerevent-card-title" style={{fontSize: '1.25rem', marginBottom: '8px'}}>{event.ename}</h2>
-                  <div className="registerevent-info-grid" style={{marginTop: '0', border: 'none', paddingTop: '0', gap: '8px'}}>
-                    <p style={{fontSize: '0.85rem', color: '#999'}}>{new Date(event.eventDate).toLocaleDateString()} • {formatTime12h(event.eventTime)}</p>
-                    <p style={{fontSize: '0.85rem', color: '#999'}}>{event.eventLoc}</p>
+                  <h2 className="registerevent-card-title">{event.ename}</h2>
+                  <div className="registerevent-card-meta">
+                    <span>{new Date(event.eventDate).toLocaleDateString()}</span>
+                    <span>•</span>
+                    <span>{event.eventLoc}</span>
                   </div>
-                  {/* BUTTONS IN CARD */}
+                  
+                  {/* --- CARD ACTION ROW: REGISTER + DETAILS --- */}
                   <div className="registerevent-card-actions">
-                    {renderControls(event)}
+                    {getActionButtons(event, true)}
+                    <button 
+                      className="registerevent-btn ghost" 
+                      onClick={(e) => { e.stopPropagation(); setSelectedEvent(event); }}
+                    >
+                      Details
+                    </button>
                   </div>
                 </div>
               </article>
@@ -380,13 +377,26 @@ export default function Registerevent() {
                     <div className="registerevent-info-item"><h4>Team Size</h4><p>{selectedEvent.min_team_size}-{selectedEvent.max_team_size} members</p></div>
                   )}
                 </div>
-                {/* Spacer for fixed bottom bar */}
+                {/* Spacer */}
                 <div style={{height: '100px'}}></div>
               </div>
 
               {/* FIXED ACTION BAR */}
               <div className="registerevent-action-bar">
-                {renderControls(selectedEvent)}
+                <div className="registerevent-btn-group">
+                  {getActionButtons(selectedEvent)}
+                  {selectedEvent.posterUrl && (
+                    <a href={selectedEvent.posterUrl} target="_blank" rel="noopener noreferrer" className="registerevent-btn about">About</a>
+                  )}
+                  {teamStates[selectedEvent.eid]?.hasJoinedTeam && !teamStates[selectedEvent.eid]?.isLeader && (
+                     // Show invite button if joined but not leader
+                     <button className="registerevent-btn ghost" onClick={() => handleViewInvites(selectedEvent.eid)}>Invites</button>
+                  )}
+                  {/* If not in team, show create team option as secondary in overlay */}
+                  {!teamStates[selectedEvent.eid]?.hasJoinedTeam && selectedEvent.is_team && (
+                     <button className="registerevent-btn secondary" onClick={() => setShowTeamModal({ eventId: selectedEvent.eid, mode: 'create' })}>Create Team</button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
