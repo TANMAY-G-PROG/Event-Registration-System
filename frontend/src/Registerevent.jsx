@@ -209,21 +209,10 @@ export default function Registerevent() {
     } catch (err) { showModalFlash('error', 'Error submitting') } finally { setIsSubmitting(false) }
   }
 
-  // --- Dynamic Button Logic (Returns just the main action button) ---
+  // --- Dynamic Button Logic ---
   function getActionButtons(event, isCardView = false) {
     const teamState = teamStates[event.eid]
-    const aboutBtn = event.posterUrl ? (
-      <a 
-        href={event.posterUrl} 
-        target="_blank" 
-        rel="noopener noreferrer" 
-        className="registerevent-btn about"
-        onClick={(e) => e.stopPropagation()}
-      >
-        About
-      </a>
-    ) : null;
-
+    
     // 1. Loading
     if (!teamState && (event.status !== 'completed')) return <button className="registerevent-btn disabled">Loading...</button>
     // 2. Completed
@@ -299,6 +288,7 @@ export default function Registerevent() {
             {filteredEvents.map(event => (
               <article key={event.eid} className="registerevent-card" onClick={() => setSelectedEvent(event)}>
                 <div className="registerevent-card-media">
+                  {/* Thumbnail: Uses BannerUrl (Cloudinary) */}
                   <img 
                     src={event.bannerUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80"} 
                     alt={event.ename} 
@@ -355,46 +345,68 @@ export default function Registerevent() {
             {/* BOTTOM 60%: DETAILS */}
             <div className="registerevent-split-bottom">
               <div className="registerevent-detail-content">
-                <h2 className="registerevent-card-title" style={{fontSize: '2rem', marginBottom: '16px'}}>{selectedEvent.ename}</h2>
-                <div style={{display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap'}}>
-                    <span className="registerevent-badge registerevent-badge-upcoming" style={{borderColor: 'rgba(255,255,255,0.2)'}}>{new Date(selectedEvent.eventDate).toDateString()}</span>
-                    <span className="registerevent-badge registerevent-badge-upcoming" style={{borderColor: 'rgba(255,255,255,0.2)'}}>{formatTime12h(selectedEvent.eventTime)}</span>
-                    {selectedEvent.regFee > 0 ? 
-                      <span className="registerevent-badge registerevent-badge-upcoming" style={{color: 'var(--re-accent-cyan)', borderColor: 'var(--re-accent-cyan)'}}>₹{selectedEvent.regFee}</span> : 
-                      <span className="registerevent-badge registerevent-badge-ongoing" style={{borderColor: 'var(--re-accent-success)'}}>Free</span>
-                    }
+                
+                {/* Header Section */}
+                <div className="registerevent-detail-header-flex">
+                    <h2 className="registerevent-detail-title">{selectedEvent.ename}</h2>
+                    <div className="registerevent-detail-price-tag">
+                        {selectedEvent.regFee > 0 ? `₹${selectedEvent.regFee}` : 'Free'}
+                    </div>
                 </div>
 
-                <div className="registerevent-hud-panel" style={{background: 'transparent', border: 'none', padding: 0}}>
-                  <h4 className="registerevent-hud-label" style={{marginBottom: '10px'}}>About</h4>
-                  <p className="registerevent-subtitle" style={{color: '#d4d4d4', fontSize: '0.95rem', maxWidth: '100%'}}>{selectedEvent.eventdesc}</p>
+                <div className="registerevent-tags-row">
+                    <span className="registerevent-tag">{new Date(selectedEvent.eventDate).toDateString()}</span>
+                    <span className="registerevent-tag">{formatTime12h(selectedEvent.eventTime)}</span>
+                    <span className="registerevent-tag status">{selectedEvent.status}</span>
                 </div>
 
-                <div className="registerevent-info-grid" style={{marginTop: '32px'}}>
-                  <div className="registerevent-info-item"><h4>Venue</h4><p>{selectedEvent.eventLoc}</p></div>
-                  <div className="registerevent-info-item"><h4>Organizer</h4><p>{selectedEvent.organizerName || "Club"}</p></div>
+                <div className="registerevent-description-box">
+                  <h4>About Event</h4>
+                  <p>{selectedEvent.eventdesc}</p>
+                </div>
+
+                {/* Awwwards Bento Grid Layout */}
+                <div className="registerevent-bento-grid">
+                  <div className="registerevent-bento-item">
+                    <span className="bento-label">Venue</span>
+                    <span className="bento-value">{selectedEvent.eventLoc}</span>
+                  </div>
+                  <div className="registerevent-bento-item">
+                    <span className="bento-label">Organizer</span>
+                    <span className="bento-value">{selectedEvent.organizerName || "Club"}</span>
+                  </div>
                   {selectedEvent.is_team && (
-                    <div className="registerevent-info-item"><h4>Team Size</h4><p>{selectedEvent.min_team_size}-{selectedEvent.max_team_size} members</p></div>
+                    <div className="registerevent-bento-item">
+                      <span className="bento-label">Team Size</span>
+                      <span className="bento-value">{selectedEvent.min_team_size} - {selectedEvent.max_team_size} Members</span>
+                    </div>
                   )}
                 </div>
-                {/* Spacer */}
-                <div style={{height: '100px'}}></div>
+                
+                {/* Spacer for fixed bottom bar */}
+                <div style={{height: '120px'}}></div>
               </div>
 
               {/* FIXED ACTION BAR */}
               <div className="registerevent-action-bar">
                 <div className="registerevent-btn-group">
                   {getActionButtons(selectedEvent)}
+                  
+                  {/* THIS IS THE POSTER BUTTON YOU REQUESTED */}
                   {selectedEvent.posterUrl && (
-                    <a href={selectedEvent.posterUrl} target="_blank" rel="noopener noreferrer" className="registerevent-btn about">About</a>
+                    <a 
+                        href={selectedEvent.posterUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="registerevent-btn about"
+                        title="View Original Poster"
+                    >
+                        View Original Poster ↗
+                    </a>
                   )}
+
                   {teamStates[selectedEvent.eid]?.hasJoinedTeam && !teamStates[selectedEvent.eid]?.isLeader && (
-                     // Show invite button if joined but not leader
                      <button className="registerevent-btn ghost" onClick={() => handleViewInvites(selectedEvent.eid)}>Invites</button>
-                  )}
-                  {/* If not in team, show create team option as secondary in overlay */}
-                  {!teamStates[selectedEvent.eid]?.hasJoinedTeam && selectedEvent.is_team && (
-                     <button className="registerevent-btn secondary" onClick={() => setShowTeamModal({ eventId: selectedEvent.eid, mode: 'create' })}>Create Team</button>
                   )}
                 </div>
               </div>
