@@ -140,13 +140,10 @@ function requireAuth(req, res, next) {
 const uploadFromBuffer = (buffer) => {
     return new Promise((resolve, reject) => {
         const cld_upload_stream = cloudinary.uploader.upload_stream(
-            { folder: "event_posters" }, // Cloudinary folder
+            { folder: "event_banners" }, // Changed folder name
             (error, result) => {
-                if (result) {
-                    resolve(result);
-                } else {
-                    reject(error);
-                }
+                if (result) resolve(result);
+                else reject(error);
             }
         );
         streamifier.createReadStream(buffer).pipe(cld_upload_stream);
@@ -324,57 +321,35 @@ app.get('/api/events', requireAuth, async (req, res) => {
     try {
         const currentDate = new Date().toISOString().split('T')[0];
         const cacheKey = 'events_list_raw';
-        
         let rows = null;
 
-        // 1. Try to get data from Redis cache
         try {
             if (redisClient.isOpen) {
                 const cachedData = await redisClient.get(cacheKey);
-                if (cachedData) {
-                    console.log('⚡ Using Redis Cache for Events');
-                    rows = JSON.parse(cachedData);
-                }
+                if (cachedData) rows = JSON.parse(cachedData);
             }
-        } catch (cacheErr) {
-            console.error('Redis read error:', cacheErr);
-            // Continue to DB if cache fails
-        }
+        } catch (cacheErr) { console.error('Redis error:', cacheErr); }
 
-        // 2. If no cache, fetch from Supabase
         if (!rows) {
-            console.log('🔍 Fetching Events from Supabase DB');
+            // Select both poster_url and banner_url
             const { data, error } = await supabase
                 .from('event')
                 .select(`
                     eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                    upi_id, is_team, min_team_size, max_team_size, poster_url,
+                    upi_id, is_team, min_team_size, max_team_size, poster_url, banner_url,
                     club:orgcid(cname),
                     student:orgusn(sname)
                 `);
             
-            if (error) {
-                console.error('Error fetching events:', error);
-                return res.status(500).json({ error: 'Database error' });
-            }
+            if (error) throw error;
             rows = data;
-
-            // 3. Save to Redis Cache (Expire in 10 minutes = 600s)
+            
             try {
-                if (redisClient.isOpen) {
-                    await redisClient.set(cacheKey, JSON.stringify(rows), { EX: 600 });
-                }
-            } catch (saveErr) {
-                console.error('Redis write error:', saveErr);
-            }
+                if (redisClient.isOpen) await redisClient.set(cacheKey, JSON.stringify(rows), { EX: 600 });
+            } catch (saveErr) { console.error('Redis write error:', saveErr); }
         }
 
-        // 4. Process data
-        const events = {
-            ongoing: [],
-            completed: [],
-            upcoming: []
-        };
+        const events = { ongoing: [], completed: [], upcoming: [] };
 
         (rows || []).forEach(event => {
             const transformedEvent = {
@@ -386,7 +361,8 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 maxVoln: event.maxvoln,
                 regFee: event.regfee,
                 upiId: event.upi_id,
-                posterUrl: event.poster_url, // Added
+                posterUrl: event.poster_url, // Google Drive
+                bannerUrl: event.banner_url, // Cloudinary
                 is_team: event.is_team,
                 min_team_size: event.min_team_size,
                 max_team_size: event.max_team_size,
@@ -400,13 +376,10 @@ app.get('/api/events', requireAuth, async (req, res) => {
             else events.upcoming.push(transformedEvent);
         });
 
-        res.json({
-            events,
-            currentUser: req.session.userUSN
-        });
+        res.json({ events, currentUser: req.session.userUSN });
     } catch (err) {
         console.error('Error fetching events:', err);
-        res.status(500).json({ error: 'Error fetching events: ' + err.message });
+        res.status(500).json({ error: 'Error fetching events' });
     }
 });
 
@@ -538,13 +511,13 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
 });
 
 // Create/Organize a new event (UPDATED WITH POSTER URL)
-app.post('/api/events/create', requireAuth, upload.single('poster'), async (req, res) => {
+app.post('/api/events/create', requireAuth, upload.single('banner'), async (req, res) => {
     try {
-        // When using multer, text fields are in req.body
         const { 
             eventName, 
             eventDescription, 
             certificate_info,
+            posterUrl, // This is the Google Drive Link (Text)
             eventDate, 
             eventTime, 
             eventLocation, 
@@ -559,25 +532,25 @@ app.post('/api/events/create', requireAuth, upload.single('poster'), async (req,
             maxTeamSize
         } = req.body;
 
-        const file = req.file; // The uploaded file buffer
-        let finalPosterUrl = null;
+        const file = req.file; // This is the Banner Image (File)
+        let finalBannerUrl = null;
 
-        // 1. Upload Image if present
+        // 1. Upload Banner to Cloudinary if present
         if (file) {
             try {
-                console.log('📤 Streaming file to Cloudinary...');
+                console.log('📤 Streaming banner to Cloudinary...');
                 const result = await uploadFromBuffer(file.buffer);
-                finalPosterUrl = result.secure_url;
-                console.log('✅ Upload success:', finalPosterUrl);
+                finalBannerUrl = result.secure_url;
+                console.log('✅ Banner upload success:', finalBannerUrl);
             } catch (uploadErr) {
                 console.error('Cloudinary Upload Error:', uploadErr);
-                return res.status(500).json({ error: 'Failed to upload image' });
+                return res.status(500).json({ error: 'Failed to upload banner image' });
             }
         }
 
         const organizedClubId = clubId || OrgCid;
         const fee = parseFloat(registrationFee) || 0;
-        const isTeam = isTeamEvent === 'true' || isTeamEvent === true; // FormData sends strings
+        const isTeam = isTeamEvent === 'true' || isTeamEvent === true;
 
         if (!eventName || !eventDescription || !eventDate || !eventTime || !eventLocation) {
             return res.status(400).json({ error: 'Required fields missing' });
@@ -591,7 +564,8 @@ app.post('/api/events/create', requireAuth, upload.single('poster'), async (req,
             ename: eventName,
             eventdesc: eventDescription,
             certificate_info: certificate_info || null,
-            poster_url: finalPosterUrl, // Save Cloudinary URL
+            poster_url: posterUrl || null,   // Google Drive Link
+            banner_url: finalBannerUrl,      // Cloudinary Link
             eventdate: eventDate,
             eventtime: eventTime,
             eventloc: eventLocation,
@@ -613,7 +587,6 @@ app.post('/api/events/create', requireAuth, upload.single('poster'), async (req,
         
         if (error) throw error;
 
-        // Invalidate Cache
         if (redisClient.isOpen) await redisClient.del('events_list_raw');
 
         res.status(201).json({ 
