@@ -1,5 +1,5 @@
 /* ===================================
-   REGISTER EVENT - YOUTUBE STYLE SPLIT
+   REGISTEREVENT - CYBER GLASS REDESIGN
    =================================== */
 
 /* 1. CORE VARIABLES & THEME */
@@ -174,7 +174,7 @@ html, body {
   perspective: 1000px;
 }
 
-/* 8. HOLOGRAPHIC CARD DESIGN */
+/* 8. HOLOGRAPHIC CARD DESIGN - FASTER ANIMATION */
 .registerevent-card {
   background: var(--re-glass-surface);
   backdrop-filter: blur(20px);
@@ -188,54 +188,29 @@ html, body {
   display: flex;
   flex-direction: column;
 }
+.registerevent-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  opacity: 0.5;
+}
 .registerevent-card:hover {
   transform: translateY(-8px) scale(1.01);
   box-shadow: 0 20px 40px rgba(0,0,0,0.4),
               0 0 0 1px rgba(255,255,255,0.1);
 }
-
-/* === NEW: BANNER SPLIT (YouTube Style) === */
-.registerevent-card-banner {
-  height: 220px; /* Adjust height for the 40% feel */
-  width: 100%;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-  border-bottom: 1px solid var(--re-glass-border);
-}
-
-/* Overlay gradient for text readability on banner */
-.registerevent-card-banner::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 60%;
-  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-  pointer-events: none;
-}
-
-/* Badge overlay positioning on top of banner */
-.registerevent-badges-overlay {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 2;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .registerevent-card-content {
-  padding: 24px;
+  padding: 28px;
   flex: 1;
   display: flex;
   flex-direction: column;
 }
-
 .registerevent-card-header {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 .registerevent-card-title-row {
   display: flex;
@@ -245,7 +220,7 @@ html, body {
   margin-bottom: 8px;
 }
 .registerevent-card-title {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--re-text-primary);
   margin: 0;
@@ -261,8 +236,12 @@ html, body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
-/* Badges (Reused) */
+/* Badges */
+.registerevent-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .registerevent-badge {
   padding: 6px 12px;
   border-radius: 6px;
@@ -270,36 +249,34 @@ html, body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid transparent;
 }
 .registerevent-badge-upcoming {
-  background: rgba(0, 240, 255, 0.2);
-  color: #fff;
-  border: 1px solid rgba(0, 240, 255, 0.3);
+  background: rgba(0, 240, 255, 0.1);
+  color: var(--re-accent-cyan);
+  border-color: rgba(0, 240, 255, 0.2);
 }
 .registerevent-badge-ongoing {
-  background: rgba(0, 255, 157, 0.2);
-  color: #fff;
-  border: 1px solid rgba(0, 255, 157, 0.3);
+  background: rgba(0, 255, 157, 0.1);
+  color: var(--re-accent-success);
+  border-color: rgba(0, 255, 157, 0.2);
 }
 .registerevent-badge-completed {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ddd;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--re-text-tertiary);
 }
 .registerevent-badge-team {
-  background: linear-gradient(135deg, rgba(112, 0, 255, 0.4), rgba(0, 240, 255, 0.4));
+  background: linear-gradient(135deg, rgba(112, 0, 255, 0.2), rgba(0, 240, 255, 0.2));
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
-
 /* Data Grid (Info) */
 .registerevent-info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 20px;
   margin-top: auto;
-  padding-top: 20px;
+  padding-top: 24px;
   border-top: 1px solid var(--re-glass-border);
 }
 .registerevent-info-item h4 {
@@ -307,7 +284,7 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--re-text-tertiary);
-  margin: 0 0 4px 0;
+  margin: 0 0 6px 0;
   font-weight: 600;
 }
 .registerevent-info-item p {
@@ -319,8 +296,8 @@ html, body {
 
 /* 9. ACTIONS & BUTTONS */
 .registerevent-actions-footer {
-  padding: 16px 24px;
-  background: rgba(0, 0, 0, 0.3);
+  padding: 20px 28px;
+  background: rgba(0, 0, 0, 0.2);
   border-top: 1px solid var(--re-glass-border);
 }
 .registerevent-register-btn,
@@ -330,7 +307,7 @@ html, body {
 .registerevent-upi-pay-btn {
   width: 100%;
   position: relative;
-  padding: 12px 20px;
+  padding: 14px 24px;
   border-radius: 12px;
   border: none;
   background: var(--re-text-primary);
@@ -425,7 +402,7 @@ html, body {
 .registerevent-status-indicator.pending { color: var(--re-accent-warning); }
 .registerevent-status-indicator.pending::before { background: var(--re-accent-warning); }
 
-/* 11. MODALS */
+/* 11. MODALS - NO BLUR ON CARD INFO */
 .registerevent-modal-overlay {
   position: fixed;
   inset: 0;
