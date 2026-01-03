@@ -190,7 +190,7 @@ const EventForm = () => {
                   className="event-form-input" 
                   type="url" 
                   name="posterUrl" 
-                  placeholder="Poster_URL" 
+                  placeholder="Poster_URL(Optional)" 
                   value={formData.posterUrl} 
                   onChange={handleChange} 
                   style={{marginBottom: '5px'}}
@@ -341,4 +341,5 @@ const EventForm = () => {
 };
 
 export default EventForm;
+
 
