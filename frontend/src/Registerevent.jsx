@@ -5,6 +5,12 @@ import QRCode from "qrcode"
 import "./registerevent.css"
 import TicketAnimation from './TicketAnimation';
 
+// --- FALLBACK IMAGES ---
+const FALLBACK_BANNERS = [
+  "https://ik.imagekit.io/flopass/Aura1.png",
+  "https://ik.imagekit.io/flopass/Aura2.jpg"
+];
+
 function formatTime12h(timeString) {
   if (!timeString) return "Time TBA"
   const [hours, minutes] = String(timeString).split(":")
@@ -59,6 +65,22 @@ export default function Registerevent() {
   function generateUpiUrl(upiId, eventName, amount, eventId) {
     const params = new URLSearchParams({ pa: upiId, pn: eventName, am: amount.toString(), cu: "INR", tn: `Event Registration - ${eventId}` })
     return `upi://pay?${params.toString()}`
+  }
+
+  // --- NEW: Helper to alternate fallback images ---
+  function resolveBanner(event, index) {
+    if (event.bannerUrl) return event.bannerUrl;
+    
+    // If index is provided, use it. If not (e.g., specific overlay case), default to 0
+    // If index is passed as null/undefined, we try to find it in the filtered list
+    let idxToUse = index;
+    if (idxToUse === undefined || idxToUse === null) {
+        idxToUse = filteredEvents.findIndex(e => e.eid === event.eid);
+        if (idxToUse === -1) idxToUse = 0;
+    }
+    
+    // Toggle between 0 and 1
+    return FALLBACK_BANNERS[idxToUse % 2];
   }
 
   // --- Loaders ---
@@ -345,11 +367,11 @@ export default function Registerevent() {
 
         {loading ? <div className="registerevent-spinner"></div> : (
           <div className="registerevent-list">
-            {filteredEvents.map(event => (
+            {filteredEvents.map((event, index) => (
               <article key={event.eid} className="registerevent-card" onClick={() => setSelectedEvent(event)}>
                 <div className="registerevent-card-media">
                   <img 
-                    src={event.bannerUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80"} 
+                    src={resolveBanner(event, index)} 
                     alt={event.ename} 
                     loading="lazy"
                   />
@@ -393,7 +415,7 @@ export default function Registerevent() {
               <button className="registerevent-close-btn" onClick={() => setSelectedEvent(null)}>×</button>
               <div className="registerevent-image-wrapper">
                 <img 
-                  src={selectedEvent.bannerUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80"} 
+                  src={resolveBanner(selectedEvent)} 
                   alt={selectedEvent.ename} 
                 />
                 <div className="registerevent-image-gradient"></div>
