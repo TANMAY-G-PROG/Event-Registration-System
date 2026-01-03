@@ -312,7 +312,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 .from('event')
                 .select(`
                     eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                    upi_id, is_team, min_team_size, max_team_size, poster_url,
+                    upi_id, is_team, min_team_size, max_team_size, poster_url,banner_url
                     club:orgcid(cname),
                     student:orgusn(sname)
                 `);
