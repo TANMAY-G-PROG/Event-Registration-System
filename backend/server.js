@@ -283,7 +283,7 @@ app.post('/api/signout', (req, res) => {
     });
 });
 
-// --- CACHED Get all events (UPDATED WITH BANNER & POSTER URL) ---
+// --- CACHED Get all events (UPDATED WITH POSTER URL) ---
 app.get('/api/events', requireAuth, async (req, res) => {
     try {
         const currentDate = new Date().toISOString().split('T')[0];
@@ -312,7 +312,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 .from('event')
                 .select(`
                     eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                    upi_id, is_team, min_team_size, max_team_size, poster_url, banner_url,
+                    upi_id, is_team, min_team_size, max_team_size, poster_url,
                     club:orgcid(cname),
                     student:orgusn(sname)
                 `);
@@ -350,8 +350,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 maxVoln: event.maxvoln,
                 regFee: event.regfee,
                 upiId: event.upi_id,
-                posterUrl: event.poster_url, 
-                bannerUrl: event.banner_url, // Added
+                posterUrl: event.poster_url, // Added
                 is_team: event.is_team,
                 min_team_size: event.min_team_size,
                 max_team_size: event.max_team_size,
@@ -383,7 +382,7 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             .select(`
                 partstatus, partusn,
                 event:parteid (
-                    eid, ename, eventdesc, certificate_info, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, poster_url, banner_url,
+                    eid, ename, eventdesc, certificate_info, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, poster_url,
                     club:orgcid(cname)
                 )
             `)
@@ -402,8 +401,7 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             maxPart: p.event?.maxpart,
             maxVoln: p.event?.maxvoln,
             regFee: p.event?.regfee,
-            posterUrl: p.event?.poster_url, 
-            bannerUrl: p.event?.banner_url, // Added
+            posterUrl: p.event?.poster_url, // Added
             clubName: p.event?.club?.cname,
             PartStatus: p.partstatus==true,
             PartUSN: p.partusn,
@@ -428,7 +426,7 @@ app.get('/api/my-volunteer-events', requireAuth, async (req, res) => {
             .select(`
                 volnstatus,
                 event:volneid (
-                    eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, banner_url,
+                    eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
                     club:orgcid(cname)
                 )
             `)
@@ -447,7 +445,6 @@ app.get('/api/my-volunteer-events', requireAuth, async (req, res) => {
             maxPart: v.event?.maxpart,
             maxVoln: v.event?.maxvoln,
             regFee: v.event?.regfee,
-            bannerUrl: v.event?.banner_url, // Added
             clubName: v.event?.club?.cname,
             VolnStatus: v.volnstatus==true,
             role: 'volunteer'
@@ -470,7 +467,7 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
             .from('event')
             .select(`
                 eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                upi_id, poster_url, banner_url,
+                upi_id, poster_url,
                 club:orgcid(cname)
             `)
             .eq('orgusn', req.session.userUSN);
@@ -489,8 +486,7 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
             maxVoln: e.maxvoln,
             regFee: e.regfee,
             upiId: e.upi_id,
-            posterUrl: e.poster_url, 
-            bannerUrl: e.banner_url, // Added
+            posterUrl: e.poster_url, // Added
             clubName: e.club?.cname,
             role: 'organizer'
         }));
@@ -505,7 +501,7 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
     }
 });
 
-// Create/Organize a new event (UPDATED WITH POSTER URL AND BANNER URL)
+// Create/Organize a new event (UPDATED WITH POSTER URL)
 app.post('/api/events/create', requireAuth, async (req, res) => {
     try {
         const { 
@@ -524,8 +520,7 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             isTeamEvent,
             minTeamSize,
             maxTeamSize,
-            posterUrl, // Existing
-            bannerUrl  // NEW FIELD
+            posterUrl // NEW FIELD
         } = req.body;
         
         const organizedClubId = clubId || OrgCid;
@@ -593,8 +588,7 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             ename: eventName,
             eventdesc: eventDescription,
             certificate_info: certificate_info || null,
-            poster_url: posterUrl || null, 
-            banner_url: bannerUrl || null, // Added
+            poster_url: posterUrl || null, // Added
             eventdate: eventDate,
             eventtime: eventTime,
             eventloc: eventLocation,
@@ -858,7 +852,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
         const { data: rows, error } = await supabase
             .from('event')
             .select(`
-                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url, banner_url,
+                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url,
                 club:orgcid(cname),
                 student:orgusn(sname)
             `)
@@ -884,8 +878,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             maxPart: event.maxpart,
             maxVoln: event.maxvoln,
             regFee: event.regFee,
-            posterUrl: event.poster_url, 
-            bannerUrl: event.banner_url, // Added
+            posterUrl: event.poster_url, // Added
             clubName: event.club?.cname,
             organizerName: event.student?.sname,
             OrgUsn: event.orgusn
@@ -2660,7 +2653,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         );
         res.setHeader(
             'Content-Disposition',
-            'attachment; filename=Event_${eventData.ename.replace(/\s+/g, '_')}_Details.xlsx'
+            `attachment; filename=Event_${eventData.ename.replace(/\s+/g, '_')}_Details.xlsx`
         );
 
         await workbook.xlsx.write(res);
@@ -2686,7 +2679,7 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
             .from('event')
             .select(`
                 eid, ename, eventdesc, eventdate, eventtime, eventloc, 
-                maxpart, maxvoln, regfee, orgusn, poster_url, banner_url,
+                maxpart, maxvoln, regfee, orgusn, poster_url,
                 club:orgcid(cname),
                 student:orgusn(sname)
             `)
@@ -2713,8 +2706,7 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
             maxPart: event.maxpart,
             maxVoln: event.maxvoln,
             regFee: event.regfee,
-            posterUrl: event.poster_url, 
-            bannerUrl: event.banner_url, // Added
+            posterUrl: event.poster_url, // Added
             clubName: event.club?.cname,
             organizerName: event.student?.sname,
             OrgUsn: event.orgusn
