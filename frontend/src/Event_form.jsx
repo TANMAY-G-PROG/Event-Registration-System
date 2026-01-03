@@ -8,8 +8,8 @@ const EventForm = () => {
     eventName: '',
     eventDescription: '',
     certificateInfo: '',
-    posterUrl: '', // Info/Brochure Link
-    bannerUrl: '', // Visual Image Link
+    posterUrl: '', // Brochure/Info
+    bannerUrl: '', // Visual Banner
     eventDate: '',
     eventTime: '',
     eventLocation: '',
@@ -43,8 +43,8 @@ const EventForm = () => {
       eventName: formData.eventName,
       eventDescription: formData.eventDescription,
       certificate_info: formData.certificateInfo || null,
-      posterUrl: formData.posterUrl || null, // Info Link
-      bannerUrl: formData.bannerUrl || null, // Visual Link
+      posterUrl: formData.posterUrl || null, 
+      bannerUrl: formData.bannerUrl || null,
       eventDate: formData.eventDate,
       eventTime: formData.eventTime,
       eventLocation: formData.eventLocation,
@@ -91,42 +91,38 @@ const EventForm = () => {
           <div className="event-form-card-side event-form-left event-form-desktop-header">
             <div className="event-form-logo-text" data-text="Hey Organisers">Hey Organisers</div>
           </div>
+          <div className="event-form-card-side event-form-left event-form-mobile-header">
+            <div className="event-form-left-header">
+              <div className="event-form-glow-text"><span className="event-form-neon">Hey</span><span className="event-form-neon event-form-neon-alt">Organisers</span></div>
+            </div>
+          </div>
           <div className="event-form-card-side event-form-right">
             <h2 className="event-form-title">Create Event</h2>
             <form className="event-form-form" onSubmit={handleSubmit}>
               <input className="event-form-input" type="text" name="eventName" placeholder="Event Name" value={formData.eventName} onChange={handleChange} required />
               <textarea className="event-form-textarea" name="eventDescription" placeholder="Description" value={formData.eventDescription} onChange={handleChange} rows="3" required />
               
-              {/* --- LINK INPUTS --- */}
-              <div style={{marginBottom: '20px'}}>
-                <input 
-                  className="event-form-input" 
-                  type="url" 
-                  name="bannerUrl" 
-                  placeholder="Banner Image Link (Visual)" 
-                  value={formData.bannerUrl} 
-                  onChange={handleChange} 
-                  style={{marginBottom: '5px'}}
-                />
-                <input 
-                  className="event-form-input" 
-                  type="url" 
-                  name="posterUrl" 
-                  placeholder="Brochure/Info Link (PDF/Docs)" 
-                  value={formData.posterUrl} 
-                  onChange={handleChange} 
-                  style={{marginBottom: '5px'}}
-                />
-                <small style={{fontSize: '11px', color: '#666', display: 'block'}}>
-                  Use "Share -> Anyone with link" for both. Banner should be an image file.
-                </small>
+              {/* --- LINK INPUTS (Vertical Stack) --- */}
+              <div style={{marginBottom: '25px', display: 'flex', flexDirection: 'column', gap: '20px'}}>
+                <div>
+                  <label style={{display: 'block', marginBottom: '8px', fontSize: '15px', fontWeight: 'bold', fontFamily: "'Libre Franklin', sans-serif"}}>
+                    Visual Banner Image <span style={{fontWeight: 'normal', color: '#666', fontSize: '13px'}}>(Optional)</span>
+                  </label>
+                  <input className="event-form-input" type="url" name="bannerUrl" placeholder="Paste Drive Link for Top Banner Image" value={formData.bannerUrl} onChange={handleChange} style={{marginBottom: '0', width: '100%'}} />
+                </div>
+                <div>
+                  <label style={{display: 'block', marginBottom: '8px', fontSize: '15px', fontWeight: 'bold', fontFamily: "'Libre Franklin', sans-serif"}}>
+                    Event Brochure/PDF <span style={{fontWeight: 'normal', color: '#666', fontSize: '13px'}}>(Optional)</span>
+                  </label>
+                  <input className="event-form-input" type="url" name="posterUrl" placeholder="Paste Drive Link for Info Button" value={formData.posterUrl} onChange={handleChange} style={{marginBottom: '5px', width: '100%'}} />
+                  <small style={{fontSize: '12px', color: '#555', display: 'block', marginTop: '5px', fontStyle: 'italic'}}>* Ensure Drive links are set to "Anyone with the link".</small>
+                </div>
               </div>
 
               <input className="event-form-input" type="date" name="eventDate" value={formData.eventDate} onChange={handleChange} required />
               <input className="event-form-input" type="time" name="eventTime" value={formData.eventTime} onChange={handleChange} required />
               <input className="event-form-input" type="text" name="eventLocation" placeholder="Location" value={formData.eventLocation} onChange={handleChange} required />
               
-              {/* Checkbox for Team Event */}
               <div className="event-form-checkbox-group">
                 <label className="event-form-checkbox-label">
                   <span className="event-form-checkbox-text">This is a Team Event</span>
@@ -143,6 +139,7 @@ const EventForm = () => {
                 </div>
               )}
 
+              <input className="event-form-input" type="number" name="maxVolunteers" placeholder="Max Volunteers" value={formData.maxVolunteers} onChange={handleChange} min="1" />
               <input className="event-form-input" type="number" name="OrgCid" placeholder="Club ID" value={formData.OrgCid} onChange={handleChange} required />
               <input className="event-form-input" type="number" name="registrationFee" placeholder="Fee (₹)" value={formData.registrationFee} onChange={handleChange} required />
               {parseFloat(formData.registrationFee) > 0 && <input className="event-form-input" type="text" name="upiId" placeholder="UPI ID" value={formData.upiId} onChange={handleChange} required />}
