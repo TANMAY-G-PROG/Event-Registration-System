@@ -18,25 +18,24 @@ function formatTime12h(timeString) {
 export default function Registerevent() {
   const navigate = useNavigate()
   
-  // --- Data States ---
+  // Data States
   const [eventsData, setEventsData] = useState({ upcoming: [], ongoing: [], completed: [] })
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState("all")
   const [teamStates, setTeamStates] = useState({})
   const [registeredEvents, setRegisteredEvents] = useState(new Set())
   
-  // --- UI & Modal States ---
+  // UI States
   const [flash, setFlash] = useState({ type: "", message: "" })
   const [modalFlash, setModalFlash] = useState({ type: "", message: "" })
-  const [selectedEvent, setSelectedEvent] = useState(null) // Controls the Overlay
+  const [selectedEvent, setSelectedEvent] = useState(null) // Controls Split Overlay
   const [ticketInfo, setTicketInfo] = useState(null);
   
-  // Team Modal
+  // Modals
   const [showTeamModal, setShowTeamModal] = useState(null)
   const [teamFormData, setTeamFormData] = useState({ teamName: '', memberUSNs: [''] })
   const [teamInvites, setTeamInvites] = useState([])
   
-  // UPI Modal
   const [showUpiModal, setShowUpiModal] = useState(null)
   const [transactionId, setTransactionId] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -63,7 +62,7 @@ export default function Registerevent() {
     return `upi://pay?${params.toString()}`
   }
 
-  // --- Initial Loaders ---
+  // --- Loaders ---
   useEffect(() => { loadEvents(); fetchMyRegistrations(); }, [])
   
   async function loadEvents() {
@@ -71,14 +70,11 @@ export default function Registerevent() {
       setLoading(true)
       const response = await fetch('/api/events', { method: "GET", credentials: "include" })
       if (response.status === 401) { navigate('/'); return }
-      if (!response.ok) throw new Error("Failed to load")
+      if (!response.ok) throw new Error("Failed")
       const data = await response.json()
       setEventsData({ upcoming: data?.events?.upcoming || [], ongoing: data?.events?.ongoing || [], completed: data?.events?.completed || [] })
-    } catch (err) {
-      showFlash("error", "Failed to load events")
-    } finally {
-      setLoading(false)
-    }
+    } catch (err) { showFlash("error", "Failed to load events") } 
+    finally { setLoading(false) }
   }
 
   async function fetchMyRegistrations() {
@@ -86,8 +82,7 @@ export default function Registerevent() {
       const res = await fetch('/api/my-participant-events', { credentials: 'include' })
       if (res.ok) {
         const data = await res.json()
-        const eventIds = new Set(data.participantEvents.map(ev => ev.eid))
-        setRegisteredEvents(eventIds)
+        setRegisteredEvents(new Set(data.participantEvents.map(ev => ev.eid)))
       }
     } catch (err) { console.error(err) }
   }
@@ -116,7 +111,7 @@ export default function Registerevent() {
     return filter === "all" ? all : all.filter(e => e.status === filter)
   }, [eventsData, filter])
 
-  // --- Generate QR Code ---
+  // --- QR Generation ---
   useEffect(() => {
     if (showUpiModal) {
       const { event } = showUpiModal
@@ -220,22 +215,22 @@ export default function Registerevent() {
   function renderControls(event) {
     const teamState = teamStates[event.eid]
     const aboutBtn = event.posterUrl ? (
-      <a href={event.posterUrl} target="_blank" rel="noopener noreferrer" className="re-btn about">
+      <a href={event.posterUrl} target="_blank" rel="noopener noreferrer" className="registerevent-btn about">
         About
       </a>
     ) : null;
 
-    if (!teamState && (event.status !== 'completed')) return <div className="re-btn-group"><button className="re-btn disabled">Loading...</button>{aboutBtn}</div>
-    if (event.status === 'completed') return <button className="re-btn disabled">Event Completed</button>
+    if (!teamState && (event.status !== 'completed')) return <div className="registerevent-btn-group"><button className="registerevent-btn disabled">Loading...</button>{aboutBtn}</div>
+    if (event.status === 'completed') return <button className="registerevent-btn disabled">Event Completed</button>
 
     // Individual Event
     if (!teamState?.isTeamEvent) {
       if (registeredEvents.has(event.eid)) {
-        return <div className="re-btn-group"><button className="re-btn success" disabled>✓ Registered</button>{aboutBtn}</div>
+        return <div className="registerevent-btn-group"><button className="registerevent-btn success" disabled>✓ Registered</button>{aboutBtn}</div>
       }
       return (
-        <div className="re-btn-group">
-          <button className="re-btn primary" onClick={() => handleRegister(event)}>
+        <div className="registerevent-btn-group">
+          <button className="registerevent-btn primary" onClick={() => handleRegister(event)}>
             { (event.regFee || 0) > 0 ? `Pay & Register (₹${event.regFee})` : "Register (Free)" }
           </button>
           {aboutBtn}
@@ -245,30 +240,32 @@ export default function Registerevent() {
 
     // Team Event
     if (teamState.registrationComplete) {
-      return <div className="re-btn-group"><button className="re-btn success" disabled>✓ Team Registered</button>{aboutBtn}</div>
+      return <div className="registerevent-btn-group"><button className="registerevent-btn success" disabled>✓ Team Registered</button>{aboutBtn}</div>
     }
 
     if (teamState.hasJoinedTeam) {
       const isLeader = teamState.isLeader
       return (
-        <div className="re-team-controls-group">
-          <div className="re-team-status-pill">
-             <span>Team: {teamState.teamName}</span>
-             <span className={teamState.canRegister ? "ready" : "waiting"}>
-               {teamState.joinedCount}/{teamState.minSize} Members
-             </span>
+        <div className="registerevent-team-controls-group">
+          <div className="registerevent-hud-panel" style={{marginBottom: '10px'}}>
+             <div className="registerevent-hud-header" style={{marginBottom: '0', paddingBottom: '0', border: 'none'}}>
+               <span className="registerevent-hud-label">Team: {teamState.teamName}</span>
+               <span className="registerevent-hud-value" style={{color: teamState.canRegister ? 'var(--re-accent-success)' : 'var(--re-accent-warning)'}}>
+                 {teamState.joinedCount}/{teamState.minSize} Members
+               </span>
+             </div>
           </div>
-          <div className="re-btn-group">
+          <div className="registerevent-btn-group">
             {isLeader ? (
               <button 
-                className={`re-btn ${teamState.canRegister ? "primary" : "disabled"}`} 
+                className={`registerevent-btn ${teamState.canRegister ? "primary" : "disabled"}`} 
                 onClick={() => teamState.canRegister && handleRegisterTeam(event, teamState)}
                 disabled={!teamState.canRegister}
               >
                 { (teamState.regFee || 0) > 0 ? `Pay (₹${teamState.regFee})` : "Finalize" }
               </button>
             ) : (
-              <button className="re-btn disabled">Waiting for Leader</button>
+              <button className="registerevent-btn disabled">Waiting for Leader</button>
             )}
             {aboutBtn}
           </div>
@@ -277,106 +274,118 @@ export default function Registerevent() {
     }
 
     return (
-      <div className="re-btn-group">
-        <button className="re-btn secondary" onClick={() => setShowTeamModal({ eventId: event.eid, mode: 'create' })}>Create Team</button>
-        <button className="re-btn ghost" onClick={() => handleViewInvites(event.eid)}>Invites</button>
+      <div className="registerevent-btn-group">
+        <button className="registerevent-btn secondary" onClick={() => setShowTeamModal({ eventId: event.eid, mode: 'create' })}>Create Team</button>
+        <button className="registerevent-btn ghost" onClick={() => handleViewInvites(event.eid)}>Invites</button>
         {aboutBtn}
       </div>
     )
   }
 
   return (
-    <main className="re-page">
-      <div className="re-bg-glow" />
+    <main className="registerevent-page">
+      <div className="registerevent-hero-bg" aria-hidden="true" />
       {ticketInfo && <TicketAnimation onClose={() => setTicketInfo(null)} {...ticketInfo} />}
-      {flash.message && <div className={`re-flash ${flash.type}`}>{flash.message}</div>}
+      {flash.message && <div className={`registerevent-flash ${flash.type === 'success' ? 'registerevent-flash-success' : 'registerevent-flash-error'}`}>{flash.message}</div>}
 
       {/* --- LIST VIEW --- */}
-      <div className="re-container">
-        <header className="re-header">
-          <h1>Events</h1>
-          <div className="re-filters">
+      <div className="registerevent-container">
+        <header className="registerevent-header">
+          <div className="registerevent-header-text">
+            <h1 className="registerevent-title">Events</h1>
+            <p className="registerevent-subtitle">Discover and join events happening around you.</p>
+          </div>
+          <div className="registerevent-filters">
             {["all", "upcoming", "ongoing", "completed"].map(k => (
-              <button key={k} className={filter===k?"active":""} onClick={()=>setFilter(k)}>
+              <button key={k} className={`registerevent-filter-btn ${filter===k?"registerevent-filter-active":""}`} onClick={()=>setFilter(k)}>
                 {k.charAt(0).toUpperCase() + k.slice(1)}
               </button>
             ))}
           </div>
         </header>
 
-        {loading ? <div className="re-loader">Loading...</div> : (
-          <div className="re-grid">
+        {loading ? <div className="registerevent-spinner"></div> : (
+          <div className="registerevent-list">
             {filteredEvents.map(event => (
-              <article key={event.eid} className="re-card" onClick={() => setSelectedEvent(event)}>
-                <div className="re-card-media">
-                  {/* UPDATE: Use bannerUrl ONLY for visual thumbnail */}
-                  <img 
-                    src={event.bannerUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80"} 
-                    alt={event.ename} 
-                    loading="lazy"
-                  />
-                  <div className={`re-badge ${event.status}`}>{event.status}</div>
-                  {event.is_team && <div className="re-badge team">Team</div>}
-                </div>
-                <div className="re-card-content">
-                  <h3>{event.ename}</h3>
-                  <div className="re-card-meta">
-                    <span>{new Date(event.eventDate).toLocaleDateString()}</span>
-                    <span>•</span>
-                    <span>{event.eventLoc}</span>
+              <article key={event.eid} className="registerevent-card" onClick={() => setSelectedEvent(event)}>
+                <div className="registerevent-card-content">
+                  <div className="registerevent-card-header">
+                    <div className="registerevent-badges">
+                      <span className={`registerevent-badge registerevent-badge-${event.status}`}>{event.status}</span>
+                      {event.is_team && <span className="registerevent-badge registerevent-badge-team">Team</span>}
+                    </div>
+                    {/* Thumbnail: Uses BannerUrl (Cloudinary) if available, fallback to Drive (optional), fallback to placeholder */}
+                    <div style={{height: '160px', width: '100%', marginTop: '16px', borderRadius: '12px', overflow: 'hidden', background: '#111'}}>
+                        <img 
+                          src={event.bannerUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80"} 
+                          alt={event.ename}
+                          style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                        />
+                    </div>
+                    <div className="registerevent-card-title-row" style={{marginTop: '16px'}}>
+                      <h2 className="registerevent-card-title">{event.ename}</h2>
+                    </div>
                   </div>
-                  <div className="re-card-cta">View Details &rarr;</div>
+                  <div className="registerevent-info-grid">
+                    <div className="registerevent-info-item"><h4>Date</h4><p>{new Date(event.eventDate).toLocaleDateString()}</p></div>
+                    <div className="registerevent-info-item"><h4>Time</h4><p>{formatTime12h(event.eventTime)}</p></div>
+                    <div className="registerevent-info-item"><h4>Location</h4><p>{event.eventLoc}</p></div>
+                    <div className="registerevent-info-item"><h4>View</h4><p style={{color: 'var(--re-accent-cyan)'}}>Tap for details &rarr;</p></div>
+                  </div>
                 </div>
               </article>
             ))}
           </div>
         )}
         
-        <button className="re-back-btn" onClick={() => navigate('/events')}>&larr; Dashboard</button>
+        <div className="registerevent-back">
+            <button className="registerevent-back-btn" onClick={() => navigate('/events')}>&larr; Dashboard</button>
+        </div>
       </div>
 
       {/* --- YOUTUBE SPLIT DETAIL OVERLAY --- */}
       {selectedEvent && (
-        <div className="re-overlay-container">
-          <div className="re-overlay-split">
+        <div className="registerevent-overlay-container">
+          <div className="registerevent-overlay-split">
             
             {/* TOP 40%: BANNER (Cloudinary bannerUrl) */}
-            <div className="re-split-top">
-              <button className="re-close-btn" onClick={() => setSelectedEvent(null)}>×</button>
-              <div className="re-image-wrapper">
+            <div className="registerevent-split-top">
+              <button className="registerevent-close-btn" onClick={() => setSelectedEvent(null)}>×</button>
+              <div className="registerevent-image-wrapper">
                 <img 
                   src={selectedEvent.bannerUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80"} 
                   alt={selectedEvent.ename} 
                 />
-                <div className="re-image-gradient"></div>
+                <div className="registerevent-image-gradient"></div>
               </div>
             </div>
 
-            {/* BOTTOM 60%: CONTENT */}
-            <div className="re-split-bottom">
-              <div className="re-detail-content">
-                <div className="re-detail-header">
-                  <h2>{selectedEvent.ename}</h2>
-                  <div className="re-detail-meta-row">
-                    <span className="re-meta-pill date">{new Date(selectedEvent.eventDate).toDateString()}</span>
-                    <span className="re-meta-pill time">{formatTime12h(selectedEvent.eventTime)}</span>
+            {/* BOTTOM 60%: DETAILS */}
+            <div className="registerevent-split-bottom">
+              <div className="registerevent-detail-content">
+                <div className="registerevent-card-title-row">
+                  <h2 className="registerevent-card-title" style={{fontSize: '2rem'}}>{selectedEvent.ename}</h2>
+                </div>
+                
+                <div style={{display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap'}}>
+                    <span className="registerevent-badge registerevent-badge-upcoming" style={{borderColor: 'var(--re-glass-border)'}}>{new Date(selectedEvent.eventDate).toDateString()}</span>
+                    <span className="registerevent-badge registerevent-badge-upcoming" style={{borderColor: 'var(--re-glass-border)'}}>{formatTime12h(selectedEvent.eventTime)}</span>
                     {selectedEvent.regFee > 0 ? 
-                      <span className="re-meta-pill fee">₹{selectedEvent.regFee}</span> : 
-                      <span className="re-meta-pill free">Free</span>
+                      <span className="registerevent-badge registerevent-badge-upcoming" style={{color: 'var(--re-accent-cyan)', borderColor: 'var(--re-accent-cyan)'}}>₹{selectedEvent.regFee}</span> : 
+                      <span className="registerevent-badge registerevent-badge-ongoing" style={{borderColor: 'var(--re-accent-success)'}}>Free</span>
                     }
-                  </div>
                 </div>
 
-                <div className="re-detail-section">
-                  <h4>About</h4>
-                  <p>{selectedEvent.eventdesc}</p>
+                <div className="registerevent-hud-panel" style={{background: 'transparent', border: 'none', padding: 0}}>
+                  <h4 className="registerevent-hud-label" style={{marginBottom: '10px'}}>About</h4>
+                  <p className="registerevent-subtitle" style={{color: '#d4d4d4', fontSize: '0.95rem', maxWidth: '100%'}}>{selectedEvent.eventdesc}</p>
                 </div>
 
-                <div className="re-detail-section info-grid">
-                  <div className="re-info-item"><label>Venue</label><span>{selectedEvent.eventLoc}</span></div>
-                  <div className="re-info-item"><label>Organizer</label><span>{selectedEvent.organizerName || "Club"}</span></div>
+                <div className="registerevent-info-grid" style={{marginTop: '32px'}}>
+                  <div className="registerevent-info-item"><h4>Venue</h4><p>{selectedEvent.eventLoc}</p></div>
+                  <div className="registerevent-info-item"><h4>Organizer</h4><p>{selectedEvent.organizerName || "Club"}</p></div>
                   {selectedEvent.is_team && (
-                    <div className="re-info-item"><label>Team Size</label><span>{selectedEvent.min_team_size}-{selectedEvent.max_team_size} members</span></div>
+                    <div className="registerevent-info-item"><h4>Team Size</h4><p>{selectedEvent.min_team_size}-{selectedEvent.max_team_size} members</p></div>
                   )}
                 </div>
                 
@@ -385,7 +394,7 @@ export default function Registerevent() {
               </div>
 
               {/* FIXED ACTION BAR */}
-              <div className="re-action-bar">
+              <div className="registerevent-action-bar">
                 {renderControls(selectedEvent)}
               </div>
             </div>
@@ -395,38 +404,46 @@ export default function Registerevent() {
 
       {/* --- MODALS --- */}
       {showTeamModal && (
-        <div className="re-modal-overlay" onClick={() => setShowTeamModal(null)}>
-          <div className="re-modal" onClick={e => e.stopPropagation()}>
-            <div className="re-modal-header">
-              <h3>{showTeamModal.mode === 'create' ? 'Create Team' : 'Invites'}</h3>
-              <button onClick={() => setShowTeamModal(null)}>×</button>
+        <div className="registerevent-modal-overlay" onClick={() => setShowTeamModal(null)}>
+          <div className="registerevent-modal" onClick={e => e.stopPropagation()}>
+            <div className="registerevent-modal-header">
+              <h2 className="registerevent-modal-title">{showTeamModal.mode === 'create' ? 'Create Team' : 'Invites'}</h2>
+              <button className="registerevent-modal-close" onClick={() => setShowTeamModal(null)}>×</button>
             </div>
-            <div className="re-modal-body">
-              {modalFlash.message && <div className={`re-mini-flash ${modalFlash.type}`}>{modalFlash.message}</div>}
+            <div className="registerevent-modal-body">
+              {modalFlash.message && <div className={`registerevent-flash ${modalFlash.type === 'success' ? 'registerevent-flash-success' : 'registerevent-flash-error'}`} style={{position: 'relative', top: 0, left: 0, transform: 'none', width: 'auto', marginBottom: '16px'}}>{modalFlash.message}</div>}
               {showTeamModal.mode === 'create' ? (
-                <>
-                  <input className="re-input" placeholder="Team Name" value={teamFormData.teamName} onChange={e => setTeamFormData({...teamFormData, teamName: e.target.value})} />
-                  <p className="re-hint">Add Members (USNs)</p>
-                  {teamFormData.memberUSNs.map((usn, i) => (
-                    <div key={i} className="re-input-group">
-                      <input className="re-input" placeholder="Member USN" value={usn} onChange={e => {
-                        const newUsns = [...teamFormData.memberUSNs]; newUsns[i] = e.target.value; setTeamFormData({...teamFormData, memberUSNs: newUsns})
-                      }} />
-                      {i > 0 && <button className="re-btn-icon" onClick={() => {
-                        const newUsns = teamFormData.memberUSNs.filter((_, idx) => idx !== i); setTeamFormData({...teamFormData, memberUSNs: newUsns})
-                      }}>×</button>}
-                    </div>
-                  ))}
-                  <button className="re-btn-text" onClick={() => setTeamFormData(prev => ({...prev, memberUSNs: [...prev.memberUSNs, '']}))}>+ Add Member</button>
-                  <button className="re-btn primary full" onClick={() => handleCreateTeam(showTeamModal.eventId)}>Create Team</button>
-                </>
+                <div className="registerevent-team-form">
+                  <div className="registerevent-form-group">
+                    <label className="registerevent-form-label">Team Name</label>
+                    <input className="registerevent-form-input" placeholder="Enter Team Name" value={teamFormData.teamName} onChange={e => setTeamFormData({...teamFormData, teamName: e.target.value})} />
+                  </div>
+                  <div className="registerevent-form-group">
+                    <label className="registerevent-form-label">Members (USNs)</label>
+                    {teamFormData.memberUSNs.map((usn, i) => (
+                        <div key={i} style={{display: 'flex', gap: '8px', marginBottom: '8px'}}>
+                        <input className="registerevent-form-input" placeholder="Member USN" value={usn} onChange={e => {
+                            const newUsns = [...teamFormData.memberUSNs]; newUsns[i] = e.target.value; setTeamFormData({...teamFormData, memberUSNs: newUsns})
+                        }} />
+                        {i > 0 && <button className="registerevent-team-action-btn" style={{width: 'auto', background: 'rgba(255,0,0,0.2)'}} onClick={() => {
+                            const newUsns = teamFormData.memberUSNs.filter((_, idx) => idx !== i); setTeamFormData({...teamFormData, memberUSNs: newUsns})
+                        }}>×</button>}
+                        </div>
+                    ))}
+                    <button className="registerevent-team-action-btn" style={{marginTop: '8px'}} onClick={() => setTeamFormData(prev => ({...prev, memberUSNs: [...prev.memberUSNs, '']}))}>+ Add Member</button>
+                  </div>
+                  <button className="registerevent-modal-submit-btn" onClick={() => handleCreateTeam(showTeamModal.eventId)}>Create Team</button>
+                </div>
               ) : (
-                <div className="re-invites-list">
-                  {!teamInvites.length ? <p>No invites.</p> : teamInvites.map((inv, i) => (
-                    <div key={i} className="re-invite-card">
-                       <div><strong>{inv.teamName}</strong><br/><small>Leader: {inv.leaderName}</small></div>
-                       {!inv.registrationComplete && !inv.joinStatus && <button className="re-btn primary small" onClick={() => handleConfirmJoin(inv.teamId, showTeamModal.eventId)}>Join</button>}
-                       {inv.joinStatus && <span className="re-status success">Joined</span>}
+                <div className="registerevent-invites-list">
+                  {!teamInvites.length ? <p style={{color: '#888', textAlign: 'center'}}>No pending invites.</p> : teamInvites.map((inv, i) => (
+                    <div key={i} className="registerevent-hud-panel" style={{marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                       <div>
+                           <div style={{color: 'white', fontWeight: 'bold'}}>{inv.teamName}</div>
+                           <div style={{fontSize: '0.8rem', color: '#888'}}>Leader: {inv.leaderName}</div>
+                       </div>
+                       {!inv.registrationComplete && !inv.joinStatus && <button className="registerevent-invite-confirm-btn" style={{width: 'auto', padding: '8px 16px'}} onClick={() => handleConfirmJoin(inv.teamId, showTeamModal.eventId)}>Join</button>}
+                       {inv.joinStatus && <span style={{color: 'var(--re-accent-success)', fontSize: '0.8rem'}}>Joined</span>}
                     </div>
                   ))}
                 </div>
@@ -437,15 +454,15 @@ export default function Registerevent() {
       )}
 
       {showUpiModal && (
-        <div className="re-modal-overlay" onClick={() => !isSubmitting && setShowUpiModal(null)}>
-          <div className="re-modal" onClick={e => e.stopPropagation()}>
-            <div className="re-modal-header"><h3>Pay & Register</h3><button disabled={isSubmitting} onClick={() => setShowUpiModal(null)}>×</button></div>
-            <div className="re-modal-body center">
-               <div className="re-qr-wrap">{qrCodeDataUrl ? <img src={qrCodeDataUrl} alt="QR" /> : <div className="re-loader-mini"></div>}</div>
-               <p>Pay <strong>₹{showUpiModal.event.regFee}</strong></p>
-               <div className="re-upi-info">UPI: {showUpiModal.event.upiId}</div>
-               <input className="re-input" placeholder="Transaction ID (UTR)" value={transactionId} onChange={e => setTransactionId(e.target.value)} disabled={isSubmitting} />
-               <button className="re-btn primary full" onClick={handleSubmitUpiPayment} disabled={isSubmitting}>{isSubmitting ? "Verifying..." : "Submit"}</button>
+        <div className="registerevent-modal-overlay" onClick={() => !isSubmitting && setShowUpiModal(null)}>
+          <div className="registerevent-modal" onClick={e => e.stopPropagation()}>
+            <div className="registerevent-modal-header"><h2 className="registerevent-modal-title">Pay & Register</h2><button className="registerevent-modal-close" disabled={isSubmitting} onClick={() => setShowUpiModal(null)}>×</button></div>
+            <div className="registerevent-modal-body" style={{textAlign: 'center'}}>
+               <div className="registerevent-qr-wrapper">{qrCodeDataUrl ? <img src={qrCodeDataUrl} alt="QR" style={{display: 'block'}} /> : <div className="registerevent-spinner" style={{margin: '40px auto'}}></div>}</div>
+               <p style={{color: '#ccc', marginBottom: '20px'}}>Pay <strong>₹{showUpiModal.event.regFee}</strong></p>
+               <div className="registerevent-payment-details"><div className="registerevent-payment-row"><span style={{color: '#888'}}>UPI ID</span><span className="registerevent-payment-value">{showUpiModal.event.upiId}</span></div></div>
+               <input className="registerevent-form-input" placeholder="Enter Transaction ID (UTR)" value={transactionId} onChange={e => setTransactionId(e.target.value)} disabled={isSubmitting} />
+               <button className="registerevent-modal-submit-btn" style={{marginTop: '16px'}} onClick={handleSubmitUpiPayment} disabled={isSubmitting}>{isSubmitting ? "Verifying..." : "Submit Payment"}</button>
             </div>
           </div>
         </div>
