@@ -188,7 +188,7 @@ body {
 .re-image-wrapper img {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Ensures banner fills space nicely */
+  object-fit: cover;
 }
 .re-image-gradient {
   position: absolute;
@@ -301,6 +301,8 @@ body {
   font-size: 16px;
   cursor: pointer;
   transition: transform 0.2s;
+  display: inline-flex; justify-content: center; align-items: center;
+  text-decoration: none; box-sizing: border-box;
 }
 .re-btn:active { transform: scale(0.98); }
 .re-btn.primary { background: var(--text-primary); color: #000; }
@@ -308,6 +310,29 @@ body {
 .re-btn.success { background: rgba(0, 255, 157, 0.1); color: var(--accent-green); border: 1px solid var(--accent-green); cursor: default; }
 .re-btn.disabled { background: #222; color: #666; cursor: not-allowed; }
 .re-btn.ghost { background: transparent; color: var(--text-secondary); font-size: 14px; padding: 16px 10px; }
+
+/* ABOUT BUTTON SPECIFIC */
+.re-btn.about {
+  background: transparent;
+  color: var(--accent-cyan);
+  border: 1px solid var(--accent-cyan);
+  margin-left: 10px;
+  width: auto; /* Allow it to shrink */
+  min-width: 100px;
+}
+.re-btn.about:hover {
+  background: rgba(0, 240, 255, 0.1);
+}
+
+/* Button grouping for split controls */
+.re-btn-group {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+}
+.re-btn-group .re-btn.primary {
+  flex: 1; /* Main button takes available space */
+}
 
 .re-action-row { display: flex; gap: 12px; }
 .re-action-row .re-btn.secondary { flex: 2; }
