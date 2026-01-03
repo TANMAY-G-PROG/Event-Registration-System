@@ -10,6 +10,26 @@ const ExcelJS = require('exceljs');
 const { createClient } = require('redis'); // Import Redis
 const Brevo = require('@getbrevo/brevo');
 
+// --- File Upload Dependencies ---
+const cloudinary = require('cloudinary').v2;
+const multer = require('multer');
+const streamifier = require('streamifier');
+
+// --- Cloudinary Config ---
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// --- Multer Config (Efficient for 512MB RAM) ---
+// We use memory storage but STRICTLY limit file size to 5MB.
+// This prevents OOM errors on Render.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+});
+
 // --- Brevo Configuration ---
 const apiInstance = new Brevo.TransactionalEmailsApi();
 const apiKey = apiInstance.authentications['apiKey'];
@@ -116,6 +136,22 @@ function requireAuth(req, res, next) {
         res.status(401).json({ error: 'Please sign in first' });
     }
 }
+
+const uploadFromBuffer = (buffer) => {
+    return new Promise((resolve, reject) => {
+        const cld_upload_stream = cloudinary.uploader.upload_stream(
+            { folder: "event_posters" }, // Cloudinary folder
+            (error, result) => {
+                if (result) {
+                    resolve(result);
+                } else {
+                    reject(error);
+                }
+            }
+        );
+        streamifier.createReadStream(buffer).pipe(cld_upload_stream);
+    });
+};
 
 // Sign up endpoint
 app.post('/api/signup', async (req, res) => {
@@ -502,8 +538,9 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
 });
 
 // Create/Organize a new event (UPDATED WITH POSTER URL)
-app.post('/api/events/create', requireAuth, async (req, res) => {
+app.post('/api/events/create', requireAuth, upload.single('poster'), async (req, res) => {
     try {
+        // When using multer, text fields are in req.body
         const { 
             eventName, 
             eventDescription, 
@@ -519,88 +556,54 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             upiId,
             isTeamEvent,
             minTeamSize,
-            maxTeamSize,
-            posterUrl // NEW FIELD
+            maxTeamSize
         } = req.body;
-        
+
+        const file = req.file; // The uploaded file buffer
+        let finalPosterUrl = null;
+
+        // 1. Upload Image if present
+        if (file) {
+            try {
+                console.log('📤 Streaming file to Cloudinary...');
+                const result = await uploadFromBuffer(file.buffer);
+                finalPosterUrl = result.secure_url;
+                console.log('✅ Upload success:', finalPosterUrl);
+            } catch (uploadErr) {
+                console.error('Cloudinary Upload Error:', uploadErr);
+                return res.status(500).json({ error: 'Failed to upload image' });
+            }
+        }
+
         const organizedClubId = clubId || OrgCid;
         const fee = parseFloat(registrationFee) || 0;
-        
+        const isTeam = isTeamEvent === 'true' || isTeamEvent === true; // FormData sends strings
+
         if (!eventName || !eventDescription || !eventDate || !eventTime || !eventLocation) {
-            return res.status(400).json({ error: 'Event name, description, date, time, and location are required' });
+            return res.status(400).json({ error: 'Required fields missing' });
         }
-        
-        // UPI Validation
+
         if (fee > 0 && (!upiId || upiId.trim() === '')) {
             return res.status(400).json({ error: 'UPI ID is required for paid events' });
         }
-        
-        const eventDateObj = new Date(eventDate);
-        const currentDate = new Date();
-        if (eventDateObj <= currentDate) {
-            return res.status(400).json({ error: 'Event date must be in the future' });
-        }
 
-        // Validate team event fields if it's a team event
-        if (isTeamEvent) {
-            if (!minTeamSize || !maxTeamSize) {
-                return res.status(400).json({ 
-                    error: 'Minimum and maximum team size are required for team events' 
-                });
-            }
-            
-            const minSize = parseInt(minTeamSize);
-            const maxSize = parseInt(maxTeamSize);
-            
-            if (minSize < 2) {
-                return res.status(400).json({ 
-                    error: 'Minimum team size must be at least 2' 
-                });
-            }
-            
-            if (maxSize < minSize) {
-                return res.status(400).json({ 
-                    error: 'Maximum team size must be greater than or equal to minimum team size' 
-                });
-            }
-        }
-        
-        if (organizedClubId) {
-            const { data: clubMembership, error: membershipError } = await supabase
-                .from('memberof')
-                .select('*')
-                .eq('studentusn', req.session.userUSN)
-                .eq('clubid', organizedClubId)
-                .limit(1);
-            
-            if (membershipError) {
-                console.error('Error checking club membership:', membershipError);
-                return res.status(500).json({ error: 'Database error' });
-            }
-            
-            if (!clubMembership || clubMembership.length === 0) {
-                return res.status(403).json({ error: 'You must be a member of the club to organize events for it' });
-            }
-        }
-        
-        // Prepare event data
         const eventData = {
             ename: eventName,
             eventdesc: eventDescription,
             certificate_info: certificate_info || null,
-            poster_url: posterUrl || null, // Added
+            poster_url: finalPosterUrl, // Save Cloudinary URL
             eventdate: eventDate,
             eventtime: eventTime,
             eventloc: eventLocation,
-            maxpart: maxParticipants || null,
-            maxvoln: maxVolunteers || null,
+            maxpart: maxParticipants ? parseInt(maxParticipants) : null,
+            maxvoln: maxVolunteers ? parseInt(maxVolunteers) : null,
             regfee: fee,
             upi_id: fee > 0 ? upiId : null,
             orgusn: req.session.userUSN,
             orgcid: organizedClubId || null,
-            is_team: isTeamEvent || false,
-            min_team_size: isTeamEvent ? (parseInt(minTeamSize) || null) : null,
-            max_team_size: isTeamEvent ? (parseInt(maxTeamSize) || null) : null
+            is_team: isTeam,
+            min_team_size: isTeam ? (parseInt(minTeamSize) || null) : null,
+            max_team_size: isTeam ? (parseInt(maxTeamSize) || null) : null
         };
 
         const { data, error } = await supabase
@@ -608,28 +611,17 @@ app.post('/api/events/create', requireAuth, async (req, res) => {
             .insert([eventData])
             .select('eid');
         
-        if (error) {
-            console.error('Error creating event:', error);
-            return res.status(500).json({ error: `Error creating event: ${error.message}` });
-        }
-        
-        // --- INVALIDATE REDIS CACHE ---
-        try {
-            if (redisClient.isOpen) {
-                await redisClient.del('events_list_raw');
-                console.log('🗑️ Cache Invalidated due to New Event');
-            }
-        } catch (cacheErr) {
-            console.error('Failed to invalidate cache:', cacheErr);
-        }
+        if (error) throw error;
+
+        // Invalidate Cache
+        if (redisClient.isOpen) await redisClient.del('events_list_raw');
 
         res.status(201).json({ 
             success: true,
-            message: isTeamEvent ? 'Team event created successfully!' : 'Event created successfully!', 
-            eventId: data[0]?.eid,
-            organizerUSN: req.session.userUSN,
-            isTeamEvent: isTeamEvent || false
+            message: 'Event created successfully!', 
+            eventId: data[0]?.eid 
         });
+
     } catch (err) {
         console.error('Error creating event:', err);
         res.status(500).json({ error: `Error creating event: ${err.message}` });
