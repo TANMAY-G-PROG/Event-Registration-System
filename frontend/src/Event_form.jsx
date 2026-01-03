@@ -4,11 +4,11 @@ import './event_form.css';
 
 const EventForm = () => {
   const navigate = useNavigate();
-  // We keep posterUrl in state just for logic, but we use a separate 'posterFile' state for the upload
   const [formData, setFormData] = useState({
     eventName: '',
     eventDescription: '',
     certificateInfo: '',
+    posterUrl: '', // TEXT INPUT (Google Drive)
     eventDate: '',
     eventTime: '',
     eventLocation: '',
@@ -22,7 +22,7 @@ const EventForm = () => {
     maxTeamSize: ''
   });
 
-  const [posterFile, setPosterFile] = useState(null); // File state
+  const [bannerFile, setBannerFile] = useState(null); // FILE INPUT (Cloudinary)
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,13 +44,13 @@ const EventForm = () => {
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) { // 5MB check on frontend
-        showMessage('File size too large. Max 5MB.', true);
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        showMessage('Banner size too large. Max 5MB.', true);
         e.target.value = null;
-        setPosterFile(null);
+        setBannerFile(null);
         return;
       }
-      setPosterFile(file);
+      setBannerFile(file);
     }
   };
 
@@ -59,18 +59,18 @@ const EventForm = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    // Basic Validation
     if (!formData.eventName || !formData.eventDate || !formData.OrgCid) {
       showMessage('Please fill required fields', true);
       setIsSubmitting(false);
       return;
     }
 
-    // Prepare FormData
     const submissionData = new FormData();
+    // Text Fields
     submissionData.append('eventName', formData.eventName);
     submissionData.append('eventDescription', formData.eventDescription);
     submissionData.append('certificate_info', formData.certificateInfo || '');
+    submissionData.append('posterUrl', formData.posterUrl || ''); // Send Drive Link
     submissionData.append('eventDate', formData.eventDate);
     submissionData.append('eventTime', formData.eventTime);
     submissionData.append('eventLocation', formData.eventLocation);
@@ -83,13 +83,12 @@ const EventForm = () => {
     submissionData.append('minTeamSize', formData.minTeamSize || '');
     submissionData.append('maxTeamSize', formData.maxTeamSize || '');
 
-    // Append File if exists
-    if (posterFile) {
-      submissionData.append('poster', posterFile);
+    // File Field
+    if (bannerFile) {
+      submissionData.append('banner', bannerFile); // Field name MUST match multer
     }
 
     try {
-      // NOTE: Do NOT set Content-Type header manually for FormData
       const res = await fetch('/api/events/create', {
         method: 'POST',
         credentials: 'include',
@@ -124,7 +123,6 @@ const EventForm = () => {
           <div className="event-form-card-side event-form-left event-form-desktop-header">
             <div className="event-form-logo-text">Hey Organisers</div>
           </div>
-          
           <div className="event-form-card-side event-form-left event-form-mobile-header">
             <div className="event-form-left-header">
               <div className="event-form-glow-text">
@@ -142,9 +140,19 @@ const EventForm = () => {
               
               <textarea className="event-form-textarea" name="eventDescription" placeholder="Description" value={formData.eventDescription} onChange={handleChange} rows="3" required />
               
-              {/* FILE UPLOAD FIELD */}
+              {/* 1. Google Drive Poster Link */}
+              <input 
+                className="event-form-input" 
+                type="url" 
+                name="posterUrl" 
+                placeholder="Google Drive Poster Link (Optional)" 
+                value={formData.posterUrl} 
+                onChange={handleChange} 
+              />
+
+              {/* 2. Cloudinary Banner Upload */}
               <div style={{marginBottom: '22px'}}>
-                <label style={{fontSize: '13px', color: '#666', marginBottom: '5px', display: 'block'}}>Event Poster (Optional, Max 5MB)</label>
+                <label style={{fontSize: '13px', color: '#666', marginBottom: '5px', display: 'block'}}>Banner Image (Upload)</label>
                 <input 
                   className="event-form-input" 
                   type="file" 
@@ -152,7 +160,7 @@ const EventForm = () => {
                   onChange={handleFileChange} 
                   style={{padding: '10px 0'}}
                 />
-                <small style={{fontSize: '11px', color: '#888'}}>This will appear as the banner for your event.</small>
+                <small style={{fontSize: '11px', color: '#888'}}>High quality banner for the event page.</small>
               </div>
 
               <textarea className="event-form-textarea" name="certificateInfo" placeholder="Certificate Info (Optional)" value={formData.certificateInfo} onChange={handleChange} rows="2" />
