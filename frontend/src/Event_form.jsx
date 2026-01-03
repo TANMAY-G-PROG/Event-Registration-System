@@ -8,8 +8,7 @@ const EventForm = () => {
     eventName: '',
     eventDescription: '',
     certificateInfo: '',
-    posterUrl: '', 
-    bannerUrl: '', // NEW: Banner URL
+    posterUrl: '', // NEW FIELD
     eventDate: '',
     eventTime: '',
     eventLocation: '',
@@ -49,8 +48,7 @@ const EventForm = () => {
       eventName: formData.eventName,
       eventDescription: formData.eventDescription,
       certificate_info: formData.certificateInfo || null,
-      posterUrl: formData.posterUrl || null,
-      bannerUrl: formData.bannerUrl || null, // Include Banner URL
+      posterUrl: formData.posterUrl || null, // SEND TO BACKEND
       eventDate: formData.eventDate,
       eventTime: formData.eventTime,
       eventLocation: formData.eventLocation,
@@ -115,7 +113,7 @@ const EventForm = () => {
       if (res.ok) {
         showMessage('Event created successfully!');
         setFormData({
-          eventName: '', eventDescription: '', certificateInfo: '', posterUrl: '', bannerUrl: '',
+          eventName: '', eventDescription: '', certificateInfo: '', posterUrl: '',
           eventDate: '', eventTime: '', eventLocation: '', maxParticipants: '', 
           maxVolunteers: '', OrgCid: '', registrationFee: '', upiId: '', 
           isTeamEvent: false, minTeamSize: '', maxTeamSize: ''
@@ -186,36 +184,19 @@ const EventForm = () => {
                 required 
               />
 
-              {/* BANNER LINK INPUT */}
-              <div style={{marginBottom: '10px'}}>
-                <input 
-                  className="event-form-input" 
-                  type="url" 
-                  name="bannerUrl" 
-                  placeholder="Banner Image URL (Landscape)" 
-                  value={formData.bannerUrl} 
-                  onChange={handleChange} 
-                  style={{marginBottom: '5px'}}
-                />
-                 <small style={{fontSize: '11px', color: '#666', display: 'block', lineHeight: '1.2'}}>
-                  Recommended for YouTube-style display (e.g., 1280x720)
-                </small>
-              </div>
-
-              {/* POSTER LINK INPUT */}
+              {/* NEW POSTER LINK INPUT */}
               <div style={{marginBottom: '22px'}}>
                 <input 
                   className="event-form-input" 
                   type="url" 
                   name="posterUrl" 
-                  placeholder="Poster Image URL (Optional)" 
+                  placeholder="Drive Link for Poster (Optional)" 
                   value={formData.posterUrl} 
                   onChange={handleChange} 
                   style={{marginBottom: '5px'}}
                 />
-                {/* UPDATED PLACEHOLDER TEXT */}
                 <small style={{fontSize: '11px', color: '#666', display: 'block', lineHeight: '1.2'}}>
-                  Optional: Upload to Drive &gt; Right Click &gt; Share &gt; Copy Link (Anyone with link)
+                  Upload to Drive &gt; Right Click &gt; Share &gt; Copy Link (Anyone with link)
                 </small>
               </div>
 
