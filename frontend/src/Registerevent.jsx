@@ -209,8 +209,14 @@ export default function Registerevent() {
     } catch (err) { showModalFlash('error', 'Error submitting') } finally { setIsSubmitting(false) }
   }
 
-  // --- Dynamic Button Logic ---
-  function getActionButtons(event, isCardView = false) {
+  // --- OPEN POSTER FUNCTION ---
+  const handleOpenPoster = (e, url) => {
+    e.stopPropagation();
+    if(url) window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  // --- Dynamic Button Logic (For Card & Overlay) ---
+  function getActionButtons(event) {
     const teamState = teamStates[event.eid]
     
     // 1. Loading
@@ -307,7 +313,7 @@ export default function Registerevent() {
                   
                   {/* --- CARD ACTION ROW: REGISTER + DETAILS --- */}
                   <div className="registerevent-card-actions">
-                    {getActionButtons(event, true)}
+                    {getActionButtons(event)}
                     <button 
                       className="registerevent-btn ghost" 
                       onClick={(e) => { e.stopPropagation(); setSelectedEvent(event); }}
@@ -392,17 +398,14 @@ export default function Registerevent() {
                 <div className="registerevent-btn-group">
                   {getActionButtons(selectedEvent)}
                   
-                  {/* THIS IS THE POSTER BUTTON YOU REQUESTED */}
+                  {/* --- POSTER LINK BUTTON (Inside Big Card) --- */}
                   {selectedEvent.posterUrl && (
-                    <a 
-                        href={selectedEvent.posterUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
+                    <button 
                         className="registerevent-btn about"
-                        title="View Original Poster"
+                        onClick={(e) => handleOpenPoster(e, selectedEvent.posterUrl)}
                     >
                         View Original Poster ↗
-                    </a>
+                    </button>
                   )}
 
                   {teamStates[selectedEvent.eid]?.hasJoinedTeam && !teamStates[selectedEvent.eid]?.isLeader && (
