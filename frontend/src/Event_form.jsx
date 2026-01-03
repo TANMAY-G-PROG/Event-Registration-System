@@ -190,7 +190,7 @@ const EventForm = () => {
                   className="event-form-input" 
                   type="url" 
                   name="posterUrl" 
-                  placeholder="Drive Link for Poster (Optional)" 
+                  placeholder="Poster_URL" 
                   value={formData.posterUrl} 
                   onChange={handleChange} 
                   style={{marginBottom: '5px'}}
@@ -341,3 +341,4 @@ const EventForm = () => {
 };
 
 export default EventForm;
+
