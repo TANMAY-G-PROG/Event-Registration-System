@@ -268,7 +268,7 @@ export default function Registerevent() {
     if (teamState.hasJoinedTeam) {
       const isLeader = teamState.isLeader
       return (
-        <div className="registerevent-team-controls-group">
+        <div className="registerevent-team-controls-group" style={{width: '100%'}}>
           {isOverlay && (
             <div className="registerevent-hud-panel">
                <div className="registerevent-hud-header">
@@ -293,7 +293,7 @@ export default function Registerevent() {
             </div>
           )}
 
-          <div className="registerevent-btn-group">
+          <div className="registerevent-btn-group" style={{marginTop: isOverlay ? '16px' : '0'}}>
             {isLeader ? (
               <button 
                 className={`registerevent-btn ${teamState.canRegister ? "primary" : "disabled"}`} 
@@ -315,7 +315,6 @@ export default function Registerevent() {
     return (
       <div className="registerevent-btn-group">
         <button className="registerevent-btn secondary" onClick={(e) => { e.stopPropagation(); setShowTeamModal({ eventId: event.eid, mode: 'create' }) }}>Create Team</button>
-        {/* Made this button 'secondary' style (whitish glass) as requested */}
         <button className="registerevent-btn secondary" onClick={(e) => { e.stopPropagation(); handleViewInvites(event.eid) }}>View Invites</button>
         {aboutBtn}
       </div>
@@ -404,14 +403,16 @@ export default function Registerevent() {
             {/* BOTTOM 60%: DETAILS */}
             <div className="registerevent-split-bottom">
               <div className="registerevent-detail-content">
-                <h2 className="registerevent-card-title" style={{fontSize: '2rem', marginBottom: '16px'}}>{selectedEvent.ename}</h2>
-                <div style={{display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap'}}>
-                    <span className="registerevent-badge registerevent-badge-upcoming" style={{borderColor: 'rgba(255,255,255,0.2)'}}>{new Date(selectedEvent.eventDate).toDateString()}</span>
-                    <span className="registerevent-badge registerevent-badge-upcoming" style={{borderColor: 'rgba(255,255,255,0.2)'}}>{formatTime12h(selectedEvent.eventTime)}</span>
-                    {selectedEvent.regFee > 0 ? 
-                      <span className="registerevent-badge registerevent-badge-upcoming" style={{color: 'var(--re-accent-cyan)', borderColor: 'var(--re-accent-cyan)'}}>₹{selectedEvent.regFee}</span> : 
-                      <span className="registerevent-badge registerevent-badge-ongoing" style={{borderColor: 'var(--re-accent-success)'}}>Free</span>
-                    }
+                <div className="registerevent-detail-header-flex">
+                   <h2 className="registerevent-card-title" style={{fontSize: '2rem', marginBottom: '8px'}}>{selectedEvent.ename}</h2>
+                   <div className="registerevent-badges" style={{marginTop: '8px'}}>
+                      <span className="registerevent-badge registerevent-badge-upcoming">{new Date(selectedEvent.eventDate).toDateString()}</span>
+                      <span className="registerevent-badge registerevent-badge-upcoming">{formatTime12h(selectedEvent.eventTime)}</span>
+                      {selectedEvent.regFee > 0 ? 
+                        <span className="registerevent-badge registerevent-badge-upcoming" style={{color: 'var(--re-accent-cyan)', borderColor: 'var(--re-accent-cyan)'}}>₹{selectedEvent.regFee}</span> : 
+                        <span className="registerevent-badge registerevent-badge-ongoing" style={{borderColor: 'var(--re-accent-success)'}}>Free</span>
+                      }
+                   </div>
                 </div>
 
                 <div className="registerevent-description-box">
@@ -436,8 +437,8 @@ export default function Registerevent() {
                   )}
                 </div>
                 
-                {/* Spacer */}
-                <div style={{height: '150px'}}></div>
+                {/* Spacer to prevent content from hiding behind fixed bottom bar */}
+                <div style={{height: '140px'}}></div>
               </div>
 
               {/* FIXED ACTION BAR */}
@@ -472,10 +473,13 @@ export default function Registerevent() {
                         <input className="registerevent-form-input" placeholder="Member USN" value={usn} onChange={e => {
                             const newUsns = [...teamFormData.memberUSNs]; newUsns[i] = e.target.value; setTeamFormData({...teamFormData, memberUSNs: newUsns})
                         }} />
-                        {i > 0 && <button className="registerevent-team-action-btn" style={{width: 'auto', background: 'rgba(255,0,0,0.2)', borderColor: 'transparent'}} onClick={() => removeMemberField(index)}>×</button>}
+                        {i > 0 && <button className="registerevent-team-action-btn" style={{width: 'auto', background: 'rgba(255,0,0,0.2)', borderColor: 'transparent'}} onClick={() => {
+                             const newUsns = teamFormData.memberUSNs.filter((_, idx) => idx !== i);
+                             setTeamFormData({...teamFormData, memberUSNs: newUsns});
+                        }}>×</button>}
                         </div>
                     ))}
-                    <button className="registerevent-team-action-btn" style={{marginTop: '8px'}} onClick={() => setTeamFormData(prev => ({...prev, memberUSNs: [...prev.memberUSNs, '']}))}>+ Add Member</button>
+                    <button className="registerevent-team-action-btn" style={{marginTop: '8px', fontSize: '0.85rem'}} onClick={() => setTeamFormData(prev => ({...prev, memberUSNs: [...prev.memberUSNs, '']}))}>+ Add Member</button>
                   </div>
                   <button className="registerevent-modal-submit-btn" onClick={() => handleCreateTeam(showTeamModal.eventId)}>Create Team</button>
                 </div>
@@ -483,12 +487,12 @@ export default function Registerevent() {
                 <div className="registerevent-invites-list">
                   {!teamInvites.length ? <p style={{color: '#888', textAlign: 'center'}}>No pending invites.</p> : teamInvites.map((inv, i) => (
                     <div key={i} className="registerevent-hud-panel" style={{marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                       <div>
+                        <div>
                            <div style={{color: 'white', fontWeight: 'bold'}}>{inv.teamName}</div>
                            <div style={{fontSize: '0.8rem', color: '#888'}}>Leader: {inv.leaderName}</div>
-                       </div>
-                       {!inv.registrationComplete && !inv.joinStatus && <button className="registerevent-invite-confirm-btn" style={{width: 'auto', padding: '8px 16px'}} onClick={() => handleConfirmJoin(inv.teamId, showTeamModal.eventId)}>Join</button>}
-                       {inv.joinStatus && <span style={{color: 'var(--re-accent-success)', fontSize: '0.8rem'}}>Joined</span>}
+                        </div>
+                        {!inv.registrationComplete && !inv.joinStatus && <button className="registerevent-invite-confirm-btn" style={{width: 'auto', padding: '8px 16px'}} onClick={() => handleConfirmJoin(inv.teamId, showTeamModal.eventId)}>Join</button>}
+                        {inv.joinStatus && <span style={{color: 'var(--re-accent-success)', fontSize: '0.8rem'}}>Joined</span>}
                     </div>
                   ))}
                 </div>
@@ -503,7 +507,7 @@ export default function Registerevent() {
           <div className="registerevent-modal" onClick={e => e.stopPropagation()}>
             <div className="registerevent-modal-header"><h2 className="registerevent-modal-title">Pay & Register</h2><button className="registerevent-modal-close" disabled={isSubmitting} onClick={() => setShowUpiModal(null)}>×</button></div>
             <div className="registerevent-modal-body" style={{textAlign: 'center'}}>
-               <div className="registerevent-qr-wrapper">{qrCodeDataUrl ? <img src={qrCodeDataUrl} alt="QR" style={{display: 'block'}} /> : <div className="registerevent-spinner" style={{margin: '40px auto'}}></div>}</div>
+               <div className="registerevent-qr-wrapper">{qrCodeDataUrl ? <img src={qrCodeDataUrl} alt="QR" style={{display: 'block', maxWidth:'100%'}} /> : <div className="registerevent-spinner" style={{margin: '40px auto'}}></div>}</div>
                <p style={{color: '#ccc', marginBottom: '20px'}}>Pay <strong>₹{showUpiModal.event.regFee}</strong></p>
                <div className="registerevent-payment-details"><div className="registerevent-payment-row"><span style={{color: '#888'}}>UPI ID</span><span className="registerevent-payment-value">{showUpiModal.event.upiId}</span></div></div>
                <input className="registerevent-form-input" placeholder="Transaction ID (UTR)" value={transactionId} onChange={e => setTransactionId(e.target.value)} disabled={isSubmitting} />
