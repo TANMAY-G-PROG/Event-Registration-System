@@ -58,7 +58,7 @@ body {
   /* Black Circle + Green Circle Background */
   background-image: 
     radial-gradient(circle farthest-corner at 10% 20%, #000000 35%, transparent 35.1%),
-    radial-gradient(circle farthest-corner at 80% 80%, #00a578 40%, transparent 40.1%);
+    radial-gradient(circle farthest-corner at 60% 70%, #00a578 40%, transparent 40.1%);
     
   background-repeat: no-repeat;
   display: flex;
@@ -71,7 +71,7 @@ body {
   color: #00a578;
   mix-blend-mode: difference;
   /* --- MOVED TEXT LEFT HERE (35px) --- */
-  margin: 180px 0 0 35px;
+  margin: 170px 0 0 35px;
   line-height: 0.8;
   z-index: 2;
 }
@@ -386,3 +386,4 @@ body {
     box-shadow: 0 4px 12px rgba(0, 165, 120, 0.4);
   }
 }
+
