@@ -1,545 +1,440 @@
-/* =========================================
-   VARIABLES & RESET
-   Theme: Organic Modernism (Linear/Stripe)
-   ========================================= */
-:root {
-  --ef-bg: #f5f5f7;
-  --ef-surface: #ffffff;
-  --ef-primary: #00a578;
-  --ef-primary-hover: #008f68;
-  --ef-text-main: #111827;
-  --ef-text-sub: #6b7280;
-  --ef-border: #e5e7eb;
-  --ef-border-focus: #00a578;
-  --ef-ring: rgba(0, 165, 120, 0.2);
-  --ef-radius: 16px;
-  --ef-radius-sm: 8px;
-  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --ef-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  --ef-shadow-lg: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;700&family=VT323&display=swap');
+
+/* ==============================================================
+   GLOBAL STYLES
+   ============================================================== */
+.event-form-container {
+  font-family: 'Libre Franklin', sans-serif;
+  cursor: crosshair;
+  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  background: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow: auto;
 }
 
-* {
+.event-form-wrap {
+  position: relative;
+  margin: 0 auto;
+  max-width: 1150px;
+  width: 90%;
+  box-shadow: 7px 13px 49px -5px rgba(0, 165, 120, 0.47);
+  overflow: hidden;
+}
+
+.event-form-registration {
+  animation: event-form-open 0.3s;
+  animation-iteration-count: 1;
+  background: radial-gradient(circle farthest-corner, black 40%, transparent 0) no-repeat, white;
+  background-position: -480px -250px;
+}
+
+.event-form-registration .event-form-button {
+  background: #000;
+}
+
+.event-form-card-side {
+  width: 50%;
+  min-height: 650px;
   box-sizing: border-box;
 }
 
-.ef-page {
-  font-family: var(--font-main);
-  background-color: var(--ef-bg);
-  min-height: 100vh;
-  color: var(--ef-text-main);
-  display: flex;
-  justify-content: center;
-  padding: 40px 20px;
-}
-
-/* =========================================
-   LAYOUT STRUCTURE
-   ========================================= */
-.ef-container {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 60px;
-  width: 100%;
-  max-width: 1100px;
-  position: relative;
-}
-
-/* --- Left Sidebar (Sticky) --- */
-.ef-sidebar {
-  position: sticky;
-  top: 40px;
-  height: fit-content;
+.event-form-right {
   display: flex;
   flex-direction: column;
-  gap: 32px;
-}
-
-.ef-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.ef-logo-icon {
-  width: 40px;
-  height: 40px;
-  background: black;
-  border-radius: 10px;
-  display: flex;
   align-items: center;
   justify-content: center;
+  padding: 10px 30px;
+  box-sizing: border-box;
 }
 
-.ef-logo-text {
-  font-weight: 700;
-  font-size: 20px;
-  letter-spacing: -0.5px;
+.event-form-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 380px;
 }
 
-.ef-main-title {
-  font-size: 36px;
-  line-height: 1.1;
-  font-weight: 800;
-  letter-spacing: -1px;
-  margin: 0 0 16px 0;
-  background: linear-gradient(to right, #111, #555);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.event-form-card {
+  display: flex;
 }
 
-.ef-subtitle {
-  color: var(--ef-text-sub);
+/* ==============================================================
+   DESKTOP HEADER
+   ============================================================== */
+.event-form-left {
+  background: radial-gradient(circle farthest-corner, #00a578 40%, transparent 0) no-repeat;
+  background-position: 140px 170px;
+}
+
+.event-form-logo-text {
+  font-family: 'VT323', monospace;
+  font-size: 130px;
+  color: #00a578;
+  mix-blend-mode: difference;
+  margin: 220px 0 0 90px;
+  line-height: 82%;
+}
+
+.event-form-mobile-header {
+  display: none;
+}
+
+/* ==============================================================
+   INPUTS, BUTTONS, CHECKBOX
+   ============================================================== */
+.event-form-input,
+.event-form-textarea {
+  border: none;
+  border-bottom: 1px solid black;
+  margin-bottom: 22px;
+  padding: 8px 5px;
+  font-family: 'Libre Franklin', sans-serif;
+  box-sizing: border-box;
   font-size: 15px;
-  line-height: 1.6;
 }
 
-/* Stepper */
-.ef-steps-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 20px;
-}
-
-.ef-step {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.event-form-textarea {
+  resize: vertical;
   font-size: 14px;
-  font-weight: 600;
-  color: #9ca3af;
-  transition: color 0.3s ease;
 }
 
-.ef-step.active {
-  color: var(--ef-text-main);
+.event-form-input:focus,
+.event-form-textarea:focus {
+  outline-color: black;
 }
 
-.ef-step-num {
-  font-size: 11px;
-  background: #e5e7eb;
-  color: #6b7280;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: monospace;
-}
-.ef-step.active .ef-step-num {
-  background: var(--ef-primary);
-  color: white;
-}
-
-.ef-sidebar-footer {
-  margin-top: auto;
-  font-size: 13px;
-  color: var(--ef-text-sub);
-}
-.ef-sidebar-footer a {
-  color: var(--ef-primary);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-/* --- Right Content (Form) --- */
-.ef-main-content {
-  width: 100%;
-  max-width: 680px;
-}
-
-.ef-form {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* =========================================
-   CARDS & SECTIONS
-   ========================================= */
-.ef-card {
-  background: var(--ef-surface);
-  border-radius: var(--ef-radius);
-  padding: 32px;
-  box-shadow: var(--ef-shadow);
-  border: 1px solid white;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.ef-card:hover {
-  box-shadow: var(--ef-shadow-lg);
-}
-
-.ef-card-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 24px 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--ef-text-main);
-}
-
-.ef-card-title svg {
-  color: var(--ef-text-sub);
-}
-
-/* =========================================
-   INPUTS & FORMS
-   ========================================= */
-.ef-input-group {
-  margin-bottom: 20px;
-  position: relative;
-}
-.ef-input-group:last-child {
-  margin-bottom: 0;
-}
-
-.ef-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 8px;
-}
-
-.ef-label .req {
-  color: #ef4444;
-}
-
-.ef-input,
-.ef-textarea {
-  width: 100%;
-  padding: 12px 16px;
-  font-size: 15px;
-  border: 1px solid var(--ef-border);
-  border-radius: var(--ef-radius-sm);
-  background: #fff;
-  transition: all 0.2s ease;
-  color: var(--ef-text-main);
-  font-family: var(--font-main);
-}
-
-.ef-input:focus,
-.ef-textarea:focus {
-  outline: none;
-  border-color: var(--ef-border-focus);
-  box-shadow: 0 0 0 4px var(--ef-ring);
-}
-
-.ef-input-lg {
-  font-size: 20px;
-  font-weight: 600;
-  padding: 16px;
-}
-
-.ef-input-wrapper {
-  position: relative;
-}
-
-.ef-input-icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--ef-text-sub);
-  display: flex;
-}
-
-.ef-pl {
-  padding-left: 44px;
-}
-
-.ef-grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-/* --- Custom File Upload --- */
-.ef-upload-zone {
-  border: 2px dashed var(--ef-border);
-  border-radius: var(--ef-radius);
-  padding: 4px;
-  position: relative;
-  background: #fafafa;
-  transition: all 0.2s ease;
-  min-height: 160px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.ef-upload-zone:hover {
-  border-color: var(--ef-primary);
-  background: #f0fdf9;
-}
-
-/* The actual file input is hidden but covers the div */
-.ef-upload-zone input[type="file"] {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  z-index: 10;
-}
-
-.ef-upload-placeholder {
-  text-align: center;
-  color: var(--ef-text-sub);
-}
-
-.ef-upload-icon {
-  margin-bottom: 12px;
-  color: #9ca3af;
-}
-
-.ef-upload-placeholder span {
-  display: block;
-  font-size: 12px;
-  margin-top: 6px;
-  color: #9ca3af;
-}
-
-.ef-preview-container {
-  width: 100%;
-  height: 200px;
-  position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.ef-banner-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.ef-preview-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.4);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  font-weight: 600;
-}
-
-.ef-upload-zone:hover .ef-preview-overlay {
-  opacity: 1;
-}
-
-/* --- Toggles & Animation --- */
-.ef-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-.ef-header-row .ef-card-title { margin: 0; }
-
-.ef-toggle-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-}
-
-.ef-toggle-label {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.ef-toggle {
-  width: 44px;
-  height: 24px;
-  background: #e5e7eb;
-  border-radius: 99px;
-  position: relative;
-  transition: background 0.2s ease;
-}
-
-.ef-toggle.active {
-  background: var(--ef-primary);
-}
-
-.ef-toggle-handle {
-  width: 20px;
-  height: 20px;
-  background: white;
-  border-radius: 50%;
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.ef-toggle.active .ef-toggle-handle {
-  transform: translateX(20px);
-}
-
-.ef-panel-anim {
-  animation: slideDown 0.3s ease forwards;
-  overflow: hidden;
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.ef-fade-in {
-  animation: fadeIn 0.4s ease forwards;
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* =========================================
-   STICKY FOOTER & BUTTON
-   ========================================= */
-.ef-sticky-footer {
-  position: sticky;
-  bottom: 20px;
-  z-index: 100;
-  margin-top: 20px;
-}
-
-.ef-btn-primary {
-  width: 100%;
-  background: var(--ef-primary);
+.event-form-button {
+  background: #00a578;
   color: white;
   border: none;
-  padding: 16px;
-  border-radius: var(--ef-radius);
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 10px 20px rgba(0, 165, 120, 0.25);
-  transition: transform 0.1s, box-shadow 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  padding: 12px;
+  cursor: alias;
+  box-shadow: 0 3px 0 1px rgba(0, 165, 120, 0.47);
+  font-family: 'Libre Franklin', sans-serif;
+  font-size: 17px;
+  font-weight: bold;
+  box-sizing: border-box;
+  margin-top: 10px;
 }
 
-.ef-btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 30px rgba(0, 165, 120, 0.3);
-}
-.ef-btn-primary:active {
-  transform: scale(0.98);
-}
-.ef-btn-primary:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
+.event-form-button:hover {
   box-shadow: none;
-  transform: none;
+  transform: translateY(3px);
+  transition: all 0.1s linear;
 }
 
-.arrow { font-size: 18px; }
-
-/* Loading Animation */
-.ef-loading-dots span {
-  animation: dots 1.4s infinite;
-  opacity: 0;
-}
-.ef-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-.ef-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes dots {
-  0% { opacity: 0; }
-  50% { opacity: 1; }
-  100% { opacity: 0; }
+.event-form-button:focus {
+  outline-color: #fb5b87;
 }
 
-/* =========================================
-   TOAST NOTIFICATION
-   ========================================= */
-.ef-toast {
-  position: fixed;
-  top: 24px;
-  right: 24px;
-  background: white;
-  padding: 12px 20px;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+.event-form-title {
+  font-size: 34px;
+  margin-bottom: 20px;
+  font-family: 'Libre Franklin', sans-serif;
+}
+
+.event-form-checkbox-group {
+  margin-bottom: 22px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  transform: translateY(-20px) scale(0.9);
-  opacity: 0;
-  transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.event-form-checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  font-family: 'Libre Franklin', sans-serif;
+}
+
+.event-form-checkbox {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  cursor: pointer;
+  accent-color: #00a578;
+}
+
+.event-form-checkbox-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: black;
+}
+
+.event-form-checkbox:checked + .event-form-checkbox-text {
+  color: #00a578;
+}
+
+@keyframes event-form-open {
+  0% { background: black; }
+  100% { }
+}
+
+/* Message Popup */
+.event-form-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 5px;
+  color: white;
+  font-weight: normal;
   z-index: 1000;
-  border: 1px solid #f3f4f6;
+  animation: event-form-slideIn 0.3s ease-in-out;
+  font-family: 'Libre Franklin', sans-serif;
 }
 
-.ef-toast.show {
-  transform: translateY(0) scale(1);
-  opacity: 1;
+.event-form-message-success { background-color: rgb(114, 221, 158); }
+.event-form-message-error { background-color: rgb(225, 108, 95); }
+
+@keyframes event-form-slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
-.ef-toast.success { border-left: 4px solid var(--ef-primary); color: var(--ef-text-main); }
-.ef-toast.error { border-left: 4px solid #ef4444; color: #b91c1c; }
-
-/* =========================================
-   MOBILE RESPONSIVENESS
-   ========================================= */
+/* ==============================================================
+   MOBILE: COMPACT PREMIUM HEADER & MODERN FLOW
+   ============================================================== */
 @media screen and (max-width: 900px) {
-  .ef-page { padding: 0; background: #fff; display: block; }
-  .ef-container { display: block; width: 100%; max-width: 100%; }
   
-  /* Mobile Header */
-  .ef-sidebar {
+  .event-form-container {
     position: relative;
-    top: 0;
+    height: auto;
+    min-height: 100dvh;
     width: 100%;
-    padding: 20px 24px 0 24px;
-    gap: 16px;
-    background: white;
-  }
-  
-  .ef-main-title { font-size: 28px; }
-  .ef-stepper, .ef-sidebar-footer, .ef-subtitle { display: none; } /* Hide context on mobile for simplicity */
-  
-  /* Mobile Form */
-  .ef-main-content {
-    padding: 24px;
-    padding-bottom: 100px; /* Space for button */
-  }
-
-  .ef-card {
+    overflow-y: auto;
+    cursor: default;
+    background: #f8f9fa;
     padding: 0;
-    box-shadow: none;
-    border: none;
-    border-radius: 0;
-    margin-bottom: 40px;
+    display: block;
   }
 
-  .ef-card-title {
-    font-size: 20px;
-    margin-bottom: 20px;
+  .event-form-wrap {
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
+    box-shadow: none;
+    margin: 0;
+    border-radius: 0;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
   }
-  
-  .ef-grid-2 { grid-template-columns: 1fr; gap: 0; }
-  
-  .ef-sticky-footer {
+
+  .event-form-card {
+    flex-direction: column;
+    height: auto;
+  }
+
+  /* --- Header --- */
+  .event-form-desktop-header {
+    display: none !important;
+  }
+
+  .event-form-mobile-header {
+    display: flex;
+    width: 100%;
+    min-height: 60px;
+    height: 60px;
+    background: #050505;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    box-sizing: border-box;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+  }
+
+  .event-form-mobile-header::before,
+  .event-form-mobile-header::after { display: none; }
+
+  .event-form-left-header {
+    text-align: center;
+    padding: 0;
+    width: 100%;
+  }
+
+  .event-form-glow-text {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    line-height: 1;
+  }
+  .event-form-glow-text::before { display: none; }
+
+  .event-form-neon {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-shadow: none;
+  }
+
+  .event-form-neon-alt {
+    font-size: 18px;
+    font-weight: 700;
+    color: #00a578;
+    text-shadow: none;
+  }
+
+  /* --- Form Container Layout (CRITICAL FIX) --- */
+  .event-form-card-side.event-form-right {
+    width: 100%;
+    /* Added Top Padding so title isn't hidden under sticky header */
+    padding: 40px 20px 120px 20px; 
+    background: #f8f9fa;
+    min-height: calc(100dvh - 60px);
+    height: auto;
+    
+    /* Changed to Flex Column + Start to prevent vertical centering off-screen */
+    display: flex; 
+    flex-direction: column;
+    justify-content: flex-start; 
+    align-items: stretch; /* Ensure children take full width */
+  }
+
+  .event-form-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #1a1a1a;
+    margin-bottom: 24px;
+    letter-spacing: -0.5px;
+    text-align: left;
+  }
+
+  .event-form-form {
+    max-width: 100%;
+    width: 100%; /* Ensure full width */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* --- Inputs --- */
+  .event-form-input,
+  .event-form-textarea {
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
+    color: #333;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    margin-bottom: 0;
+    -webkit-appearance: none;
+    box-sizing: border-box; /* Critical for padding calculation */
+  }
+
+  .event-form-input::placeholder,
+  .event-form-textarea::placeholder {
+    color: #9ca3af;
+    font-weight: 400;
+  }
+
+  .event-form-input:focus,
+  .event-form-textarea:focus {
+    border-color: #00a578;
+    box-shadow: 0 4px 12px rgba(0, 165, 120, 0.15);
+    transform: translateY(-1px);
+    outline: none;
+  }
+
+  .event-form-textarea {
+    min-height: 120px;
+    line-height: 1.5;
+  }
+
+  /* --- Checkbox --- */
+  .event-form-checkbox-group {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 8px 0;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .event-form-checkbox-label {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .event-form-checkbox {
+    width: 24px;
+    height: 24px;
+    order: 2;
+    accent-color: #00a578;
+  }
+
+  .event-form-button {
     position: fixed;
-    bottom: 20px;
+    bottom: 24px;
     left: 20px;
     right: 20px;
-    width: auto;
+    width: calc(100% - 40px);
+    padding: 18px;
+    background: #00a578;
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 10px 25px rgba(0, 165, 120, 0.4);
+    z-index: 100;
+    margin: 0;
+    transition: transform 0.2s;
+  }
+  
+  .event-form-button:active {
+    transform: scale(0.98);
+  }
+
+  .event-form-row {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+  }
+  .event-form-row .event-form-input {
+    flex: 1;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .event-form-card-side.event-form-right {
+    padding: 30px 16px 100px 16px;
+  }
+  .event-form-mobile-header {
+    height: 60px;
+    min-height: 60px;
+    padding: 0 16px;
+  }
+  .event-form-button {
+    bottom: 20px;
+    width: calc(100% - 32px);
+    left: 16px;
   }
 }
