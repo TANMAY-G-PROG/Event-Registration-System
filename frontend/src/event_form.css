@@ -72,7 +72,7 @@ body {
   mix-blend-mode: difference;
   
   /* 👇 CHANGED: 250px (Moves Text DOWN) */
-  margin: 200px 0 0 35px;
+  margin: 210px 0 0 35px;
   line-height: 0.8;
   z-index: 2;
 }
@@ -387,3 +387,4 @@ body {
     box-shadow: 0 4px 12px rgba(0, 165, 120, 0.4);
   }
 }
+
