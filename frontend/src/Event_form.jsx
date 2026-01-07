@@ -162,7 +162,7 @@ const EventForm = () => {
               <input 
                 className="event-form-input" 
                 type="url" 
-                name="posterUrl" 
+                name="Event Brochure" 
                 placeholder="Google Drive Poster Link (Optional)" 
                 value={formData.posterUrl} 
                 onChange={handleChange} 
@@ -228,3 +228,4 @@ const EventForm = () => {
   );
 };
 export default EventForm;
+
