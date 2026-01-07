@@ -10,7 +10,7 @@ const EventForm = () => {
     eventName: '',
     eventDescription: '',
     certificateInfo: '',
-    posterUrl: '', // This stores the Event Brochure/Google Drive Link
+    posterUrl: '', // Stores the Google Drive Link
     eventDate: '',
     eventTime: '',
     eventLocation: '',
@@ -73,14 +73,13 @@ const EventForm = () => {
       return;
     }
 
-    // Use FormData to handle text + file
     const submissionData = new FormData();
     
     // Append all text fields
     submissionData.append('eventName', formData.eventName);
     submissionData.append('eventDescription', formData.eventDescription);
     submissionData.append('certificate_info', formData.certificateInfo || '');
-    submissionData.append('posterUrl', formData.posterUrl || ''); // Google Drive Link
+    submissionData.append('posterUrl', formData.posterUrl || '');
     submissionData.append('eventDate', formData.eventDate);
     submissionData.append('eventTime', formData.eventTime);
     submissionData.append('eventLocation', formData.eventLocation);
@@ -93,16 +92,15 @@ const EventForm = () => {
     submissionData.append('minTeamSize', formData.minTeamSize || '');
     submissionData.append('maxTeamSize', formData.maxTeamSize || '');
 
-    // Append the file if one was selected
+    // Append the banner file if selected
     if (bannerFile) {
-      submissionData.append('banner', bannerFile); // Key must match 'upload.single("banner")' in server.js
+      submissionData.append('banner', bannerFile);
     }
 
     try {
       const res = await fetch('/api/events/create', {
         method: 'POST',
         credentials: 'include',
-        // Note: Do NOT set Content-Type header manually for FormData; browser does it automatically
         body: submissionData 
       });
 
@@ -136,10 +134,11 @@ const EventForm = () => {
       
       <div className="event-form-wrap event-form-registration">
         <div className="event-form-card">
-          {/* Header Sections */}
+          {/* Header Section (Left Side) */}
           <div className="event-form-card-side event-form-left event-form-desktop-header">
             <div className="event-form-logo-text">Hey Organisers</div>
           </div>
+          
           <div className="event-form-card-side event-form-left event-form-mobile-header">
             <div className="event-form-left-header">
               <div className="event-form-glow-text">
@@ -149,44 +148,49 @@ const EventForm = () => {
             </div>
           </div>
 
-          {/* Form Section */}
-          <div className="event-form-card-side event-form-right">
-            <h2 className="event-form-title">Create Event</h2>
+          {/* Form Section (Right Side) */}
+          <div className="event-form-card-side event-form-right" style={{ paddingTop: '40px' }}> {/* ADDED PADDING HERE */}
+            
+            <h2 className="event-form-title" style={{ marginTop: '10px', marginBottom: '25px', display: 'block' }}>
+              Create Event
+            </h2>
+            
             <form className="event-form-form" onSubmit={handleSubmit}>
               
               <input className="event-form-input" type="text" name="eventName" placeholder="Event Name" value={formData.eventName} onChange={handleChange} required />
               
               <textarea className="event-form-textarea" name="eventDescription" placeholder="Description" value={formData.eventDescription} onChange={handleChange} rows="3" required />
               
-              {/* --- 1. OPTIONAL BROCHURE LINK (Google Drive) --- */}
-              <div style={{ marginBottom: '15px' }}>
+              {/* --- BROCHURE LINK SECTION --- */}
+              <div style={{ marginBottom: '18px', width: '100%' }}>
                 <input 
                   className="event-form-input" 
                   type="url" 
-                  name="posterUrl" // Fixed: Must match state key 'posterUrl'
-                  placeholder="Event Brochure Link (Google Drive/Docs)" 
+                  name="posterUrl" 
+                  // FIXED: Shortened placeholder so it fits
+                  placeholder="Event Brochure Link" 
                   value={formData.posterUrl} 
                   onChange={handleChange} 
-                  style={{ marginBottom: '5px' }}
+                  style={{ marginBottom: '6px', width: '100%', boxSizing: 'border-box' }}
                 />
-                <small style={{ fontSize: '11px', color: '#888', display: 'block', paddingLeft: '4px', lineHeight: '1.4' }}>
-                  ℹ️ <strong>How to get link:</strong> In Google Drive, click Share &rarr; General Access &rarr; Select "Anyone with the link" &rarr; Copy Link.
+                <small style={{ fontSize: '11px', color: '#666', display: 'block', lineHeight: '1.4' }}>
+                  ℹ️ <strong>Google Drive:</strong> Share &rarr; General Access &rarr; "Anyone with the link" &rarr; Copy Link.
                 </small>
               </div>
 
-              {/* --- 2. OPTIONAL BANNER UPLOAD (Cloudinary) --- */}
-              <div style={{marginBottom: '22px'}}>
-                <label style={{fontSize: '14px', fontWeight: '600', color: '#333', marginBottom: '8px', display: 'block'}}>
+              {/* --- BANNER UPLOAD SECTION --- */}
+              <div style={{ marginBottom: '22px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', marginBottom: '8px', display: 'block' }}>
                   Event Banner (Optional)
                 </label>
-                <div style={{background: '#f0f0f0', padding: '10px', borderRadius: '8px', border: '1px dashed #ccc'}}>
+                <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '8px', border: '1px dashed #ccc' }}>
                   <input 
                     type="file" 
                     accept="image/*"
                     onChange={handleFileChange} 
-                    style={{width: '100%', fontSize: '13px'}}
+                    style={{ width: '100%', fontSize: '13px' }}
                   />
-                  <small style={{fontSize: '11px', color: '#666', marginTop: '4px', display: 'block'}}>
+                  <small style={{ fontSize: '11px', color: '#666', marginTop: '4px', display: 'block' }}>
                     Max 5MB. This will be the main banner in the details page.
                   </small>
                 </div>
