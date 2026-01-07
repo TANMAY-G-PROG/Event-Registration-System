@@ -371,13 +371,11 @@ export default function Events() {
     }
   };
 
-  // Image style: Full width/height, crop nicely (cover), no padding
   const imgStyle = {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
     display: 'block',
-    // We remove border radius here because the parent div handles it
   };
 
   return (
