@@ -149,20 +149,9 @@ const EventForm = () => {
           </div>
 
           {/* Form Section (Right Side) */}
-          {/* VISIBILITY FIX: justifyContent: 'flex-start' stops vertical centering, paddingTop forces it down */}
-          <div 
-            className="event-form-card-side event-form-right" 
-            style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              justifyContent: 'flex-start', // Forces content to start at top
-              paddingTop: '80px', // Pushes title down significantly
-              height: '100%', 
-              overflowY: 'auto' // Ensures you can scroll if it gets too tall
-            }}
-          > 
+          <div className="event-form-card-side event-form-right">
             
-            <h2 className="event-form-title" style={{ marginBottom: '25px', display: 'block' }}>
+            <h2 className="event-form-title">
               Create Event
             </h2>
             
@@ -172,9 +161,8 @@ const EventForm = () => {
               
               <textarea className="event-form-textarea" name="eventDescription" placeholder="Description" value={formData.eventDescription} onChange={handleChange} rows="3" required />
               
-              {/* --- BROCHURE LINK SECTION (With Label) --- */}
+              {/* --- BROCHURE LINK SECTION --- */}
               <div style={{ marginBottom: '18px', width: '100%' }}>
-                {/* ADDED LABEL HERE */}
                 <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', marginBottom: '8px', display: 'block' }}>
                   Event Brochure Link <span>(Optional)</span>
                 </label>
@@ -186,7 +174,7 @@ const EventForm = () => {
                   placeholder="Paste Google Drive link here..." 
                   value={formData.posterUrl} 
                   onChange={handleChange} 
-                  style={{ marginBottom: '6px', width: '100%', boxSizing: 'border-box' }}
+                  style={{ marginBottom: '6px' }}
                 />
                 <small style={{ fontSize: '11px', color: '#666', display: 'block', lineHeight: '1.4' }}>
                   ℹ️ <strong>Google Drive:</strong> Share &rarr; General Access &rarr; "Anyone with the link" &rarr; Copy Link.
