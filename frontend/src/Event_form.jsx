@@ -193,7 +193,7 @@ const EventForm = () => {
                 </div>
 
                 <div className="input-group">
-                  <label className="input-label">Brochure Link <span>(Drive)</span></label>
+                  <label className="input-label">Brochure Link (Drive) <span>(Optional)</span></label>
                   <input 
                     className="modern-input" 
                     type="url" 
@@ -346,4 +346,5 @@ const EventForm = () => {
 };
 
 export default EventForm;
+
 
