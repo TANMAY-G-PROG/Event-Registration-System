@@ -91,16 +91,20 @@ const LightRays = ({
       const maxDpr = isMobile ? 1.5 : 2;
       const renderer = new Renderer({
         dpr: Math.min(window.devicePixelRatio, maxDpr),
-        alpha: true
+        alpha: false, // Opaque canvas prevents underlying colors from showing
       });
       rendererRef.current = renderer;
       const gl = renderer.gl;
       gl.canvas.style.width = '100%';
       gl.canvas.style.height = '100%';
+      // Ensure canvas is block element to avoid inline spacing issues
+      gl.canvas.style.display = 'block'; 
+      
       while (containerRef.current.firstChild) {
         containerRef.current.removeChild(containerRef.current.firstChild);
       }
       containerRef.current.appendChild(gl.canvas);
+      
       const vert = `
 attribute vec2 position;
 varying vec2 vUv;
@@ -171,6 +175,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     fragColor.rgb = mix(vec3(gray), fragColor.rgb, saturation);
   }
   fragColor.rgb *= raysColor;
+  
+  // Mix with deep blue background to ensure full coverage
+  // This matches your hex #1a1a2e (0.1, 0.1, 0.18)
+  vec3 bgColor = vec3(0.1, 0.1, 0.18);
+  fragColor.rgb = mix(bgColor, fragColor.rgb, fragColor.a);
+  fragColor.a = 1.0;
 }
 void main() {
   vec4 color;
