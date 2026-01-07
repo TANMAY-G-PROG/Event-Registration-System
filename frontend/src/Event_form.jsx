@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './event_form.css';
 
 const EventForm = () => {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   
-  // ==========================================
-  // LOGIC & STATE (FROM CODE 1 - UNCHANGED)
-  // ==========================================
+  // --- STATE MANAGEMENT ---
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 5;
+
   const [formData, setFormData] = useState({
     eventName: '',
     eventDescription: '',
     certificateInfo: '',
-    posterUrl: '', // Stores the Google Drive Link
+    posterUrl: '', // Google Drive Link
     eventDate: '',
     eventTime: '',
     eventLocation: '',
@@ -27,9 +29,11 @@ const EventForm = () => {
   });
 
   const [bannerFile, setBannerFile] = useState(null); 
+  const [bannerPreview, setBannerPreview] = useState(null);
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // --- HELPERS ---
   const showMessage = (text, isError = false) => {
     setMessage({ text, isError, show: true });
     setTimeout(() => {
@@ -50,11 +54,52 @@ const EventForm = () => {
       const file = e.target.files[0];
       if (file.size > 5 * 1024 * 1024) { 
         showMessage('Banner image is too large (Max 5MB).', true);
-        e.target.value = null;
-        setBannerFile(null);
         return;
       }
       setBannerFile(file);
+      // Create preview URL
+      const objectUrl = URL.createObjectURL(file);
+      setBannerPreview(objectUrl);
+    }
+  };
+
+  // --- STEP NAVIGATION & VALIDATION ---
+  const validateStep = (step) => {
+    switch(step) {
+      case 1: // Basics
+        return formData.eventName && formData.eventDescription;
+      case 2: // Schedule
+        return formData.eventDate && formData.eventTime && formData.eventLocation;
+      case 3: // Participation
+        if (formData.isTeamEvent) {
+          return formData.minTeamSize && formData.maxTeamSize && formData.OrgCid;
+        }
+        return formData.OrgCid; 
+      case 4: // Payment
+        if (parseFloat(formData.registrationFee) > 0) return formData.upiId;
+        return formData.registrationFee !== '';
+      case 5: // Extras
+        return true; // Optional fields
+      default:
+        return true;
+    }
+  };
+
+  const nextStep = (e) => {
+    e.preventDefault();
+    if (!validateStep(currentStep)) {
+      showMessage('Please fill in all required fields for this step.', true);
+      return;
+    }
+    if (currentStep < totalSteps) {
+      setCurrentStep(curr => curr + 1);
+    }
+  };
+
+  const prevStep = (e) => {
+    e.preventDefault();
+    if (currentStep > 1) {
+      setCurrentStep(curr => curr - 1);
     }
   };
 
@@ -63,29 +108,10 @@ const EventForm = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    if (!formData.eventName || !formData.eventDate || !formData.OrgCid) {
-      showMessage('Please fill in all required fields.', true);
-      setIsSubmitting(false);
-      return;
-    }
-
     const submissionData = new FormData();
-    submissionData.append('eventName', formData.eventName);
-    submissionData.append('eventDescription', formData.eventDescription);
-    submissionData.append('certificate_info', formData.certificateInfo || '');
-    submissionData.append('posterUrl', formData.posterUrl || '');
-    submissionData.append('eventDate', formData.eventDate);
-    submissionData.append('eventTime', formData.eventTime);
-    submissionData.append('eventLocation', formData.eventLocation);
-    submissionData.append('maxParticipants', formData.maxParticipants || '');
-    submissionData.append('maxVolunteers', formData.maxVolunteers || '');
-    submissionData.append('OrgCid', formData.OrgCid);
-    submissionData.append('registrationFee', formData.registrationFee || '0');
-    submissionData.append('upiId', formData.upiId || '');
-    submissionData.append('isTeamEvent', formData.isTeamEvent);
-    submissionData.append('minTeamSize', formData.minTeamSize || '');
-    submissionData.append('maxTeamSize', formData.maxTeamSize || '');
-
+    Object.keys(formData).forEach(key => {
+      submissionData.append(key, formData[key]);
+    });
     if (bannerFile) {
       submissionData.append('banner', bannerFile);
     }
@@ -117,6 +143,149 @@ const EventForm = () => {
     }
   };
 
+  // --- RENDER STEPS ---
+  const renderStepContent = () => {
+    switch(currentStep) {
+      case 1:
+        return (
+          <div className="form-step-content fade-in">
+            <h3 className="step-title">Event Basics</h3>
+            <div className="input-group">
+              <label>Event Name</label>
+              <input className="premium-input" type="text" name="eventName" placeholder="e.g. Hackathon 2025" value={formData.eventName} onChange={handleChange} autoFocus />
+            </div>
+            <div className="input-group">
+              <label>Short Description</label>
+              <textarea className="premium-input premium-textarea" name="eventDescription" placeholder="What is this event about?" value={formData.eventDescription} onChange={handleChange} rows="4" />
+            </div>
+            <div className="input-group">
+              <label>Event Banner <span className="optional-tag">(Optional)</span></label>
+              <div 
+                className={`file-drop-zone ${bannerPreview ? 'has-image' : ''}`}
+                onClick={() => fileInputRef.current.click()}
+                style={bannerPreview ? { backgroundImage: `url(${bannerPreview})` } : {}}
+              >
+                {!bannerPreview && (
+                  <div className="drop-zone-content">
+                    <span className="drop-icon">📷</span>
+                    <p>Click to upload banner</p>
+                    <small>Max size 5MB</small>
+                  </div>
+                )}
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  accept="image/*" 
+                  onChange={handleFileChange} 
+                  style={{ display: 'none' }} 
+                />
+              </div>
+            </div>
+          </div>
+        );
+      case 2:
+        return (
+          <div className="form-step-content fade-in">
+            <h3 className="step-title">Schedule & Location</h3>
+            <div className="form-row">
+              <div className="input-group">
+                <label>Date</label>
+                <input className="premium-input" type="date" name="eventDate" value={formData.eventDate} onChange={handleChange} />
+              </div>
+              <div className="input-group">
+                <label>Time</label>
+                <input className="premium-input" type="time" name="eventTime" value={formData.eventTime} onChange={handleChange} />
+              </div>
+            </div>
+            <div className="input-group">
+              <label>Location / Venue</label>
+              <input className="premium-input" type="text" name="eventLocation" placeholder="e.g. Auditorium 1 / Google Meet" value={formData.eventLocation} onChange={handleChange} />
+            </div>
+          </div>
+        );
+      case 3:
+        return (
+          <div className="form-step-content fade-in">
+            <h3 className="step-title">Participation Details</h3>
+            
+            <div className="toggle-container">
+              <span>Is this a Team Event?</span>
+              <label className="switch">
+                <input type="checkbox" name="isTeamEvent" checked={formData.isTeamEvent} onChange={handleChange} />
+                <span className="slider round"></span>
+              </label>
+            </div>
+
+            {formData.isTeamEvent && (
+              <div className="form-row fade-in">
+                <div className="input-group">
+                  <label>Min Team Size</label>
+                  <input className="premium-input" type="number" name="minTeamSize" value={formData.minTeamSize} onChange={handleChange} min="2" />
+                </div>
+                <div className="input-group">
+                  <label>Max Team Size</label>
+                  <input className="premium-input" type="number" name="maxTeamSize" value={formData.maxTeamSize} onChange={handleChange} min="2" />
+                </div>
+              </div>
+            )}
+
+            <div className="form-row">
+              <div className="input-group">
+                <label>{formData.isTeamEvent ? "Max Teams" : "Max Participants"}</label>
+                <input className="premium-input" type="number" name="maxParticipants" placeholder="Limit" value={formData.maxParticipants} onChange={handleChange} />
+              </div>
+              <div className="input-group">
+                <label>Max Volunteers</label>
+                <input className="premium-input" type="number" name="maxVolunteers" placeholder="Limit" value={formData.maxVolunteers} onChange={handleChange} />
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label>Organization / Club ID</label>
+              <input className="premium-input" type="number" name="OrgCid" placeholder="Your Club ID" value={formData.OrgCid} onChange={handleChange} />
+            </div>
+          </div>
+        );
+      case 4:
+        return (
+          <div className="form-step-content fade-in">
+            <h3 className="step-title">Payment Info</h3>
+            <div className="input-group">
+              <label>Registration Fee (₹)</label>
+              <input className="premium-input" type="number" name="registrationFee" placeholder="0 for free" value={formData.registrationFee} onChange={handleChange} min="0" step="0.01" />
+            </div>
+            
+            {parseFloat(formData.registrationFee) > 0 && (
+              <div className="input-group fade-in">
+                <label>UPI ID for collection</label>
+                <input className="premium-input" type="text" name="upiId" placeholder="username@oksbi" value={formData.upiId} onChange={handleChange} />
+              </div>
+            )}
+          </div>
+        );
+      case 5:
+        return (
+          <div className="form-step-content fade-in">
+            <h3 className="step-title">Extras</h3>
+            <div className="input-group">
+              <label>Brochure Link <span className="optional-tag">(Optional)</span></label>
+              <input className="premium-input" type="url" name="posterUrl" placeholder="Google Drive Link" value={formData.posterUrl} onChange={handleChange} />
+              <small className="helper-text">Make sure the link is set to "Anyone with the link can view"</small>
+            </div>
+            <div className="input-group">
+              <label>Certificate Info <span className="optional-tag">(Optional)</span></label>
+              <textarea className="premium-input premium-textarea" name="certificateInfo" placeholder="Details about certification criteria..." value={formData.certificateInfo} onChange={handleChange} rows="3" />
+            </div>
+            
+            <div className="review-box">
+              <p>Ready to publish <strong>{formData.eventName}</strong>?</p>
+            </div>
+          </div>
+        );
+      default: return null;
+    }
+  };
+
   return (
     <div className="event-form-container">
       {message.show && (
@@ -125,12 +294,10 @@ const EventForm = () => {
         </div>
       )}
       
-      <div className="event-form-wrap event-form-registration">
+      <div className="event-form-wrap">
         <div className="event-form-card">
           
-          {/* ==============================================================
-              LEFT SIDE (FROM CODE 1 - UNCHANGED)
-             ============================================================== */}
+          {/* --- LEFT SIDE (UNCHANGED) --- */}
           <div className="event-form-card-side event-form-left event-form-desktop-header">
             <div className="event-form-logo-text">Hey Organisers</div>
           </div>
@@ -144,151 +311,43 @@ const EventForm = () => {
             </div>
           </div>
 
-          {/* ==============================================================
-              RIGHT SIDE (STRUCTURE FROM CODE 2 - PREMIUM LAYOUT)
-             ============================================================== */}
+          {/* --- RIGHT SIDE (REDESIGNED) --- */}
           <div className="event-form-card-side event-form-right">
             
-            <h2 className="event-form-title">Create Event</h2>
-            <p className="event-form-subtitle">Fill in the details below to publish your event.</p>
-            
-            <form className="event-form-form" onSubmit={handleSubmit}>
+            {/* Header with Progress */}
+            <div className="form-header">
+              <h2>Create Event</h2>
+              <div className="step-indicator">
+                <div className="step-text">Step {currentStep} of {totalSteps}</div>
+                <div className="progress-bar-bg">
+                  <div className="progress-bar-fill" style={{ width: `${(currentStep / totalSteps) * 100}%` }}></div>
+                </div>
+              </div>
+            </div>
+
+            <form className="event-form-wizard" onSubmit={handleSubmit}>
               
-              {/* --- SECTION 1: Event Details --- */}
-              <div className="ef-card">
-                <div className="ef-section-title">Event Basics</div>
-                
-                <div className="ef-group">
-                  <label className="ef-label">Event Name</label>
-                  <input className="event-form-input" type="text" name="eventName" placeholder="Event Name" value={formData.eventName} onChange={handleChange} required />
-                </div>
-                
-                <div className="ef-group">
-                  <label className="ef-label">Description</label>
-                  <textarea className="event-form-textarea" name="eventDescription" placeholder="Description" value={formData.eventDescription} onChange={handleChange} rows="3" required />
-                </div>
-
-                <div className="ef-group">
-                  <label className="ef-label">Certificate Info (Optional)</label>
-                  <textarea className="event-form-textarea" name="certificateInfo" placeholder="Certificate Info (Optional)" value={formData.certificateInfo} onChange={handleChange} rows="2" />
-                </div>
+              <div className="step-container">
+                {renderStepContent()}
               </div>
 
-              {/* --- SECTION 2: Media --- */}
-              <div className="ef-card">
-                <div className="ef-section-title">Media & Links</div>
-                
-                <div className="ef-group">
-                  <label className="ef-label">Event Brochure Link <span>(Optional)</span></label>
-                  <input 
-                    className="event-form-input" 
-                    type="url" 
-                    name="posterUrl" 
-                    placeholder="Paste Google Drive link here..." 
-                    value={formData.posterUrl} 
-                    onChange={handleChange} 
-                  />
-                  <small className="ef-helper">
-                    ℹ️ <strong>Google Drive:</strong> Share &rarr; General Access &rarr; "Anyone with the link" &rarr; Copy Link.
-                  </small>
-                </div>
-
-                <div className="ef-group">
-                  <label className="ef-label">Event Banner <span>(Optional)</span></label>
-                  <div className="ef-file-box">
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={handleFileChange} 
-                      style={{ width: '100%' }}
-                    />
-                    <small className="ef-helper">Max 5MB. This will be the main banner in the details page.</small>
-                  </div>
-                </div>
-              </div>
-
-              {/* --- SECTION 3: Schedule --- */}
-              <div className="ef-card">
-                <div className="ef-section-title">Schedule</div>
-                
-                <div className="ef-grid-2">
-                  <div className="ef-group">
-                    <label className="ef-label">Date</label>
-                    <input className="event-form-input" type="date" name="eventDate" value={formData.eventDate} onChange={handleChange} required />
-                  </div>
-                  <div className="ef-group">
-                    <label className="ef-label">Time</label>
-                    <input className="event-form-input" type="time" name="eventTime" value={formData.eventTime} onChange={handleChange} required />
-                  </div>
-                </div>
-
-                <div className="ef-group">
-                  <label className="ef-label">Location</label>
-                  <input className="event-form-input" type="text" name="eventLocation" placeholder="Location" value={formData.eventLocation} onChange={handleChange} required />
-                </div>
-              </div>
-
-              {/* --- SECTION 4: Participation --- */}
-              <div className="ef-card">
-                <div className="ef-section-title">Participation</div>
-
-                <label className="ef-checkbox-wrapper">
-                  <input type="checkbox" name="isTeamEvent" checked={formData.isTeamEvent} onChange={handleChange} className="event-form-checkbox" />
-                  <span className="ef-checkbox-text">Team Event?</span>
-                </label>
-
-                <div className="ef-grid-2">
-                  <div className="ef-group">
-                    <label className="ef-label">{formData.isTeamEvent ? "Max Teams" : "Max Participants"}</label>
-                    <input className="event-form-input" type="number" name="maxParticipants" placeholder={formData.isTeamEvent ? "Max Teams" : "Max Participants"} value={formData.maxParticipants} onChange={handleChange} min="1" />
-                  </div>
-                  <div className="ef-group">
-                    <label className="ef-label">Club ID</label>
-                    <input className="event-form-input" type="number" name="OrgCid" placeholder="Club ID" value={formData.OrgCid} onChange={handleChange} required />
-                  </div>
-                </div>
-
-                {formData.isTeamEvent && (
-                  <div className="ef-grid-2">
-                    <div className="ef-group">
-                      <label className="ef-label">Min Team Size</label>
-                      <input className="event-form-input" type="number" name="minTeamSize" placeholder="Min Size" value={formData.minTeamSize} onChange={handleChange} min="2" required />
-                    </div>
-                    <div className="ef-group">
-                      <label className="ef-label">Max Team Size</label>
-                      <input className="event-form-input" type="number" name="maxTeamSize" placeholder="Max Size" value={formData.maxTeamSize} onChange={handleChange} min="2" required />
-                    </div>
-                  </div>
+              {/* Navigation Actions */}
+              <div className="form-actions">
+                {currentStep > 1 ? (
+                  <button className="btn-secondary" onClick={prevStep}>Back</button>
+                ) : (
+                  <div></div> /* Spacer */
                 )}
 
-                <div className="ef-group">
-                  <label className="ef-label">Max Volunteers</label>
-                  <input className="event-form-input" type="number" name="maxVolunteers" placeholder="Max Volunteers" value={formData.maxVolunteers} onChange={handleChange} min="1" />
-                </div>
+                {currentStep < totalSteps ? (
+                  <button className="btn-primary" onClick={nextStep}>Next Step</button>
+                ) : (
+                  <button className="btn-primary btn-submit" type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? 'Publishing...' : 'Publish Event'}
+                  </button>
+                )}
               </div>
 
-              {/* --- SECTION 5: Payment --- */}
-              <div className="ef-card">
-                <div className="ef-section-title">Payment</div>
-                
-                <div className="ef-grid-2">
-                  <div className="ef-group">
-                    <label className="ef-label">Registration Fee (₹)</label>
-                    <input className="event-form-input" type="number" name="registrationFee" placeholder="Fee (₹)" value={formData.registrationFee} onChange={handleChange} step="0.01" min="0" required />
-                  </div>
-                  
-                  {parseFloat(formData.registrationFee) > 0 && (
-                    <div className="ef-group">
-                      <label className="ef-label">UPI ID</label>
-                      <input className="event-form-input" type="text" name="upiId" placeholder="UPI ID (e.g. name@upi)" value={formData.upiId} onChange={handleChange} required />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <button className="event-form-button" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Uploading...' : 'Publish Event'}
-              </button>
             </form>
           </div>
         </div>
@@ -296,4 +355,5 @@ const EventForm = () => {
     </div>
   );
 };
+
 export default EventForm;
