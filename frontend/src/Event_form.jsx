@@ -5,7 +5,7 @@ import './event_form.css';
 const EventForm = () => {
   const navigate = useNavigate();
   
-  // State for text fields (UNCHANGED)
+  // State for text fields
   const [formData, setFormData] = useState({
     eventName: '',
     eventDescription: '',
@@ -24,10 +24,10 @@ const EventForm = () => {
     maxTeamSize: ''
   });
 
-  // State specifically for the file upload (UNCHANGED)
+  // State specifically for the file upload
   const [bannerFile, setBannerFile] = useState(null); 
   
-  // UI States (UNCHANGED)
+  // UI States
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -46,7 +46,7 @@ const EventForm = () => {
     }));
   };
 
-  // Handle the Banner File selection (UNCHANGED)
+  // Handle the Banner File selection
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -132,162 +132,113 @@ const EventForm = () => {
         </div>
       )}
       
-      {/* LEFT SIDE: Branding (Split Screen) */}
-      <div className="event-form-left">
-        <div className="event-form-logo-text">
-          Hey<br />Organisers
-        </div>
-      </div>
-
-      {/* RIGHT SIDE: Premium Form */}
-      <div className="event-form-right">
-        
-        <h2 className="event-form-title">Create Event</h2>
-        <p className="event-form-subtitle">Fill in the details below to publish your event.</p>
-
-        <form className="event-form-form" onSubmit={handleSubmit}>
+      <div className="event-form-wrap event-form-registration">
+        <div className="event-form-card">
+          {/* Header Section (Left Side) */}
+          <div className="event-form-card-side event-form-left event-form-desktop-header">
+            <div className="event-form-logo-text">Hey Organisers</div>
+          </div>
           
-          {/* --- SECTION 1: Event Details --- */}
-          <div className="ef-card">
-            <div className="ef-section-title">Event Basics</div>
-            
-            <div className="ef-group">
-              <label className="ef-label">Event Name</label>
-              <input className="event-form-input" type="text" name="eventName" placeholder="Event Name" value={formData.eventName} onChange={handleChange} required />
-            </div>
-            
-            <div className="ef-group">
-              <label className="ef-label">Description</label>
-              <textarea className="event-form-textarea" name="eventDescription" placeholder="Description" value={formData.eventDescription} onChange={handleChange} rows="3" required />
-            </div>
-
-             <div className="ef-group">
-               <label className="ef-label">Certificate Info (Optional)</label>
-               <textarea className="event-form-textarea" name="certificateInfo" placeholder="Certificate Info (Optional)" value={formData.certificateInfo} onChange={handleChange} rows="2" />
-             </div>
-          </div>
-
-          {/* --- SECTION 2: Media --- */}
-          <div className="ef-card">
-            <div className="ef-section-title">Media & Links</div>
-            
-            <div className="ef-group">
-              <label className="ef-label">Event Brochure Link <span>(Optional)</span></label>
-              <input 
-                 className="event-form-input" 
-                 type="url" 
-                 name="posterUrl" 
-                 placeholder="Paste Google Drive link here..." 
-                 value={formData.posterUrl} 
-                 onChange={handleChange} 
-               />
-              <small className="ef-helper">
-                ℹ️ <strong>Google Drive:</strong> Share &rarr; General Access &rarr; "Anyone with the link" &rarr; Copy Link.
-              </small>
-            </div>
-
-            <div className="ef-group">
-              <label className="ef-label">Event Banner <span>(Optional)</span></label>
-              <div className="ef-file-box">
-                <input 
-                  type="file" 
-                  accept="image/*"
-                  onChange={handleFileChange} 
-                  style={{ width: '100%' }}
-                />
-                <small className="ef-helper">Max 5MB. This will be the main banner in the details page.</small>
+          {/* Mobile Header (Hidden on desktop) */}
+          <div className="event-form-card-side event-form-left event-form-mobile-header">
+            <div className="event-form-left-header">
+              <div className="event-form-glow-text">
+                <span className="event-form-neon">Hey</span>
+                <span className="event-form-neon event-form-neon-alt">Organisers</span>
               </div>
             </div>
           </div>
 
-          {/* --- SECTION 3: Schedule --- */}
-          <div className="ef-card">
-            <div className="ef-section-title">Schedule</div>
+          {/* Form Section (Right Side) */}
+          <div className="event-form-card-side event-form-right">
             
-            <div className="ef-grid-2">
-              <div className="ef-group">
-                <label className="ef-label">Date</label>
-                <input className="event-form-input" type="date" name="eventDate" value={formData.eventDate} onChange={handleChange} required />
-              </div>
-              <div className="ef-group">
-                <label className="ef-label">Time</label>
-                <input className="event-form-input" type="time" name="eventTime" value={formData.eventTime} onChange={handleChange} required />
-              </div>
-            </div>
-
-            <div className="ef-group">
-               <label className="ef-label">Location</label>
-               <input className="event-form-input" type="text" name="eventLocation" placeholder="Location" value={formData.eventLocation} onChange={handleChange} required />
-            </div>
-          </div>
-
-          {/* --- SECTION 4: Participation --- */}
-          <div className="ef-card">
-            <div className="ef-section-title">Participation</div>
-
-            <label className="ef-checkbox-wrapper">
-               <input type="checkbox" name="isTeamEvent" checked={formData.isTeamEvent} onChange={handleChange} className="event-form-checkbox" />
-               <span className="ef-checkbox-text">Team Event?</span>
-            </label>
-
-            <div className="ef-grid-2">
-               <div className="ef-group">
-                  <label className="ef-label">{formData.isTeamEvent ? "Max Teams" : "Max Participants"}</label>
-                  <input className="event-form-input" type="number" name="maxParticipants" placeholder={formData.isTeamEvent ? "Max Teams" : "Max Participants"} value={formData.maxParticipants} onChange={handleChange} min="1" />
-               </div>
-               <div className="ef-group">
-                  <label className="ef-label">Club ID</label>
-                  <input className="event-form-input" type="number" name="OrgCid" placeholder="Club ID" value={formData.OrgCid} onChange={handleChange} required />
-               </div>
-            </div>
-
-            {formData.isTeamEvent && (
-              <div className="ef-grid-2">
-                <div className="ef-group">
-                  <label className="ef-label">Min Team Size</label>
-                  <input className="event-form-input" type="number" name="minTeamSize" placeholder="Min Size" value={formData.minTeamSize} onChange={handleChange} min="2" required />
-                </div>
-                <div className="ef-group">
-                   <label className="ef-label">Max Team Size</label>
-                   <input className="event-form-input" type="number" name="maxTeamSize" placeholder="Max Size" value={formData.maxTeamSize} onChange={handleChange} min="2" required />
-                </div>
-              </div>
-            )}
-
-            <div className="ef-group">
-               <label className="ef-label">Max Volunteers</label>
-               <input className="event-form-input" type="number" name="maxVolunteers" placeholder="Max Volunteers" value={formData.maxVolunteers} onChange={handleChange} min="1" />
-            </div>
-          </div>
-
-          {/* --- SECTION 5: Payment --- */}
-          <div className="ef-card">
-            <div className="ef-section-title">Payment</div>
+            <h2 className="event-form-title">
+              Create Event
+            </h2>
             
-            <div className="ef-grid-2">
-              <div className="ef-group">
-                 <label className="ef-label">Registration Fee (₹)</label>
-                 <input className="event-form-input" type="number" name="registrationFee" placeholder="Fee (₹)" value={formData.registrationFee} onChange={handleChange} step="0.01" min="0" required />
-              </div>
+            <form className="event-form-form" onSubmit={handleSubmit}>
               
-              {parseFloat(formData.registrationFee) > 0 && (
-                <div className="ef-group">
-                   <label className="ef-label">UPI ID</label>
-                   <input className="event-form-input" type="text" name="upiId" placeholder="UPI ID (e.g. name@upi)" value={formData.upiId} onChange={handleChange} required />
+              <input className="event-form-input" type="text" name="eventName" placeholder="Event Name" value={formData.eventName} onChange={handleChange} required />
+              
+              <textarea className="event-form-textarea" name="eventDescription" placeholder="Description" value={formData.eventDescription} onChange={handleChange} rows="3" required />
+              
+              {/* --- BROCHURE LINK SECTION --- */}
+              <div style={{ marginBottom: '18px', width: '100%' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', marginBottom: '8px', display: 'block' }}>
+                  Event Brochure Link <span>(Optional)</span>
+                </label>
+                
+                <input 
+                  className="event-form-input" 
+                  type="url" 
+                  name="posterUrl" 
+                  placeholder="Paste Google Drive link here..." 
+                  value={formData.posterUrl} 
+                  onChange={handleChange} 
+                  style={{ marginBottom: '6px' }}
+                />
+                <small style={{ fontSize: '11px', color: '#666', display: 'block', lineHeight: '1.4' }}>
+                  ℹ️ <strong>Google Drive:</strong> Share &rarr; General Access &rarr; "Anyone with the link" &rarr; Copy Link.
+                </small>
+              </div>
+
+              {/* --- BANNER UPLOAD SECTION --- */}
+              <div style={{ marginBottom: '22px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', marginBottom: '8px', display: 'block' }}>
+                  Event Banner <span>(Optional)</span>
+                </label>
+                <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '8px', border: '1px dashed #ccc' }}>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={handleFileChange} 
+                    style={{ width: '100%', fontSize: '13px' }}
+                  />
+                  <small style={{ fontSize: '11px', color: '#666', marginTop: '4px', display: 'block' }}>
+                    Max 5MB. This will be the main banner in the details page.
+                  </small>
+                </div>
+              </div>
+
+              <textarea className="event-form-textarea" name="certificateInfo" placeholder="Certificate Info (Optional)" value={formData.certificateInfo} onChange={handleChange} rows="2" />
+              
+              <input className="event-form-input" type="date" name="eventDate" value={formData.eventDate} onChange={handleChange} required />
+              <input className="event-form-input" type="time" name="eventTime" value={formData.eventTime} onChange={handleChange} required />
+              <input className="event-form-input" type="text" name="eventLocation" placeholder="Location" value={formData.eventLocation} onChange={handleChange} required />
+              
+              <div className="event-form-checkbox-group">
+                <label className="event-form-checkbox-label">
+                  <span className="event-form-checkbox-text">Team Event?</span>
+                  <input type="checkbox" name="isTeamEvent" checked={formData.isTeamEvent} onChange={handleChange} className="event-form-checkbox" />
+                </label>
+              </div>
+
+              <input className="event-form-input" type="number" name="maxParticipants" placeholder={formData.isTeamEvent ? "Max Teams" : "Max Participants"} value={formData.maxParticipants} onChange={handleChange} min="1" />
+              
+              {formData.isTeamEvent && (
+                <div className="event-form-row">
+                  <input className="event-form-input" type="number" name="minTeamSize" placeholder="Min Size" value={formData.minTeamSize} onChange={handleChange} min="2" required />
+                  <input className="event-form-input" type="number" name="maxTeamSize" placeholder="Max Size" value={formData.maxTeamSize} onChange={handleChange} min="2" required />
                 </div>
               )}
-            </div>
+
+              <input className="event-form-input" type="number" name="maxVolunteers" placeholder="Max Volunteers" value={formData.maxVolunteers} onChange={handleChange} min="1" />
+              <input className="event-form-input" type="number" name="OrgCid" placeholder="Club ID" value={formData.OrgCid} onChange={handleChange} required />
+              
+              <input className="event-form-input" type="number" name="registrationFee" placeholder="Fee (₹)" value={formData.registrationFee} onChange={handleChange} step="0.01" min="0" required />
+              
+              {parseFloat(formData.registrationFee) > 0 && (
+                <input className="event-form-input" type="text" name="upiId" placeholder="UPI ID (e.g. name@upi)" value={formData.upiId} onChange={handleChange} required />
+              )}
+              
+              <button className="event-form-button" type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Uploading...' : 'Publish Event'}
+              </button>
+            </form>
           </div>
-
-          {/* Submit Button (Unchanged Text) */}
-          <button className="event-form-button" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Uploading...' : 'Publish Event'}
-          </button>
-
-        </form>
+        </div>
       </div>
     </div>
   );
 };
-
 export default EventForm;
