@@ -1,440 +1,264 @@
-@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;700&family=VT323&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* ==============================================================
-   GLOBAL STYLES
-   ============================================================== */
+:root {
+  --primary: #00a578;
+  --primary-hover: #008f68;
+  --bg-color: #f3f4f6; /* Soft gray background */
+  --card-bg: #ffffff;
+  --text-main: #111827;
+  --text-sub: #6b7280;
+  --border: #e5e7eb;
+  --radius: 12px;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --input-bg: #ffffff;
+}
+
+/* Page Container - Centered and Clean */
 .event-form-container {
-  font-family: 'Libre Franklin', sans-serif;
-  cursor: crosshair;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-color);
   min-height: 100vh;
-  height: 100vh;
-  width: 100vw;
-  background: black;
+  width: 100%;
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 0;
-  margin: 0;
+  padding: 40px 20px;
   box-sizing: border-box;
-  position: fixed;
-  top: 0;
-  left: 0;
-  overflow: auto;
 }
 
 .event-form-wrap {
-  position: relative;
-  margin: 0 auto;
-  max-width: 1150px;
-  width: 90%;
-  box-shadow: 7px 13px 49px -5px rgba(0, 165, 120, 0.47);
-  overflow: hidden;
-}
-
-.event-form-registration {
-  animation: event-form-open 0.3s;
-  animation-iteration-count: 1;
-  background: radial-gradient(circle farthest-corner, black 40%, transparent 0) no-repeat, white;
-  background-position: -480px -250px;
-}
-
-.event-form-registration .event-form-button {
-  background: #000;
-}
-
-.event-form-card-side {
-  width: 50%;
-  min-height: 650px;
-  box-sizing: border-box;
-}
-
-.event-form-right {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 30px;
-  box-sizing: border-box;
-}
-
-.event-form-form {
-  display: flex;
-  flex-direction: column;
   width: 100%;
-  max-width: 380px;
+  max-width: 700px; /* Focused width like Stripe forms */
 }
 
-.event-form-card {
+/* Header Styling */
+.event-form-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.event-form-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.event-form-subtitle {
+  color: var(--text-sub);
+  font-size: 16px;
+}
+
+/* Card Styling - Grouping the fields */
+.event-form-section {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255,255,255,0.5);
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 20px;
   display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
 }
 
-/* ==============================================================
-   DESKTOP HEADER
-   ============================================================== */
-.event-form-left {
-  background: radial-gradient(circle farthest-corner, #00a578 40%, transparent 0) no-repeat;
-  background-position: 140px 170px;
+/* Input Styling - The "Premium" Look */
+.event-form-group {
+  margin-bottom: 20px;
 }
 
-.event-form-logo-text {
-  font-family: 'VT323', monospace;
-  font-size: 130px;
-  color: #00a578;
-  mix-blend-mode: difference;
-  margin: 220px 0 0 90px;
-  line-height: 82%;
+.event-form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
 }
 
-.event-form-mobile-header {
-  display: none;
-}
-
-/* ==============================================================
-   INPUTS, BUTTONS, CHECKBOX
-   ============================================================== */
 .event-form-input,
 .event-form-textarea {
-  border: none;
-  border-bottom: 1px solid black;
-  margin-bottom: 22px;
-  padding: 8px 5px;
-  font-family: 'Libre Franklin', sans-serif;
-  box-sizing: border-box;
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   font-size: 15px;
-}
-
-.event-form-textarea {
-  resize: vertical;
-  font-size: 14px;
+  background: var(--input-bg);
+  transition: all 0.2s ease;
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+  color: var(--text-main);
 }
 
 .event-form-input:focus,
 .event-form-textarea:focus {
-  outline-color: black;
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(0, 165, 120, 0.15); /* Soft green glow */
 }
 
-.event-form-button {
-  background: #00a578;
-  color: white;
-  border: none;
-  padding: 12px;
-  cursor: alias;
-  box-shadow: 0 3px 0 1px rgba(0, 165, 120, 0.47);
-  font-family: 'Libre Franklin', sans-serif;
-  font-size: 17px;
-  font-weight: bold;
-  box-sizing: border-box;
-  margin-top: 10px;
+.event-form-textarea {
+  resize: vertical;
+  min-height: 100px;
 }
 
-.event-form-button:hover {
-  box-shadow: none;
-  transform: translateY(3px);
-  transition: all 0.1s linear;
+/* Helper Text */
+.event-form-helper {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-top: 6px;
+  line-height: 1.4;
+  display: block;
 }
 
-.event-form-button:focus {
-  outline-color: #fb5b87;
-}
-
-.event-form-title {
-  font-size: 34px;
-  margin-bottom: 20px;
-  font-family: 'Libre Franklin', sans-serif;
-}
-
-.event-form-checkbox-group {
-  margin-bottom: 22px;
-  display: flex;
-  align-items: center;
-}
-
-.event-form-checkbox-label {
-  display: flex;
-  align-items: center;
+/* File Upload Zone */
+.file-upload-box {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  background: #fafafa;
+  transition: all 0.2s;
   cursor: pointer;
-  user-select: none;
-  font-family: 'Libre Franklin', sans-serif;
+}
+
+.file-upload-box:hover {
+  border-color: var(--primary);
+  background: #f0fdf4;
+}
+
+/* Grid for Side-by-Side Inputs */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Checkbox Toggle Styling */
+.event-form-checkbox-group {
+  display: flex;
+  align-items: center;
+  background: #f9fafb;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+  cursor: pointer;
 }
 
 .event-form-checkbox {
-  width: 20px;
-  height: 20px;
-  margin-right: 10px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  margin-right: 12px;
   cursor: pointer;
-  accent-color: #00a578;
 }
 
 .event-form-checkbox-text {
-  font-size: 16px;
   font-weight: 600;
-  color: black;
+  color: var(--text-main);
+  font-size: 15px;
 }
 
-.event-form-checkbox:checked + .event-form-checkbox-text {
-  color: #00a578;
+/* Button Styling */
+.event-form-button {
+  width: 100%;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform 0.1s, background-color 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 165, 120, 0.3);
+  margin-top: 20px;
 }
 
-@keyframes event-form-open {
-  0% { background: black; }
-  100% { }
+.event-form-button:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
 }
 
-/* Message Popup */
+.event-form-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Message Toasts */
 .event-form-message {
   position: fixed;
   top: 20px;
   right: 20px;
-  padding: 15px 20px;
-  border-radius: 5px;
+  padding: 16px 24px;
+  border-radius: 8px;
   color: white;
-  font-weight: normal;
+  font-weight: 500;
   z-index: 1000;
-  animation: event-form-slideIn 0.3s ease-in-out;
-  font-family: 'Libre Franklin', sans-serif;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.3s ease;
 }
 
-.event-form-message-success { background-color: rgb(114, 221, 158); }
-.event-form-message-error { background-color: rgb(225, 108, 95); }
+.event-form-message-success { background-color: #10b981; }
+.event-form-message-error { background-color: #ef4444; }
 
-@keyframes event-form-slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+@keyframes slideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
-/* ==============================================================
-   MOBILE: COMPACT PREMIUM HEADER & MODERN FLOW
-   ============================================================== */
-@media screen and (max-width: 900px) {
-  
+/* Mobile Responsiveness */
+@media screen and (max-width: 600px) {
   .event-form-container {
-    position: relative;
-    height: auto;
-    min-height: 100dvh;
-    width: 100%;
-    overflow-y: auto;
-    cursor: default;
-    background: #f8f9fa;
     padding: 0;
-    display: block;
+    background: white;
   }
-
+  
   .event-form-wrap {
-    width: 100%;
-    height: auto;
-    min-height: 100dvh;
-    box-shadow: none;
-    margin: 0;
-    border-radius: 0;
-    background: transparent;
-    display: flex;
-    flex-direction: column;
+    max-width: 100%;
   }
 
-  .event-form-card {
-    flex-direction: column;
-    height: auto;
-  }
-
-  /* --- Header --- */
-  .event-form-desktop-header {
-    display: none !important;
-  }
-
-  .event-form-mobile-header {
-    display: flex;
-    width: 100%;
-    min-height: 60px;
-    height: 60px;
-    background: #050505;
-    align-items: center;
-    justify-content: center;
-    padding: 0 20px;
-    box-sizing: border-box;
-    position: sticky;
-    top: 0;
-    z-index: 50;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
-  }
-
-  .event-form-mobile-header::before,
-  .event-form-mobile-header::after { display: none; }
-
-  .event-form-left-header {
-    text-align: center;
-    padding: 0;
-    width: 100%;
-  }
-
-  .event-form-glow-text {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    line-height: 1;
-  }
-  .event-form-glow-text::before { display: none; }
-
-  .event-form-neon {
-    font-family: 'Libre Franklin', sans-serif;
-    font-size: 18px;
-    font-weight: 600;
-    color: #ffffff;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    text-shadow: none;
-  }
-
-  .event-form-neon-alt {
-    font-size: 18px;
-    font-weight: 700;
-    color: #00a578;
-    text-shadow: none;
-  }
-
-  /* --- Form Container Layout (CRITICAL FIX) --- */
-  .event-form-card-side.event-form-right {
-    width: 100%;
-    /* Added Top Padding so title isn't hidden under sticky header */
-    padding: 40px 20px 120px 20px; 
-    background: #f8f9fa;
-    min-height: calc(100dvh - 60px);
-    height: auto;
-    
-    /* Changed to Flex Column + Start to prevent vertical centering off-screen */
-    display: flex; 
-    flex-direction: column;
-    justify-content: flex-start; 
-    align-items: stretch; /* Ensure children take full width */
-  }
-
-  .event-form-title {
-    font-size: 24px;
-    font-weight: 800;
-    color: #1a1a1a;
-    margin-bottom: 24px;
-    letter-spacing: -0.5px;
+  .event-form-header {
+    padding: 30px 20px 10px;
+    margin-bottom: 10px;
     text-align: left;
   }
 
-  .event-form-form {
-    max-width: 100%;
-    width: 100%; /* Ensure full width */
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  /* --- Inputs --- */
-  .event-form-input,
-  .event-form-textarea {
-    width: 100%;
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    padding: 16px;
-    font-size: 16px;
-    color: #333;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+  .event-form-section {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    border-bottom: 8px solid var(--bg-color);
+    padding: 24px 20px;
     margin-bottom: 0;
-    -webkit-appearance: none;
-    box-sizing: border-box; /* Critical for padding calculation */
   }
 
-  .event-form-input::placeholder,
-  .event-form-textarea::placeholder {
-    color: #9ca3af;
-    font-weight: 400;
-  }
-
-  .event-form-input:focus,
-  .event-form-textarea:focus {
-    border-color: #00a578;
-    box-shadow: 0 4px 12px rgba(0, 165, 120, 0.15);
-    transform: translateY(-1px);
-    outline: none;
-  }
-
-  .event-form-textarea {
-    min-height: 120px;
-    line-height: 1.5;
-  }
-
-  /* --- Checkbox --- */
-  .event-form-checkbox-group {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    padding: 16px;
-    margin: 8px 0;
-    display: flex;
-    align-items: center;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .event-form-checkbox-label {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .event-form-checkbox {
-    width: 24px;
-    height: 24px;
-    order: 2;
-    accent-color: #00a578;
+  .form-grid-2 {
+    grid-template-columns: 1fr;
   }
 
   .event-form-button {
     position: fixed;
-    bottom: 24px;
+    bottom: 20px;
     left: 20px;
-    right: 20px;
     width: calc(100% - 40px);
-    padding: 18px;
-    background: #00a578;
-    color: white;
-    font-size: 18px;
-    font-weight: 700;
-    border-radius: 16px;
-    border: none;
-    box-shadow: 0 10px 25px rgba(0, 165, 120, 0.4);
     z-index: 100;
-    margin: 0;
-    transition: transform 0.2s;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
   }
   
-  .event-form-button:active {
-    transform: scale(0.98);
-  }
-
-  .event-form-row {
-    display: flex;
-    gap: 12px;
-    width: 100%;
-  }
-  .event-form-row .event-form-input {
-    flex: 1;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .event-form-card-side.event-form-right {
-    padding: 30px 16px 100px 16px;
-  }
-  .event-form-mobile-header {
-    height: 60px;
-    min-height: 60px;
-    padding: 0 16px;
-  }
-  .event-form-button {
-    bottom: 20px;
-    width: calc(100% - 32px);
-    left: 16px;
+  /* Add padding to bottom so content isn't hidden behind fixed button */
+  .event-form-form {
+    padding-bottom: 80px;
   }
 }
