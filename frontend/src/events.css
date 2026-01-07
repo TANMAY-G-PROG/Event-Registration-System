@@ -18,15 +18,14 @@
   --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-/* --- FIX 1: Set background to the DARKEST color. 
-   If there is a gap, it will look like part of the deep space theme, 
-   not a light blue bar. --- */
+/* --- GLOBAL RESET --- */
 html, body {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  background-color: #1a1a2e; /* Changed from light blue to dark blue */
+  /* Fallback color just in case, but the canvas will cover this */
+  background-color: #1a1a2e; 
   overflow-x: hidden;
 }
 
@@ -35,7 +34,7 @@ html, body {
   font-family: 'Outfit', sans-serif;
   margin: 0;
   padding: 0;
-  min-height: 100vh;
+  min-height: 100vh; /* Ensures content pushes bounds if needed */
   width: 100%;
   display: flex;
   justify-content: center;
@@ -49,21 +48,22 @@ html, body {
   box-sizing: border-box;
 }
 
-/* --- FIX 2: Use 'inset: 0' to force full coverage --- */
+/* --- FIX: BACKGROUND STRETCH --- */
+/* using 'inset: 0' forces it to touch all 4 corners of the viewport */
 .events-wrapper .light-rays-background {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  /* Use viewport units as a backup, but inset: 0 handles the pinning */
-  width: 100vw;
-  height: 100vh;
+  inset: 0; /* Shorthand for top:0, right:0, bottom:0, left:0 */
+  width: 100%;
+  height: 100%;
   z-index: 0;
-  /* Ensure the gradient covers the whole area */
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   pointer-events: none;
-  background-size: cover; 
+}
+
+/* --- Ensure the canvas inside fills the container perfectly --- */
+.events-wrapper .light-rays-container {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 /* --- LOGOUT BUTTON --- */
@@ -226,7 +226,7 @@ html, body {
   padding-bottom: 80px;
 }
 
-/* --- CARD STYLE --- */
+/* --- CARD STYLE (DARK GLASS) --- */
 .events-wrapper .card {
   background: rgba(20, 30, 60, 0.6); 
   backdrop-filter: blur(16px);
