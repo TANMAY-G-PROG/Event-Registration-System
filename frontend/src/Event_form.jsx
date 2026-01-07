@@ -10,7 +10,7 @@ const EventForm = () => {
     eventName: '',
     eventDescription: '',
     certificateInfo: '',
-    posterUrl: '', // Text input for Google Drive Link (optional)
+    posterUrl: '', // This stores the Event Brochure/Google Drive Link
     eventDate: '',
     eventTime: '',
     eventLocation: '',
@@ -158,15 +158,21 @@ const EventForm = () => {
               
               <textarea className="event-form-textarea" name="eventDescription" placeholder="Description" value={formData.eventDescription} onChange={handleChange} rows="3" required />
               
-              {/* --- 1. OPTIONAL POSTER LINK (Google Drive) --- */}
-              <input 
-                className="event-form-input" 
-                type="url" 
-                name="Event Brochure" 
-                placeholder="Google Drive Poster Link (Optional)" 
-                value={formData.posterUrl} 
-                onChange={handleChange} 
-              />
+              {/* --- 1. OPTIONAL BROCHURE LINK (Google Drive) --- */}
+              <div style={{ marginBottom: '15px' }}>
+                <input 
+                  className="event-form-input" 
+                  type="url" 
+                  name="posterUrl" // Fixed: Must match state key 'posterUrl'
+                  placeholder="Event Brochure Link (Google Drive/Docs)" 
+                  value={formData.posterUrl} 
+                  onChange={handleChange} 
+                  style={{ marginBottom: '5px' }}
+                />
+                <small style={{ fontSize: '11px', color: '#888', display: 'block', paddingLeft: '4px', lineHeight: '1.4' }}>
+                  ℹ️ <strong>How to get link:</strong> In Google Drive, click Share &rarr; General Access &rarr; Select "Anyone with the link" &rarr; Copy Link.
+                </small>
+              </div>
 
               {/* --- 2. OPTIONAL BANNER UPLOAD (Cloudinary) --- */}
               <div style={{marginBottom: '22px'}}>
@@ -228,4 +234,3 @@ const EventForm = () => {
   );
 };
 export default EventForm;
-
