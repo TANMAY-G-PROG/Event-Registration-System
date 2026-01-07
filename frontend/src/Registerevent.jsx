@@ -5,11 +5,10 @@ import QRCode from "qrcode"
 import "./registerevent.css"
 import TicketAnimation from './TicketAnimation';
 
-// --- FALLBACK IMAGES ---
-const FALLBACK_BANNERS = [
-  "https://ik.imagekit.io/flopass/Aura1.png",
-  "https://ik.imagekit.io/flopass/Aura2.jpg"
-];
+// --- FALLBACK IMAGE ---
+// Changed from an array to a single constant for Aura1.png
+const FALLBACK_BANNER = "https://ik.imagekit.io/flopass/Aura1.png";
+
 
 function formatTime12h(timeString) {
   if (!timeString) return "Time TBA"
@@ -67,20 +66,12 @@ export default function Registerevent() {
     return `upi://pay?${params.toString()}`
   }
 
-  // --- NEW: Helper to alternate fallback images ---
-  function resolveBanner(event, index) {
+  // --- UPDATED: Helper to use fixed fallback image ---
+  // We removed the 'index' parameter and the calculating logic.
+  function resolveBanner(event) {
     if (event.bannerUrl) return event.bannerUrl;
-    
-    // If index is provided, use it. If not (e.g., specific overlay case), default to 0
-    // If index is passed as null/undefined, we try to find it in the filtered list
-    let idxToUse = index;
-    if (idxToUse === undefined || idxToUse === null) {
-        idxToUse = filteredEvents.findIndex(e => e.eid === event.eid);
-        if (idxToUse === -1) idxToUse = 0;
-    }
-    
-    // Toggle between 0 and 1
-    return FALLBACK_BANNERS[idxToUse % 2];
+    // Always return the single fallback banner
+    return FALLBACK_BANNER;
   }
 
   // --- Loaders ---
@@ -302,15 +293,15 @@ export default function Registerevent() {
                
                {/* --- TEAM ROSTER DISPLAY --- */}
                <div className="registerevent-member-stack">
-                  <span className="registerevent-hud-label">Member Status:</span>
-                  {teamState.members?.map((member, idx) => (
-                    <div key={idx} className="registerevent-member-row">
-                      <span>{member.student?.sname || member.student_usn}</span>
-                      <span className={`registerevent-status-indicator ${member.join_status ? "joined" : "pending"}`}>
-                        {member.join_status ? "Accepted" : "Pending"}
-                      </span>
-                    </div>
-                  ))}
+                 <span className="registerevent-hud-label">Member Status:</span>
+                 {teamState.members?.map((member, idx) => (
+                   <div key={idx} className="registerevent-member-row">
+                     <span>{member.student?.sname || member.student_usn}</span>
+                     <span className={`registerevent-status-indicator ${member.join_status ? "joined" : "pending"}`}>
+                       {member.join_status ? "Accepted" : "Pending"}
+                     </span>
+                   </div>
+                 ))}
                </div>
             </div>
           )}
@@ -370,8 +361,9 @@ export default function Registerevent() {
             {filteredEvents.map((event, index) => (
               <article key={event.eid} className="registerevent-card" onClick={() => setSelectedEvent(event)}>
                 <div className="registerevent-card-media">
+                  {/* UPDATED: resolveBanner no longer needs index */}
                   <img 
-                    src={resolveBanner(event, index)} 
+                    src={resolveBanner(event)} 
                     alt={event.ename} 
                     loading="lazy"
                   />
@@ -414,6 +406,7 @@ export default function Registerevent() {
             <div className="registerevent-split-top">
               <button className="registerevent-close-btn" onClick={() => setSelectedEvent(null)}>×</button>
               <div className="registerevent-image-wrapper">
+                {/* UPDATED: resolveBanner use */}
                 <img 
                   src={resolveBanner(selectedEvent)} 
                   alt={selectedEvent.ename} 
@@ -428,12 +421,12 @@ export default function Registerevent() {
                 <div className="registerevent-detail-header-flex">
                    <h2 className="registerevent-card-title" style={{fontSize: '2rem', marginBottom: '8px'}}>{selectedEvent.ename}</h2>
                    <div className="registerevent-badges" style={{marginTop: '8px'}}>
-                      <span className="registerevent-badge registerevent-badge-upcoming">{new Date(selectedEvent.eventDate).toDateString()}</span>
-                      <span className="registerevent-badge registerevent-badge-upcoming">{formatTime12h(selectedEvent.eventTime)}</span>
-                      {selectedEvent.regFee > 0 ? 
-                        <span className="registerevent-badge registerevent-badge-upcoming" style={{color: 'var(--re-accent-cyan)', borderColor: 'var(--re-accent-cyan)'}}>₹{selectedEvent.regFee}</span> : 
-                        <span className="registerevent-badge registerevent-badge-ongoing" style={{borderColor: 'var(--re-accent-success)'}}>Free</span>
-                      }
+                     <span className="registerevent-badge registerevent-badge-upcoming">{new Date(selectedEvent.eventDate).toDateString()}</span>
+                     <span className="registerevent-badge registerevent-badge-upcoming">{formatTime12h(selectedEvent.eventTime)}</span>
+                     {selectedEvent.regFee > 0 ? 
+                       <span className="registerevent-badge registerevent-badge-upcoming" style={{color: 'var(--re-accent-cyan)', borderColor: 'var(--re-accent-cyan)'}}>₹{selectedEvent.regFee}</span> : 
+                       <span className="registerevent-badge registerevent-badge-ongoing" style={{borderColor: 'var(--re-accent-success)'}}>Free</span>
+                     }
                    </div>
                 </div>
 
