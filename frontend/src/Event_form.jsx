@@ -149,9 +149,20 @@ const EventForm = () => {
           </div>
 
           {/* Form Section (Right Side) */}
-          <div className="event-form-card-side event-form-right" style={{ paddingTop: '40px' }}> {/* ADDED PADDING HERE */}
+          {/* VISIBILITY FIX: justifyContent: 'flex-start' stops vertical centering, paddingTop forces it down */}
+          <div 
+            className="event-form-card-side event-form-right" 
+            style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              justifyContent: 'flex-start', // Forces content to start at top
+              paddingTop: '80px', // Pushes title down significantly
+              height: '100%', 
+              overflowY: 'auto' // Ensures you can scroll if it gets too tall
+            }}
+          > 
             
-            <h2 className="event-form-title" style={{ marginTop: '10px', marginBottom: '25px', display: 'block' }}>
+            <h2 className="event-form-title" style={{ marginBottom: '25px', display: 'block' }}>
               Create Event
             </h2>
             
@@ -161,14 +172,18 @@ const EventForm = () => {
               
               <textarea className="event-form-textarea" name="eventDescription" placeholder="Description" value={formData.eventDescription} onChange={handleChange} rows="3" required />
               
-              {/* --- BROCHURE LINK SECTION --- */}
+              {/* --- BROCHURE LINK SECTION (With Label) --- */}
               <div style={{ marginBottom: '18px', width: '100%' }}>
+                {/* ADDED LABEL HERE */}
+                <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', marginBottom: '8px', display: 'block' }}>
+                  Event Brochure Link <span>(Optional)</span>
+                </label>
+                
                 <input 
                   className="event-form-input" 
                   type="url" 
                   name="posterUrl" 
-                  // FIXED: Shortened placeholder so it fits
-                  placeholder="Event Brochure Link" 
+                  placeholder="Paste Google Drive link here..." 
                   value={formData.posterUrl} 
                   onChange={handleChange} 
                   style={{ marginBottom: '6px', width: '100%', boxSizing: 'border-box' }}
@@ -181,7 +196,7 @@ const EventForm = () => {
               {/* --- BANNER UPLOAD SECTION --- */}
               <div style={{ marginBottom: '22px' }}>
                 <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', marginBottom: '8px', display: 'block' }}>
-                  Event Banner (Optional)
+                  Event Banner <span>(Optional)</span>
                 </label>
                 <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '8px', border: '1px dashed #ccc' }}>
                   <input 
