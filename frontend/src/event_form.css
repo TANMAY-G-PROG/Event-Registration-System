@@ -1,74 +1,86 @@
 @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;700&family=VT323&family=Inter:wght@400;500;600;700&display=swap');
 
 /* ==============================================================
-   VARIABLES
+   VARIABLES (Added from Code 2 to support Premium Form)
    ============================================================== */
 :root {
-  --ef-bg: #f5f5f7;
-  --ef-surface: #ffffff;
-  --ef-primary: #00a578;
-  --ef-primary-hover: #008f68;
-  --ef-text-main: #111827;
-  --ef-text-sub: #6b7280;
-  --ef-border: #e5e7eb;
-  --ef-border-focus: #00a578;
-  --ef-ring: rgba(0, 165, 120, 0.2);
-  --ef-radius: 12px;
-  --ef-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --primary: #00a578;
+  --primary-hover: #008f68;
+  --bg-right: #f3f4f6;
+  --card-bg: #ffffff;
+  --text-main: #111827;
+  --text-sub: #6b7280;
+  --border: #e5e7eb;
+  --radius: 12px;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 /* ==============================================================
-   GLOBAL LAYOUT - FULL SCREEN SPLIT
+   GLOBAL STYLES (From Code 1)
    ============================================================== */
 .event-form-container {
   font-family: 'Libre Franklin', sans-serif;
-  width: 100vw;
+  cursor: crosshair;
+  min-height: 100vh;
   height: 100vh;
-  margin: 0;
-  padding: 0;
-  overflow: hidden; /* Prevents double scrollbars */
-  background: white;
-}
-
-.event-form-wrap {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  max-width: none;
-  box-shadow: none;
-  border-radius: 0;
-}
-
-/* ==============================================================
-   LEFT SIDE (FULL SCREEN BRANDING - OLD CODE STYLE)
-   ============================================================== */
-.event-form-card-side.event-form-left {
-  width: 45%;
-  height: 100%;
-  /* Original Gradient */
-  background: radial-gradient(circle farthest-corner, #00a578 40%, transparent 0) no-repeat;
-  background-position: 140px 170px;
-  background-color: #000; /* Ensure background is black */
-  position: relative;
-  overflow: hidden;
-  padding: 0;
+  width: 100vw;
+  background: black;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow: auto;
 }
 
-/* Original Pixel Text Positioning */
+.event-form-wrap {
+  position: relative;
+  margin: 0 auto;
+  max-width: 1150px;
+  width: 90%;
+  box-shadow: 7px 13px 49px -5px rgba(0, 165, 120, 0.47);
+  overflow: hidden;
+  /* Added rounded corners if desired, else remove */
+  border-radius: 4px; 
+}
+
+.event-form-registration {
+  animation: event-form-open 0.3s;
+  animation-iteration-count: 1;
+  background: white; /* Changed to white to match right side clean look */
+}
+
+.event-form-card {
+  display: flex;
+  height: 80vh; /* Fixed height for split scrolling */
+}
+
+.event-form-card-side {
+  width: 50%;
+  box-sizing: border-box;
+}
+
+/* ==============================================================
+   LEFT SIDE (From Code 1 - Neon/Dark)
+   ============================================================== */
+.event-form-left {
+  background: radial-gradient(circle farthest-corner, #00a578 40%, transparent 0) no-repeat;
+  background-color: black;
+  background-position: 140px 170px;
+  min-height: 650px;
+}
+
 .event-form-logo-text {
   font-family: 'VT323', monospace;
   font-size: 130px;
   color: #00a578;
   mix-blend-mode: difference;
-  position: absolute;
-  top: 220px;
-  left: 90px;
+  margin: 220px 0 0 90px;
   line-height: 82%;
-  z-index: 10;
 }
 
 .event-form-mobile-header {
@@ -76,65 +88,62 @@
 }
 
 /* ==============================================================
-   RIGHT SIDE (PREMIUM FORM - SCROLLABLE)
+   RIGHT SIDE (From Code 2 - Premium/Light)
    ============================================================== */
-.event-form-card-side.event-form-right {
-  width: 55%;
-  height: 100%;
-  background-color: #f3f4f6; /* Premium BG */
-  overflow-y: auto; /* Scroll only the form part */
+.event-form-right {
+  background-color: var(--bg-right);
+  padding: 40px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 40px 60px;
-  box-sizing: border-box;
+  overflow-y: auto; /* Enable internal scrolling for form */
 }
 
 .event-form-title {
-  font-size: 34px;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+  font-family: 'Inter', sans-serif;
+}
+
+.event-form-subtitle {
+  color: var(--text-sub);
   margin-bottom: 32px;
-  font-family: 'Libre Franklin', sans-serif;
-  color: var(--ef-text-main);
-  text-align: center;
-  width: 100%;
+  font-size: 15px;
+  font-family: 'Inter', sans-serif;
 }
 
 .event-form-form {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 550px;
-  gap: 20px;
-  padding-bottom: 40px;
 }
 
-/* --- PREMIUM CARD STYLES --- */
+/* --- Premium Cards --- */
 .ef-card {
-  background: var(--ef-surface);
-  border-radius: var(--ef-radius);
-  padding: 24px 32px;
-  box-shadow: var(--ef-shadow);
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
   border: 1px solid white;
 }
 
 .ef-section-title {
   font-size: 16px;
   font-weight: 600;
-  margin: 0 0 20px 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--ef-text-main);
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--ef-border);
+  color: var(--text-main);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Inter', sans-serif;
 }
 
-/* --- INPUTS & CONTROLS --- */
+/* --- Inputs & Labels --- */
 .ef-group {
   margin-bottom: 20px;
-  position: relative;
 }
-.ef-group:last-child { margin-bottom: 0; }
 
 .ef-label {
   display: block;
@@ -142,245 +151,242 @@
   font-weight: 600;
   color: #374151;
   margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Inter', sans-serif;
 }
-.ef-label .req { color: #ef4444; }
 
-.ef-input, .ef-textarea {
+.event-form-input,
+.event-form-textarea {
   width: 100%;
-  padding: 12px 16px;
-  font-size: 14px;
-  border: 1px solid var(--ef-border);
+  padding: 12px;
+  border: 1px solid var(--border);
   border-radius: 8px;
+  font-size: 15px;
   background: #fff;
   transition: all 0.2s ease;
-  font-family: 'Libre Franklin', sans-serif;
-  color: var(--ef-text-main);
+  font-family: 'Inter', sans-serif;
+  color: var(--text-main);
   box-sizing: border-box;
+  margin-bottom: 0; /* Override Code 1 margin */
 }
 
-.ef-input:focus, .ef-textarea:focus {
+.event-form-input:focus,
+.event-form-textarea:focus {
   outline: none;
-  border-color: var(--ef-border-focus);
-  box-shadow: 0 0 0 3px var(--ef-ring);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(0, 165, 120, 0.15);
 }
 
-.ef-textarea { resize: vertical; min-height: 80px; }
+.event-form-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
 
+/* --- Grid & Layout Utilities --- */
 .ef-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.ef-input-wrapper { position: relative; }
-.ef-input-icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--ef-text-sub);
-  display: flex;
-}
-.ef-pl { padding-left: 44px; }
-
-.ef-upload-zone {
-  border: 2px dashed var(--ef-border);
+/* --- File Upload --- */
+.ef-file-box {
+  border: 2px dashed var(--border);
   border-radius: 8px;
-  padding: 24px;
+  padding: 20px;
   text-align: center;
   background: #fafafa;
-  transition: all 0.2s;
+  transition: background 0.2s;
   cursor: pointer;
-  position: relative;
 }
-.ef-upload-zone:hover {
-  background: #f0fdf9;
-  border-color: var(--ef-primary);
+.ef-file-box:hover {
+  background: #f0fdf4;
+  border-color: var(--primary);
 }
-.ef-upload-zone input[type="file"] {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  opacity: 0; cursor: pointer;
+.ef-helper {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-top: 6px;
+  display: block;
 }
-.ef-preview-container {
-  width: 100%; height: 180px;
-  border-radius: 8px; overflow: hidden; position: relative;
-}
-.ef-banner-preview {
-  width: 100%; height: 100%; object-fit: cover;
-}
-.ef-preview-overlay {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5); color: white;
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity 0.2s; gap: 5px;
-}
-.ef-upload-zone:hover .ef-preview-overlay { opacity: 1; }
-.ef-helper { font-size: 11px; color: var(--ef-text-sub); display: block; margin-top: 6px; line-height: 1.4; }
 
-.ef-header-row {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+/* --- Toggle Checkbox --- */
+.ef-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+  cursor: pointer;
 }
-.ef-toggle-wrapper { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-.ef-toggle-label { font-size: 14px; font-weight: 600; }
-.ef-toggle {
-  width: 44px; height: 24px; background: #e5e7eb; border-radius: 20px; position: relative; transition: background 0.2s;
-}
-.ef-toggle.active { background: var(--ef-primary); }
-.ef-toggle-handle {
-  width: 20px; height: 20px; background: white; border-radius: 50%;
-  position: absolute; top: 2px; left: 2px; transition: transform 0.2s;
-}
-.ef-toggle.active .ef-toggle-handle { transform: translateX(20px); }
 
+.event-form-checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+.ef-checkbox-text {
+  font-weight: 600;
+  font-size: 15px;
+  font-family: 'Inter', sans-serif;
+  color: var(--text-main);
+}
+
+/* --- Buttons --- */
 .event-form-button {
-  background: #00a578;
+  width: 100%;
+  background-color: var(--primary);
   color: white;
   border: none;
   padding: 16px;
-  cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 165, 120, 0.2);
-  font-family: 'Libre Franklin', sans-serif;
   font-size: 16px;
-  font-weight: bold;
-  border-radius: 8px;
+  font-weight: 700;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 165, 120, 0.3);
   margin-top: 10px;
-  transition: transform 0.1s;
+  font-family: 'Inter', sans-serif;
 }
+
 .event-form-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 165, 120, 0.3);
+  background-color: var(--primary-hover);
 }
-.event-form-button:disabled { background: #9ca3af; transform: none; }
 
-.ef-panel-anim { animation: slideDown 0.3s ease forwards; overflow: hidden; }
-.ef-fade-in { animation: fadeIn 0.4s ease forwards; }
-
-@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-.event-form-message {
-  position: fixed; top: 20px; right: 20px;
-  padding: 15px 20px; border-radius: 5px; color: white;
-  z-index: 1000; animation: event-form-slideIn 0.3s ease-in-out;
-  font-family: 'Libre Franklin', sans-serif;
+.event-form-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
 }
-.event-form-message-success { background-color: rgb(114, 221, 158); }
-.event-form-message-error { background-color: rgb(225, 108, 95); }
-@keyframes event-form-slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
 /* ==============================================================
-   MOBILE RESPONSIVENESS (EXACT MATCH TO OLD CODE)
+   TOAST MESSAGES
+   ============================================================== */
+.event-form-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 5px;
+  color: white;
+  font-weight: normal;
+  z-index: 1000;
+  animation: event-form-slideIn 0.3s ease-in-out;
+  font-family: 'Libre Franklin', sans-serif;
+}
+
+.event-form-message-success { background-color: rgb(114, 221, 158); }
+.event-form-message-error { background-color: rgb(225, 108, 95); }
+
+@keyframes event-form-slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes event-form-open {
+  0% { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ==============================================================
+   MOBILE RESPONSIVE
    ============================================================== */
 @media screen and (max-width: 900px) {
   
   .event-form-container {
+    position: relative;
     height: auto;
     min-height: 100dvh;
+    width: 100%;
     overflow-y: auto;
-    background: #f8f9fa; /* Matches Old Code */
+    cursor: default;
+    background: #f8f9fa;
+    display: block;
   }
 
   .event-form-wrap {
-    flex-direction: column;
-    height: auto;
-    min-height: 100dvh;
+    width: 100%;
+    box-shadow: none;
+    margin: 0;
+    border-radius: 0;
   }
 
-  /* Hide Desktop Header */
-  .event-form-card-side.event-form-left.event-form-desktop-header {
+  .event-form-card {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .event-form-desktop-header {
     display: none !important;
   }
 
-  /* Show Mobile Header */
+  /* Keep Code 1 Mobile Header Style */
   .event-form-mobile-header {
     display: flex;
     width: 100%;
-    min-height: 60px;
     height: 60px;
     background: #050505;
     align-items: center;
     justify-content: center;
-    padding: 0 20px;
-    box-sizing: border-box;
     position: sticky;
     top: 0;
     z-index: 50;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
   }
 
-  .event-form-left-header { text-align: center; width: 100%; }
   .event-form-glow-text {
-    display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px;
+    display: flex;
+    gap: 6px;
   }
+
   .event-form-neon {
-    font-family: 'Libre Franklin', sans-serif; font-size: 18px; font-weight: 600; color: #ffffff; text-transform: uppercase;
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    text-transform: uppercase;
   }
-  .event-form-neon-alt { font-size: 18px; font-weight: 700; color: #00a578; }
 
-  /* Right Side Mobile Adjustments - RESET to Old Style */
-  .event-form-card-side.event-form-right {
+  .event-form-neon-alt {
+    color: #00a578;
+  }
+
+  /* Mobile Content Adjustments */
+  .event-form-card-side {
     width: 100%;
-    padding: 30px 20px 120px 20px; 
+  }
+
+  .event-form-right {
+    padding: 24px 20px 100px 20px;
     height: auto;
-    min-height: calc(100dvh - 60px);
-    background: #f8f9fa;
+    overflow-y: visible;
   }
 
-  .event-form-title {
-    font-size: 24px; text-align: left; margin-bottom: 24px; color: #1a1a1a;
-  }
-
-  /* Flatten Cards: Remove white background and shadows */
   .ef-card {
-    background: transparent; border: none; box-shadow: none; padding: 0;
-  }
-  
-  .ef-section-title {
-    margin-top: 10px; border: none; font-size: 14px; color: #666;
-  }
-
-  /* Mobile Inputs - Reset to clean white with border */
-  .ef-input, .ef-textarea {
-    width: 100%;
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    padding: 16px;
-    font-size: 16px;
-    color: #333;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-    margin-bottom: 0;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: none;
+    border: none;
   }
 
-  .ef-input:focus, .ef-textarea:focus {
-    border-color: #00a578;
-    box-shadow: 0 4px 12px rgba(0, 165, 120, 0.15);
+  .ef-grid-2 {
+    grid-template-columns: 1fr;
   }
 
-  /* Button: Sticky at bottom */
   .event-form-button {
     position: fixed;
-    bottom: 24px; left: 20px; right: 20px;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
     width: calc(100% - 40px);
     z-index: 100;
-    margin: 0;
-    padding: 18px;
-    font-size: 18px;
-    border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0, 165, 120, 0.4);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
   }
-  
-  .ef-input-icon { display: none; } /* Hide icons on mobile */
-  .ef-pl { padding-left: 16px; } /* Reset padding */
-  .ef-toggle-wrapper {
-    background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px; width: 100%; justify-content: space-between;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .event-form-card-side.event-form-right { padding: 30px 16px 100px 16px; }
-  .event-form-mobile-header { height: 60px; min-height: 60px; padding: 0 16px; }
-  .event-form-button { bottom: 20px; width: calc(100% - 32px); left: 16px; }
 }
