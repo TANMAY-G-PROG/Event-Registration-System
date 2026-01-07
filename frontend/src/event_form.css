@@ -1,39 +1,71 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=VT323&display=swap');
 
+/* =========================================
+   VARIABLES
+   ========================================= */
 :root {
   --primary: #00a578;
   --primary-hover: #008f68;
-  --bg-color: #f3f4f6; /* Soft gray background */
+  --bg-right: #f3f4f6; /* Light gray for form background */
   --card-bg: #ffffff;
   --text-main: #111827;
   --text-sub: #6b7280;
   --border: #e5e7eb;
   --radius: 12px;
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --input-bg: #ffffff;
 }
 
-/* Page Container - Centered and Clean */
-.event-form-container {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg-color);
-  min-height: 100vh;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  padding: 40px 20px;
+* {
   box-sizing: border-box;
 }
 
-.event-form-wrap {
-  width: 100%;
-  max-width: 700px; /* Focused width like Stripe forms */
+body {
+  margin: 0;
+  padding: 0;
 }
 
-/* Header Styling */
-.event-form-header {
-  text-align: center;
-  margin-bottom: 32px;
+.event-form-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+}
+
+/* =========================================
+   LEFT SIDE (Branding / Art)
+   ========================================= */
+.event-form-left {
+  width: 45%;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  /* Subtle texture or gradient from your original idea */
+  background: radial-gradient(circle at 10% 20%, #111 0%, #000 90%);
+}
+
+.event-form-logo-text {
+  font-family: 'VT323', monospace;
+  font-size: 120px;
+  color: var(--primary);
+  line-height: 0.9;
+  transform: rotate(-5deg);
+  text-shadow: 4px 4px 0px #fff;
+  mix-blend-mode: difference;
+}
+
+/* =========================================
+   RIGHT SIDE (The Form)
+   ========================================= */
+.event-form-right {
+  width: 55%;
+  background-color: var(--bg-right);
+  overflow-y: auto;
+  padding: 40px 60px;
+  display: flex;
+  flex-direction: column;
 }
 
 .event-form-title {
@@ -46,55 +78,54 @@
 
 .event-form-subtitle {
   color: var(--text-sub);
+  margin-bottom: 32px;
   font-size: 16px;
 }
 
-/* Card Styling - Grouping the fields */
-.event-form-section {
+/* --- Premium Cards --- */
+.ef-card {
   background: var(--card-bg);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
   padding: 32px;
   margin-bottom: 24px;
-  border: 1px solid rgba(255,255,255,0.5);
+  box-shadow: var(--shadow);
+  border: 1px solid white;
 }
 
-.section-title {
+.ef-section-title {
   font-size: 18px;
   font-weight: 600;
   color: var(--text-main);
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
   padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
 }
 
-/* Input Styling - The "Premium" Look */
-.event-form-group {
+/* --- Inputs --- */
+.ef-group {
   margin-bottom: 20px;
 }
 
-.event-form-label {
+.ef-label {
   display: block;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: #374151;
   margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .event-form-input,
 .event-form-textarea {
   width: 100%;
-  padding: 12px 16px;
+  padding: 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 15px;
-  background: var(--input-bg);
+  background: #fff;
   transition: all 0.2s ease;
   font-family: 'Inter', sans-serif;
-  box-sizing: border-box;
   color: var(--text-main);
 }
 
@@ -102,52 +133,48 @@
 .event-form-textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(0, 165, 120, 0.15); /* Soft green glow */
+  box-shadow: 0 0 0 4px rgba(0, 165, 120, 0.15);
 }
 
 .event-form-textarea {
-  resize: vertical;
   min-height: 100px;
+  resize: vertical;
 }
 
-/* Helper Text */
-.event-form-helper {
+/* --- Grid for side-by-side --- */
+.ef-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* --- File Upload Styling --- */
+.ef-file-box {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+  background: #fafafa;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+.ef-file-box:hover {
+  background: #f0fdf4;
+  border-color: var(--primary);
+}
+.ef-helper {
   font-size: 12px;
   color: var(--text-sub);
   margin-top: 6px;
-  line-height: 1.4;
   display: block;
 }
 
-/* File Upload Zone */
-.file-upload-box {
-  border: 2px dashed var(--border);
-  border-radius: 8px;
-  padding: 20px;
-  text-align: center;
-  background: #fafafa;
-  transition: all 0.2s;
-  cursor: pointer;
-}
-
-.file-upload-box:hover {
-  border-color: var(--primary);
-  background: #f0fdf4;
-}
-
-/* Grid for Side-by-Side Inputs */
-.form-grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-/* Checkbox Toggle Styling */
-.event-form-checkbox-group {
+/* --- Toggle --- */
+.ef-checkbox-wrapper {
   display: flex;
   align-items: center;
   background: #f9fafb;
-  padding: 12px 16px;
+  padding: 16px;
   border-radius: 8px;
   border: 1px solid var(--border);
   margin-bottom: 20px;
@@ -155,110 +182,109 @@
 }
 
 .event-form-checkbox {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   accent-color: var(--primary);
   margin-right: 12px;
   cursor: pointer;
 }
 
-.event-form-checkbox-text {
+.ef-checkbox-text {
   font-weight: 600;
-  color: var(--text-main);
   font-size: 15px;
 }
 
-/* Button Styling */
+/* --- Button --- */
 .event-form-button {
   width: 100%;
   background-color: var(--primary);
   color: white;
   border: none;
-  padding: 16px;
+  padding: 18px;
   font-size: 16px;
   font-weight: 700;
   border-radius: var(--radius);
   cursor: pointer;
-  transition: transform 0.1s, background-color 0.2s;
+  transition: transform 0.1s, box-shadow 0.2s;
   box-shadow: 0 4px 12px rgba(0, 165, 120, 0.3);
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
 .event-form-button:hover {
-  background-color: var(--primary-hover);
   transform: translateY(-2px);
+  background-color: var(--primary-hover);
 }
 
 .event-form-button:disabled {
   background-color: #9ca3af;
   cursor: not-allowed;
   transform: none;
-  box-shadow: none;
 }
 
-/* Message Toasts */
+/* --- Toast Messages --- */
 .event-form-message {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 24px;
+  right: 24px;
   padding: 16px 24px;
   border-radius: 8px;
   color: white;
-  font-weight: 500;
+  font-weight: 600;
   z-index: 1000;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   animation: slideIn 0.3s ease;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
-
-.event-form-message-success { background-color: #10b981; }
-.event-form-message-error { background-color: #ef4444; }
+.event-form-message-success { background: #10b981; }
+.event-form-message-error { background: #ef4444; }
 
 @keyframes slideIn {
   from { transform: translateY(-20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* Mobile Responsiveness */
-@media screen and (max-width: 600px) {
+/* =========================================
+   MOBILE RESPONSIVENESS
+   ========================================= */
+@media screen and (max-width: 900px) {
   .event-form-container {
-    padding: 0;
-    background: white;
-  }
-  
-  .event-form-wrap {
-    max-width: 100%;
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    background: #f3f4f6;
   }
 
-  .event-form-header {
-    padding: 30px 20px 10px;
-    margin-bottom: 10px;
-    text-align: left;
+  /* Hide the big branding on mobile to focus on form */
+  .event-form-left {
+    display: none;
   }
 
-  .event-form-section {
-    border-radius: 0;
+  /* Add a small mobile header instead */
+  .event-form-right {
+    width: 100%;
+    padding: 24px 20px 100px 20px; /* Bottom padding for sticky button */
+    height: auto;
+    overflow-y: visible;
+  }
+
+  .ef-card {
+    padding: 24px 20px;
+    border-radius: 16px;
     box-shadow: none;
     border: none;
-    border-bottom: 8px solid var(--bg-color);
-    padding: 24px 20px;
-    margin-bottom: 0;
   }
 
-  .form-grid-2 {
+  .ef-grid-2 {
     grid-template-columns: 1fr;
   }
 
+  /* Sticky Button for Mobile */
   .event-form-button {
     position: fixed;
     bottom: 20px;
     left: 20px;
+    right: 20px;
     width: calc(100% - 40px);
     z-index: 100;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-  }
-  
-  /* Add padding to bottom so content isn't hidden behind fixed button */
-  .event-form-form {
-    padding-bottom: 80px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
   }
 }
