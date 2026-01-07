@@ -7,7 +7,7 @@ import TicketAnimation from './TicketAnimation';
 
 // --- FALLBACK IMAGE ---
 // Changed from an array to a single constant for Aura1.png
-const FALLBACK_BANNER = "https://ik.imagekit.io/flopass/Aura1.png";
+const FALLBACK_BANNER = "https://ik.imagekit.io/flopass/Aura.png";
 
 
 function formatTime12h(timeString) {
@@ -534,3 +534,4 @@ export default function Registerevent() {
     </main>
   )
 }
+
