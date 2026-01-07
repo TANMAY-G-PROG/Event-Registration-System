@@ -34,11 +34,9 @@ body {
 .event-form-wrap {
   position: relative;
   margin: 0 auto;
-  /* --- INCREASED SIZE HERE --- */
   max-width: 1400px; 
   width: 96%;
   height: 94vh; 
-  /* -------------------------- */
   background: #fff;
   border-radius: 24px;
   box-shadow: 0 25px 50px -12px rgba(0, 165, 120, 0.25);
@@ -58,7 +56,9 @@ body {
   /* Black Circle + Green Circle Background */
   background-image: 
     radial-gradient(circle farthest-corner at 10% 20%, #000000 35%, transparent 35.1%),
-    radial-gradient(circle farthest-corner at 60% 70%, #00a578 40%, transparent 40.1%);
+    
+    /* 👇 CHANGED: 80% 90% (Moves Green Circle DOWN) */
+    radial-gradient(circle farthest-corner at 80% 90%, #00a578 40%, transparent 40.1%);
     
   background-repeat: no-repeat;
   display: flex;
@@ -70,8 +70,9 @@ body {
   font-size: 130px;
   color: #00a578;
   mix-blend-mode: difference;
-  /* --- MOVED TEXT LEFT HERE (35px) --- */
-  margin: 170px 0 0 35px;
+  
+  /* 👇 CHANGED: 250px (Moves Text DOWN) */
+  margin: 200px 0 0 35px;
   line-height: 0.8;
   z-index: 2;
 }
@@ -89,7 +90,7 @@ body {
   height: 100%;
   background: #fff;
   overflow-y: auto; 
-  padding: 50px 70px; /* Slightly more padding for bigger card */
+  padding: 50px 70px; 
   box-sizing: border-box;
   scroll-behavior: smooth;
 }
@@ -107,7 +108,7 @@ body {
   margin-bottom: 32px;
 }
 .event-form-title {
-  font-size: 36px; /* Slightly larger title */
+  font-size: 36px;
   font-weight: 800;
   color: var(--text-dark);
   margin: 0 0 8px 0;
@@ -142,17 +143,17 @@ body {
 .form-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px; /* More gap for bigger card */
+  gap: 20px; 
 }
 
 .input-group {
-  margin-bottom: 24px; /* More breathing room */
+  margin-bottom: 24px; 
   position: relative;
 }
 
 .input-label {
   display: block;
-  font-size: 14px; /* Slightly readable font */
+  font-size: 14px; 
   font-weight: 600;
   color: var(--text-dark);
   margin-bottom: 8px;
@@ -170,7 +171,7 @@ body {
   background: var(--bg-input);
   border: 1px solid transparent;
   border-radius: var(--radius);
-  padding: 16px 18px; /* Larger hit area */
+  padding: 16px 18px; 
   font-size: 15px;
   color: var(--text-dark);
   font-family: 'Libre Franklin', sans-serif;
@@ -258,7 +259,7 @@ body {
   background: var(--text-dark);
   color: white;
   border: none;
-  padding: 18px; /* Bigger button */
+  padding: 18px; 
   border-radius: var(--radius);
   font-size: 16px;
   font-weight: 600;
@@ -386,4 +387,3 @@ body {
     box-shadow: 0 4px 12px rgba(0, 165, 120, 0.4);
   }
 }
-
