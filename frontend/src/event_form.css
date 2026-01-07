@@ -69,7 +69,7 @@
 }
 
 /* ==============================================================
-   DESKTOP HEADER - ORIGINAL
+   DESKTOP HEADER
    ============================================================== */
 .event-form-left {
   background: radial-gradient(circle farthest-corner, #00a578 40%, transparent 0) no-repeat;
@@ -85,7 +85,6 @@
   line-height: 82%;
 }
 
-/* Hide mobile header on desktop */
 .event-form-mobile-header {
   display: none;
 }
@@ -207,7 +206,7 @@
    MOBILE: COMPACT PREMIUM HEADER & MODERN FLOW
    ============================================================== */
 @media screen and (max-width: 900px) {
-  /* Fix scrolling & cursor issues on mobile */
+  
   .event-form-container {
     position: relative;
     height: auto;
@@ -237,7 +236,7 @@
     height: auto;
   }
 
-  /* --- Header Redesign: Minimal & Premium (60px) --- */
+  /* --- Header --- */
   .event-form-desktop-header {
     display: none !important;
   }
@@ -245,26 +244,22 @@
   .event-form-mobile-header {
     display: flex;
     width: 100%;
-    min-height: 60px; /* Compact Height */
+    min-height: 60px;
     height: 60px;
-    max-height: 60px;
-    background: #050505; /* Deep Black/Grey */
+    background: #050505;
     align-items: center;
-    justify-content: center; /* Centered Text */
+    justify-content: center;
     padding: 0 20px;
     box-sizing: border-box;
     position: sticky;
     top: 0;
     z-index: 50;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* Subtle Divider */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 2px 15px rgba(0,0,0,0.1);
   }
 
-  /* Remove all old animations/glows from pseudo-elements */
   .event-form-mobile-header::before,
-  .event-form-mobile-header::after {
-    display: none;
-  }
+  .event-form-mobile-header::after { display: none; }
 
   .event-form-left-header {
     text-align: center;
@@ -274,19 +269,14 @@
 
   .event-form-glow-text {
     display: flex;
-    flex-direction: row; /* Side by side */
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     gap: 6px;
     line-height: 1;
   }
+  .event-form-glow-text::before { display: none; }
 
-  /* Remove the sweep shine animation */
-  .event-form-glow-text::before {
-    display: none;
-  }
-
-  /* Clean Text Styling */
   .event-form-neon {
     font-family: 'Libre Franklin', sans-serif;
     font-size: 18px;
@@ -294,24 +284,30 @@
     color: #ffffff;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    text-shadow: none; /* Remove glow */
+    text-shadow: none;
   }
 
   .event-form-neon-alt {
     font-size: 18px;
     font-weight: 700;
-    color: #00a578; /* Brand Green */
+    color: #00a578;
     text-shadow: none;
   }
 
-  /* --- Form Container Layout --- */
+  /* --- Form Container Layout (CRITICAL FIX) --- */
   .event-form-card-side.event-form-right {
     width: 100%;
-    padding: 24px 20px 120px 20px;
+    /* Added Top Padding so title isn't hidden under sticky header */
+    padding: 40px 20px 120px 20px; 
     background: #f8f9fa;
     min-height: calc(100dvh - 60px);
     height: auto;
-    display: block;
+    
+    /* Changed to Flex Column + Start to prevent vertical centering off-screen */
+    display: flex; 
+    flex-direction: column;
+    justify-content: flex-start; 
+    align-items: stretch; /* Ensure children take full width */
   }
 
   .event-form-title {
@@ -325,12 +321,13 @@
 
   .event-form-form {
     max-width: 100%;
+    width: 100%; /* Ensure full width */
     display: flex;
     flex-direction: column;
     gap: 16px;
   }
 
-  /* --- Inputs: Mobile Friendly --- */
+  /* --- Inputs --- */
   .event-form-input,
   .event-form-textarea {
     width: 100%;
@@ -344,6 +341,7 @@
     box-shadow: 0 2px 5px rgba(0,0,0,0.02);
     margin-bottom: 0;
     -webkit-appearance: none;
+    box-sizing: border-box; /* Critical for padding calculation */
   }
 
   .event-form-input::placeholder,
@@ -374,6 +372,8 @@
     margin: 8px 0;
     display: flex;
     align-items: center;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .event-form-checkbox-label {
@@ -390,13 +390,6 @@
     accent-color: #00a578;
   }
 
-  .event-form-checkbox-text {
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-  }
-
-  /* --- Fixed Bottom Action Bar --- */
   .event-form-button {
     position: fixed;
     bottom: 24px;
@@ -415,17 +408,16 @@
     margin: 0;
     transition: transform 0.2s;
   }
-
+  
   .event-form-button:active {
     transform: scale(0.98);
   }
 
-  /* Helper for split inputs */
   .event-form-row {
     display: flex;
     gap: 12px;
+    width: 100%;
   }
-  
   .event-form-row .event-form-input {
     flex: 1;
   }
@@ -433,15 +425,13 @@
 
 @media screen and (max-width: 480px) {
   .event-form-card-side.event-form-right {
-    padding: 20px 16px 100px 16px;
+    padding: 30px 16px 100px 16px;
   }
-  
   .event-form-mobile-header {
-    height: 60px; /* Enforce strictly */
+    height: 60px;
     min-height: 60px;
     padding: 0 16px;
   }
-  
   .event-form-button {
     bottom: 20px;
     width: calc(100% - 32px);
