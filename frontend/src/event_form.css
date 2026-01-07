@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;700&family=VT323&family=Inter:wght@400;500;600;700&display=swap');
 
 /* ==============================================================
-   VARIABLES (Added from Code 2 to support Premium Form)
+   VARIABLES
    ============================================================== */
 :root {
   --primary: #00a578;
@@ -16,7 +16,7 @@
 }
 
 /* ==============================================================
-   GLOBAL STYLES (From Code 1)
+   GLOBAL STYLES
    ============================================================== */
 .event-form-container {
   font-family: 'Libre Franklin', sans-serif;
@@ -24,7 +24,9 @@
   min-height: 100vh;
   height: 100vh;
   width: 100vw;
-  background: black;
+  /* Main background behind the card can remain black for contrast, 
+     or change to #f3f4f6 if you want the whole page light */
+  background: black; 
   display: flex;
   align-items: center;
   justify-content: center;
@@ -42,21 +44,20 @@
   margin: 0 auto;
   max-width: 1150px;
   width: 90%;
-  box-shadow: 7px 13px 49px -5px rgba(0, 165, 120, 0.47);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5); /* Updated shadow for depth */
   overflow: hidden;
-  /* Added rounded corners if desired, else remove */
-  border-radius: 4px; 
+  border-radius: 12px; 
 }
 
 .event-form-registration {
   animation: event-form-open 0.3s;
   animation-iteration-count: 1;
-  background: white; /* Changed to white to match right side clean look */
+  background: white; 
 }
 
 .event-form-card {
   display: flex;
-  height: 80vh; /* Fixed height for split scrolling */
+  height: 85vh; /* Increased height slightly */
 }
 
 .event-form-card-side {
@@ -65,22 +66,34 @@
 }
 
 /* ==============================================================
-   LEFT SIDE (From Code 1 - Neon/Dark)
+   LEFT SIDE (UPDATED: White Background)
    ============================================================== */
 .event-form-left {
+  /* Keep the Green Circle Graphic */
   background: radial-gradient(circle farthest-corner, #00a578 40%, transparent 0) no-repeat;
-  background-color: black;
+  
+  /* CHANGED: Background color to White */
+  background-color: white; 
+  
   background-position: 140px 170px;
   min-height: 650px;
+  position: relative;
 }
 
 .event-form-logo-text {
   font-family: 'VT323', monospace;
   font-size: 130px;
-  color: #00a578;
-  mix-blend-mode: difference;
+  
+  /* CHANGED: Text to Black so it stands out against White BG and Green Circle */
+  color: #000000; 
+  
+  /* REMOVED: mix-blend-mode: difference (looks pink on white bg) */
+  /* mix-blend-mode: difference; */
+  
   margin: 220px 0 0 90px;
   line-height: 82%;
+  z-index: 10;
+  position: relative;
 }
 
 .event-form-mobile-header {
@@ -88,14 +101,14 @@
 }
 
 /* ==============================================================
-   RIGHT SIDE (From Code 2 - Premium/Light)
+   RIGHT SIDE (Premium Form)
    ============================================================== */
 .event-form-right {
   background-color: var(--bg-right);
   padding: 40px;
   display: flex;
   flex-direction: column;
-  overflow-y: auto; /* Enable internal scrolling for form */
+  overflow-y: auto; 
 }
 
 .event-form-title {
@@ -168,7 +181,6 @@
   font-family: 'Inter', sans-serif;
   color: var(--text-main);
   box-sizing: border-box;
-  margin-bottom: 0; /* Override Code 1 margin */
 }
 
 .event-form-input:focus,
@@ -327,7 +339,6 @@
     display: none !important;
   }
 
-  /* Keep Code 1 Mobile Header Style */
   .event-form-mobile-header {
     display: flex;
     width: 100%;
@@ -358,7 +369,6 @@
     color: #00a578;
   }
 
-  /* Mobile Content Adjustments */
   .event-form-card-side {
     width: 100%;
   }
