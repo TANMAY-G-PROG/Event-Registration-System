@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;700&family=VT323&display=swap');
 
 /* ==============================================================
-   VARIABLES (Premium Theme)
+   VARIABLES
    ============================================================== */
 :root {
   --ef-bg: #f5f5f7;
@@ -18,59 +18,39 @@
 }
 
 /* ==============================================================
-   GLOBAL LAYOUT (OLD)
+   GLOBAL LAYOUT - FULL SCREEN MODIFICATION
    ============================================================== */
 .event-form-container {
   font-family: 'Libre Franklin', sans-serif;
-  cursor: crosshair;
-  min-height: 100vh;
-  height: 100vh;
   width: 100vw;
-  background: black;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
+  height: 100vh;
   margin: 0;
-  box-sizing: border-box;
-  position: fixed;
-  top: 0;
-  left: 0;
-  overflow: auto;
+  padding: 0;
+  overflow: hidden; /* Prevents double scrollbars */
+  background: white;
 }
 
 .event-form-wrap {
-  position: relative;
-  margin: 0 auto;
-  max-width: 1150px;
-  width: 90%;
-  box-shadow: 7px 13px 49px -5px rgba(0, 165, 120, 0.47);
-  overflow: hidden;
-}
-
-.event-form-registration {
-  animation: event-form-open 0.3s;
-  animation-iteration-count: 1;
-  background: radial-gradient(circle farthest-corner, black 40%, transparent 0) no-repeat, white;
-  background-position: -480px -250px;
-}
-
-.event-form-card {
   display: flex;
-}
-
-.event-form-card-side {
-  width: 50%;
-  min-height: 650px;
-  box-sizing: border-box;
+  width: 100%;
+  height: 100%; /* Takes full height */
+  margin: 0;
+  max-width: none; /* REMOVED LIMIT: Stretches full width */
+  box-shadow: none; /* Removed floating shadow */
+  border-radius: 0; /* Square corners for full screen */
 }
 
 /* ==============================================================
-   LEFT SIDE (UNCHANGED)
+   LEFT SIDE (UNCHANGED VISUALS, NOW FULL HEIGHT)
    ============================================================== */
-.event-form-left {
+.event-form-card-side.event-form-left {
+  width: 45%; /* Fixed width for left branding */
+  height: 100%;
   background: radial-gradient(circle farthest-corner, #00a578 40%, transparent 0) no-repeat;
   background-position: 140px 170px;
+  background-color: #000; /* Ensure black bg behind the green circle */
+  position: relative;
+  overflow: hidden;
 }
 
 .event-form-logo-text {
@@ -78,8 +58,11 @@
   font-size: 130px;
   color: #00a578;
   mix-blend-mode: difference;
-  margin: 220px 0 0 90px;
+  position: absolute;
+  top: 220px;
+  left: 90px;
   line-height: 82%;
+  z-index: 10;
 }
 
 .event-form-mobile-header {
@@ -87,43 +70,45 @@
 }
 
 /* ==============================================================
-   RIGHT SIDE (PREMIUM FORM STYLES)
+   RIGHT SIDE (SCROLLABLE FORM AREA)
    ============================================================== */
-.event-form-right {
+.event-form-card-side.event-form-right {
+  width: 55%; /* Remaining width */
+  height: 100%;
+  background-color: #f3f4f6;
+  overflow-y: auto; /* Scroll ONLY the form side */
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* justify-content: center; Removed to allow scrolling flow */
-  padding: 40px 30px;
+  padding: 40px 60px; /* Comfortable internal padding */
   box-sizing: border-box;
-  overflow-y: auto;
-  background-color: #f3f4f6; /* Premium BG for right side */
-  height: 650px; /* Match min-height of side */
 }
 
 .event-form-title {
   font-size: 34px;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
   font-family: 'Libre Franklin', sans-serif;
   color: var(--ef-text-main);
   text-align: center;
+  width: 100%;
 }
 
 .event-form-form {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 420px;
+  max-width: 550px; /* Keeps the inputs from getting too wide on huge screens */
   gap: 20px;
+  padding-bottom: 40px; /* Space at bottom for scrolling */
 }
 
-/* --- PREMIUM COMPONENTS (New styles) --- */
+/* --- PREMIUM COMPONENTS --- */
 
-/* Cards */
+/* Cards inside the form */
 .ef-card {
   background: var(--ef-surface);
   border-radius: var(--ef-radius);
-  padding: 24px;
+  padding: 24px 32px;
   box-shadow: var(--ef-shadow);
   border: 1px solid white;
 }
@@ -131,7 +116,7 @@
 .ef-section-title {
   font-size: 16px;
   font-weight: 600;
-  margin: 0 0 16px 0;
+  margin: 0 0 20px 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -146,7 +131,7 @@
 
 /* Inputs */
 .ef-group {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   position: relative;
 }
 .ef-group:last-child {
@@ -158,13 +143,13 @@
   font-size: 13px;
   font-weight: 600;
   color: #374151;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .ef-label .req { color: #ef4444; }
 
 .ef-input, .ef-textarea {
   width: 100%;
-  padding: 12px;
+  padding: 12px 16px;
   font-size: 14px;
   border: 1px solid var(--ef-border);
   border-radius: 8px;
@@ -183,30 +168,30 @@
 
 .ef-textarea { resize: vertical; min-height: 80px; }
 
-/* Grid */
+/* Grid for 2-column inputs */
 .ef-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 16px;
 }
 
 /* Icon Inputs */
 .ef-input-wrapper { position: relative; }
 .ef-input-icon {
   position: absolute;
-  left: 12px;
+  left: 14px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--ef-text-sub);
   display: flex;
 }
-.ef-pl { padding-left: 40px; }
+.ef-pl { padding-left: 44px; }
 
 /* File Upload */
 .ef-upload-zone {
   border: 2px dashed var(--ef-border);
   border-radius: 8px;
-  padding: 20px;
+  padding: 24px;
   text-align: center;
   background: #fafafa;
   transition: all 0.2s;
@@ -223,7 +208,7 @@
   opacity: 0; cursor: pointer;
 }
 .ef-preview-container {
-  width: 100%; height: 150px;
+  width: 100%; height: 180px;
   border-radius: 8px; overflow: hidden; position: relative;
 }
 .ef-banner-preview {
@@ -236,31 +221,31 @@
   opacity: 0; transition: opacity 0.2s; gap: 5px;
 }
 .ef-upload-zone:hover .ef-preview-overlay { opacity: 1; }
-.ef-helper { font-size: 11px; color: var(--ef-text-sub); display: block; margin-top: 4px; line-height: 1.4; }
+.ef-helper { font-size: 11px; color: var(--ef-text-sub); display: block; margin-top: 6px; line-height: 1.4; }
 
-/* Toggle */
+/* Toggle header */
 .ef-header-row {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
 }
-.ef-toggle-wrapper { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-.ef-toggle-label { font-size: 13px; font-weight: 600; }
+.ef-toggle-wrapper { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.ef-toggle-label { font-size: 14px; font-weight: 600; }
 .ef-toggle {
-  width: 40px; height: 22px; background: #e5e7eb; border-radius: 20px; position: relative; transition: background 0.2s;
+  width: 44px; height: 24px; background: #e5e7eb; border-radius: 20px; position: relative; transition: background 0.2s;
 }
 .ef-toggle.active { background: var(--ef-primary); }
 .ef-toggle-handle {
-  width: 18px; height: 18px; background: white; border-radius: 50%;
+  width: 20px; height: 20px; background: white; border-radius: 50%;
   position: absolute; top: 2px; left: 2px; transition: transform 0.2s;
 }
-.ef-toggle.active .ef-toggle-handle { transform: translateX(18px); }
+.ef-toggle.active .ef-toggle-handle { transform: translateX(20px); }
 
 /* Button */
 .event-form-button {
   background: #00a578;
   color: white;
   border: none;
-  padding: 14px;
-  cursor: alias;
+  padding: 16px;
+  cursor: pointer;
   box-shadow: 0 4px 6px rgba(0, 165, 120, 0.2);
   font-family: 'Libre Franklin', sans-serif;
   font-size: 16px;
@@ -275,15 +260,13 @@
 }
 .event-form-button:disabled { background: #9ca3af; transform: none; }
 
-/* Animations */
+/* Animations & Toast */
 .ef-panel-anim { animation: slideDown 0.3s ease forwards; overflow: hidden; }
 .ef-fade-in { animation: fadeIn 0.4s ease forwards; }
 
 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes event-form-open { 0% { background: black; } 100% { } }
 
-/* Message Popup */
 .event-form-message {
   position: fixed; top: 20px; right: 20px;
   padding: 15px 20px; border-radius: 5px; color: white;
@@ -295,44 +278,28 @@
 @keyframes event-form-slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
 /* ==============================================================
-   MOBILE: COMPACT PREMIUM HEADER & MODERN FLOW
+   MOBILE RESPONSIVENESS (UNCHANGED logic, adapted for full width)
    ============================================================== */
 @media screen and (max-width: 900px) {
   
   .event-form-container {
-    position: relative;
     height: auto;
     min-height: 100dvh;
-    width: 100%;
-    overflow-y: auto;
-    cursor: default;
-    background: #f8f9fa;
-    padding: 0;
-    display: block;
+    overflow-y: auto; /* Allow window scrolling on mobile */
   }
 
   .event-form-wrap {
-    width: 100%;
+    flex-direction: column;
     height: auto;
     min-height: 100dvh;
-    box-shadow: none;
-    margin: 0;
-    border-radius: 0;
-    background: transparent;
-    display: flex;
-    flex-direction: column;
   }
 
-  .event-form-card {
-    flex-direction: column;
-    height: auto;
-  }
-
-  /* --- Header --- */
-  .event-form-desktop-header {
+  /* Hide Desktop Header on mobile */
+  .event-form-card-side.event-form-left.event-form-desktop-header {
     display: none !important;
   }
 
+  /* Show Mobile Header */
   .event-form-mobile-header {
     display: flex;
     width: 100%;
@@ -347,114 +314,42 @@
     top: 0;
     z-index: 50;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
   }
 
-  .event-form-left-header { text-align: center; padding: 0; width: 100%; }
-
+  .event-form-left-header { text-align: center; width: 100%; }
   .event-form-glow-text {
-    display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; line-height: 1;
+    display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px;
   }
-
   .event-form-neon {
-    font-family: 'Libre Franklin', sans-serif; font-size: 18px; font-weight: 600; color: #ffffff;
-    text-transform: uppercase; letter-spacing: 0.5px;
+    font-family: 'Libre Franklin', sans-serif; font-size: 18px; font-weight: 600; color: #ffffff; text-transform: uppercase;
   }
-
   .event-form-neon-alt { font-size: 18px; font-weight: 700; color: #00a578; }
 
-  /* --- Form Container Layout --- */
+  /* Right Side Mobile Adjustments */
   .event-form-card-side.event-form-right {
     width: 100%;
-    padding: 40px 20px 120px 20px; 
-    background: #f8f9fa;
-    min-height: calc(100dvh - 60px);
+    padding: 30px 20px 120px 20px; 
     height: auto;
-    display: flex; 
-    flex-direction: column;
-    justify-content: flex-start; 
-    align-items: stretch; 
+    min-height: calc(100dvh - 60px);
   }
 
   .event-form-title {
-    font-size: 24px; font-weight: 800; color: #1a1a1a; margin-bottom: 24px;
-    letter-spacing: -0.5px; text-align: left;
+    font-size: 24px; text-align: left; margin-bottom: 24px;
   }
 
-  .event-form-form {
-    max-width: 100%; width: 100%; gap: 16px;
-  }
-
-  /* --- CRITICAL: Reset Card Styles for Mobile to look like old flat list --- */
+  /* Flatten cards for mobile to remove "boxed" feel */
   .ef-card {
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    margin-bottom: 0;
+    background: transparent; border: none; box-shadow: none; padding: 0;
   }
-
-  /* Remove section titles on mobile to match old flow, or keep them for structure. 
-     Keeping them small helps organization, but if you want exact old look, display: none them.
-     I will keep them subtly to maintain the new HTML logic without breaking layout. */
+  
   .ef-section-title {
-    margin-bottom: 12px; margin-top: 12px; border: none; font-size: 14px; color: #666;
+    margin-top: 10px; border: none; font-size: 14px; color: #666;
   }
 
-  /* --- Inputs (Mobile overrides) --- */
-  .ef-input, .ef-textarea {
-    width: 100%;
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    padding: 16px;
-    font-size: 16px;
-    color: #333;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-    margin-bottom: 0;
-    -webkit-appearance: none;
-  }
-
-  .ef-input:focus, .ef-textarea:focus {
-    border-color: #00a578;
-    box-shadow: 0 4px 12px rgba(0, 165, 120, 0.15);
-  }
-
-  /* Mobile Checkbox/Toggle adaptation */
-  .ef-toggle-wrapper {
-    background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px; width: 100%; justify-content: space-between;
-  }
-  .ef-header-row { margin-bottom: 0; width: 100%; display: block;}
-  .ef-section-title svg { display: none; } /* Hide icons in headers on mobile if desired */
-  .ef-card-title { display: none; } /* Hide icons title container */
-
-  /* Button */
   .event-form-button {
     position: fixed;
-    bottom: 24px;
-    left: 20px;
-    right: 20px;
+    bottom: 24px; left: 20px; right: 20px;
     width: calc(100% - 40px);
-    padding: 18px;
-    background: #00a578;
-    color: white;
-    font-size: 18px;
-    font-weight: 700;
-    border-radius: 16px;
-    border: none;
-    box-shadow: 0 10px 25px rgba(0, 165, 120, 0.4);
     z-index: 100;
-    margin: 0;
-    transition: transform 0.2s;
   }
-  .event-form-button:active { transform: scale(0.98); }
-
-  .ef-grid-2 { display: flex; gap: 12px; }
-  .ef-grid-2 .ef-group { flex: 1; }
-}
-
-@media screen and (max-width: 480px) {
-  .event-form-card-side.event-form-right { padding: 30px 16px 100px 16px; }
-  .event-form-mobile-header { height: 60px; min-height: 60px; padding: 0 16px; }
-  .event-form-button { bottom: 20px; width: calc(100% - 32px); left: 16px; }
 }
