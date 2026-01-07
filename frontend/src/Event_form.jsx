@@ -323,7 +323,7 @@ const EventForm = () => {
                 <textarea 
                   className="modern-textarea" 
                   name="certificateInfo" 
-                  placeholder="Details about certification criteria..." 
+                  placeholder="Text to be displayed on the certificate" 
                   value={formData.certificateInfo} 
                   onChange={handleChange} 
                   rows="2" 
@@ -346,3 +346,4 @@ const EventForm = () => {
 };
 
 export default EventForm;
+
