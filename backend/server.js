@@ -8,7 +8,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 const ExcelJS = require('exceljs');
 const { createClient } = require('redis'); 
-const RedisStore = require('connect-redis').default; // <--- NEW IMPORT
+const RedisStore = require('connect-redis').RedisStore; 
 const Brevo = require('@getbrevo/brevo');
 
 // --- File Upload Dependencies ---
