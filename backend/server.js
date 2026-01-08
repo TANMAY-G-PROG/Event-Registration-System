@@ -7,8 +7,7 @@ const bcrypt = require('bcrypt');
 const cors = require('cors');
 const crypto = require('crypto');
 const ExcelJS = require('exceljs');
-const { createClient } = require('redis'); 
-const RedisStore = require('connect-redis').RedisStore; 
+const { createClient } = require('redis'); // Import Redis
 const Brevo = require('@getbrevo/brevo');
 
 // --- File Upload Dependencies ---
@@ -24,6 +23,8 @@ cloudinary.config({
 });
 
 // --- Multer Config (Efficient for 512MB RAM) ---
+// We use memory storage but STRICTLY limit file size to 5MB.
+// This prevents OOM errors on Render.
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
@@ -41,6 +42,7 @@ const PORT = process.env.PORT || 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // --- Redis Client Setup ---
+// Uses env variable or falls back to your provided connection string
 const redisUrl = process.env.REDIS_URL || 'redis://default:ovBfSh1ALdigQLS0BDbJApUwTOJ6nk3i@redis-10269.c81.us-east-1-2.ec2.cloud.redislabs.com:10269';
 
 const redisClient = createClient({
@@ -79,6 +81,7 @@ app.use((req, res, next) => {
   next();
 });
 
+
 app.use(express.json());
 
 // Health check route for UptimeRobot
@@ -86,30 +89,28 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// --- Secure Session with Redis Store (UPDATED) ---
+// --- Secure Session ---
 app.use(session({
-    store: new RedisStore({ 
-        client: redisClient,
-        prefix: 'sess:', 
-        ttl: 3600, // 1 Hour in Seconds (Redis Auto-Delete)
-    }),
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: false, // Recommended: Don't save empty sessions
+    saveUninitialized: false,
     name: 'sessionId',
-    rolling: true, // Resets the 1hr timer if user is active
+    rolling: true,
     cookie: {
         httpOnly: true,
-        maxAge: 60 * 60 * 1000, // 1 Hour in Milliseconds (Browser Cookie)
+        maxAge: 60 * 60 * 1000, 
         secure: IS_PRODUCTION ? true : false,  
         sameSite: IS_PRODUCTION ? "lax" : "lax", 
         path: '/'
     }
 }));
 
+
 // Debug middleware to log all requests
 app.use((req, res, next) => {
     console.log(`\n📝 ${req.method} ${req.url}`);
+    // console.log('📋 Session ID:', req.sessionID);
+    // console.log('👤 User USN:', req.session.userUSN || 'Not logged in');
     next();
 });
 
@@ -125,6 +126,7 @@ async function testSupabaseConnection() {
 }
 testSupabaseConnection();
 
+
 // Middleware to check if user is authenticated
 function requireAuth(req, res, next) {
     if (req.session.userUSN) {
@@ -138,7 +140,7 @@ function requireAuth(req, res, next) {
 const uploadFromBuffer = (buffer) => {
     return new Promise((resolve, reject) => {
         const cld_upload_stream = cloudinary.uploader.upload_stream(
-            { folder: "event_banners" }, 
+            { folder: "event_banners" }, // Changed folder name
             (error, result) => {
                 if (result) resolve(result);
                 else reject(error);
@@ -147,10 +149,6 @@ const uploadFromBuffer = (buffer) => {
         streamifier.createReadStream(buffer).pipe(cld_upload_stream);
     });
 };
-
-// ... 
-// ... (The rest of your routes below this point remain EXACTLY the same)
-// ... 
 
 // Sign up endpoint
 app.post('/api/signup', async (req, res) => {
@@ -2556,8 +2554,8 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         partHdr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
 
         const partCols = ws.addRow([
-            'USN', 'Name', 'Semester', 'Mobile No', 'Email', 
-            'Participation Status', 'Payment Status', 'Team Name', 
+            'USN', 'Name', 'Semester', 'Mobile No', 'Email',
+            'Participation Status', 'Payment Status', 'Team Name',
             'UPI Transaction ID', 'Payment Amount'
         ]);
         partCols.font = { bold: true };
@@ -2630,6 +2628,95 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
     } catch (err) {
         console.error('Excel generation error:', err);
         res.status(500).json({ error: 'Error generating Excel file' });
+    }
+});
+app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        const userUSN = req.session.userUSN;
+
+        if (!eventId || isNaN(eventId)) {
+            return res.status(400).json({ error: 'Invalid event ID' });
+        }
+
+        // Fetch event details
+        const { data: eventRows, error: eventError } = await supabase
+            .from('event')
+            .select(`
+                eid, ename, eventdesc, eventdate, eventtime, eventloc, 
+                maxpart, maxvoln, regfee, orgusn, poster_url,
+                club:orgcid(cname),
+                student:orgusn(sname)
+            `)
+            .eq('eid', eventId)
+            .limit(1);
+
+        if (eventError) {
+            console.error('Error fetching event details:', eventError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!eventRows || eventRows.length === 0) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        const event = eventRows[0];
+        
+        // Transform event data
+        const transformedEvent = {
+            ...event,
+            eventDate: event.eventdate,
+            eventTime: event.eventtime,
+            eventLoc: event.eventloc,
+            maxPart: event.maxpart,
+            maxVoln: event.maxvoln,
+            regFee: event.regfee,
+            posterUrl: event.poster_url, // Added
+            clubName: event.club?.cname,
+            organizerName: event.student?.sname,
+            OrgUsn: event.orgusn
+        };
+
+        // Check if user is registered as participant
+        const { data: participantCheck, error: participantError } = await supabase
+            .from('participant')
+            .select('partstatus, payment_status')
+            .eq('partusn', userUSN)
+            .eq('parteid', eventId)
+            .limit(1);
+
+        if (participantError) {
+            console.error('Error checking participant status:', participantError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        // User is registered as participant
+        if (participantCheck && participantCheck.length > 0) {
+            transformedEvent.isRegistered = true;
+            transformedEvent.paymentStatus = participantCheck[0].payment_status || null;
+            transformedEvent.attendanceMarked = participantCheck[0].partstatus || false;
+
+            console.log(`✅ Participant status for ${userUSN} on event ${eventId}:`, {
+                isRegistered: true,
+                paymentStatus: transformedEvent.paymentStatus,
+                attendanceMarked: transformedEvent.attendanceMarked
+            });
+
+            return res.json(transformedEvent);
+        }
+
+        // User is not registered
+        console.log(`ℹ️ User ${userUSN} is not registered for event ${eventId}`);
+        return res.status(403).json({ 
+            error: 'You are not registered for this event',
+            isRegistered: false 
+        });
+
+    } catch (err) {
+        console.error('Error fetching participant event status:', err);
+        res.status(500).json({
+            error: 'Error fetching event details: ' + err.message 
+        });
     }
 });
 
