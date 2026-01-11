@@ -8,10 +8,8 @@
   padding: 0;
   box-sizing: border-box;
   font-family: 'Montserrat', sans-serif;
-  
-  /* KOKONUT THEME UPDATE: Dark Background */
-  background-color: #030303; 
-  /* No linear gradient here, we use the dark theme */
+  background-color: #00416A; 
+  background: linear-gradient(to right, #E4E5E6, #00416A);
   
   position: fixed;
   top: 0;
@@ -34,48 +32,6 @@
 .login-page * {
   box-sizing: border-box;
 }
-
-/* --- KOKONUT BACKGROUND SHAPES (New) --- */
-.kokonut-shapes {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.elegant-shape {
-  position: absolute;
-  z-index: 0;
-}
-.shape-1 { left: -5%; top: 20%; }
-.shape-2 { right: 0%; top: 75%; }
-.shape-3 { left: 10%; bottom: 10%; }
-
-.shape-inner {
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  backdrop-filter: blur(2px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 32px 0 rgba(255, 255, 255, 0.1);
-}
-.shape-inner::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2), transparent 70%);
-}
-
-.bg-gradient-blur {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.1), transparent 70%);
-  filter: blur(80px);
-  z-index: -1;
-}
-
 
 /* --- NAV BUTTONS --- */
 .login-page .top-nav-buttons {
@@ -101,8 +57,6 @@
   display: inline-block;
   z-index: 1;
   transition: transform 0.2s ease;
-  /* Add border for visibility on dark theme */
-  border: 1px solid rgba(255,255,255,0.2); 
 }
 
 .login-page .button span {
@@ -144,7 +98,6 @@
   z-index: 0;
 }
 
-/* Bubbles kept exactly as old code */
 .login-page .bubble-1 { background: #5c6bc0; top: -20%; left: -10%; animation: moveUpRight 12s ease-in-out infinite; }
 .login-page .bubble-2 { background: #2da0a8; top: 0%; left: 10%; animation: moveDownLeft 10s ease-in-out infinite; animation-delay: 1s; }
 .login-page .bubble-3 { background: #1A2980; top: 20%; left: 50%; animation: moveRight 8s ease-in-out infinite; animation-delay: 2s; }
@@ -162,31 +115,25 @@
 @keyframes moveLeft { 0% { transform: translate(0, 0); } 25% { transform: translate(-100%, 0); } 50% { transform: translate(100%, -50%); } 75% { transform: translate(-50%, 50%); } 100% { transform: translate(0, 0); } }
 @keyframes moveUp { 0% { transform: translate(0, 0); } 25% { transform: translate(0, -100%); } 50% { transform: translate(50%, 50%); } 75% { transform: translate(-50%, -50%); } 100% { transform: translate(0, 0); } }
 
-/* --- DESKTOP VIEW CONTAINER (THE GLASS CARD) --- */
+/* --- DESKTOP VIEW CONTAINER --- */
 .login-page .container {
-  /* KOKONUT THEME: Replaces white background with glass */
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  
+  background-color: #fff;
   border-radius: 30px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.35);
   position: relative;
   overflow: hidden;
   width: 768px;
   max-width: 100%;
   min-height: 480px;
-  z-index: 10;
 }
 
-.login-page .container p { font-size: 14px; line-height: 20px; letter-spacing: 0.3px; margin: 20px 0; color: #ccc; }
+.login-page .container p { font-size: 14px; line-height: 20px; letter-spacing: 0.3px; margin: 20px 0; }
 .login-page .container span { font-size: 12px; }
-.login-page .container a { color: #ccc; font-size: 13px; text-decoration: none; margin: 15px 0 10px; transition: color 0.3s ease; }
-.login-page .container a:hover { color: #fff; }
+.login-page .container a { color: #333; font-size: 13px; text-decoration: none; margin: 15px 0 10px; transition: color 0.3s ease; }
+.login-page .container a:hover { color: #2da0a8; }
 .login-page .forgot-password-link { cursor: pointer; }
 
-/* BUTTONS (Original Gradient Styles) */
+/* CRITICAL FIX: Make button styles more specific to avoid conflicts */
 .login-page .container button,
 .login-page .form-container button,
 .login-page .toggle-panel button {
@@ -203,9 +150,8 @@
   background-size: 200% auto;
   transition: all 0.5s ease;
   cursor: pointer;
-  width: auto; 
-  display: inline-block;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  width: auto; /* ADDED: Prevent stretching */
+  display: inline-block; /* ADDED: Prevent full width */
 }
 
 .login-page .container button:hover,
@@ -219,12 +165,12 @@
   transform: scale(0.98);
 }
 
-.login-page .container button.hidden { background: transparent; border: 1px solid #fff; box-shadow: none; }
+.login-page .container button.hidden { background: transparent; border: 2px solid #fff; }
 .login-page .container button.hidden:hover { background: rgba(255, 255, 255, 0.1); }
 
-/* Forms (Updated for Dark Theme) */
+/* Forms */
 .login-page .form-container > form {
-  background-color: transparent; /* Remove white background */
+  background-color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -233,35 +179,13 @@
   height: 100%;
 }
 
-.login-page .form-container h1 { 
-  margin-bottom: 20px; 
-  font-size: 28px; 
-  font-weight: 700; 
-  color: #fff; /* White text */
-}
-
-.login-page .container input { 
-  background-color: rgba(255,255,255,0.05); /* Dark transparent input */
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
-  margin: 8px 0; 
-  padding: 12px 15px; 
-  font-size: 13px; 
-  border-radius: 8px; 
-  width: 100%; 
-  outline: none; 
-  transition: all 0.3s ease; 
-}
-
-.login-page .container input:focus { 
-  background-color: rgba(255,255,255,0.1); 
-  border-color: rgba(255,255,255,0.3);
-}
+.login-page .form-container h1 { margin-bottom: 20px; font-size: 28px; font-weight: 700; }
+.login-page .container input { background-color: #eee; border: none; margin: 8px 0; padding: 12px 15px; font-size: 13px; border-radius: 8px; width: 100%; outline: none; transition: background-color 0.3s ease; }
+.login-page .container input:focus { background-color: #e0e0e0; }
 
 .login-page .password-wrapper { position: relative; width: 100%; }
 .login-page .password-wrapper input { padding-right: 45px; }
-.login-page .password-toggle-icon { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); cursor: pointer; color: #aaa; transition: color 0.2s ease; }
-.login-page .password-toggle-icon:hover { color: #fff; }
+.login-page .password-toggle-icon { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); cursor: pointer; color: #777; transition: color 0.2s ease; }
 
 .login-page .form-container { position: absolute; top: 0; height: 100%; transition: all 0.6s ease-in-out; }
 .login-page .sign-in { left: 0; width: 50%; z-index: 2; }
@@ -271,19 +195,13 @@
 
 @keyframes fade-in { 0%, 49.99% { opacity: 0; z-index: 1; } 50%, 100% { opacity: 1; z-index: 5; } }
 
-/* Toggle Panel (Desktop) - Updated Gradient to blend better but keep spirit */
+/* Toggle Panel (Desktop) */
 .login-page .toggle-container { position: absolute; top: 0; left: 50%; width: 50%; height: 100%; overflow: hidden; transition: all 0.6s ease-in-out; border-radius: 150px 0 0 100px; z-index: 1000; }
 .login-page .container.active .toggle-container { transform: translateX(-100%); border-radius: 0 150px 100px 0; }
-
-.login-page .toggle { 
-  /* Original Gradient kept as requested */
-  background: linear-gradient(to right, #5c6bc0, #2da0a8); 
-  height: 100%; color: #fff; position: relative; left: -100%; width: 200%; transform: translateX(0); transition: all 0.6s ease-in-out; 
-}
-
+.login-page .toggle { background: linear-gradient(to right, #5c6bc0, #2da0a8); height: 100%; color: #fff; position: relative; left: -100%; width: 200%; transform: translateX(0); transition: all 0.6s ease-in-out; }
 .login-page .container.active .toggle { transform: translateX(50%); }
 .login-page .toggle-panel { position: absolute; width: 50%; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 0 30px; text-align: center; top: 0; transform: translateX(0); transition: all 0.6s ease-in-out; }
-.login-page .toggle-panel h1 { font-size: 26px; margin-bottom: 10px; color: #fff; }
+.login-page .toggle-panel h1 { font-size: 26px; margin-bottom: 10px; }
 .login-page .toggle-left { transform: translateX(-200%); }
 .login-page .container.active .toggle-left { transform: translateX(0); }
 .login-page .toggle-right { right: 0; transform: translateX(0); }
@@ -298,41 +216,26 @@
 .login-page .message.error { background-color: #e16c5f; }
 @keyframes slide-down { from { transform: translateX(-50%) translateY(-100%); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
 
-/* --- FORGOT PASSWORD STYLES (Dark Glass Update) --- */
+/* --- FORGOT PASSWORD STYLES --- */
 .login-page .forgot-password-container { width: 500px; max-width: calc(100% - 30px); min-height: 400px; margin: 0 15px; }
 .login-page .forgot-password-form { position: relative; width: 100%; }
-
-.login-page .forgot-password-form form { 
-  /* KOKONUT THEME */
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  
-  display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 40px; min-height: 400px; border-radius: 30px; 
-}
-
-.login-page .forgot-password-icon { font-size: 48px; color: #fff; margin-bottom: 20px; }
-.login-page .forgot-password-form h1 { margin-bottom: 10px; font-size: 28px; color: #fff; }
-.login-page .forgot-password-description { text-align: center; margin-bottom: 20px; color: #ccc; font-size: 14px; line-height: 1.5; }
-.login-page .forgot-password-form input { width: 100%; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+.login-page .forgot-password-form form { background-color: #fff; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 40px; min-height: 400px; border-radius: 30px; }
+.login-page .forgot-password-icon { font-size: 48px; color: #1A2980; margin-bottom: 20px; }
+.login-page .forgot-password-form h1 { margin-bottom: 10px; font-size: 28px; }
+.login-page .forgot-password-description { text-align: center; margin-bottom: 20px; color: #666; font-size: 14px; line-height: 1.5; }
+.login-page .forgot-password-form input { width: 100%; }
 .login-page .submit-button, .login-page .back-button { width: 100%; margin-top: 10px; }
-.login-page .back-button { color: #fff !important; border: 2px solid #fff !important; background-image: none !important; }
-.login-page .back-button:hover { background: rgba(255, 255, 255, 0.1) !important; transform: scale(1.02); }
-.login-page .info-tip { margin-top: 20px; padding: 15px; background-color: rgba(99, 102, 241, 0.1); border-left: 4px solid #6366f1; border-radius: 5px; font-size: 12px; width: 100%; box-sizing: border-box; color: #ccc; }
+.login-page .back-button { color: #1A2980 !important; border: 2px solid #1A2980 !important; background-image: none !important; }
+.login-page .back-button:hover { background: rgba(26, 41, 128, 0.1) !important; transform: scale(1.02); }
+.login-page .info-tip { margin-top: 20px; padding: 15px; background-color: #f0f9ff; border-left: 4px solid #1A2980; border-radius: 5px; font-size: 12px; width: 100%; box-sizing: border-box; }
 
 /* ---------------------------------------------------- */
-/* --- MOBILE SETTINGS (EXACT COPY AS REQUESTED) --- */
+/* --- MOBILE SETTINGS --- */
 /* ---------------------------------------------------- */
 @media screen and (max-width: 768px) {
-  /* Hide the desktop shapes on mobile to keep it clean, or keep them. 
-     Since "Mobile code full same", we usually hide extra desktop elements */
-  .kokonut-shapes { display: none; }
-
   .login-page {
     display: block;
     padding: 0;
-    /* Keeps the original gradient background for mobile */
     background: linear-gradient(to right, #E4E5E6, #00416A);
     height: 100dvh;
     overflow: hidden;
@@ -341,7 +244,7 @@
   .login-page .container { display: none !important; }
 
   .login-page .top-nav-buttons { top: 15px; right: 15px; gap: 8px; }
-  .login-page .button { padding: 8px 16px; font-size: 10px; border: none; }
+  .login-page .button { padding: 8px 16px; font-size: 10px; }
 
   .mobile-view-wrapper {
     display: flex; flex-direction: column; width: 100%; height: 100dvh; position: relative;
@@ -353,13 +256,11 @@
     margin: 80px 15px 15px 15px;
     display: block !important;
   }
-  .login-page .forgot-password-form form { padding: 30px 25px; min-height: 450px; background-color: #fff; /* Revert to white for mobile */ border: none; backdrop-filter: none; }
-  .login-page .forgot-password-icon { font-size: 40px; margin-bottom: 15px; color: #1A2980; }
-  .login-page .forgot-password-form h1 { font-size: 24px; margin-bottom: 8px; color: #000; }
-  .login-page .forgot-password-description { font-size: 13px; margin-bottom: 18px; color: #666; }
-  .login-page .forgot-password-form input { background-color: #eee; color: #000; border: none; }
-  .login-page .back-button { color: #1A2980 !important; border: 2px solid #1A2980 !important; }
-  .login-page .info-tip { font-size: 11px; padding: 12px; background-color: #f0f9ff; border-left: 4px solid #1A2980; color: #000; }
+  .login-page .forgot-password-form form { padding: 30px 25px; min-height: 450px; }
+  .login-page .forgot-password-icon { font-size: 40px; margin-bottom: 15px; }
+  .login-page .forgot-password-form h1 { font-size: 24px; margin-bottom: 8px; }
+  .login-page .forgot-password-description { font-size: 13px; margin-bottom: 18px; }
+  .login-page .info-tip { font-size: 11px; padding: 12px; }
 
   /* Premium Mobile View */
   .m-hero-section { height: 25vh; display: flex; flex-direction: column; justify-content: center; padding: 0 32px; margin-top: 40px; position: relative; z-index: 10; }
