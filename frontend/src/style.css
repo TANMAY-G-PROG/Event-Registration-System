@@ -1,450 +1,331 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* ── RESET ──────────────────────────────────────────────── */
-.login-page * {
+:root {
+  --bg-dark: #030303;
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --text-main: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.6);
+  --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #f43f5e 100%);
+}
+
+* {
   box-sizing: border-box;
 }
 
-.login-page {
+body, html {
   margin: 0;
   padding: 0;
-  font-family: 'Montserrat', sans-serif;
-  /* Deep Blue Gradient Background like the reference */
-  background: radial-gradient(circle at top center, #0d61bc 0%, #061a35 100%);
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  overflow: hidden; /* Prevent scrolling on main page */
+}
+
+/* ─── CONTAINER & BACKGROUND ────────────────────────── */
+.login-page {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: var(--bg-dark);
   overflow: hidden;
 }
 
-/* ── 3D BACKGROUND SHAPES (CSS Only) ────────────────────── */
-.background-shapes {
+/* Soft ambient blurs (The "Kokonut" glow) */
+.bg-gradient-blur {
   position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  filter: blur(100px);
+  opacity: 0.3;
   z-index: 0;
+}
+
+.blur-indigo {
+  background: radial-gradient(circle at top left, rgba(99, 102, 241, 0.15), transparent 60%);
+}
+
+.blur-rose {
+  background: radial-gradient(circle at bottom right, rgba(244, 63, 94, 0.15), transparent 60%);
+}
+
+.overlay-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #030303, transparent, rgba(3,3,3,0.8));
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ─── FLOATING SHAPES ────────────────────────────── */
+.shapes-container {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   pointer-events: none;
+  z-index: 1;
 }
 
-/* Generic Shape Style */
-.shape {
+.elegant-shape {
   position: absolute;
-  filter: blur(5px); /* Soft clay feel */
-  opacity: 0.8;
-  animation: float 15s infinite ease-in-out;
 }
 
-/* Shape 1: The large squiggle/ring (Top Left) */
-.shape-1 {
-  width: 300px;
-  height: 300px;
-  top: -50px;
-  left: -50px;
-  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  box-shadow: 
-    inset 10px 10px 20px rgba(255,255,255,0.2),
-    inset -10px -20px 20px rgba(0,0,0,0.1),
-    20px 20px 50px rgba(0,0,0,0.3);
-  animation-delay: 0s;
+.shape-1 { top: 15%; left: -5%; }
+.shape-2 { top: 70%; right: 0%; }
+.shape-3 { bottom: 10%; left: 10%; }
+.shape-4 { top: 15%; right: 20%; }
+
+.shape-inner {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px; /* Full circle */
+  backdrop-filter: blur(2px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* Shape 2: The soft blob (Bottom Right) */
-.shape-2 {
-  width: 400px;
-  height: 400px;
-  bottom: -100px;
-  right: -50px;
-  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); /* Slight teal hint */
-  background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); /* Or Blue/Purple */
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1), transparent), linear-gradient(135deg, #0ba360 0%, #3cba92 100%); /* Greenish Blue */
-  background: #0072ff; /* Flat fallback */
-  background: radial-gradient(circle at 30% 30%, #4facfe, #00f2fe);
-  box-shadow: 
-    inset 20px 20px 40px rgba(255,255,255,0.4),
-    20px 20px 60px rgba(0,0,0,0.4);
-  animation-delay: -5s;
+.shape-inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2), transparent 70%);
 }
 
-/* Shape 3: Small ring (Top Right center) */
-.shape-3 {
-  width: 150px;
-  height: 150px;
-  top: 20%;
-  right: 20%;
-  border: 40px solid #2af598;
-  border-radius: 50%;
-  background: transparent;
-  box-shadow: 
-    inset 5px 5px 10px rgba(0,0,0,0.2),
-    10px 10px 20px rgba(0,0,0,0.2);
-  transform: rotateX(45deg) rotateY(25deg);
-  animation: floatRotate 20s infinite linear;
-  filter: blur(2px);
-  opacity: 0.6;
+/* ─── GLASS CARD ─────────────────────────────────── */
+.content-wrapper {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 420px;
+  padding: 1rem;
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-30px) scale(1.05); }
-}
-
-@keyframes floatRotate {
-  0% { transform: rotate(0deg) translateY(0); }
-  50% { transform: rotate(180deg) translateY(-20px); }
-  100% { transform: rotate(360deg) translateY(0); }
-}
-
-/* ── NAV BUTTONS ────────────────────────────────────────── */
-.login-page .top-nav-buttons {
-  position: fixed;
-  top: 30px;
-  right: 40px;
-  display: flex;
-  gap: 15px;
-  z-index: 10001;
-}
-
-.login-page .button {
-  padding: 10px 20px;
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 30px;
-  background: rgba(255,255,255,0.1);
-  color: white;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  backdrop-filter: blur(10px);
-  transition: all 0.3s;
-}
-
-.login-page .button:hover {
-  background: white;
-  color: #061a35;
-}
-
-/* ── GLASS CARD CONTAINER ──────────────────────────────── */
-.login-page .container {
-  /* The Glass Effect */
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 30px;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
-  
+.glass-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(24px);
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   position: relative;
   overflow: hidden;
-  width: 850px;
-  max-width: 90%;
-  min-height: 550px;
-  z-index: 100;
 }
 
-/* ── FORMS ─────────────────────────────────────────────── */
-.login-page .form-container {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  transition: all 0.6s ease-in-out;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 0 50px;
-}
-
-.login-page form {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-.login-page .sign-in { left: 0; width: 50%; z-index: 2; }
-.login-page .sign-up { left: 0; width: 50%; opacity: 0; z-index: 1; }
-
-.login-page .container.active .sign-in { transform: translateX(100%); }
-.login-page .container.active .sign-up { transform: translateX(100%); opacity: 1; z-index: 5; animation: move 0.6s; }
-
-@keyframes move {
-  0%, 49.99% { opacity: 0; z-index: 1; }
-  50%, 100% { opacity: 1; z-index: 5; }
-}
-
-/* Typography & Inputs */
-.login-page h1 {
-  font-size: 32px;
-  color: #ffffff; /* White text for glass */
-  margin-bottom: 25px;
-  font-weight: 700;
-}
-
-.login-page .input-group {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    margin-bottom: 15px;
-    width: 100%;
-}
-
-.login-page label {
-    font-size: 12px;
-    color: rgba(255,255,255,0.8);
-    margin-bottom: 5px;
-    font-weight: 500;
-}
-
-.login-page input {
-  background-color: #ffffff; /* Stark white inputs like reference */
-  border: none;
-  margin: 5px 0 15px 0;
-  padding: 12px 15px;
-  font-size: 14px;
-  border-radius: 8px; /* Rounded corners */
-  width: 100%;
-  outline: none;
-  color: #333;
-  transition: transform 0.2s;
-}
-
-.login-page input:focus {
-  transform: scale(1.02);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-.login-page .row-input {
-    display: flex;
-    gap: 10px;
-}
-.login-page .half-input { width: 100%; }
-
-.login-page .password-wrapper { position: relative; width: 100%; }
-.login-page .password-wrapper input { padding-right: 40px; margin-bottom: 0; }
-.login-page .password-toggle-icon {
-  position: absolute;
-  top: 50%;
-  right: 15px;
-  transform: translateY(-50%);
-  color: #999;
-  cursor: pointer;
-}
-
-/* Buttons */
-.login-page .container button {
-  background-color: #061a35; /* Navy Blue button */
-  color: #ffffff;
-  font-size: 13px;
-  padding: 12px 45px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  margin-top: 20px;
-  cursor: pointer;
-  width: 100%; /* Full width like reference */
-  transition: all 0.3s;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.login-page .container button:hover {
-  background-color: #0d2c55;
-  transform: translateY(-2px);
-}
-
-.login-page .forgot-password-link {
-  color: rgba(255,255,255,0.8);
-  font-size: 12px;
-  text-decoration: none;
-  margin: 10px 0;
-  align-self: flex-start;
-}
-
-.login-page .forgot-password-link:hover {
-  color: #fff;
-  text-decoration: underline;
-}
-
-/* ── SLIDING OVERLAY (The "Glassier" Part) ──────────────── */
-.login-page .toggle-container {
+/* Internal glow inside card */
+.card-glow {
   position: absolute;
   top: 0;
   left: 50%;
-  width: 50%;
-  height: 100%;
-  overflow: hidden;
-  transition: all 0.6s ease-in-out;
-  border-radius: 30px; /* Match container radius */
-  z-index: 1000;
-  pointer-events: none; /* Let clicks pass through if needed, but buttons need pointer-events auto */
+  transform: translateX(-50%);
+  width: 100%;
+  height: 120px;
+  background: rgba(99, 102, 241, 0.1);
+  filter: blur(60px);
+  pointer-events: none;
 }
 
-/* IMPORTANT: Re-enable pointer events for the internal elements */
-.login-page .toggle {
-    pointer-events: auto;
-}
-
-.login-page .container.active .toggle-container {
-  transform: translateX(-100%);
-  border-radius: 30px;
-}
-
-.login-page .toggle {
-  background: rgba(255, 255, 255, 0.1); /* Slightly lighter glass for contrast */
-  backdrop-filter: blur(30px); /* Heavier blur */
-  -webkit-backdrop-filter: blur(30px);
-  background: linear-gradient(to right, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-  border-left: 1px solid rgba(255,255,255,0.1);
-  border-right: 1px solid rgba(255,255,255,0.1);
-  
-  height: 100%;
-  color: #fff;
+/* ─── HEADER ─────────────────────────────────────── */
+.card-header {
+  text-align: center;
+  margin-bottom: 2rem;
   position: relative;
-  left: -100%;
-  width: 200%;
-  transform: translateX(0);
-  transition: all 0.6s ease-in-out;
+  z-index: 20;
 }
 
-.login-page .container.active .toggle {
-  transform: translateX(50%);
-}
-
-.login-page .toggle-panel {
-  position: absolute;
-  width: 50%;
-  height: 100%;
-  display: flex;
+.logo-badge {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
-  padding: 0 30px;
-  text-align: center;
-  top: 0;
-  transform: translateX(0);
-  transition: all 0.6s ease-in-out;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 1.5rem;
+  color: #fff;
+  font-size: 20px;
 }
 
-.login-page .toggle-panel h1 {
-    color: #fff;
-    font-size: 28px;
+.title-gradient {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(to bottom, #ffffff, rgba(255, 255, 255, 0.7));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.02em;
 }
 
-.login-page .toggle-panel p {
-  font-size: 14px;
-  line-height: 20px;
-  letter-spacing: 0.3px;
-  margin: 20px 0;
-  color: rgba(255,255,255,0.9);
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin: 0;
 }
 
-/* Ghost Button (Outline) */
-.login-page .toggle-panel button.ghost {
-  background-color: transparent;
-  border: 1px solid #fff;
-  width: auto;
-  padding: 10px 40px;
+/* ─── TOGGLE ─────────────────────────────────────── */
+.auth-toggle {
+  display: flex;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.login-page .toggle-panel button.ghost:hover {
-  background-color: #fff;
-  color: #061a35;
+.toggle-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.login-page .toggle-left { transform: translateX(-200%); }
-.login-page .container.active .toggle-left { transform: translateX(0); }
-.login-page .toggle-right { right: 0; transform: translateX(0); }
-.login-page .container.active .toggle-right { transform: translateX(200%); }
-
-.login-page .message {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 15px 25px;
-    border-radius: 8px;
-    color: white;
-    z-index: 10000;
-}
-.login-page .message.success { background: #2ecc71; }
-.login-page .message.error { background: #e74c3c; }
-
-/* ── FORGOT PASSWORD ───────────────────────────────────── */
-.login-page .forgot-password-container {
-    background: white; /* Keep this readable */
-    border-radius: 20px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+.toggle-btn.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-/* -------------------------------------------------------- */
-/* ⚠️ MOBILE SAFETY ZONE: UNCHANGED CODE ⚠️                */
-/* -------------------------------------------------------- */
+/* ─── FORMS ──────────────────────────────────────── */
+.auth-form {
+  position: relative;
+  z-index: 20;
+}
+
+.scrollable-signup {
+  max-height: 320px; /* Limits height on mobile */
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+/* Scrollbar styling for signup */
+.scrollable-signup::-webkit-scrollbar { width: 4px; }
+.scrollable-signup::-webkit-scrollbar-track { background: transparent; }
+.scrollable-signup::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+.input-group {
+  margin-bottom: 1.25rem;
+}
+
+.input-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  margin-left: 4px;
+}
+
+.input-group input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
+  color: #fff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.input-group input:focus {
+  border-color: #6366f1; /* Indigo focus */
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.input-group input::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.row {
+  display: flex;
+  gap: 1rem;
+}
+.half { flex: 1; }
+
+.password-wrapper {
+  position: relative;
+}
+
+.toggle-icon {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.toggle-icon:hover { color: #fff; }
+
+.form-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-footer a {
+  color: #818cf8;
+  font-size: 0.8rem;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.form-footer a:hover { color: #a5b4fc; }
+
+/* ─── SUBMIT BUTTON ──────────────────────────────── */
+.submit-btn {
+  width: 100%;
+  background: var(--primary-gradient);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 1rem;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  margin-top: 0.5rem;
+}
+
+/* ─── TOAST ──────────────────────────────────────── */
+.toast-message {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 99px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  z-index: 100;
+  color: #fff;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.toast-message.success { background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.5); }
+.toast-message.error { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); }
+
+/* ─── MOBILE RESPONSIVE ──────────────────────────── */
 @media screen and (max-width: 768px) {
-  /* Hide all the new desktop fancy stuff */
-  .desktop-view-only { display: none !important; }
-
-  .login-page {
-    display: block;
-    padding: 0;
-    /* Revert background for mobile only if you want, 
-       or keep the new blue one. Let's keep the new blue one as it looks good on mobile too,
-       but usually we want to keep mobile SAFE. */
-    background: linear-gradient(to right, #E4E5E6, #00416A); /* Original Gradient */
-    height: 100dvh;
-    overflow: hidden;
-  }
-  
-  .login-page .container { display: none !important; }
-
-  .login-page .top-nav-buttons { top: 15px; right: 15px; gap: 8px; }
-  .login-page .button { padding: 8px 16px; font-size: 10px; color: white; border: none; background: transparent; }
-  .login-page .button:hover { background: transparent; color: white; }
-
-  .mobile-view-wrapper {
-    display: flex; flex-direction: column; width: 100%; height: 100dvh; position: relative;
-  }
-  
-  /* ... (Rest of mobile styles exactly as they were) ... */
-  .m-hero-section { height: 25vh; display: flex; flex-direction: column; justify-content: center; padding: 0 32px; margin-top: 40px; position: relative; z-index: 10; }
-  .m-logo { font-family: 'Clash Display', sans-serif; font-size: 60px; font-weight: 600; color: #00416A; margin: 0; letter-spacing: -2px; line-height: 1; }
-  .m-divider { height: 4px; width: 80px; background-color: rgba(255,255,255,0.6); margin: 16px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-  .m-tagline { font-family: 'Satoshi', sans-serif; color: #00416A; font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.8; margin: 0; }
-
-  .m-interaction-sheet { flex: 1; background-color: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border-top-left-radius: 40px; border-top-right-radius: 40px; box-shadow: 0 -20px 60px rgba(0,0,0,0.2); display: flex; flex-direction: column; position: relative; z-index: 20; overflow: hidden; animation: slide-up-mobile 0.5s ease-out; }
-  @keyframes slide-up-mobile { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-  .m-sheet-header { flex: none; padding: 32px 32px 16px 32px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: flex-end; }
-  .m-sheet-title { font-family: 'Clash Display', sans-serif; font-size: 24px; font-weight: 600; color: #00416A; margin: 0; }
-  .m-toggle-link { font-family: 'Satoshi', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #2da0a8; background: none; border: none; border-bottom: 1px dashed #2da0a8; padding-bottom: 2px; cursor: pointer; }
-
-  .m-form-scroll { flex: 1; overflow-y: auto; padding: 24px 32px 96px 32px; -ms-overflow-style: none; scrollbar-width: none; }
-  .m-form-scroll::-webkit-scrollbar { display: none; }
-
-  .m-form-group { margin-top: 16px; display: flex; flex-direction: column; gap: 5px; }
-  .m-row { display: flex; justify-content: space-between; gap: 10px; }
-  .m-input-wrapper { margin-bottom: 20px; width: 100%; position: relative; }
-  .m-half { width: 48%; }
-  .m-label { display: block; font-family: 'Satoshi', sans-serif; font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-  .m-input-container { position: relative; }
-  .m-input-field { width: 100%; background: transparent; border: none; border-bottom: 1px solid #d1d5db; padding: 8px 0; font-family: 'JetBrains Mono', monospace; font-size: 15px; color: #111827; border-radius: 0; outline: none; transition: all 0.2s; }
-  .m-input-field:focus { border-bottom: 2px solid #00416A; }
-  .m-input-field::placeholder { color: #d1d5db; }
-  .m-pass-toggle { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: none; border: none; color: #9ca3af; cursor: pointer; }
-
-  .m-submit-btn { width: 100%; background: linear-gradient(to right, #1A2980, #26D0CE); color: white; height: 56px; border-radius: 16px; font-family: 'Satoshi', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 2px; border: none; margin-top: 32px; margin-bottom: 16px; box-shadow: 0 10px 25px rgba(26, 41, 128, 0.2); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: opacity 0.2s; }
-  .m-submit-btn:active { transform: scale(0.98); }
-  .m-arrow { transition: transform 0.2s; }
-  .m-submit-btn:hover .m-arrow { transform: translateX(4px); }
-
-  .m-forgot-wrapper { display: flex; justify-content: flex-end; margin-top: -10px; margin-bottom: 20px; }
-  .m-forgot-link { font-family: 'Satoshi', sans-serif; font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px; text-decoration: none; }
-  
-  .login-page .forgot-password-container {
-    width: calc(100% - 30px) !important;
-    min-height: 450px;
-    margin: 80px 15px 15px 15px;
-    display: block !important;
-  }
+  .elegant-shape { opacity: 0.5; }
+  .content-wrapper { padding: 1rem; max-width: 100%; }
+  .glass-card { padding: 1.5rem; }
+  .title-gradient { font-size: 1.75rem; }
 }
