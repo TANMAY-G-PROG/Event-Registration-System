@@ -1,50 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion"; // Required for Kokonut Background
-import "./style.css";
-
-// ─── KOKONUT UI SHAPE COMPONENT ─────────────────────────────
-function ElegantShape({
-  className,
-  delay = 0,
-  width = 400,
-  height = 100,
-  rotate = 0,
-  gradient = "rgba(255,255,255,0.08)",
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -150, rotate: rotate - 15 }}
-      animate={{ opacity: 1, y: 0, rotate: rotate }}
-      transition={{
-        duration: 2.4,
-        delay,
-        ease: [0.23, 0.86, 0.39, 0.96],
-        opacity: { duration: 1.2 },
-      }}
-      className={`elegant-shape ${className}`}
-      style={{ width, height }}
-    >
-      <motion.div
-        animate={{ y: [0, 15, 0] }}
-        transition={{
-          duration: 12,
-          repeat: Number.POSITIVE_INFINITY,
-          ease: "easeInOut",
-        }}
-        className="shape-inner"
-        style={{
-          background: `linear-gradient(to right, transparent, ${gradient})`,
-        }}
-      />
-    </motion.div>
-  );
-}
+import "./style.css"; // make sure this file exists
 
 export default function Login() {
   const navigate = useNavigate();
 
-  // ── State (UNCHANGED) ─────────────────────────────────────
+  // ── State ─────────────────────────────────────
   const [isActive, setIsActive] = useState(false); // true → sign-up panel active
   const [message, setMessage] = useState({ text: "", isError: false, show: false });
   const [showPassword, setShowPassword] = useState({ signIn: false, signUp: false });
@@ -188,15 +149,7 @@ export default function Login() {
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
       />
 
-      {/* ── KOKONUT UI BACKGROUND SHAPES ────────────────── */}
-      <div className="kokonut-shapes">
-        <ElegantShape delay={0.3} width={600} height={140} rotate={12} gradient="rgba(99, 102, 241, 0.15)" className="shape-1" />
-        <ElegantShape delay={0.5} width={500} height={120} rotate={-15} gradient="rgba(244, 63, 94, 0.15)" className="shape-2" />
-        <ElegantShape delay={0.4} width={300} height={80} rotate={-8} gradient="rgba(139, 92, 246, 0.15)" className="shape-3" />
-        <div className="bg-gradient-blur" />
-      </div>
-
-      {/* Top navigation buttons (Original Style) */}
+      {/* Top navigation buttons */}
       <div className="top-nav-buttons">
         <button className="button" onClick={goTo("/about-us")}>
           {[1, 2, 3, 4, 5, 6, 7].map((i) => (
@@ -219,9 +172,8 @@ export default function Login() {
         </div>
       )}
 
-      {/* ── Desktop View (Sliding panels - Updated to Glass) ───────────────────── */}
+      {/* ── Desktop View (Sliding panels) ───────────────────── */}
       <div className={`container desktop-view ${isActive ? "active" : ""}`} id="container">
-        
         {/* Sign-up form */}
         <div className="form-container sign-up">
           <form onKeyPress={handleKeyPress}>
@@ -324,7 +276,7 @@ export default function Login() {
           </form>
         </div>
 
-        {/* Toggle overlay (Kept original logic & gradient) */}
+        {/* Toggle overlay */}
         <div className="toggle-container">
           <div className="toggle">
             <div className="toggle-panel toggle-left">
@@ -345,7 +297,7 @@ export default function Login() {
         </div>
       </div>
 
-      {/* ── Mobile View (EXACTLY AS OLD CODE) ───────────────────── */}
+      {/* ── Mobile View (Premium bottom sheet) ───────────────────── */}
       <div className="mobile-view-wrapper">
         <div className="m-hero-section">
           <div className="m-hero-content">
@@ -468,7 +420,7 @@ export default function Login() {
   );
 }
 
-// ── Mobile Input Component (UNCHANGED) ─────────────────────
+// ── Mobile Input Component ─────────────────────
 const MobileInput = ({
   label,
   name,
