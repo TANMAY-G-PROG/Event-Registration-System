@@ -1,16 +1,64 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import "./style.css";
+
+// ─── ELEGANT SHAPE COMPONENT (From Kokonut UI) ────────────────
+const ElegantShape = ({
+  className,
+  delay = 0,
+  width = 400,
+  height = 100,
+  rotate = 0,
+  gradient = "rgba(255,255,255,0.08)",
+}) => {
+  return (
+    <motion.div
+      initial={{
+        opacity: 0,
+        y: -150,
+        rotate: rotate - 15,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        rotate: rotate,
+      }}
+      transition={{
+        duration: 2.4,
+        delay,
+        ease: [0.23, 0.86, 0.39, 0.96],
+        opacity: { duration: 1.2 },
+      }}
+      className={`elegant-shape ${className}`}
+      style={{ width, height }}
+    >
+      <motion.div
+        animate={{
+          y: [0, 15, 0],
+        }}
+        transition={{
+          duration: 12,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+        }}
+        className="shape-inner"
+        style={{
+          background: `linear-gradient(to right, transparent, ${gradient})`,
+        }}
+      />
+    </motion.div>
+  );
+};
 
 export default function Login() {
   const navigate = useNavigate();
 
-  // ── State (UNCHANGED) ─────────────────────────────────────
-  const [isActive, setIsActive] = useState(false);
+  // ─── STATE ───────────────────────────────────────────────────
+  const [isActive, setIsActive] = useState(false); // false = Sign In, true = Sign Up
   const [message, setMessage] = useState({ text: "", isError: false, show: false });
   const [showPassword, setShowPassword] = useState({ signIn: false, signUp: false });
 
-  // Form data (UNCHANGED)
   const [signInData, setSignInData] = useState({ usn: "", password: "" });
   const [signUpData, setSignUpData] = useState({
     name: "",
@@ -21,7 +69,7 @@ export default function Login() {
     password: "",
   });
 
-  // ── Effects (UNCHANGED) ───────────────────────────────────
+  // ─── EFFECTS ─────────────────────────────────────────────────
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -33,7 +81,7 @@ export default function Login() {
     }
   }, [message.show]);
 
-  // ── API Helpers (UNCHANGED) ───────────────────────────────
+  // ─── API LOGIC ───────────────────────────────────────────────
   const checkAuthStatus = async () => {
     try {
       const res = await fetch("/api/me", {
@@ -55,7 +103,6 @@ export default function Login() {
     setMessage({ text, isError, show: true });
   };
 
-  // ── Handlers (UNCHANGED) ───────────────────────────────────
   const handleSignIn = async (e) => {
     e?.preventDefault();
     const { usn, password } = signInData;
@@ -126,349 +173,253 @@ export default function Login() {
     }));
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      isActive ? handleSignUp() : handleSignIn();
-    }
-  };
-
   const togglePasswordVisibility = (form) => {
     setShowPassword((prev) => ({ ...prev, [form]: !prev[form] }));
   };
 
-  const goTo = (path) => () => navigate(path);
-  const goToContact = () => navigate("/about-us#connect-section");
-
-  // ── Render ─────────────────────────────────────
+  // ─── RENDER ──────────────────────────────────────────────────
   return (
     <div className="login-page">
-      {/* Font Awesome */}
       <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
       />
 
-      {/* ── NEW: Background 3D Shapes ───────────────── */}
-      <div className="background-shapes desktop-view-only">
-        <div className="shape shape-1"></div>
-        <div className="shape shape-2"></div>
-        <div className="shape shape-3"></div>
+      {/* 1. Background Gradients & Blurs */}
+      <div className="bg-gradient-blur blur-indigo" />
+      <div className="bg-gradient-blur blur-rose" />
+
+      {/* 2. Floating Elegant Shapes (The Kokonut Effect) */}
+      <div className="shapes-container">
+        <ElegantShape
+          delay={0.3}
+          width={600}
+          height={140}
+          rotate={12}
+          gradient="rgba(99, 102, 241, 0.15)" // Indigo
+          className="shape-1"
+        />
+        <ElegantShape
+          delay={0.5}
+          width={500}
+          height={120}
+          rotate={-15}
+          gradient="rgba(244, 63, 94, 0.15)" // Rose
+          className="shape-2"
+        />
+        <ElegantShape
+          delay={0.4}
+          width={300}
+          height={80}
+          rotate={-8}
+          gradient="rgba(139, 92, 246, 0.15)" // Violet
+          className="shape-3"
+        />
+        <ElegantShape
+          delay={0.6}
+          width={200}
+          height={60}
+          rotate={20}
+          gradient="rgba(245, 158, 11, 0.15)" // Amber
+          className="shape-4"
+        />
       </div>
 
-      {/* Top navigation buttons */}
-      <div className="top-nav-buttons">
-        <button className="button" onClick={goTo("/about-us")}>
-          <span>About Us</span>
-        </button>
-        <button className="button" onClick={goToContact}>
-          <span>Contact Us</span>
-        </button>
-      </div>
+      {/* 3. Main Glass Card */}
+      <div className="content-wrapper">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, delay: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
+          className="glass-card"
+        >
+          {/* Internal Glow */}
+          <div className="card-glow" />
 
-      {/* Toast message */}
-      {message.show && (
-        <div className={`message ${message.isError ? "error" : "success"}`}>
-          {message.text}
-        </div>
-      )}
+          {/* Header Section */}
+          <div className="card-header">
+            <div className="logo-badge">
+              <i className="fa-solid fa-bolt"></i>
+            </div>
+            <h1 className="title-gradient">
+              {isActive ? "Join the Flow" : "Welcome Back"}
+            </h1>
+            <p className="subtitle">
+              {isActive
+                ? "Create your student profile to get started"
+                : "Enter your credentials to access events"}
+            </p>
+          </div>
 
-      {/* ── Desktop View (Updated Class) ───────────────────── */}
-      <div className={`container desktop-view ${isActive ? "active" : ""}`} id="container">
-        
-        {/* Sign-up form */}
-        <div className="form-container sign-up">
-          <form onKeyPress={handleKeyPress}>
-            <h1>Create Account</h1>
-            <input
-              type="text"
-              name="name"
-              placeholder="Name"
-              value={signUpData.name}
-              onChange={handleSignUpChange}
-            />
-            <input
-              type="text"
-              name="usn"
-              placeholder="USN"
-              value={signUpData.usn}
-              onChange={handleSignUpChange}
-            />
-            <div className="row-input">
-                <input
-                type="number"
-                name="sem"
-                placeholder="Sem"
-                className="half-input"
-                value={signUpData.sem}
-                onChange={handleSignUpChange}
-                />
-                <input
-                type="tel"
-                name="mobno"
-                placeholder="Mobile"
-                className="half-input"
-                value={signUpData.mobno}
-                onChange={handleSignUpChange}
-                />
-            </div>
-            <input
-              type="email"
-              name="email"
-              placeholder="Email ID"
-              value={signUpData.email}
-              onChange={handleSignUpChange}
-            />
-            <div className="password-wrapper">
-              <input
-                type={showPassword.signUp ? "text" : "password"}
-                name="password"
-                placeholder="Password"
-                value={signUpData.password}
-                onChange={handleSignUpChange}
-              />
-              <i
-                className={`fa-solid ${
-                  showPassword.signUp ? "fa-eye-slash" : "fa-eye"
-                } password-toggle-icon`}
-                onClick={() => togglePasswordVisibility("signUp")}
-              />
-            </div>
-            <button type="button" onClick={handleSignUp}>
+          {/* Toggle Switch */}
+          <div className="auth-toggle">
+            <button
+              className={`toggle-btn ${!isActive ? "active" : ""}`}
+              onClick={() => setIsActive(false)}
+            >
+              Sign In
+            </button>
+            <button
+              className={`toggle-btn ${isActive ? "active" : ""}`}
+              onClick={() => setIsActive(true)}
+            >
               Sign Up
             </button>
-          </form>
-        </div>
-
-        {/* Sign-in form */}
-        <div className="form-container sign-in">
-          <form onKeyPress={handleKeyPress}>
-            <h1>Sign In</h1>
-            <div className="input-group">
-                <label>Email or USN</label>
-                <input
-                type="text"
-                name="usn"
-                placeholder="Enter your USN"
-                value={signInData.usn}
-                onChange={handleSignInChange}
-                />
-            </div>
-            <div className="input-group">
-                <label>Password</label>
-                <div className="password-wrapper">
-                <input
-                    type={showPassword.signIn ? "text" : "password"}
-                    name="password"
-                    placeholder="Enter password"
-                    value={signInData.password}
-                    onChange={handleSignInChange}
-                />
-                <i
-                    className={`fa-solid ${
-                    showPassword.signIn ? "fa-eye-slash" : "fa-eye"
-                    } password-toggle-icon`}
-                    onClick={() => togglePasswordVisibility("signIn")}
-                />
-                </div>
-            </div>
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/forgot-password");
-              }}
-              className="forgot-password-link"
-            >
-              Forgot Password?
-            </a>
-            <button type="button" onClick={handleSignIn}>
-              Sign in
-            </button>
-          </form>
-        </div>
-
-        {/* Toggle overlay */}
-        <div className="toggle-container">
-          <div className="toggle">
-            <div className="toggle-panel toggle-left">
-              <h1>Welcome Back!</h1>
-              <p>To keep connected with us please login with your personal info</p>
-              <button className="ghost" onClick={() => setIsActive(false)}>
-                Sign In
-              </button>
-            </div>
-            <div className="toggle-panel toggle-right">
-              <h1>Hello, Friend!</h1>
-              <p>Enter your personal details and start your journey with us</p>
-              <button className="ghost" onClick={() => setIsActive(true)}>
-                Sign Up
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Mobile View (UNCHANGED) ───────────────────── */}
-      <div className="mobile-view-wrapper">
-        <div className="m-hero-section">
-          <div className="m-hero-content">
-            <h1 className="m-logo">FLO.</h1>
-            <div className="m-divider" />
-            <p className="m-tagline">The Pulse of Campus</p>
-          </div>
-        </div>
-
-        <div className="m-interaction-sheet">
-          <div className="m-sheet-header">
-            <h2 className="m-sheet-title">{isActive ? "New Account" : "Welcome Back"}</h2>
-            <button onClick={() => setIsActive(!isActive)} className="m-toggle-link">
-              {isActive ? "Log In Instead" : "Create Account"}
-            </button>
           </div>
 
-          <div className="m-form-scroll">
-            <form onSubmit={isActive ? handleSignUp : handleSignIn}>
-              {!isActive ? (
-                // Sign-in fields
-                <div className="m-form-group">
-                  <MobileInput
-                    label="University Serial No."
+          {/* Form Section */}
+          <form className="auth-form" onSubmit={isActive ? handleSignUp : handleSignIn}>
+            
+            {!isActive ? (
+              // ─── SIGN IN FORM ───────────────────────
+              <motion.div
+                key="signin"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4 }}
+                className="form-group-wrapper"
+              >
+                <div className="input-group">
+                  <label>University Serial No.</label>
+                  <input
+                    type="text"
                     name="usn"
                     value={signInData.usn}
                     onChange={handleSignInChange}
-                    placeholder="USN"
+                    placeholder="Enter USN"
                   />
-                  <MobileInput
-                    label="Password"
-                    name="password"
-                    value={signInData.password}
-                    onChange={handleSignInChange}
-                    placeholder="Password"
-                    isPassword
-                    isVisible={showPassword.signIn}
-                    onToggleVisibility={() => togglePasswordVisibility("signIn")}
-                  />
-                  <div className="m-forgot-wrapper">
-                    <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        navigate("/forgot-password");
-                      }}
-                      className="m-forgot-link"
-                    >
-                      Forgot Your Password?
-                    </a>
+                </div>
+                <div className="input-group">
+                  <label>Password</label>
+                  <div className="password-wrapper">
+                    <input
+                      type={showPassword.signIn ? "text" : "password"}
+                      name="password"
+                      value={signInData.password}
+                      onChange={handleSignInChange}
+                      placeholder="••••••••"
+                    />
+                    <i
+                      className={`fa-solid ${
+                        showPassword.signIn ? "fa-eye-slash" : "fa-eye"
+                      } toggle-icon`}
+                      onClick={() => togglePasswordVisibility("signIn")}
+                    />
                   </div>
                 </div>
-              ) : (
-                // Sign-up fields
-                <div className="m-form-group">
-                  <MobileInput
-                    label="Name"
+                <div className="form-footer">
+                   <a href="#" onClick={(e) => { e.preventDefault(); navigate("/forgot-password"); }}>
+                     Forgot Password?
+                   </a>
+                </div>
+              </motion.div>
+            ) : (
+              // ─── SIGN UP FORM ───────────────────────
+              <motion.div
+                key="signup"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4 }}
+                className="form-group-wrapper scrollable-signup"
+              >
+                <div className="input-group">
+                  <label>Full Name</label>
+                  <input
+                    type="text"
                     name="name"
                     value={signUpData.name}
                     onChange={handleSignUpChange}
-                    placeholder="Name"
+                    placeholder="John Doe"
                   />
-                  <MobileInput
-                    label="USN"
-                    name="usn"
-                    value={signUpData.usn}
-                    onChange={handleSignUpChange}
-                    placeholder="USN"
-                  />
-                  <div className="m-row">
-                    <MobileInput
-                      label="Semester"
+                </div>
+                <div className="row">
+                  <div className="input-group half">
+                    <label>USN</label>
+                    <input
+                      type="text"
+                      name="usn"
+                      value={signUpData.usn}
+                      onChange={handleSignUpChange}
+                      placeholder="1BM..."
+                    />
+                  </div>
+                  <div className="input-group half">
+                    <label>Sem</label>
+                    <input
+                      type="number"
                       name="sem"
                       value={signUpData.sem}
                       onChange={handleSignUpChange}
-                      placeholder="Sem"
-                      half
-                      type="number"
-                    />
-                    <MobileInput
-                      label="Mobile"
-                      name="mobno"
-                      value={signUpData.mobno}
-                      onChange={handleSignUpChange}
-                      placeholder="Mobile"
-                      half
-                      type="tel"
+                      placeholder="1-8"
                     />
                   </div>
-                  <MobileInput
-                    label="Email ID"
+                </div>
+                <div className="input-group">
+                  <label>Mobile</label>
+                  <input
+                    type="tel"
+                    name="mobno"
+                    value={signUpData.mobno}
+                    onChange={handleSignUpChange}
+                    placeholder="9999999999"
+                  />
+                </div>
+                <div className="input-group">
+                  <label>Email</label>
+                  <input
+                    type="email"
                     name="email"
                     value={signUpData.email}
                     onChange={handleSignUpChange}
-                    placeholder="Email ID"
-                    type="email"
-                  />
-                  <MobileInput
-                    label="Password"
-                    name="password"
-                    value={signUpData.password}
-                    onChange={handleSignUpChange}
-                    placeholder="Password"
-                    isPassword
-                    isVisible={showPassword.signUp}
-                    onToggleVisibility={() => togglePasswordVisibility("signUp")}
+                    placeholder="email@example.com"
                   />
                 </div>
-              )}
+                <div className="input-group">
+                  <label>Password</label>
+                  <div className="password-wrapper">
+                    <input
+                      type={showPassword.signUp ? "text" : "password"}
+                      name="password"
+                      value={signUpData.password}
+                      onChange={handleSignUpChange}
+                      placeholder="••••••••"
+                    />
+                    <i
+                      className={`fa-solid ${
+                        showPassword.signUp ? "fa-eye-slash" : "fa-eye"
+                      } toggle-icon`}
+                      onClick={() => togglePasswordVisibility("signUp")}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
-              <button type="submit" className="m-submit-btn">
-                {isActive ? "SIGN UP" : "SIGN IN"}
-                <span className="m-arrow">→</span>
-              </button>
-            </form>
-          </div>
-        </div>
+            <motion.button
+              whileHover={{ scale: 1.02, opacity: 0.9 }}
+              whileTap={{ scale: 0.98 }}
+              className="submit-btn"
+              type="submit"
+            >
+              {isActive ? "Create Account" : "Sign In"}
+            </motion.button>
+          </form>
+        </motion.div>
       </div>
+
+      {/* Toast Message */}
+      {message.show && (
+        <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`toast-message ${message.isError ? "error" : "success"}`}
+        >
+          {message.text}
+        </motion.div>
+      )}
+
+      {/* Overlay to darken edges */}
+      <div className="overlay-gradient" />
     </div>
   );
 }
-
-// ── Mobile Input Component (UNCHANGED) ─────────────────────
-const MobileInput = ({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder,
-  half,
-  type = "text",
-  isPassword,
-  isVisible,
-  onToggleVisibility,
-}) => {
-  const inputType = isPassword ? (isVisible ? "text" : "password") : type;
-
-  return (
-    <div className={`m-input-wrapper ${half ? "m-half" : ""}`}>
-      <label className="m-label">{label}</label>
-      <div className="m-input-container">
-        <input
-          type={inputType}
-          name={name}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          className="m-input-field"
-        />
-        {isPassword && (
-          <button type="button" onClick={onToggleVisibility} className="m-pass-toggle">
-            {isVisible ? (
-              <i className="fa-solid fa-eye-slash" />
-            ) : (
-              <i className="fa-solid fa-eye" />
-            )}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
