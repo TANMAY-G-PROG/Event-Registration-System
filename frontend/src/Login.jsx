@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./style.css"; // make sure this file exists
+import "./style.css";
 
 export default function Login() {
   const navigate = useNavigate();
 
-  // ── State ─────────────────────────────────────
-  const [isActive, setIsActive] = useState(false); // true → sign-up panel active
+  // ── State (UNCHANGED) ─────────────────────────────────────
+  const [isActive, setIsActive] = useState(false);
   const [message, setMessage] = useState({ text: "", isError: false, show: false });
   const [showPassword, setShowPassword] = useState({ signIn: false, signUp: false });
 
-  // Form data
+  // Form data (UNCHANGED)
   const [signInData, setSignInData] = useState({ usn: "", password: "" });
   const [signUpData, setSignUpData] = useState({
     name: "",
@@ -21,7 +21,7 @@ export default function Login() {
     password: "",
   });
 
-  // ── Effects ───────────────────────────────────
+  // ── Effects (UNCHANGED) ───────────────────────────────────
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -33,7 +33,7 @@ export default function Login() {
     }
   }, [message.show]);
 
-  // ── API Helpers ───────────────────────────────
+  // ── API Helpers (UNCHANGED) ───────────────────────────────
   const checkAuthStatus = async () => {
     try {
       const res = await fetch("/api/me", {
@@ -55,7 +55,7 @@ export default function Login() {
     setMessage({ text, isError, show: true });
   };
 
-  // ── Handlers ───────────────────────────────────
+  // ── Handlers (UNCHANGED) ───────────────────────────────────
   const handleSignIn = async (e) => {
     e?.preventDefault();
     const { usn, password } = signInData;
@@ -149,18 +149,19 @@ export default function Login() {
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
       />
 
+      {/* Cinematic Background Elements (New for Redesign) */}
+      <div className="auth-background-wrapper">
+         <div className="ambient-orb orb-1"></div>
+         <div className="ambient-orb orb-2"></div>
+         <div className="grid-overlay"></div>
+      </div>
+
       {/* Top navigation buttons */}
       <div className="top-nav-buttons">
         <button className="button" onClick={goTo("/about-us")}>
-          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <div key={i} className={`bubble-layer bubble-${i}`} />
-          ))}
           <span>About Us</span>
         </button>
         <button className="button" onClick={goToContact}>
-          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <div key={i} className={`bubble-layer bubble-${i}`} />
-          ))}
           <span>Contact Us</span>
         </button>
       </div>
@@ -168,59 +169,94 @@ export default function Login() {
       {/* Toast message */}
       {message.show && (
         <div className={`message ${message.isError ? "error" : "success"}`}>
-          {message.text}
+            <div className={`status-dot ${message.isError ? "red" : "green"}`}></div>
+            {message.text}
         </div>
       )}
 
-      {/* ── Desktop View (Sliding panels) ───────────────────── */}
+      {/* ── Desktop View (Redesigned) ───────────────────── */}
       <div className={`container desktop-view ${isActive ? "active" : ""}`} id="container">
+        
         {/* Sign-up form */}
         <div className="form-container sign-up">
           <form onKeyPress={handleKeyPress}>
-            <h1>Create Account</h1>
-            <input
-              type="text"
-              name="name"
-              placeholder="Name"
-              value={signUpData.name}
-              onChange={handleSignUpChange}
-            />
-            <input
-              type="text"
-              name="usn"
-              placeholder="USN"
-              value={signUpData.usn}
-              onChange={handleSignUpChange}
-            />
-            <input
-              type="number"
-              name="sem"
-              placeholder="Semester"
-              value={signUpData.sem}
-              onChange={handleSignUpChange}
-            />
-            <input
-              type="tel"
-              name="mobno"
-              placeholder="Mobile Number"
-              value={signUpData.mobno}
-              onChange={handleSignUpChange}
-            />
-            <input
-              type="email"
-              name="email"
-              placeholder="Email ID"
-              value={signUpData.email}
-              onChange={handleSignUpChange}
-            />
-            <div className="password-wrapper">
+            <div className="form-header">
+                <h1>Join the Flow</h1>
+                <p className="subtitle">Create your student profile</p>
+            </div>
+            
+            <div className="input-group">
+                <input
+                type="text"
+                name="name"
+                placeholder=" " 
+                required
+                value={signUpData.name}
+                onChange={handleSignUpChange}
+                />
+                <label>Full Name</label>
+            </div>
+
+            <div className="row-inputs">
+                <div className="input-group">
+                    <input
+                    type="text"
+                    name="usn"
+                    placeholder=" "
+                    required
+                    value={signUpData.usn}
+                    onChange={handleSignUpChange}
+                    />
+                    <label>USN</label>
+                </div>
+                <div className="input-group">
+                    <input
+                    type="number"
+                    name="sem"
+                    placeholder=" "
+                    required
+                    value={signUpData.sem}
+                    onChange={handleSignUpChange}
+                    />
+                    <label>Sem</label>
+                </div>
+            </div>
+
+            <div className="row-inputs">
+                 <div className="input-group">
+                    <input
+                    type="tel"
+                    name="mobno"
+                    placeholder=" "
+                    required
+                    value={signUpData.mobno}
+                    onChange={handleSignUpChange}
+                    />
+                    <label>Mobile</label>
+                </div>
+                 <div className="input-group">
+                    <input
+                    type="email"
+                    name="email"
+                    placeholder=" "
+                    required
+                    value={signUpData.email}
+                    onChange={handleSignUpChange}
+                    />
+                    <label>Email</label>
+                </div>
+            </div>
+
+            <div className="input-group password-group">
               <input
                 type={showPassword.signUp ? "text" : "password"}
                 name="password"
-                placeholder="Password"
+                placeholder=" "
+                required
                 value={signUpData.password}
                 onChange={handleSignUpChange}
               />
+              <label>Password</label>
               <i
                 className={`fa-solid ${
                   showPassword.signUp ? "fa-eye-slash" : "fa-eye"
@@ -228,8 +264,9 @@ export default function Login() {
                 onClick={() => togglePasswordVisibility("signUp")}
               />
             </div>
-            <button type="button" onClick={handleSignUp}>
-              Sign Up
+
+            <button type="button" className="action-btn" onClick={handleSignUp}>
+              Create Account <i className="fa-solid fa-arrow-right"></i>
             </button>
           </form>
         </div>
@@ -237,22 +274,33 @@ export default function Login() {
         {/* Sign-in form */}
         <div className="form-container sign-in">
           <form onKeyPress={handleKeyPress}>
-            <h1>Sign In</h1>
-            <input
-              type="text"
-              name="usn"
-              placeholder="USN"
-              value={signInData.usn}
-              onChange={handleSignInChange}
-            />
-            <div className="password-wrapper">
+            <div className="form-header">
+                <h1>Welcome Back</h1>
+                <p className="subtitle">Enter your credentials to access events</p>
+            </div>
+            
+            <div className="input-group">
+              <input
+                type="text"
+                name="usn"
+                placeholder=" "
+                required
+                value={signInData.usn}
+                onChange={handleSignInChange}
+              />
+              <label>University Serial No.</label>
+            </div>
+            
+            <div className="input-group password-group">
               <input
                 type={showPassword.signIn ? "text" : "password"}
                 name="password"
-                placeholder="Password"
+                placeholder=" "
+                required
                 value={signInData.password}
                 onChange={handleSignInChange}
               />
+              <label>Password</label>
               <i
                 className={`fa-solid ${
                   showPassword.signIn ? "fa-eye-slash" : "fa-eye"
@@ -260,18 +308,22 @@ export default function Login() {
                 onClick={() => togglePasswordVisibility("signIn")}
               />
             </div>
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/forgot-password");
-              }}
-              className="forgot-password-link"
-            >
-              Forgot Your Password?
-            </a>
-            <button type="button" onClick={handleSignIn}>
-              Sign In
+
+            <div className="form-utilities">
+                <a
+                href="#"
+                onClick={(e) => {
+                    e.preventDefault();
+                    navigate("/forgot-password");
+                }}
+                className="forgot-password-link"
+                >
+                Forgot Password?
+                </a>
+            </div>
+
+            <button type="button" className="action-btn" onClick={handleSignIn}>
+              Sign In <i className="fa-solid fa-arrow-right"></i>
             </button>
           </form>
         </div>
@@ -280,16 +332,16 @@ export default function Login() {
         <div className="toggle-container">
           <div className="toggle">
             <div className="toggle-panel toggle-left">
-              <h1>Welcome Back!</h1>
-              <p>Enter your personal details to use all of site features</p>
-              <button className="hidden" onClick={() => setIsActive(false)}>
+              <h1>Already<br/>aboard?</h1>
+              <p>Sign in to access your event dashboard and certificates.</p>
+              <button className="ghost-btn" onClick={() => setIsActive(false)}>
                 Sign In
               </button>
             </div>
             <div className="toggle-panel toggle-right">
-              <h1>Hello, Friend!</h1>
-              <p>Register with your personal details to create a new account</p>
-              <button className="hidden" onClick={() => setIsActive(true)}>
+              <h1>New<br/>Here?</h1>
+              <p>Join the community to register for events and competitions.</p>
+              <button className="ghost-btn" onClick={() => setIsActive(true)}>
                 Sign Up
               </button>
             </div>
@@ -297,7 +349,7 @@ export default function Login() {
         </div>
       </div>
 
-      {/* ── Mobile View (Premium bottom sheet) ───────────────────── */}
+      {/* ── Mobile View (UNCHANGED) ───────────────────── */}
       <div className="mobile-view-wrapper">
         <div className="m-hero-section">
           <div className="m-hero-content">
@@ -420,7 +472,7 @@ export default function Login() {
   );
 }
 
-// ── Mobile Input Component ─────────────────────
+// ── Mobile Input Component (UNCHANGED) ─────────────────────
 const MobileInput = ({
   label,
   name,
