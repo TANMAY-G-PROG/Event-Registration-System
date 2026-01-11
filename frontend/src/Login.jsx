@@ -149,11 +149,11 @@ export default function Login() {
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
       />
 
-      {/* Cinematic Background Elements (New for Redesign) */}
-      <div className="auth-background-wrapper">
-         <div className="ambient-orb orb-1"></div>
-         <div className="ambient-orb orb-2"></div>
-         <div className="grid-overlay"></div>
+      {/* ── NEW: Background 3D Shapes ───────────────── */}
+      <div className="background-shapes desktop-view-only">
+        <div className="shape shape-1"></div>
+        <div className="shape shape-2"></div>
+        <div className="shape shape-3"></div>
       </div>
 
       {/* Top navigation buttons */}
@@ -169,94 +169,64 @@ export default function Login() {
       {/* Toast message */}
       {message.show && (
         <div className={`message ${message.isError ? "error" : "success"}`}>
-            <div className={`status-dot ${message.isError ? "red" : "green"}`}></div>
-            {message.text}
+          {message.text}
         </div>
       )}
 
-      {/* ── Desktop View (Redesigned) ───────────────────── */}
+      {/* ── Desktop View (Updated Class) ───────────────────── */}
       <div className={`container desktop-view ${isActive ? "active" : ""}`} id="container">
         
         {/* Sign-up form */}
         <div className="form-container sign-up">
           <form onKeyPress={handleKeyPress}>
-            <div className="form-header">
-                <h1>Join the Flow</h1>
-                <p className="subtitle">Create your student profile</p>
-            </div>
-            
-            <div className="input-group">
+            <h1>Create Account</h1>
+            <input
+              type="text"
+              name="name"
+              placeholder="Name"
+              value={signUpData.name}
+              onChange={handleSignUpChange}
+            />
+            <input
+              type="text"
+              name="usn"
+              placeholder="USN"
+              value={signUpData.usn}
+              onChange={handleSignUpChange}
+            />
+            <div className="row-input">
                 <input
-                type="text"
-                name="name"
-                placeholder=" " 
-                required
-                value={signUpData.name}
+                type="number"
+                name="sem"
+                placeholder="Sem"
+                className="half-input"
+                value={signUpData.sem}
                 onChange={handleSignUpChange}
                 />
-                <label>Full Name</label>
+                <input
+                type="tel"
+                name="mobno"
+                placeholder="Mobile"
+                className="half-input"
+                value={signUpData.mobno}
+                onChange={handleSignUpChange}
+                />
             </div>
-
-            <div className="row-inputs">
-                <div className="input-group">
-                    <input
-                    type="text"
-                    name="usn"
-                    placeholder=" "
-                    required
-                    value={signUpData.usn}
-                    onChange={handleSignUpChange}
-                    />
-                    <label>USN</label>
-                </div>
-                <div className="input-group">
-                    <input
-                    type="number"
-                    name="sem"
-                    placeholder=" "
-                    required
-                    value={signUpData.sem}
-                    onChange={handleSignUpChange}
-                    />
-                    <label>Sem</label>
-                </div>
-            </div>
-
-            <div className="row-inputs">
-                 <div className="input-group">
-                    <input
-                    type="tel"
-                    name="mobno"
-                    placeholder=" "
-                    required
-                    value={signUpData.mobno}
-                    onChange={handleSignUpChange}
-                    />
-                    <label>Mobile</label>
-                </div>
-                 <div className="input-group">
-                    <input
-                    type="email"
-                    name="email"
-                    placeholder=" "
-                    required
-                    value={signUpData.email}
-                    onChange={handleSignUpChange}
-                    />
-                    <label>Email</label>
-                </div>
-            </div>
-
-            <div className="input-group password-group">
+            <input
+              type="email"
+              name="email"
+              placeholder="Email ID"
+              value={signUpData.email}
+              onChange={handleSignUpChange}
+            />
+            <div className="password-wrapper">
               <input
                 type={showPassword.signUp ? "text" : "password"}
                 name="password"
-                placeholder=" "
-                required
+                placeholder="Password"
                 value={signUpData.password}
                 onChange={handleSignUpChange}
               />
-              <label>Password</label>
               <i
                 className={`fa-solid ${
                   showPassword.signUp ? "fa-eye-slash" : "fa-eye"
@@ -264,9 +234,8 @@ export default function Login() {
                 onClick={() => togglePasswordVisibility("signUp")}
               />
             </div>
-
-            <button type="button" className="action-btn" onClick={handleSignUp}>
-              Create Account <i className="fa-solid fa-arrow-right"></i>
+            <button type="button" onClick={handleSignUp}>
+              Sign Up
             </button>
           </form>
         </div>
@@ -274,56 +243,47 @@ export default function Login() {
         {/* Sign-in form */}
         <div className="form-container sign-in">
           <form onKeyPress={handleKeyPress}>
-            <div className="form-header">
-                <h1>Welcome Back</h1>
-                <p className="subtitle">Enter your credentials to access events</p>
-            </div>
-            
+            <h1>Sign In</h1>
             <div className="input-group">
-              <input
+                <label>Email or USN</label>
+                <input
                 type="text"
                 name="usn"
-                placeholder=" "
-                required
+                placeholder="Enter your USN"
                 value={signInData.usn}
                 onChange={handleSignInChange}
-              />
-              <label>University Serial No.</label>
+                />
             </div>
-            
-            <div className="input-group password-group">
-              <input
-                type={showPassword.signIn ? "text" : "password"}
-                name="password"
-                placeholder=" "
-                required
-                value={signInData.password}
-                onChange={handleSignInChange}
-              />
-              <label>Password</label>
-              <i
-                className={`fa-solid ${
-                  showPassword.signIn ? "fa-eye-slash" : "fa-eye"
-                } password-toggle-icon`}
-                onClick={() => togglePasswordVisibility("signIn")}
-              />
+            <div className="input-group">
+                <label>Password</label>
+                <div className="password-wrapper">
+                <input
+                    type={showPassword.signIn ? "text" : "password"}
+                    name="password"
+                    placeholder="Enter password"
+                    value={signInData.password}
+                    onChange={handleSignInChange}
+                />
+                <i
+                    className={`fa-solid ${
+                    showPassword.signIn ? "fa-eye-slash" : "fa-eye"
+                    } password-toggle-icon`}
+                    onClick={() => togglePasswordVisibility("signIn")}
+                />
+                </div>
             </div>
-
-            <div className="form-utilities">
-                <a
-                href="#"
-                onClick={(e) => {
-                    e.preventDefault();
-                    navigate("/forgot-password");
-                }}
-                className="forgot-password-link"
-                >
-                Forgot Password?
-                </a>
-            </div>
-
-            <button type="button" className="action-btn" onClick={handleSignIn}>
-              Sign In <i className="fa-solid fa-arrow-right"></i>
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/forgot-password");
+              }}
+              className="forgot-password-link"
+            >
+              Forgot Password?
+            </a>
+            <button type="button" onClick={handleSignIn}>
+              Sign in
             </button>
           </form>
         </div>
@@ -332,16 +292,16 @@ export default function Login() {
         <div className="toggle-container">
           <div className="toggle">
             <div className="toggle-panel toggle-left">
-              <h1>Already<br/>aboard?</h1>
-              <p>Sign in to access your event dashboard and certificates.</p>
-              <button className="ghost-btn" onClick={() => setIsActive(false)}>
+              <h1>Welcome Back!</h1>
+              <p>To keep connected with us please login with your personal info</p>
+              <button className="ghost" onClick={() => setIsActive(false)}>
                 Sign In
               </button>
             </div>
             <div className="toggle-panel toggle-right">
-              <h1>New<br/>Here?</h1>
-              <p>Join the community to register for events and competitions.</p>
-              <button className="ghost-btn" onClick={() => setIsActive(true)}>
+              <h1>Hello, Friend!</h1>
+              <p>Enter your personal details and start your journey with us</p>
+              <button className="ghost" onClick={() => setIsActive(true)}>
                 Sign Up
               </button>
             </div>
