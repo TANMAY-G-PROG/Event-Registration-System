@@ -26,7 +26,6 @@ html, body {
   height: 100%;
   background-color: #1a1a2e; 
   overflow-x: hidden;
-  /* iOS smooth scrolling */
   -webkit-overflow-scrolling: touch;
 }
 
@@ -35,7 +34,7 @@ html, body {
   font-family: 'Outfit', sans-serif;
   margin: 0;
   padding: 0;
-  /* FIX 1: Use 100dvh so layout adjusts when Safari URL bar moves */
+  /* FIX 1: iOS Safari Bottom Bar Fix */
   min-height: 100vh; 
   min-height: 100dvh; 
   width: 100%;
@@ -45,8 +44,8 @@ html, body {
   position: relative;
   overflow-x: hidden;
   overflow-y: auto; 
-  /* FIX 2: Add padding for iPhone 'Home' swipe bar */
-  padding-bottom: env(safe-area-inset-bottom); 
+  /* FIX 2: iPhone Home Bar Padding */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .events-wrapper * {
@@ -98,14 +97,10 @@ html, body {
     0 0.25em 0.125em -0.125em rgba(0, 0, 0, 0.2),
     0 0 0.1em 0.25em inset rgba(255, 255, 255, 0.2),
     0 0 0 0 rgba(255, 255, 255, 1);
-  
   backdrop-filter: blur(clamp(1px, 0.125em, 4px));
   -webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px));
-  
-  /* FIX 3: Performance - removed 'all' transition */
   transition: transform var(--anim--hover-time) var(--anim--hover-ease),
               box-shadow var(--anim--hover-time) var(--anim--hover-ease);
-  
   display: flex;
   align-items: center;
   gap: 8px;
@@ -180,28 +175,26 @@ html, body {
   box-shadow: inset 0 0 0 calc(var(--border-width) / 2) rgba(255, 255, 255, 0.5);
 }
 
-/* FIX 4: Only apply hover effects on devices with a mouse */
-@media (hover: hover) {
-  .events-wrapper .logout-btn:hover {
-    transform: scale(0.975);
-    backdrop-filter: blur(0.01em);
-    -webkit-backdrop-filter: blur(0.01em);
-    box-shadow:
-      inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05),
-      inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5),
-      0 0.15em 0.05em -0.1em rgba(0, 0, 0, 0.25),
-      0 0 0.05em 0.1em inset rgba(255, 255, 255, 0.5),
-      0 0 0 0 rgba(255, 255, 255, 1);
-    text-shadow: 0.025em 0.025em 0.025em rgba(0, 0, 0, 0.12);
-  }
+/* --- LOGOUT HOVER: Disabled on iOS --- */
+.events-wrapper:not(.is-ios) .logout-btn:hover {
+  transform: scale(0.975);
+  backdrop-filter: blur(0.01em);
+  -webkit-backdrop-filter: blur(0.01em);
+  box-shadow:
+    inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05),
+    inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5),
+    0 0.15em 0.05em -0.1em rgba(0, 0, 0, 0.25),
+    0 0 0.05em 0.1em inset rgba(255, 255, 255, 0.5),
+    0 0 0 0 rgba(255, 255, 255, 1);
+  text-shadow: 0.025em 0.025em 0.025em rgba(0, 0, 0, 0.12);
+}
 
-  .events-wrapper .logout-btn:hover::before {
-    background-position: 25% 50%;
-  }
+.events-wrapper:not(.is-ios) .logout-btn:hover::before {
+  background-position: 25% 50%;
+}
 
-  .events-wrapper .logout-btn:hover::after {
-    --angle-1: -125deg;
-  }
+.events-wrapper:not(.is-ios) .logout-btn:hover::after {
+  --angle-1: -125deg;
 }
 
 .events-wrapper .logout-btn:active {
@@ -248,39 +241,34 @@ html, body {
   border-radius: 24px;
   overflow: hidden;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  
-  /* FIX 5: Performance - Specific transitions */
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0, 1),
               box-shadow 0.4s cubic-bezier(0.175, 0.885, 0, 1),
               border-color 0.4s ease;
-              
   pointer-events: auto;
   cursor: pointer;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  transform: translateZ(0); /* Hardware acceleration */
+  transform: translateZ(0); 
 }
 
-/* FIX 6: Only animate scale on mouse hover, disable on touch */
-@media (hover: hover) {
-  .events-wrapper .card:hover {
-    box-shadow: 0 15px 40px rgba(100, 120, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: scale(1.05) translateY(-10px);
-  }
+/* --- CARD ANIMATIONS: ENABLED FOR ANDROID/DESKTOP, DISABLED FOR IOS --- */
+.events-wrapper:not(.is-ios) .card:hover {
+  box-shadow: 0 15px 40px rgba(100, 120, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05) translateY(-10px);
+}
 
-  .events-wrapper .card:hover .card__img img {
-    transform: scale(1.1);
-  }
-  
-  .events-wrapper .card:hover .card__icon {
-    background: rgba(102, 126, 234, 0.8);
-    border-color: rgba(102, 126, 234, 1);
-    transform: scale(1.1);
-    box-shadow: 
-      0 0 20px rgba(102, 126, 234, 0.6), 
-      0 0 40px rgba(102, 126, 234, 0.4);
-  }
+.events-wrapper:not(.is-ios) .card:hover .card__img img {
+  transform: scale(1.1);
+}
+
+.events-wrapper:not(.is-ios) .card:hover .card__icon {
+  background: rgba(102, 126, 234, 0.8);
+  border-color: rgba(102, 126, 234, 1);
+  transform: scale(1.1);
+  box-shadow: 
+    0 0 20px rgba(102, 126, 234, 0.6), 
+    0 0 40px rgba(102, 126, 234, 0.4);
 }
 
 /* --- IMAGE SECTION --- */
@@ -353,7 +341,6 @@ html, body {
 /* --- MEDIA QUERIES --- */
 @media (max-width: 768px) {
   .events-wrapper { 
-    /* FIX 7: Slightly less padding on top for mobile */
     padding-top: 20px; 
     align-items: flex-start;
   }
@@ -364,7 +351,6 @@ html, body {
     align-items: center;
   }
   .events-wrapper .card {
-    /* FIX 8: Prevent card from touching absolute edges */
     width: min(340px, calc(100vw - 40px));
   }
   .events-wrapper .card__title { font-size: 1.25rem; }
