@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import './organisers.css';
@@ -14,12 +14,25 @@ const Organisers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [generatingExcel, setGeneratingExcel] = useState({});
+  
+  // Payment States
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedEventForPayments, setSelectedEventForPayments] = useState(null);
   const [pendingPayments, setPendingPayments] = useState([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [processingPayment, setProcessingPayment] = useState({});
   const [isTeamEvent, setIsTeamEvent] = useState(false);
+
+  // --- FIX 1: iOS Detection Logic ---
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    const wrapper = document.querySelector('.organisers-unique-wrapper');
+    if (isIOS && wrapper) {
+      wrapper.classList.add('is-ios');
+    }
+  }, []);
 
   // --- Logic ---
   const categorizeEvents = useCallback((events) => {
@@ -208,27 +221,18 @@ const Organisers = () => {
   const handleOrganiseClick = () => navigate('/create-event');
   const handleBack = () => navigate('/events');
 
-  // Close modal handler
   const handleCloseModal = () => {
     setShowPaymentModal(false);
   };
 
-  // --- FIXED SCROLL LOGIC ---
-  // We lock the wrapper specifically because it is the scroll container
+  // --- FIX 2: Handle Body Scroll Lock when Modal is Open ---
   useEffect(() => {
-    const wrapper = document.querySelector('.organisers-unique-wrapper');
-    if (showPaymentModal && wrapper) {
-      // Lock scroll on the wrapper
-      wrapper.style.overflow = 'hidden';
-    } else if (wrapper) {
-      // Restore scroll
-      wrapper.style.overflow = 'auto'; // or 'overlay' or unset depending on CSS, 'auto' is safest
+    if (showPaymentModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
-    
-    // Cleanup
-    return () => {
-      if (wrapper) wrapper.style.overflow = 'auto';
-    };
+    return () => { document.body.style.overflow = ''; };
   }, [showPaymentModal]);
 
   // --- Render Event Item ---
@@ -292,7 +296,6 @@ const Organisers = () => {
   return (
     <>
       <div className="organisers-unique-wrapper">
-        {/* Shiny Back Button */}
         <div className="org-logout-container">
           <button className="org-logout-btn" onClick={handleBack}>
             <i className="fas fa-arrow-left"></i> Back
@@ -302,7 +305,6 @@ const Organisers = () => {
         <section className="org-hero-section">
           <div className="org-container">
             
-            {/* Card Grid Layout */}
             <div className="org-card-grid">
               
               <div className="org-card" id="completed-card">
@@ -337,7 +339,6 @@ const Organisers = () => {
 
             </div>
 
-            {/* Animated Organise Button */}
             <div className="org-button-container">
               <button onClick={handleOrganiseClick}>
                  Organise New Event
@@ -347,8 +348,7 @@ const Organisers = () => {
         </section>
       </div>
 
-      {/* --- MOVED OUTSIDE OF WRAPPER TO FIX POSITIONING --- */}
-      {/* Payment Modal - MOBILE OPTIMIZED */}
+      {/* Payment Modal */}
       {showPaymentModal && (
         <div 
           className="org-fintech-modal-overlay" 
