@@ -53,7 +53,8 @@ const LightRays = ({
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
+      // Improved check for mobile devices
+      setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -80,25 +81,36 @@ const LightRays = ({
 
   useEffect(() => {
     if (!isVisible || !containerRef.current) return;
+    
     if (cleanupFunctionRef.current) {
       cleanupFunctionRef.current();
       cleanupFunctionRef.current = null;
     }
+
     const initializeWebGL = async () => {
       if (!containerRef.current) return;
       await new Promise(resolve => setTimeout(resolve, 10));
       if (!containerRef.current) return;
-      const maxDpr = isMobile ? 1.5 : 2;
+
+      // FIX: FORCE LOW DPR ON MOBILE FOR SMOOTHNESS
+      // iPhone Retina screens use DPR 3.0 which kills WebGL performance.
+      // We cap it at 1.0 for mobile, 1.5 for desktop.
+      const maxDpr = isMobile ? 1.0 : 1.5;
+      
       const renderer = new Renderer({
         dpr: Math.min(window.devicePixelRatio, maxDpr),
-        alpha: false, // Opaque canvas prevents underlying colors from showing
+        alpha: false,
+        width: containerRef.current.clientWidth,
+        height: containerRef.current.clientHeight,
       });
+      
       rendererRef.current = renderer;
       const gl = renderer.gl;
+      
+      // Ensure canvas fits container exactly
       gl.canvas.style.width = '100%';
       gl.canvas.style.height = '100%';
-      // Ensure canvas is block element to avoid inline spacing issues
-      gl.canvas.style.display = 'block'; 
+      gl.canvas.style.display = 'block';
       
       while (containerRef.current.firstChild) {
         containerRef.current.removeChild(containerRef.current.firstChild);
@@ -176,8 +188,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   }
   fragColor.rgb *= raysColor;
   
-  // Mix with deep blue background to ensure full coverage
-  // This matches your hex #1a1a2e (0.1, 0.1, 0.18)
   vec3 bgColor = vec3(0.1, 0.1, 0.18);
   fragColor.rgb = mix(bgColor, fragColor.rgb, fragColor.a);
   fragColor.a = 1.0;
@@ -213,9 +223,14 @@ void main() {
       });
       const mesh = new Mesh(gl, { geometry, program });
       meshRef.current = mesh;
+
       const updatePlacement = () => {
         if (!containerRef.current || !renderer) return;
-        renderer.dpr = Math.min(window.devicePixelRatio, maxDpr);
+        // Use local maxDpr check again for resize events
+        const isMobileResize = window.innerWidth <= 768;
+        const resizeDpr = isMobileResize ? 1.0 : 1.5;
+        renderer.dpr = Math.min(window.devicePixelRatio, resizeDpr);
+        
         const { clientWidth: wCSS, clientHeight: hCSS } = containerRef.current;
         renderer.setSize(wCSS, hCSS);
         const dpr = renderer.dpr;
@@ -226,6 +241,7 @@ void main() {
         uniforms.rayPos.value = anchor;
         uniforms.rayDir.value = dir;
       };
+
       const loop = t => {
         if (!rendererRef.current || !uniformsRef.current || !meshRef.current) return;
         uniforms.iTime.value = t * 0.001;
@@ -242,9 +258,11 @@ void main() {
           console.warn('WebGL rendering error:', error);
         }
       };
+      
       window.addEventListener('resize', updatePlacement);
       updatePlacement();
       animationIdRef.current = requestAnimationFrame(loop);
+      
       cleanupFunctionRef.current = () => {
         if (animationIdRef.current) {
           cancelAnimationFrame(animationIdRef.current);
