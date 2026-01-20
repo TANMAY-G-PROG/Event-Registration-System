@@ -99,8 +99,11 @@ html, body {
     0 0 0 0 rgba(255, 255, 255, 1);
   backdrop-filter: blur(clamp(1px, 0.125em, 4px));
   -webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px));
+  
+  /* FIX 3: Performance - specific transitions */
   transition: transform var(--anim--hover-time) var(--anim--hover-ease),
               box-shadow var(--anim--hover-time) var(--anim--hover-ease);
+              
   display: flex;
   align-items: center;
   gap: 8px;
@@ -287,7 +290,10 @@ html, body {
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   transform: translateZ(0);
-  image-rendering: -webkit-optimize-contrast;
+  
+  /* FIX 4: Remove optimize-contrast to fix blurry/jagged photos on iOS */
+  image-rendering: auto;
+
   will-change: transform;
   transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 }
