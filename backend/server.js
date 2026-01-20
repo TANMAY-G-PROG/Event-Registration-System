@@ -806,6 +806,71 @@ app.get('/api/events/:eventId/participant-count', requireAuth, async (req, res) 
         res.status(500).json({ error: 'Error fetching participant count' });
     }
 });
+// ==================== TICKET PAGE ENDPOINT (FIX FOR 404) ====================
+app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        const userUSN = req.session.userUSN;
+
+        // 1. Fetch Event Details
+        const { data: event, error: eventError } = await supabase
+            .from('event')
+            .select(`
+                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, regfee,
+                club:orgcid(cname)
+            `)
+            .eq('eid', eventId)
+            .limit(1)
+            .maybeSingle();
+
+        if (eventError) {
+            console.error('Error fetching event for ticket:', eventError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!event) return res.status(404).json({ error: 'Event not found' });
+
+        // 2. Check Participant Registration
+        const { data: participant, error: partError } = await supabase
+            .from('participant')
+            .select('partstatus, payment_status')
+            .eq('parteid', eventId)
+            .eq('partusn', userUSN)
+            .maybeSingle();
+
+        if (partError) {
+            console.error('Error checking participant status:', partError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        // 3. If not registered
+        if (!participant) {
+            return res.json({ 
+                isRegistered: false,
+                ename: event.ename 
+            });
+        }
+
+        // 4. Return Data expected by ParticipantTicket.jsx
+        res.json({
+            isRegistered: true,
+            ename: event.ename,
+            clubName: event.club?.cname,
+            eventDate: event.eventdate,
+            eventTime: event.eventtime,
+            eventLoc: event.eventloc,
+            eventdesc: event.eventdesc,
+            regFee: event.regfee,
+            maxPart: event.maxpart,
+            // If payment_status is null but fee is 0, consider it verified/free
+            paymentStatus: participant.payment_status || (event.regfee > 0 ? 'pending' : 'verified') 
+        });
+
+    } catch (err) {
+        console.error('Error in participant-status route:', err);
+        res.status(500).json({ error: 'Server Error' });
+    }
+});
 
 // Individual Event Details Route (for organizer ticket page) (UPDATED)
 app.get('/api/events/:eventId', requireAuth, async (req, res) => {
