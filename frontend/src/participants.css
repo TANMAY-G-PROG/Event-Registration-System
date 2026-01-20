@@ -15,20 +15,16 @@ html, body {
 :root { --anim--hover-time: 400ms; --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1); }
 
 .participants-page {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  /* FIX 1: Removed fixed positioning to allow native body scroll */
+  position: relative; 
+  min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
-  /* Buffer for mobile safe areas */
   padding-bottom: calc(80px + env(safe-area-inset-bottom));
   font-family: 'Montserrat', sans-serif;
   color: white;
   overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  /* overflow-y: auto; <-- REMOVED this to let body scroll */
 }
 
 .part-bg-layer {
@@ -58,7 +54,10 @@ html, body {
   box-shadow: inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05), inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5), 0 0.25em 0.125em -0.125em rgba(0, 0, 0, 0.2), 0 0 0.1em 0.25em inset rgba(255, 255, 255, 0.2), 0 0 0 0 rgba(255, 255, 255, 1);
   backdrop-filter: blur(clamp(1px, 0.125em, 4px));
   -webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px));
-  transition: all var(--anim--hover-time) var(--anim--hover-ease);
+  
+  /* FIX 2: Specific transition */
+  transition: transform var(--anim--hover-time) var(--anim--hover-ease);
+  
   display: flex; align-items: center; gap: 8px;
   font-family: "Inter", sans-serif; font-weight: 500; font-size: 14px; color: white;
   text-shadow: 0em 0.25em 0.05em rgba(0, 0, 0, 0.1);
@@ -83,9 +82,12 @@ html, body {
   transition: all var(--anim--hover-time) var(--anim--hover-ease), --angle-1 500ms ease;
   box-shadow: inset 0 0 0 calc(var(--border-width) / 2) rgba(255, 255, 255, 0.5);
 }
-.participants-page .logout-btn:hover { transform: scale(0.975); }
-.participants-page .logout-btn:hover::before { background-position: 25% 50%; }
-.participants-page .logout-btn:hover::after { --angle-1: -125deg; }
+
+/* FIX 3: Disable hover on iOS/Touch to prevent sticky glitch */
+.participants-page:not(.is-ios) .logout-btn:hover { transform: scale(0.975); }
+.participants-page:not(.is-ios) .logout-btn:hover::before { background-position: 25% 50%; }
+.participants-page:not(.is-ios) .logout-btn:hover::after { --angle-1: -125deg; }
+
 .participants-page .logout-btn:active { transform: scale(0.96); }
 .participants-page .logout-btn:active::before { background-position: 50% 15%; --angle-2: -15deg; }
 .participants-page .logout-btn:active::after { --angle-1: -75deg; }
@@ -114,14 +116,18 @@ html, body {
   filter: brightness(0.75) saturate(1.2) contrast(0.85);
   border: 1px solid rgba(255,255,255,0.1);
 }
+
 .participants-page .card-grid:hover > .card:not(:hover) .card__background {
   filter: brightness(0.5) saturate(0) contrast(1.2) blur(20px);
 }
 #completed-card .card__background { background-image: radial-gradient(circle 311px at 8.6% 27.9%, rgba(62, 147, 252, 0.57) 12.9%, rgba(239, 183, 192, 0.44) 91.2%); }
 #ongoing-card .card__background { background-image: radial-gradient(circle farthest-corner at 10% 20%, rgba(253, 193, 104, 0.7) 0%, rgba(251, 128, 128, 0.7) 90%); }
 #upcoming-card .card__background { background-image: radial-gradient(circle farthest-corner at 10% 20%, rgba(90, 92, 106, 0.7) 0%, rgba(32, 45, 58, 0.7) 81.3%); }
-.participants-page .card:hover { transform: scale(1.05) translateZ(0); z-index: 10; }
-.participants-page .card:hover .card__background { transform: scale(1.05) translateZ(0); }
+
+/* Only animate scale if not iOS */
+.participants-page:not(.is-ios) .card:hover { transform: scale(1.05) translateZ(0); z-index: 10; }
+.participants-page:not(.is-ios) .card:hover .card__background { transform: scale(1.05) translateZ(0); }
+
 .participants-page .card__content {
   position: absolute; inset: 0; padding: 24px;
   display: flex; flex-direction: column; z-index: 2;
@@ -145,7 +151,7 @@ html, body {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 12px; border-radius: 8px; margin-bottom: 12px;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease;
 }
 .part-event-item-glass:hover { background: rgba(255, 255, 255, 0.2); }
 .part-event-item-glass h4 { margin: 0 0 5px 0; font-size: 1.1rem; color: white; }
@@ -154,6 +160,7 @@ html, body {
 .status-attended { color: #00ff9d; font-weight: bold; }
 .status-reg { color: #aaa; }
 .part-event-actions { display: flex; gap: 5px; }
+
 .part-glass-btn {
   flex: 1; padding: 6px 10px; border-radius: 6px;
   border: 1px solid rgba(255,255,255,0.3);
@@ -180,11 +187,11 @@ html, body {
   background: transparent; color: #fff; overflow: hidden;
   box-shadow: 0 0 0 0 transparent; transition: all 0.2s ease-in; cursor: pointer;
 }
-.participants-page .button-container button:hover {
+.participants-page:not(.is-ios) .button-container button:hover {
   background: rgb(61, 106, 255); box-shadow: 0 0 30px 5px rgba(0, 142, 236, 0.815);
   transition: all 0.2s ease-out; transform: translateY(-2px);
 }
-.participants-page .button-container button:hover::before { animation: sh02 0.5s 0s linear; }
+.participants-page:not(.is-ios) .button-container button:hover::before { animation: sh02 0.5s 0s linear; }
 .participants-page .button-container button::before {
   content: ''; display: block; width: 0px; height: 86%; position: absolute;
   top: 7%; left: 0%; opacity: 0; background: #fff;
@@ -196,30 +203,20 @@ html, body {
 }
 
 /* --- MOBILE SPECIFICS --- */
-
-/* Default: Hide FAB on Desktop */
 .mobile-fab { display: none; }
 
 @media (max-width: 768px) {
-  /* 1. Grid becomes single column */
   .participants-page .card-grid { grid-template-columns: 1fr; }
 
-  /* 2. STATIC BUTTON: Remains VISIBLE so scrolling triggers observer */
-
-  /* 3. MOBILE FAB STYLING */
   .mobile-fab {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-
-    /* Positioning */
     position: fixed;
     bottom: 24px;
     right: 24px;
     z-index: 9999;
-
-    /* Visual Style */
     padding: 12px 24px;
     border-radius: 8px; 
     border: 2px solid rgb(61, 106, 255);
@@ -229,10 +226,7 @@ html, body {
     letter-spacing: 2px;
     color: #fff;
     background: rgb(61, 106, 255);
-    
-    /* NO GLOW - Standard Shadow */
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-
     cursor: pointer;
     transition: all 0.3s ease; 
     -webkit-tap-highlight-color: transparent;
@@ -240,7 +234,6 @@ html, body {
     transform: translateY(0);
   }
 
-  /* 4. HIDDEN STATE FOR FAB (Applied when static button is in view) */
   .mobile-fab.hidden {
     opacity: 0;
     transform: translateY(20px);
