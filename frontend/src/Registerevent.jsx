@@ -1,14 +1,11 @@
 "use client"
-import { useEffect, useMemo, useState, useRef } from "react"
+import { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import QRCode from "qrcode"
 import "./registerevent.css"
 import TicketAnimation from './TicketAnimation';
 
-// --- FALLBACK IMAGE ---
-// Changed from an array to a single constant for Aura1.png
 const FALLBACK_BANNER = "https://ik.imagekit.io/flopass/Aura.png";
-
 
 function formatTime12h(timeString) {
   if (!timeString) return "Time TBA"
@@ -66,18 +63,12 @@ export default function Registerevent() {
     return `upi://pay?${params.toString()}`
   }
 
-  // --- UPDATED: Helper to use fixed fallback image ---
-  // We removed the 'index' parameter and the calculating logic.
   function resolveBanner(event) {
-    if (event.bannerUrl) return event.bannerUrl;
-    // Always return the single fallback banner
-    return FALLBACK_BANNER;
+    return event.bannerUrl || FALLBACK_BANNER;
   }
 
   // --- Loaders ---
-  useEffect(() => { loadEvents(); fetchMyRegistrations(); }, [])
-  
-  async function loadEvents() {
+  const loadEvents = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch('/api/events', { method: "GET", credentials: "include" })
@@ -87,9 +78,9 @@ export default function Registerevent() {
       setEventsData({ upcoming: data?.events?.upcoming || [], ongoing: data?.events?.ongoing || [], completed: data?.events?.completed || [] })
     } catch (err) { showFlash("error", "Failed to load events") } 
     finally { setLoading(false) }
-  }
+  }, [navigate]);
 
-  async function fetchMyRegistrations() {
+  const fetchMyRegistrations = useCallback(async () => {
     try {
       const res = await fetch('/api/my-participant-events', { credentials: 'include' })
       if (res.ok) {
@@ -97,9 +88,9 @@ export default function Registerevent() {
         setRegisteredEvents(new Set(data.participantEvents.map(ev => ev.eid)))
       }
     } catch (err) { console.error(err) }
-  }
+  }, []);
 
-  async function loadTeamStatus(eventId) {
+  const loadTeamStatus = useCallback(async (eventId) => {
     try {
       const response = await fetch(`/api/events/${eventId}/team-status`, { credentials: 'include' })
       if (response.ok) {
@@ -107,12 +98,27 @@ export default function Registerevent() {
         setTeamStates(prev => ({ ...prev, [eventId]: data }))
       }
     } catch (err) { console.error(err) }
-  }
+  }, []);
 
+  // Initial Load
+  useEffect(() => { loadEvents(); fetchMyRegistrations(); }, [loadEvents, fetchMyRegistrations])
+
+  // Fetch Team Statuses when events load
   useEffect(() => { 
     const activeEvents = [...(eventsData.upcoming || []), ...(eventsData.ongoing || [])]; 
-    activeEvents.forEach(event => { loadTeamStatus(event.eid) }) 
-  }, [eventsData])
+    if(activeEvents.length > 0) {
+        activeEvents.forEach(event => { loadTeamStatus(event.eid) }) 
+    }
+  }, [eventsData, loadTeamStatus])
+
+  // Scroll Lock Helper
+  useEffect(() => {
+    const shouldLock = selectedEvent || showTeamModal || showUpiModal;
+    const wrapper = document.querySelector('.registerevent-page');
+    if(wrapper) {
+        wrapper.style.overflowY = shouldLock ? 'hidden' : 'auto';
+    }
+  }, [selectedEvent, showTeamModal, showUpiModal]);
 
   const filteredEvents = useMemo(() => {
     const all = [
@@ -222,31 +228,24 @@ export default function Registerevent() {
     } catch (err) { showModalFlash('error', 'Error submitting') } finally { setIsSubmitting(false) }
   }
 
-  // --- OPEN POSTER FUNCTION ---
   const handleOpenPoster = (e, url) => {
     e.stopPropagation();
     if(url) window.open(url, '_blank', 'noopener,noreferrer');
   }
 
-  // --- Dynamic Button Logic ---
   function renderControls(event, isOverlay = false) {
     const teamState = teamStates[event.eid]
     
-    // ABOUT BUTTON
     const aboutBtn = (event.posterUrl && isOverlay) ? (
-      <button 
-          className="registerevent-btn about"
-          onClick={(e) => handleOpenPoster(e, event.posterUrl)}
-      >
+      <button className="registerevent-btn about" onClick={(e) => handleOpenPoster(e, event.posterUrl)}>
           View Poster ↗
       </button>
     ) : null;
 
-    // 1. Loading / Closed
     if (!teamState && (event.status !== 'completed')) return <button className="registerevent-btn disabled">Loading...</button>
     if (event.status === 'completed') return <button className="registerevent-btn disabled">Event Completed</button>
 
-    // 2. Individual Event
+    // Individual Event
     if (!teamState?.isTeamEvent) {
       if (registeredEvents.has(event.eid)) {
         return (
@@ -258,10 +257,7 @@ export default function Registerevent() {
       }
       return (
         <div className="registerevent-btn-group">
-          <button 
-            className="registerevent-btn primary" 
-            onClick={(e) => { e.stopPropagation(); handleRegister(event); }}
-          >
+          <button className="registerevent-btn primary" onClick={(e) => { e.stopPropagation(); handleRegister(event); }}>
             { (event.regFee || 0) > 0 ? `Pay ₹${event.regFee}` : "Register" }
           </button>
           {aboutBtn}
@@ -269,7 +265,7 @@ export default function Registerevent() {
       )
     }
 
-    // 3. Team Event: Already Registered
+    // Team Event: Registered
     if (teamState.registrationComplete) return (
       <div className="registerevent-btn-group">
         <button className="registerevent-btn success" disabled>✓ Team Registered</button>
@@ -277,7 +273,7 @@ export default function Registerevent() {
       </div>
     )
 
-    // 4. Team Event: Joined/Leader (Display Roster Status Here)
+    // Team Event: Joined/Leader
     if (teamState.hasJoinedTeam) {
       const isLeader = teamState.isLeader
       return (
@@ -290,8 +286,6 @@ export default function Registerevent() {
                    {teamState.joinedCount}/{teamState.minSize} Members
                  </span>
                </div>
-               
-               {/* --- TEAM ROSTER DISPLAY --- */}
                <div className="registerevent-member-stack">
                  <span className="registerevent-hud-label">Member Status:</span>
                  {teamState.members?.map((member, idx) => (
@@ -324,7 +318,7 @@ export default function Registerevent() {
       )
     }
 
-    // 5. Team Event: Not Joined (Create or View Invites)
+    // Team Event: Not Joined
     return (
       <div className="registerevent-btn-group">
         <button className="registerevent-btn secondary" onClick={(e) => { e.stopPropagation(); setShowTeamModal({ eventId: event.eid, mode: 'create' }) }}>Create Team</button>
@@ -338,9 +332,10 @@ export default function Registerevent() {
     <main className="registerevent-page">
       <div className="registerevent-hero-bg" aria-hidden="true" />
       {ticketInfo && <TicketAnimation onClose={() => setTicketInfo(null)} {...ticketInfo} />}
+      
+      {/* Updated Flash Container to use proper Z-Index */}
       {flash.message && <div className={`registerevent-flash ${flash.type === 'success' ? 'registerevent-flash-success' : 'registerevent-flash-error'}`}>{flash.message}</div>}
 
-      {/* --- LIST VIEW --- */}
       <div className="registerevent-container">
         <header className="registerevent-header">
           <div className="registerevent-header-text">
@@ -358,15 +353,10 @@ export default function Registerevent() {
 
         {loading ? <div className="registerevent-spinner"></div> : (
           <div className="registerevent-list">
-            {filteredEvents.map((event, index) => (
+            {filteredEvents.map((event) => (
               <article key={event.eid} className="registerevent-card" onClick={() => setSelectedEvent(event)}>
                 <div className="registerevent-card-media">
-                  {/* UPDATED: resolveBanner no longer needs index */}
-                  <img 
-                    src={resolveBanner(event)} 
-                    alt={event.ename} 
-                    loading="lazy"
-                  />
+                  <img src={resolveBanner(event)} alt={event.ename} loading="lazy" />
                   <div className={`registerevent-badge ${event.status}`}>{event.status}</div>
                   {event.is_team && <span className="registerevent-badge registerevent-badge-team">Team</span>}
                 </div>
@@ -377,13 +367,9 @@ export default function Registerevent() {
                     <span>•</span>
                     <span>{event.eventLoc}</span>
                   </div>
-                  
                   <div className="registerevent-card-actions">
                     {renderControls(event, false)}
-                    <button 
-                      className="registerevent-btn ghost" 
-                      onClick={(e) => { e.stopPropagation(); setSelectedEvent(event); }}
-                    >
+                    <button className="registerevent-btn ghost" onClick={(e) => { e.stopPropagation(); setSelectedEvent(event); }}>
                       Details
                     </button>
                   </div>
@@ -398,24 +384,18 @@ export default function Registerevent() {
         </div>
       </div>
 
-      {/* --- OVERLAY SPLIT VIEW --- */}
+      {/* OVERLAY */}
       {selectedEvent && (
         <div className="registerevent-overlay-container">
           <div className="registerevent-overlay-split">
-            {/* TOP 40%: BANNER */}
             <div className="registerevent-split-top">
               <button className="registerevent-close-btn" onClick={() => setSelectedEvent(null)}>×</button>
               <div className="registerevent-image-wrapper">
-                {/* UPDATED: resolveBanner use */}
-                <img 
-                  src={resolveBanner(selectedEvent)} 
-                  alt={selectedEvent.ename} 
-                />
+                <img src={resolveBanner(selectedEvent)} alt={selectedEvent.ename} />
                 <div className="registerevent-image-gradient"></div>
               </div>
             </div>
 
-            {/* BOTTOM 60%: DETAILS */}
             <div className="registerevent-split-bottom">
               <div className="registerevent-detail-content">
                 <div className="registerevent-detail-header-flex">
@@ -451,12 +431,9 @@ export default function Registerevent() {
                     </div>
                   )}
                 </div>
-                
-                {/* Spacer to prevent content from hiding behind fixed bottom bar */}
                 <div style={{height: '140px'}}></div>
               </div>
 
-              {/* FIXED ACTION BAR */}
               <div className="registerevent-action-bar">
                 {renderControls(selectedEvent, true)}
               </div>
@@ -465,7 +442,7 @@ export default function Registerevent() {
         </div>
       )}
 
-      {/* --- MODALS (Team & UPI) --- */}
+      {/* MODALS */}
       {showTeamModal && (
         <div className="registerevent-modal-overlay" onClick={() => setShowTeamModal(null)}>
           <div className="registerevent-modal" onClick={e => e.stopPropagation()}>
@@ -534,4 +511,3 @@ export default function Registerevent() {
     </main>
   )
 }
-
