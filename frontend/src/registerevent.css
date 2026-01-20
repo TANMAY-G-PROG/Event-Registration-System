@@ -1,8 +1,38 @@
 /* ===================================
-   REGISTEREVENT - MERGED STYLE (Primary Layout + Secondary Atmospherics)
+   REGISTEREVENT - COMPLETE STYLES
+   Includes iOS Safari Fixes & Premium UI
    =================================== */
 
-/* 1. VARIABLES & RESET */
+@import url('https://fonts.googleapis.com/css?family=Montserrat:400,700');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
+
+/* --- 1. IOS ZOOM PREVENTIONS (CRITICAL) --- */
+html {
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation; /* Prevents double-tap zoom delay */
+}
+
+/* Force inputs to be 16px on mobile to prevent auto-zoom */
+@media screen and (max-width: 768px) {
+  input, 
+  textarea, 
+  select, 
+  .registerevent-form-input {
+    font-size: 16px !important; 
+  }
+}
+
+body {
+  margin: 0; 
+  padding: 0; 
+  background-color: #0b0e14; 
+  height: 100%; 
+  width: 100%;
+  overflow-x: hidden;
+  position: relative; /* Locks body width */
+}
+
+/* --- 2. VARIABLES --- */
 .registerevent-page {
   /* Core Palette */
   --re-bg-deep: #0b0e14;
@@ -30,14 +60,11 @@
   --re-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-html, body {
-  margin: 0; padding: 0; background-color: #0b0e14; height: 100%; width: 100%;
-}
-
-/* 2. GLOBAL RESET */
+/* --- 3. PAGE CONTAINER --- */
 .registerevent-page {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; 
-  height: 100vh; /* Fallback */
+  /* Use dvh for mobile browser bar compatibility */
+  height: 100vh; 
   height: 100dvh;
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
   margin: 0; padding: 0; background-color: var(--re-bg-deep);
@@ -46,7 +73,7 @@ html, body {
   -webkit-font-smoothing: antialiased; box-sizing: border-box; -webkit-overflow-scrolling: touch;
 }
 
-/* 3. ATMOSPHERIC BACKGROUND */
+/* --- 4. BACKGROUND --- */
 .registerevent-hero-bg {
   position: fixed;
   inset: 0;
@@ -61,12 +88,11 @@ html, body {
   filter: saturate(1.05) brightness(1.02);
 }
 
-/* 4. LAYOUT CONTAINER */
+/* --- 5. MAIN CONTENT LAYOUT --- */
 .registerevent-container {
   max-width: 1280px; margin: 0 auto; padding: 80px 24px 60px; position: relative; z-index: 10;
 }
 
-/* 5. HEADER & HERO SECTION */
 .registerevent-header {
   display: flex; flex-direction: column; gap: 32px; margin-bottom: 80px; position: relative;
 }
@@ -80,7 +106,7 @@ html, body {
   font-size: 1.125rem; color: var(--re-text-secondary); margin-top: 16px; font-weight: 400; max-width: 45ch; line-height: 1.6;
 }
 
-/* 6. FILTERS */
+/* --- 6. FILTERS --- */
 .registerevent-filters {
   display: inline-flex; padding: 6px; background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(10px);
   border: 1px solid var(--re-glass-border); border-radius: 100px; gap: 4px; position: relative;
@@ -91,12 +117,11 @@ html, body {
 .registerevent-filter-btn:hover { color: var(--re-text-primary); }
 .registerevent-filter-active { color: #000 !important; background: var(--re-text-primary); box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2); }
 
-/* 7. EVENT GRID */
+/* --- 7. CARDS --- */
 .registerevent-list {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 32px; perspective: 1000px;
 }
 
-/* 8. CARDS */
 .registerevent-card {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(20px);
@@ -124,19 +149,10 @@ html, body {
 
 .registerevent-card-content { padding: 20px; display: flex; flex-direction: column; flex: 1; }
 .registerevent-card-title { font-size: 1.3rem; font-weight: 700; margin: 0 0 8px 0; color: white; line-height: 1.2; }
-.registerevent-card-desc { font-size: 0.95rem; color: var(--re-text-secondary); line-height: 1.6; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .registerevent-card-meta { font-size: 0.85rem; color: var(--re-text-secondary); margin-bottom: 20px; display: flex; gap: 8px; }
 .registerevent-card-actions { margin-top: auto; display: flex; gap: 10px; }
 
-/* 9. BUTTONS */
-.registerevent-modal-submit-btn, .registerevent-invite-confirm-btn {
-  width: 100%; position: relative; padding: 14px 24px; border-radius: 12px; border: none; background: var(--re-text-primary); color: #000; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: transform 0.2s var(--re-ease-smooth), box-shadow 0.2s; overflow: hidden; z-index: 1; text-align: center; text-decoration: none; display: inline-block;
-}
-.registerevent-modal-submit-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(255, 255, 255, 0.4); }
-
-.registerevent-team-action-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; width: 100%; }
-.registerevent-team-action-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: white; }
-
+/* --- 8. BUTTONS --- */
 .registerevent-btn { width: 100%; padding: 10px 16px; border-radius: 8px; border: none; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: inline-flex; justify-content: center; align-items: center; text-decoration: none; box-sizing: border-box; }
 .registerevent-btn:active { transform: scale(0.98); }
 .registerevent-btn.primary { background: white; color: black; }
@@ -153,7 +169,15 @@ html, body {
 .registerevent-btn-group { display: flex; gap: 10px; width: 100%; flex-wrap: wrap; }
 .registerevent-btn-group > * { flex: 1 1 auto; min-width: 120px; }
 
-/* 10. TEAM HUD PANEL */
+/* Modal & Team Buttons */
+.registerevent-modal-submit-btn, .registerevent-invite-confirm-btn {
+  width: 100%; position: relative; padding: 14px 24px; border-radius: 12px; border: none; background: var(--re-text-primary); color: #000; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: transform 0.2s var(--re-ease-smooth), box-shadow 0.2s; overflow: hidden; z-index: 1; text-align: center; text-decoration: none; display: inline-block;
+}
+.registerevent-modal-submit-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(255, 255, 255, 0.4); }
+.registerevent-team-action-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; width: 100%; }
+.registerevent-team-action-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: white; }
+
+/* --- 9. TEAM HUD --- */
 .registerevent-hud-panel { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--re-glass-border); border-radius: 12px; padding: 16px; margin-top: 16px; }
 .registerevent-hud-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--re-glass-border); padding-bottom: 12px; }
 .registerevent-hud-label { font-size: 0.75rem; color: var(--re-text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
@@ -164,49 +188,131 @@ html, body {
 .registerevent-status-indicator.joined { color: var(--re-accent-success); }
 .registerevent-status-indicator.pending { color: var(--re-accent-warning); }
 
-/* 11. OVERLAY (BIG CARD / DETAILS) */
-.registerevent-overlay-container { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px); }
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.registerevent-overlay-split { display: flex; flex-direction: column; height: 100%; width: 100%; }
+/* --- 10. OVERLAY (FIXED FOR IOS SAFARI BOTTOM BAR) --- */
+.registerevent-overlay-container { 
+  position: fixed; 
+  inset: 0; 
+  background: rgba(0,0,0,0.95); 
+  z-index: 9999; 
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+  backdrop-filter: blur(10px);
+  /* CRITICAL FIX: Use dynamic viewport height */
+  height: 100dvh; 
+  width: 100%;
+  overflow: hidden; /* Prevent outer scroll */
+}
 
-.registerevent-split-top { height: 40vh; width: 100%; position: relative; background: #000; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* Flex Column Layout to stack Image (Top) and Content (Bottom) */
+.registerevent-overlay-split { 
+  display: flex; 
+  flex-direction: column; 
+  height: 100%; 
+  width: 100%; 
+}
+
+/* TOP SECTION (Image) */
+.registerevent-split-top { 
+  height: 35%; /* Fixed height for image area */
+  width: 100%; 
+  position: relative; 
+  background: #000;
+  flex-shrink: 0; /* Don't shrink */
+}
+
 .registerevent-image-wrapper { width: 100%; height: 100%; }
 .registerevent-image-wrapper img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
 .registerevent-image-gradient { position: absolute; inset: 0; background: linear-gradient(to top, #000 0%, transparent 60%); }
-.registerevent-close-btn { position: absolute; top: 24px; right: 24px; width: 44px; height: 44px; border-radius: 50%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 20px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
 
-.registerevent-split-bottom { height: 60vh; background: #000; position: relative; display: flex; flex-direction: column; }
-.registerevent-detail-content { flex: 1; overflow-y: auto; padding: 32px 24px 140px; }
+.registerevent-close-btn { 
+  position: absolute; top: 24px; right: 24px; 
+  width: 44px; height: 44px; border-radius: 50%; 
+  background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); 
+  color: white; font-size: 20px; cursor: pointer; z-index: 10; 
+  display: flex; align-items: center; justify-content: center; 
+  backdrop-filter: blur(10px); 
+}
+
+/* BOTTOM SECTION (Details + Buttons) */
+/* FIX: Flex layout to handle scrolling content vs fixed footer */
+.registerevent-split-bottom { 
+  height: 65%; /* Remaining height */
+  background: #000; 
+  position: relative; 
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden; /* Contain inner scroll */
+}
+
+/* Content Area: Grows to fill space, Scrolls internally */
+.registerevent-detail-content { 
+  flex: 1; 
+  overflow-y: auto; 
+  padding: 24px 24px 20px; /* Reduced bottom padding since footer is separate */
+  -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+}
+
 .registerevent-detail-header-flex { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 24px; }
 
 .registerevent-description-box h4 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--re-text-secondary); margin-bottom: 12px; }
 .registerevent-description-box p { font-size: 1rem; line-height: 1.6; color: #ddd; margin-bottom: 40px; }
-.registerevent-bento-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.registerevent-bento-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
 .registerevent-bento-item { background: #111; padding: 16px; border-radius: 12px; border: 1px solid var(--re-border); display: flex; flex-direction: column; gap: 6px; }
 .bento-label { font-size: 0.75rem; color: var(--re-text-secondary); text-transform: uppercase; }
 .bento-value { font-size: 1rem; font-weight: 500; color: white; }
 
+/* FIX: Action Bar is now RELATIVE (stacked), not Absolute */
+/* This forces it to sit at the bottom of the flex container, always visible */
 .registerevent-action-bar { 
-  position: absolute; bottom: 0; left: 0; width: 100%; padding: 20px 24px; 
-  background: rgba(0,0,0,0.95); backdrop-filter: blur(20px); border-top: 1px solid var(--re-border); 
-  z-index: 50; padding-bottom: calc(20px + env(safe-area-inset-bottom)); height: auto; box-sizing: border-box;
+  position: relative; 
+  width: 100%; 
+  padding: 20px 24px; 
+  background: rgba(10, 10, 15, 0.98); /* Solid background to cover scroll */
+  border-top: 1px solid var(--re-border); 
+  z-index: 50; 
+  /* Add safe area padding for iPhone Home Indicator */
+  padding-bottom: calc(20px + env(safe-area-inset-bottom)); 
+  flex-shrink: 0; /* Prevent it from squishing */
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
 }
 
+/* DESKTOP OVERRIDE (Revert to Side-by-Side) */
 @media (min-width: 1024px) {
-  .registerevent-overlay-split { flex-direction: row; max-width: 1100px; height: 85vh; margin: 7.5vh auto; border-radius: 24px; overflow: hidden; border: 1px solid var(--re-border); box-shadow: 0 50px 100px -20px rgba(0,0,0,0.8); }
+  .registerevent-overlay-split { 
+    flex-direction: row; 
+    max-width: 1100px; 
+    height: 85vh; 
+    margin: 7.5vh auto; 
+    border-radius: 24px; 
+    overflow: hidden; 
+    border: 1px solid var(--re-border); 
+    box-shadow: 0 50px 100px -20px rgba(0,0,0,0.8); 
+  }
+  
   .registerevent-split-top { width: 55%; height: 100%; order: 1; }
-  .registerevent-split-bottom { width: 45%; height: 100%; order: 2; border-left: 1px solid var(--re-border); }
-  .registerevent-overlay-container { background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; padding: 0; }
+  
+  .registerevent-split-bottom { width: 45%; height: 100%; order: 2; border-left: 1px solid var(--re-border); display: block; overflow: visible; }
+  
+  .registerevent-overlay-container { 
+    background: rgba(0,0,0,0.8); 
+    backdrop-filter: blur(10px); 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    padding: 0; 
+    height: 100vh; /* Fallback for desktop */
+  }
+  
   .registerevent-close-btn { top: 20px; left: 20px; right: auto; }
+  
+  /* On Desktop, revert to Absolute positioning for footer */
   .registerevent-detail-content { padding: 48px 40px 140px; }
-  .registerevent-action-bar { position: absolute; padding: 24px 40px; }
+  .registerevent-action-bar { position: absolute; bottom: 0; width: 100%; padding: 24px 40px; padding-bottom: 24px; background: rgba(0,0,0,0.95); }
 }
 
-/* UTILS */
-.registerevent-back-btn { margin-top: 40px; background: transparent; border: 1px solid var(--re-border); color: #888; padding: 10px 20px; border-radius: 100px; cursor: pointer; }
-.registerevent-back { display: flex; justify-content: center; }
-
-/* 12. MODALS */
+/* --- 11. MODALS --- */
 .registerevent-modal-overlay { 
   position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 10000; display: flex; align-items: center; justify-content: center; animation: modal-fade-in 0.2s ease-out;
 }
@@ -226,6 +332,10 @@ html, body {
 }
 .registerevent-form-input:focus { outline: none; border-color: var(--re-accent-cyan); box-shadow: 0 0 0 4px rgba(0, 240, 255, 0.1); }
 
+/* --- 12. UTILS & FLASH --- */
+.registerevent-back-btn { margin-top: 40px; background: transparent; border: 1px solid var(--re-border); color: #888; padding: 10px 20px; border-radius: 100px; cursor: pointer; }
+.registerevent-back { display: flex; justify-content: center; }
+
 .registerevent-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--re-accent-cyan); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
 @keyframes spin { 100% { transform: rotate(360deg); } }
 @keyframes modal-fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -236,12 +346,12 @@ html, body {
 .registerevent-payment-value { font-family: 'JetBrains Mono', monospace; color: var(--re-accent-cyan); }
 .registerevent-qr-wrapper { background: white; padding: 16px; border-radius: 16px; margin: 0 auto 20px; width: fit-content; box-shadow: 0 0 30px rgba(0, 240, 255, 0.2); }
 
-/* UPDATED FLASH Z-INDEX */
+/* Updated Flash Z-Index (Above Modal) */
 .registerevent-flash { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 100px; font-weight: 600; font-size: 0.9rem; z-index: 11000; backdrop-filter: blur(12px); display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
 .registerevent-flash-success { background: rgba(0, 255, 157, 0.15); border: 1px solid rgba(0, 255, 157, 0.3); color: #a3ffce; }
 .registerevent-flash-error { background: rgba(255, 0, 85, 0.15); border: 1px solid rgba(255, 0, 85, 0.3); color: #ffc2d6; }
 
-/* Responsive */
+/* Responsive Base */
 @media (max-width: 768px) {
   .registerevent-container { padding-top: 80px; padding-left: 16px; padding-right: 16px; }
   .registerevent-title { font-size: 2.5rem; }
