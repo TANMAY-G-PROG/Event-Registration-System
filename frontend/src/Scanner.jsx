@@ -4,203 +4,191 @@ import './Scanner.css';
 export default function Scanner() {
   const [pageState, setPageState] = useState('loading');
   const [errorMsg, setErrorMsg] = useState(null);
-  const [lastResult, setLastResult] = useState('');
-  const [libraryLoaded, setLibraryLoaded] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [userUSN, setUserUSN] = useState(null);
 
-  const scannerRef = useRef(null);
-  const html5QrcodeScannerRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const fileScannerRef = useRef(null);
+  // References
+  const scannerInstanceRef = useRef(null); // Stores the scanner instance
+  const isMountedRef = useRef(true);       // Tracks if component is active
 
   useEffect(() => {
+    isMountedRef.current = true;
     const urlParams = new URLSearchParams(window.location.search);
     const role = urlParams.get('role');
-    const detectedRole = role === 'volunteer' ? 'volunteer' : 'participant';
-    setUserRole(detectedRole);
+    setUserRole(role === 'volunteer' ? 'volunteer' : 'participant');
+    
     fetchUserData();
-    loadQRLibrary();
+    
+    // Load library dynamically
+    if (!window.Html5Qrcode) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
+      script.onload = () => console.log('✅ QR Lib Loaded');
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      isMountedRef.current = false;
+      stopScanner(); // Cleanup on unmount
+    };
   }, []);
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch('/api/me', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await fetch('/api/me');
       if (response.ok) {
         const data = await response.json();
         setUserUSN(data.userUSN);
+        setPageState('scanning'); // Go straight to scanning if user exists
       } else {
-        setErrorMsg('User not authenticated. Please sign in first.');
+        setErrorMsg('Please sign in first.');
         setPageState('error');
       }
-    } catch (err) {
-      setErrorMsg('Failed to load user information.');
+    } catch {
+      setErrorMsg('Failed to load user.');
       setPageState('error');
     }
   };
 
-  useEffect(() => {
-    if (pageState === 'loading' && userUSN && libraryLoaded) {
-      setPageState('scanning');
+  // --- CORE SCANNER LOGIC (iOS FIXED) ---
+  const startScanner = async () => {
+    // 1. Safety Checks
+    if (!window.Html5Qrcode) {
+      setTimeout(startScanner, 100); // Retry if lib not ready
+      return;
     }
-  }, [pageState, userUSN, libraryLoaded]);
+    if (scannerInstanceRef.current) return; // Already running
 
-  useEffect(() => {
-    if (pageState === 'scanning') {
-      const timer = setTimeout(() => initScanner(), 300); // Increased delay for iOS
-      return () => clearTimeout(timer);
-    }
-    return () => cleanupScanner();
-  }, [pageState]);
+    try {
+      // 2. Initialize the Core Class (Not the Scanner Widget)
+      const html5QrCode = new window.Html5Qrcode("reader");
+      scannerInstanceRef.current = html5QrCode;
 
-  const cleanupScanner = () => {
-    if (html5QrcodeScannerRef.current) {
+      // 3. iOS-Specific Config
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+        disableFlip: false, // Helps with some front/back camera bugs
+      };
+
+      // 4. Start Camera (Requesting "environment" explicitly)
+      await html5QrCode.start(
+        { facingMode: "environment" }, 
+        config,
+        onScanSuccess,
+        (errorMessage) => {
+           // Ignore frame read errors (common while moving camera)
+        }
+      );
+      
+      if(isMountedRef.current) setIsScanning(true);
+
+    } catch (err) {
+      console.error("Camera Start Error:", err);
+      // Fallback: If "environment" fails, try generic back camera
       try {
-        html5QrcodeScannerRef.current.clear().catch(err => console.warn(err));
-        html5QrcodeScannerRef.current = null;
-      } catch (err) {
-        console.warn('Cleanup warning:', err);
+         if (scannerInstanceRef.current) {
+             await scannerInstanceRef.current.start(
+                { facingMode: { exact: "environment" } }, 
+                config, 
+                onScanSuccess
+             );
+         }
+      } catch (retryErr) {
+         setErrorMsg("Camera error. Please ensure you are on HTTPS and allowed camera permissions.");
+         setPageState('error');
       }
     }
   };
 
-  const loadQRLibrary = () => {
-    if (window.Html5QrcodeScanner) {
-      setLibraryLoaded(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
-    script.onload = () => setLibraryLoaded(true);
-    script.onerror = () => {
-      setErrorMsg('Failed to load scanner library.');
-      setPageState('error');
-    };
-    document.head.appendChild(script);
-  };
-
-  const initScanner = () => {
-    if (!window.Html5QrcodeScanner || !scannerRef.current || html5QrcodeScannerRef.current) {
-      return;
-    }
-
-    try {
-      // FIX FOR IOS: Simplified config
-      const config = {
-        fps: 10,
-        // Removed fixed aspectRatio - let the camera decide
-        videoConstraints: {
-          facingMode: { ideal: "environment" }
-        },
-        rememberLastUsedCamera: true,
-        supportedScanTypes: [0, 1] 
-      };
-
-      const scanner = new window.Html5QrcodeScanner(
-        'reader', 
-        config, 
-        /* verbose= */ false
-      );
-      
-      scanner.render(onScanSuccess, onScanError);
-      html5QrcodeScannerRef.current = scanner;
-      setIsScanning(true);
-    } catch (err) {
-      console.error('Init error:', err);
-      setErrorMsg('Camera access denied or not supported.');
-      setPageState('error');
+  const stopScanner = async () => {
+    if (scannerInstanceRef.current) {
+      try {
+        await scannerInstanceRef.current.stop();
+        scannerInstanceRef.current.clear();
+      } catch (err) {
+        console.warn("Failed to stop scanner", err);
+      }
+      scannerInstanceRef.current = null;
+      if(isMountedRef.current) setIsScanning(false);
     }
   };
+
+  // Trigger start when entering scanning state
+  useEffect(() => {
+    if (pageState === 'scanning') {
+      // Small delay to ensure DOM #reader is ready
+      const t = setTimeout(startScanner, 100);
+      return () => clearTimeout(t);
+    }
+  }, [pageState]);
 
   const onScanSuccess = async (decodedText) => {
-    if (pageState !== 'scanning') return;
+    if (!isMountedRef.current) return;
     
-    setIsScanning(false);
+    // Stop scanning immediately
+    await stopScanner();
     setPageState('processing');
-    setLastResult(decodedText);
-    cleanupScanner();
-    
+
     if (decodedText.startsWith('eventId:')) {
       const eventId = decodedText.split(':')[1];
       await markAttendance(eventId);
     } else {
-      setErrorMsg('Invalid QR Code. Please scan an Event QR.');
+      setErrorMsg('Invalid QR. Please scan an Event QR.');
       setPageState('error');
-    }
-  };
-
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    if (!window.Html5Qrcode) return;
-
-    try {
-      if (!fileScannerRef.current) {
-        fileScannerRef.current = new window.Html5Qrcode('file-reader');
-      }
-      const decodedText = await fileScannerRef.current.scanFile(file, true);
-      onScanSuccess(decodedText);
-    } catch (err) {
-      setErrorMsg('Could not find QR code in image.');
-      setPageState('error');
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const markAttendance = async (eventId) => {
     try {
       const endpoint = userRole === 'volunteer' ? '/api/mark-volunteer-attendance' : '/api/mark-participant-attendance';
-      const response = await fetch(endpoint, {
+      const res = await fetch(endpoint, {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventId, usn: userUSN }),
       });
-      const data = await response.json();
-      if (response.ok && data.success) {
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
         setPageState('success');
-        setErrorMsg(null);
       } else {
-        setErrorMsg(data.error || 'Failed to mark attendance');
+        setErrorMsg(data.error || 'Attendance failed');
         setPageState('error');
       }
-    } catch (err) {
-      setErrorMsg('Network error. Try again.');
+    } catch {
+      setErrorMsg('Network error.');
       setPageState('error');
     }
   };
 
-  const onScanError = (errorMessage) => {
-    // Ignore common scanning errors to prevent console spam
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !window.Html5Qrcode) return;
+
+    try {
+      const html5QrCode = new window.Html5Qrcode("reader"); // Re-use the ID
+      const result = await html5QrCode.scanFile(file, true);
+      onScanSuccess(result);
+    } catch (err) {
+      setErrorMsg("Could not read QR from image.");
+      setPageState('error');
+    }
   };
 
-  const scanAgain = () => {
-    setLastResult('');
+  const reset = () => {
     setErrorMsg(null);
     setPageState('scanning');
   };
 
-  const restartScanner = () => {
-    setErrorMsg(null);
-    setPageState('loading');
-    fetchUserData();
-  };
-
-  const goBack = () => {
-    window.history.back();
-  };
+  const goBack = () => window.history.back();
 
   return (
     <div className="scanner-container">
-      <div id="file-reader" style={{ display: 'none' }} />
       <div className="scanner-card">
         
+        {/* Header */}
         <div className="scanner-header">
           <div className="scanner-icon">📱</div>
           <h1 className="scanner-title">Mark Attendance</h1>
@@ -210,35 +198,44 @@ export default function Scanner() {
           {userUSN && <p className="scanner-usn">{userUSN}</p>}
         </div>
 
+        {/* Loading State */}
         {pageState === 'loading' && (
           <div className="status-box loading-box fade-in">
             <div className="status-icon">⏳</div>
-            <p>Initializing...</p>
+            <p>Loading...</p>
           </div>
         )}
 
+        {/* Error State */}
         {pageState === 'error' && (
           <div className="status-box error-box fade-in">
             <div className="status-icon">⚠️</div>
             <p className="error-message">{errorMsg}</p>
             <div className="button-group">
-              <button onClick={restartScanner} className="btn btn-danger">Try Again</button>
+              <button onClick={reset} className="btn btn-danger">Try Again</button>
               <button onClick={goBack} className="btn btn-secondary">Go Back</button>
             </div>
           </div>
         )}
 
+        {/* Scanning State */}
         {pageState === 'scanning' && (
           <div className="scanner-main fade-in">
             <div className="scanner-video-container">
-              {/* This ID is strictly required by the library */}
-              <div id="reader" ref={scannerRef}></div>
+              {/* Core API requires an empty div with an ID */}
+              <div id="reader" style={{ width: "100%", height: "100%" }}></div>
+              
+              {!isScanning && (
+                <div className="scanner-loading-overlay">
+                  <div className="org-spinner-dots"></div>
+                  <span style={{marginTop: '10px', fontSize: '12px'}}>Starting Camera...</span>
+                </div>
+              )}
             </div>
             
             <div className="file-upload-box">
               <p>Or upload QR image</p>
               <input
-                ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handleFileUpload}
@@ -246,22 +243,33 @@ export default function Scanner() {
                 id="qr-file-input"
               />
               <label htmlFor="qr-file-input" className="btn btn-primary">
-                📁 Upload Image
+                📁 Choose Image
               </label>
             </div>
           </div>
         )}
 
+        {/* Processing State */}
+        {pageState === 'processing' && (
+          <div className="status-box loading-box fade-in">
+            <div className="org-spinner-dots"></div>
+            <p>Marking Attendance...</p>
+          </div>
+        )}
+
+        {/* Success State */}
         {pageState === 'success' && (
           <div className="status-box success-box fade-in">
             <div className="status-icon">✅</div>
-            <h2 className="success-title">Attendance Marked!</h2>
+            <h2 className="success-title">Done!</h2>
+            <p>Attendance Marked Successfully</p>
             <div className="button-group">
               <button onClick={goBack} className="btn btn-success-light">Back</button>
-              <button onClick={scanAgain} className="btn btn-success-dark">Scan Another</button>
+              <button onClick={reset} className="btn btn-success-dark">Scan Next</button>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
