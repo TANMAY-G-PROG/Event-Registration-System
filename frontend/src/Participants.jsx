@@ -5,6 +5,10 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import DOMPurify from 'dompurify';
 
+// Cache fonts outside component to prevent re-fetching on every click
+let cachedFontBytes = null;
+let cachedTemplateBytes = null;
+
 const Participants = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState({
@@ -19,25 +23,35 @@ const Participants = () => {
   const [generatingIds, setGeneratingIds] = useState(new Set());
   const [downloadLinks, setDownloadLinks] = useState({});
 
-  // --- FAB Visibility Logic ---
+  // FAB Visibility Logic
   const [showFab, setShowFab] = useState(true);
-  const buttonRef = useRef(null); // Ref for the static bottom button
+  const buttonRef = useRef(null); 
+
+  // --- 1. iOS Detection ---
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const wrapper = document.querySelector('.participants-page');
+    if (isIOS && wrapper) {
+      wrapper.classList.add('is-ios');
+    }
+  }, []);
 
   useEffect(() => {
     fetchUserInfo();
     fetchParticipantEvents();
   }, []);
 
-  // Observer to hide FAB when static button is visible
+  // --- 2. Observer Fix ---
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // If static button is visible (intersecting), hide FAB
+        // Hide FAB if static button is visible
         setShowFab(!entry.isIntersecting);
       },
       {
-        root: null,
-        threshold: 0.1, // Trigger when 10% of the button is visible
+        root: null, // Relies on viewport (works best with native body scroll)
+        threshold: 0.1, 
       }
     );
 
@@ -50,8 +64,9 @@ const Participants = () => {
         observer.unobserve(buttonRef.current);
       }
     };
-  }, [loading]); // Re-run when loading finishes (content might shift)
+  }, [loading]); 
 
+  // Cleanup object URLs
   useEffect(() => {
     return () => {
       Object.values(downloadLinks).forEach(link => {
@@ -62,11 +77,7 @@ const Participants = () => {
 
   const fetchUserInfo = async () => {
     try {
-      const response = await fetch('/api/me', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await fetch('/api/me');
       if (response.ok) {
         const data = await response.json();
         setUserInfo({ userName: data.userName, userUSN: data.userUSN });
@@ -107,22 +118,23 @@ const Participants = () => {
       else if (diffDays < 0) categorized.completed.push(event);
       else categorized.upcoming.push(event);
     });
+
+    // --- 3. Sort Events ---
+    // Upcoming: Soonest first
+    categorized.upcoming.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
+    // Completed: Most recent first
+    categorized.completed.sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
+
     return categorized;
   };
 
   const fetchParticipantEvents = async () => {
     try {
-      const response = await fetch('/api/my-participant-events', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
+      const response = await fetch('/api/my-participant-events');
       if (!response.ok) {
         if (response.status === 401) { navigate('/'); return; }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       const data = await response.json();
       setEvents(categorizeEvents(data.participantEvents || []));
       setLoading(false);
@@ -135,8 +147,7 @@ const Participants = () => {
   const generateCertificate = async (event) => {
     if (downloadLinks[event.eid]?.url) window.URL.revokeObjectURL(downloadLinks[event.eid].url);
     setGeneratingIds(prev => new Set(prev).add(event.eid));
-    setDownloadLinks(prev => ({ ...prev, [event.eid]: null }));
-
+    
     try {
       if (!event.PartStatus) {
         alert('Certificate is only available for attended events.');
@@ -145,39 +156,44 @@ const Participants = () => {
       }
       
       const t = new Date().getTime();
-      // UPDATED: Using certificate-template.pdf
-      const existingPdfBytes = await fetch(`/certificate-template.pdf?v=${t}`).then(res => {
-        if (!res.ok) throw new Error('Template not found');
-        return res.arrayBuffer();
-      });
 
-      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      // --- 4. Optimized Font/Template Loading ---
+      if (!cachedTemplateBytes) {
+        const res = await fetch(`/certificate-template.pdf?v=${t}`);
+        if (!res.ok) throw new Error('Template not found');
+        cachedTemplateBytes = await res.arrayBuffer();
+      }
+
+      const pdfDoc = await PDFDocument.load(cachedTemplateBytes);
       pdfDoc.registerFontkit(fontkit);
       const page = pdfDoc.getPages()[0];
       const { width } = page.getSize();
 
       let nameFont;
       try {
-        const fontBytes = await fetch(`/Allura-Regular.ttf?v=${t}`).then(r => r.ok ? r.arrayBuffer() : Promise.reject());
-        nameFont = await pdfDoc.embedFont(fontBytes);
-      } catch { nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold); }
+        if (!cachedFontBytes) {
+           const fontRes = await fetch(`/Allura-Regular.ttf?v=${t}`);
+           if (fontRes.ok) cachedFontBytes = await fontRes.arrayBuffer();
+           else throw new Error("Font missing");
+        }
+        nameFont = await pdfDoc.embedFont(cachedFontBytes);
+      } catch { 
+        nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold); 
+      }
 
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
-      // UPDATED: Included Bold Font
       const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
       
-      const nameText = userInfo.userName;
-      const nameWidth = nameFont.widthOfTextAtSize(nameText, 38);
-      
       // Draw Name
+      const nameText = userInfo.userName || "Participant";
+      const nameWidth = nameFont.widthOfTextAtSize(nameText, 38);
       page.drawText(nameText, { x: (width - nameWidth) / 2, y: 250, size: 38, font: nameFont, color: rgb(0.97, 0.85, 0.57) });
       
-      // Draw USN
-      page.drawText(userInfo.userUSN, { x: 170, y: 160, size: 19, font, color: rgb(1,1,1) });
-      
-      // UPDATED: Draw Date with specific coordinates
+      // Draw USN & Date
+      page.drawText(userInfo.userUSN || "", { x: 170, y: 160, size: 19, font, color: rgb(1,1,1) });
       page.drawText(formatDate(event.eventDate), { x: 510, y: 160, size: 16, font: boldFont, color: rgb(1,1,1) });
 
+      // Draw Description with wrapping
       const descFont = font; 
       const contentText = event.certificate_info || event.eventdesc || event.ename;
       const words = contentText.split(' ');
@@ -197,7 +213,8 @@ const Participants = () => {
       setDownloadLinks(prev => ({ ...prev, [event.eid]: { url, filename: `Certificate_${event.eid}.pdf` } }));
 
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      console.error(err);
+      alert(`Error generating certificate: ${err.message}`);
     } finally {
       setGeneratingIds(prev => { const next = new Set(prev); next.delete(event.eid); return next; });
     }
@@ -258,8 +275,7 @@ const Participants = () => {
   return (
     <div className="participants-page">
       <div className="part-bg-layer"></div>
-      <div className="part-noise-overlay"></div>
-
+      
       <div className="logout-container">
         <button id="backBtn" className="logout-btn" onClick={handleBack}>
           <i className="fas fa-arrow-left"></i> Back
@@ -270,7 +286,6 @@ const Participants = () => {
         <div className="container">
           
           <div className="card-grid">
-            
             <div className="card" id="completed-card">
               <div className="card__background"></div>
               <div className="card__content">
@@ -300,17 +315,16 @@ const Participants = () => {
                 </div>
               </div>
             </div>
-
           </div>
 
-          {/* STATIC BUTTON - Attached Ref here */}
+          {/* STATIC BUTTON - Observer watches this */}
           <div className="button-container static-action-btn" ref={buttonRef}>
             <button onClick={handleParticipateClick}>
               Participate in other Event
             </button>
           </div>
 
-          {/* MOBILE FAB - Added .hidden class logic */}
+          {/* MOBILE FAB */}
           <button 
             className={`mobile-fab ${!showFab ? 'hidden' : ''}`} 
             onClick={handleParticipateClick}
