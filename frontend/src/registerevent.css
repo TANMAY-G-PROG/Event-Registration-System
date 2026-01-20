@@ -18,7 +18,7 @@
   --re-accent-error: #ff0055;
   --re-accent-warning: #ffbd00;
 
-  /* Glassmorphism System (From Secondary Code) */
+  /* Glassmorphism System */
   --re-glass-surface: rgba(255, 255, 255, 0.03);
   --re-glass-border: rgba(255, 255, 255, 0.08);
   --re-glass-highlight: rgba(255, 255, 255, 0.15);
@@ -36,7 +36,9 @@ html, body {
 
 /* 2. GLOBAL RESET */
 .registerevent-page {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100dvh;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; 
+  height: 100vh; /* Fallback */
+  height: 100dvh;
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
   margin: 0; padding: 0; background-color: var(--re-bg-deep);
   color: var(--re-text-primary); font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -44,7 +46,7 @@ html, body {
   -webkit-font-smoothing: antialiased; box-sizing: border-box; -webkit-overflow-scrolling: touch;
 }
 
-/* 3. ATMOSPHERIC BACKGROUND (Replaces Matrix Rain) */
+/* 3. ATMOSPHERIC BACKGROUND */
 .registerevent-hero-bg {
   position: fixed;
   inset: 0;
@@ -96,7 +98,7 @@ html, body {
 
 /* 8. CARDS */
 .registerevent-card {
-  background: rgba(255, 255, 255, 0.03); /* Slight glass tweak */
+  background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(20px);
   border: 1px solid var(--re-border); border-radius: 16px; overflow: hidden;
   cursor: pointer; transition: transform 0.3s var(--re-ease), border-color 0.3s, box-shadow 0.3s;
@@ -112,25 +114,13 @@ html, body {
 .registerevent-card-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s var(--re-ease); }
 .registerevent-card:hover .registerevent-card-media img { transform: scale(1.05); }
 
-/* Updated Badge Styles (from secondary) */
+/* Badges */
 .registerevent-badge { position: absolute; top: 12px; right: 12px; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; backdrop-filter: blur(8px); background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.2); color: white; }
 .registerevent-badge-team { right: auto; left: 12px; background: rgba(112, 0, 255, 0.8); border-color: rgba(112,0,255,0.4); }
 
-/* Badges specifically for Overlay (Relative positioning fix) */
-.registerevent-badges {
-    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
-}
-.registerevent-badges .registerevent-badge {
-    position: static; /* Important to stop overlapping */
-    background: rgba(0, 240, 255, 0.1);
-    color: var(--re-accent-cyan);
-    border-color: rgba(0, 240, 255, 0.2);
-}
-.registerevent-badges .registerevent-badge-ongoing {
-    color: var(--re-accent-success);
-    border-color: rgba(0, 255, 157, 0.2);
-    background: rgba(0, 255, 157, 0.1);
-}
+.registerevent-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.registerevent-badges .registerevent-badge { position: static; background: rgba(0, 240, 255, 0.1); color: var(--re-accent-cyan); border-color: rgba(0, 240, 255, 0.2); }
+.registerevent-badges .registerevent-badge-ongoing { color: var(--re-accent-success); border-color: rgba(0, 255, 157, 0.2); background: rgba(0, 255, 157, 0.1); }
 
 .registerevent-card-content { padding: 20px; display: flex; flex-direction: column; flex: 1; }
 .registerevent-card-title { font-size: 1.3rem; font-weight: 700; margin: 0 0 8px 0; color: white; line-height: 1.2; }
@@ -138,7 +128,7 @@ html, body {
 .registerevent-card-meta { font-size: 0.85rem; color: var(--re-text-secondary); margin-bottom: 20px; display: flex; gap: 8px; }
 .registerevent-card-actions { margin-top: auto; display: flex; gap: 10px; }
 
-/* 9. BUTTONS (Updated to match Secondary Styles) */
+/* 9. BUTTONS */
 .registerevent-modal-submit-btn, .registerevent-invite-confirm-btn {
   width: 100%; position: relative; padding: 14px 24px; border-radius: 12px; border: none; background: var(--re-text-primary); color: #000; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: transform 0.2s var(--re-ease-smooth), box-shadow 0.2s; overflow: hidden; z-index: 1; text-align: center; text-decoration: none; display: inline-block;
 }
@@ -147,7 +137,6 @@ html, body {
 .registerevent-team-action-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; width: 100%; }
 .registerevent-team-action-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: white; }
 
-/* SHARED BUTTON STYLES FOR OVERLAY/CARDS */
 .registerevent-btn { width: 100%; padding: 10px 16px; border-radius: 8px; border: none; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; display: inline-flex; justify-content: center; align-items: center; text-decoration: none; box-sizing: border-box; }
 .registerevent-btn:active { transform: scale(0.98); }
 .registerevent-btn.primary { background: white; color: black; }
@@ -175,7 +164,7 @@ html, body {
 .registerevent-status-indicator.joined { color: var(--re-accent-success); }
 .registerevent-status-indicator.pending { color: var(--re-accent-warning); }
 
-/* 11. OVERLAY (BIG CARD / DETAILS) - FIXED LAYOUT BUGS */
+/* 11. OVERLAY (BIG CARD / DETAILS) */
 .registerevent-overlay-container { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px); }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .registerevent-overlay-split { display: flex; flex-direction: column; height: 100%; width: 100%; }
@@ -186,35 +175,10 @@ html, body {
 .registerevent-image-gradient { position: absolute; inset: 0; background: linear-gradient(to top, #000 0%, transparent 60%); }
 .registerevent-close-btn { position: absolute; top: 24px; right: 24px; width: 44px; height: 44px; border-radius: 50%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 20px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
 
-/* FIXED: Bottom Section Layout */
-.registerevent-split-bottom { 
-    height: 60vh; 
-    background: #000; 
-    position: relative; /* Ensure context for absolute children */
-    display: flex; 
-    flex-direction: column; 
-}
+.registerevent-split-bottom { height: 60vh; background: #000; position: relative; display: flex; flex-direction: column; }
+.registerevent-detail-content { flex: 1; overflow-y: auto; padding: 32px 24px 140px; }
+.registerevent-detail-header-flex { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 24px; }
 
-/* FIXED: Content Padding ensures text isn't cut by fixed button bar */
-.registerevent-detail-content { 
-    flex: 1; 
-    overflow-y: auto; 
-    padding: 32px 24px 140px; /* Large bottom padding for buttons */
-}
-
-/* FIXED: Header Flex for Title and Pills */
-.registerevent-detail-header-flex { 
-    display: flex; 
-    flex-direction: column; /* Better for mobile */
-    align-items: flex-start; 
-    margin-bottom: 24px; 
-}
-
-.registerevent-detail-title { font-size: 2rem; font-weight: 800; line-height: 1.1; margin: 0; max-width: 80%; color: white; }
-.registerevent-detail-price-tag { font-size: 1.25rem; font-weight: 700; color: var(--re-accent-cyan); }
-.registerevent-tags-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px; }
-.registerevent-tag { padding: 6px 12px; border-radius: 100px; background: rgba(255,255,255,0.05); font-size: 0.85rem; color: var(--re-text-secondary); border: 1px solid var(--re-border); }
-.registerevent-tag.status { border-color: var(--re-accent-green); color: var(--re-accent-green); }
 .registerevent-description-box h4 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--re-text-secondary); margin-bottom: 12px; }
 .registerevent-description-box p { font-size: 1rem; line-height: 1.6; color: #ddd; margin-bottom: 40px; }
 .registerevent-bento-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -222,20 +186,10 @@ html, body {
 .bento-label { font-size: 0.75rem; color: var(--re-text-secondary); text-transform: uppercase; }
 .bento-value { font-size: 1rem; font-weight: 500; color: white; }
 
-/* FIXED: Action Bar Z-Index and Layout */
 .registerevent-action-bar { 
-    position: absolute; 
-    bottom: 0; 
-    left: 0; 
-    width: 100%; 
-    padding: 20px 24px; 
-    background: rgba(0,0,0,0.95); 
-    backdrop-filter: blur(20px); 
-    border-top: 1px solid var(--re-border); 
-    z-index: 50; /* Ensure it stays on top */
-    padding-bottom: calc(20px + env(safe-area-inset-bottom)); 
-    height: auto; 
-    box-sizing: border-box;
+  position: absolute; bottom: 0; left: 0; width: 100%; padding: 20px 24px; 
+  background: rgba(0,0,0,0.95); backdrop-filter: blur(20px); border-top: 1px solid var(--re-border); 
+  z-index: 50; padding-bottom: calc(20px + env(safe-area-inset-bottom)); height: auto; box-sizing: border-box;
 }
 
 @media (min-width: 1024px) {
@@ -252,7 +206,7 @@ html, body {
 .registerevent-back-btn { margin-top: 40px; background: transparent; border: 1px solid var(--re-border); color: #888; padding: 10px 20px; border-radius: 100px; cursor: pointer; }
 .registerevent-back { display: flex; justify-content: center; }
 
-/* 12. UPDATED MODALS (Glassmorphism from Secondary Code) */
+/* 12. MODALS */
 .registerevent-modal-overlay { 
   position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 10000; display: flex; align-items: center; justify-content: center; animation: modal-fade-in 0.2s ease-out;
 }
@@ -265,7 +219,6 @@ html, body {
 .registerevent-modal-close:hover { background: white; color: black; }
 .registerevent-modal-body { padding: 24px; }
 
-/* Form Styles from Secondary */
 .registerevent-form-group { margin-bottom: 20px; }
 .registerevent-form-label { display: block; font-size: 0.85rem; color: var(--re-text-secondary); margin-bottom: 8px; font-weight: 500; }
 .registerevent-form-input { 
@@ -282,7 +235,9 @@ html, body {
 .registerevent-payment-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .registerevent-payment-value { font-family: 'JetBrains Mono', monospace; color: var(--re-accent-cyan); }
 .registerevent-qr-wrapper { background: white; padding: 16px; border-radius: 16px; margin: 0 auto 20px; width: fit-content; box-shadow: 0 0 30px rgba(0, 240, 255, 0.2); }
-.registerevent-flash { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 100px; font-weight: 600; font-size: 0.9rem; z-index: 2000; backdrop-filter: blur(12px); display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+
+/* UPDATED FLASH Z-INDEX */
+.registerevent-flash { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 100px; font-weight: 600; font-size: 0.9rem; z-index: 11000; backdrop-filter: blur(12px); display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
 .registerevent-flash-success { background: rgba(0, 255, 157, 0.15); border: 1px solid rgba(0, 255, 157, 0.3); color: #a3ffce; }
 .registerevent-flash-error { background: rgba(255, 0, 85, 0.15); border: 1px solid rgba(255, 0, 85, 0.3); color: #ffc2d6; }
 
@@ -293,7 +248,4 @@ html, body {
   .registerevent-filters { width: 100%; display: flex; overflow-x: auto; padding: 4px; }
   .registerevent-filter-btn { flex: 1; padding: 10px 16px; white-space: nowrap; }
   .registerevent-list { grid-template-columns: 1fr; }
-  .registerevent-info-grid { grid-template-columns: 1fr 1fr; }
 }
-
-
