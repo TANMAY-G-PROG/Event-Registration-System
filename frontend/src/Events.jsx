@@ -91,6 +91,7 @@ const LightRays = ({
       await new Promise(resolve => setTimeout(resolve, 10));
       if (!containerRef.current) return;
 
+      // FIX 5: Force low DPR on mobile to prevent animation lag
       const maxDpr = isMobile ? 1.0 : 1.5;
       
       const renderer = new Renderer({
@@ -341,7 +342,7 @@ export default function Events() {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
 
-  // --- FIX 1: Detect iOS and Add Class ---
+  // --- FIX 6: Detect iOS and Add Class ---
   useEffect(() => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -446,8 +447,9 @@ export default function Events() {
         {/* Card 1: Participants */}
         <article className="card card--1" onClick={() => navigate('/participants')}>
           <div className="card__img">
+            {/* FIX 7: Added ImageKit parameters for high quality on retina */}
             <img 
-              src="https://ik.imagekit.io/flopass/volunteers.png?tr=w-800,h-600,fo-auto" 
+              src="https://ik.imagekit.io/flopass/volunteers.png?tr=w-800,h-600,fo-auto,dpr-auto,q-100" 
               alt="Participants"
               style={imgStyle}
               loading="lazy"
@@ -465,7 +467,7 @@ export default function Events() {
         <article className="card card--2" onClick={() => navigate('/organisers')}>
           <div className="card__img">
             <img 
-              src="https://ik.imagekit.io/flopass/organisers.png?tr=w-800,h-600,fo-auto" 
+              src="https://ik.imagekit.io/flopass/organisers.png?tr=w-800,h-600,fo-auto,dpr-auto,q-100" 
               alt="Organisers"
               style={imgStyle}
               loading="lazy"
@@ -483,7 +485,7 @@ export default function Events() {
         <article className="card card--3" onClick={() => navigate('/volunteers')}>
           <div className="card__img">
             <img 
-              src="https://ik.imagekit.io/flopass/participants.png?tr=w-800,h-600,fo-auto" 
+              src="https://ik.imagekit.io/flopass/participants.png?tr=w-800,h-600,fo-auto,dpr-auto,q-100" 
               alt="Volunteers"
               style={imgStyle}
               loading="lazy"
