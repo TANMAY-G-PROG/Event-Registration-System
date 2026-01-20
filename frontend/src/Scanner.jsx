@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import './Scanner.css'; // This connects the design we created
+import './Scanner.css';
 
 export default function Scanner() {
   const [pageState, setPageState] = useState('loading');
@@ -20,7 +20,6 @@ export default function Scanner() {
     const role = urlParams.get('role');
     const detectedRole = role === 'volunteer' ? 'volunteer' : 'participant';
     setUserRole(detectedRole);
-    console.log('✅ User role detected:', detectedRole);
     fetchUserData();
     loadQRLibrary();
   }, []);
@@ -30,39 +29,31 @@ export default function Scanner() {
       const response = await fetch('/api/me', {
         method: 'GET',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
       if (response.ok) {
         const data = await response.json();
         setUserUSN(data.userUSN);
-        console.log('✅ User USN loaded:', data.userUSN);
       } else {
         setErrorMsg('User not authenticated. Please sign in first.');
         setPageState('error');
       }
     } catch (err) {
-      console.error('Error fetching user info:', err);
-      setErrorMsg('Failed to load user information. Please try again.');
+      setErrorMsg('Failed to load user information.');
       setPageState('error');
     }
   };
 
   useEffect(() => {
     if (pageState === 'loading' && userUSN && libraryLoaded) {
-      console.log('🚀 Prerequisites met. Switching to scanning state.');
       setPageState('scanning');
     }
   }, [pageState, userUSN, libraryLoaded]);
 
   useEffect(() => {
     if (pageState === 'scanning') {
-      const timer = setTimeout(() => initScanner(), 100);
+      const timer = setTimeout(() => initScanner(), 300); // Increased delay for iOS
       return () => clearTimeout(timer);
-    }
-    if (pageState !== 'scanning') {
-      cleanupScanner();
     }
     return () => cleanupScanner();
   }, [pageState]);
@@ -70,29 +61,24 @@ export default function Scanner() {
   const cleanupScanner = () => {
     if (html5QrcodeScannerRef.current) {
       try {
-        html5QrcodeScannerRef.current.clear();
+        html5QrcodeScannerRef.current.clear().catch(err => console.warn(err));
         html5QrcodeScannerRef.current = null;
-        console.log('🧹 Scanner cleaned up');
       } catch (err) {
-        console.error('Cleanup error:', err);
+        console.warn('Cleanup warning:', err);
       }
     }
   };
 
   const loadQRLibrary = () => {
     if (window.Html5QrcodeScanner) {
-      console.log('✅ QR library already loaded');
       setLibraryLoaded(true);
       return;
     }
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
-    script.onload = () => {
-      console.log('✅ QR library loaded');
-      setLibraryLoaded(true);
-    };
+    script.onload = () => setLibraryLoaded(true);
     script.onerror = () => {
-      setErrorMsg('Failed to load QR scanner library. Please refresh the page.');
+      setErrorMsg('Failed to load scanner library.');
       setPageState('error');
     };
     document.head.appendChild(script);
@@ -100,55 +86,50 @@ export default function Scanner() {
 
   const initScanner = () => {
     if (!window.Html5QrcodeScanner || !scannerRef.current || html5QrcodeScannerRef.current) {
-      console.log('⚠️ Scanner not ready or already initialized');
       return;
     }
-    console.log('🎥 Initializing scanner');
+
     try {
-      const scanner = new window.Html5QrcodeScanner(
-        'reader',
-        {
-          qrbox: { width: 250, height: 250 },
-          fps: 10,
-          aspectRatio: 1.0,
-          showTorchButtonIfSupported: true,
-          rememberLastUsedCamera: true,
-          videoConstraints: {
-            facingMode: { ideal: 'environment' },
-          },
-          supportedScanTypes: [0, 1],
-          formatsToSupport: [0, 1],
+      // FIX FOR IOS: Simplified config
+      const config = {
+        fps: 10,
+        // Removed fixed aspectRatio - let the camera decide
+        videoConstraints: {
+          facingMode: { ideal: "environment" }
         },
-        false
+        rememberLastUsedCamera: true,
+        supportedScanTypes: [0, 1] 
+      };
+
+      const scanner = new window.Html5QrcodeScanner(
+        'reader', 
+        config, 
+        /* verbose= */ false
       );
+      
       scanner.render(onScanSuccess, onScanError);
       html5QrcodeScannerRef.current = scanner;
       setIsScanning(true);
-      console.log('✅ Scanner rendered');
     } catch (err) {
-      console.error('Scanner initialization error:', err);
-      setErrorMsg('Failed to initialize scanner. Check camera permissions and try again.');
+      console.error('Init error:', err);
+      setErrorMsg('Camera access denied or not supported.');
       setPageState('error');
     }
   };
 
   const onScanSuccess = async (decodedText) => {
-    // Prevent multiple scans while processing
     if (pageState !== 'scanning') return;
     
-    console.log(`✅ QR Code detected: ${decodedText}`);
     setIsScanning(false);
-    setPageState('processing'); // Temporary state to prevent duplicate scans
+    setPageState('processing');
     setLastResult(decodedText);
-    
-    // Stop scanner immediately
     cleanupScanner();
     
     if (decodedText.startsWith('eventId:')) {
       const eventId = decodedText.split(':')[1];
       await markAttendance(eventId);
     } else {
-      setErrorMsg('Invalid QR code format. Please scan the event QR code.');
+      setErrorMsg('Invalid QR Code. Please scan an Event QR.');
       setPageState('error');
     }
   };
@@ -156,88 +137,57 @@ export default function Scanner() {
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-    console.log('📁 File selected:', file.name);
-    if (!window.Html5Qrcode) {
-      setErrorMsg('QR scanner library not loaded. Please refresh and try again.');
-      setPageState('error');
-      return;
-    }
+    if (!window.Html5Qrcode) return;
+
     try {
       if (!fileScannerRef.current) {
         fileScannerRef.current = new window.Html5Qrcode('file-reader');
       }
       const decodedText = await fileScannerRef.current.scanFile(file, true);
-      console.log('✅ QR decoded from file:', decodedText);
-      await onScanSuccess(decodedText);
+      onScanSuccess(decodedText);
     } catch (err) {
-      console.error('File scan error:', err);
-      setErrorMsg('Could not read QR code from image. Please try another image.');
+      setErrorMsg('Could not find QR code in image.');
       setPageState('error');
     } finally {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const markAttendance = async (eventId) => {
-    if (!userUSN || !userRole) {
-      setErrorMsg('User session error. Please sign in again.');
-      setPageState('error');
-      return;
-    }
-    console.log(`🎯 Marking attendance - Role: ${userRole}, USN: ${userUSN}, Event: ${eventId}`);
     try {
       const endpoint = userRole === 'volunteer' ? '/api/mark-volunteer-attendance' : '/api/mark-participant-attendance';
-      console.log(`📡 Calling endpoint: ${endpoint}`);
       const response = await fetch(endpoint, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          eventId: eventId,
-          usn: userUSN,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, usn: userUSN }),
       });
       const data = await response.json();
-      console.log('📥 Response:', data);
       if (response.ok && data.success) {
         setPageState('success');
         setErrorMsg(null);
-        console.log(`✅ ${userRole} attendance marked successfully`);
       } else {
         setErrorMsg(data.error || 'Failed to mark attendance');
         setPageState('error');
       }
     } catch (err) {
-      console.error('Error marking attendance:', err);
-      setErrorMsg('Network error. Please try again.');
+      setErrorMsg('Network error. Try again.');
       setPageState('error');
     }
   };
 
   const onScanError = (errorMessage) => {
-    if (errorMessage.includes('NotFoundException') || errorMessage.includes('No MultiFormat Readers')) {
-      return;
-    }
-    console.log(`Scan error: ${errorMessage}`);
+    // Ignore common scanning errors to prevent console spam
   };
 
   const scanAgain = () => {
-    console.log('🔄 Restarting scanner');
     setLastResult('');
     setErrorMsg(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
     setPageState('scanning');
   };
 
   const restartScanner = () => {
     setErrorMsg(null);
-    setUserUSN(null);
     setPageState('loading');
     fetchUserData();
   };
@@ -250,50 +200,43 @@ export default function Scanner() {
     <div className="scanner-container">
       <div id="file-reader" style={{ display: 'none' }} />
       <div className="scanner-card">
+        
         <div className="scanner-header">
           <div className="scanner-icon">📱</div>
           <h1 className="scanner-title">Mark Attendance</h1>
           <p className="scanner-subtitle">
-            {userRole === 'volunteer' ? '🤝 Volunteer' : '🎫 Participant'} - Scan event QR code
+            {userRole === 'volunteer' ? 'Volunteer' : 'Participant'} Mode
           </p>
-          {userUSN && (
-            <p className="scanner-usn">
-              USN: {userUSN}
-            </p>
-          )}
+          {userUSN && <p className="scanner-usn">{userUSN}</p>}
         </div>
+
         {pageState === 'loading' && (
           <div className="status-box loading-box fade-in">
             <div className="status-icon">⏳</div>
-            <p>Loading user data...</p>
+            <p>Initializing...</p>
           </div>
         )}
+
         {pageState === 'error' && (
           <div className="status-box error-box fade-in">
             <div className="status-icon">⚠️</div>
             <p className="error-message">{errorMsg}</p>
             <div className="button-group">
-              <button onClick={restartScanner} className="btn btn-danger">
-                Try Again
-              </button>
-              <button onClick={goBack} className="btn btn-secondary">
-                Go Back
-              </button>
+              <button onClick={restartScanner} className="btn btn-danger">Try Again</button>
+              <button onClick={goBack} className="btn btn-secondary">Go Back</button>
             </div>
           </div>
         )}
+
         {pageState === 'scanning' && (
           <div className="scanner-main fade-in">
             <div className="scanner-video-container">
+              {/* This ID is strictly required by the library */}
               <div id="reader" ref={scannerRef}></div>
-              {isScanning && (
-                <div className="scanner-status-badge">
-                  🔍 Scanning...
-                </div>
-              )}
             </div>
+            
             <div className="file-upload-box">
-              <p>Or upload QR code image</p>
+              <p>Or upload QR image</p>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -303,36 +246,19 @@ export default function Scanner() {
                 id="qr-file-input"
               />
               <label htmlFor="qr-file-input" className="btn btn-primary">
-                📁 Choose Image File
+                📁 Upload Image
               </label>
-            </div>
-            <div className="instructions-box">
-              <div className="instructions-title">📋 Instructions:</div>
-              <ul>
-                <li>Scan the <strong>organizer's QR code</strong> using camera</li>
-                <li>Or upload a screenshot/photo of the QR code</li>
-                <li>Your attendance will be automatically marked</li>
-                <li>Make sure you are registered for the event</li>
-              </ul>
             </div>
           </div>
         )}
+
         {pageState === 'success' && (
           <div className="status-box success-box fade-in">
             <div className="status-icon">✅</div>
-            <h2 className="success-title">
-              {userRole === 'volunteer' ? 'Volunteer' : 'Participant'} Attendance Marked!
-            </h2>
-            <p className="success-message">
-              Your attendance has been successfully recorded as a {userRole}.
-            </p>
+            <h2 className="success-title">Attendance Marked!</h2>
             <div className="button-group">
-              <button onClick={goBack} className="btn btn-success-light">
-                ← Back to Event
-              </button>
-              <button onClick={scanAgain} className="btn btn-success-dark">
-                🔄 Scan Another Event
-              </button>
+              <button onClick={goBack} className="btn btn-success-light">Back</button>
+              <button onClick={scanAgain} className="btn btn-success-dark">Scan Another</button>
             </div>
           </div>
         )}
@@ -340,4 +266,3 @@ export default function Scanner() {
     </div>
   );
 }
-
