@@ -53,7 +53,6 @@ const LightRays = ({
 
   useEffect(() => {
     const checkMobile = () => {
-      // Improved check for mobile devices
       setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0);
     };
     checkMobile();
@@ -92,9 +91,6 @@ const LightRays = ({
       await new Promise(resolve => setTimeout(resolve, 10));
       if (!containerRef.current) return;
 
-      // FIX: FORCE LOW DPR ON MOBILE FOR SMOOTHNESS
-      // iPhone Retina screens use DPR 3.0 which kills WebGL performance.
-      // We cap it at 1.0 for mobile, 1.5 for desktop.
       const maxDpr = isMobile ? 1.0 : 1.5;
       
       const renderer = new Renderer({
@@ -107,7 +103,6 @@ const LightRays = ({
       rendererRef.current = renderer;
       const gl = renderer.gl;
       
-      // Ensure canvas fits container exactly
       gl.canvas.style.width = '100%';
       gl.canvas.style.height = '100%';
       gl.canvas.style.display = 'block';
@@ -226,7 +221,6 @@ void main() {
 
       const updatePlacement = () => {
         if (!containerRef.current || !renderer) return;
-        // Use local maxDpr check again for resize events
         const isMobileResize = window.innerWidth <= 768;
         const resizeDpr = isMobileResize ? 1.0 : 1.5;
         renderer.dpr = Math.min(window.devicePixelRatio, resizeDpr);
@@ -346,6 +340,17 @@ void main() {
 export default function Events() {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
+
+  // --- FIX 1: Detect iOS and Add Class ---
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    const wrapper = document.querySelector('.events-wrapper');
+    if (isIOS && wrapper) {
+      wrapper.classList.add('is-ios');
+    }
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => {
