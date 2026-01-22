@@ -200,6 +200,7 @@ body {
   height: 100dvh; 
   width: 100%;
   overflow: hidden; /* Prevent outer scroll */
+  box-sizing: border-box; /* ADDED SAFETY */
 }
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -242,7 +243,7 @@ body {
   position: relative; 
   display: flex; 
   flex-direction: column; 
-  overflow: hidden; /* Contain inner scroll */
+  overflow-x: hidden; /* Fix horizontal overflow */
 }
 
 /* Content Area: Grows to fill space, Scrolls internally */
@@ -268,6 +269,7 @@ body {
 .registerevent-action-bar { 
   position: relative; 
   width: 100%; 
+  box-sizing: border-box; /* <--- CRITICAL FIX HERE: Ensures padding doesn't widen element beyond screen */
   padding: 20px 24px; 
   background: rgba(10, 10, 15, 0.98); /* Solid background to cover scroll */
   border-top: 1px solid var(--re-border); 
