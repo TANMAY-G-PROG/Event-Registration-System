@@ -550,10 +550,28 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             }
         }
 
-        const organizedClubId = clubId || OrgCid;
+        const organizedClubId = (clubId || OrgCid) ? parseInt(clubId || OrgCid) : null;
         const fee = parseFloat(registrationFee) || 0;
         const isTeam = isTeamEvent === 'true' || isTeamEvent === true;
+        if (organizedClubId) {
+            const { data: membershipCheck, error: memberError } = await supabase
+                .from('memberof')
+                .select('clubid')
+                .eq('studentusn', req.session.userUSN)
+                .eq('clubid', organizedClubId)
+                .limit(1);
 
+            if (memberError) {
+                console.error('Membership check failed:', memberError);
+                return res.status(500).json({ error: 'Database verification failed' });
+            }
+
+            if (!membershipCheck || membershipCheck.length === 0) {
+                return res.status(403).json({ 
+                    error: 'Unauthorized: You are not a member of this club and cannot organize events for it.' 
+                });
+            }
+        }
         if (!eventName || !eventDescription || !eventDate || !eventTime || !eventLocation) {
             return res.status(400).json({ error: 'Required fields missing' });
         }
