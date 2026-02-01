@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './event_form.css';
 
@@ -16,7 +16,7 @@ const EventForm = () => {
     eventLocation: '',
     maxParticipants: '',
     maxVolunteers: '',
-    OrgCid: '',
+    OrgCid: '', // Now selected from dropdown
     registrationFee: '',
     upiId: '', 
     isTeamEvent: false,
@@ -30,6 +30,32 @@ const EventForm = () => {
   // UI States
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // NEW: State for Clubs Dropdown
+  const [myClubs, setMyClubs] = useState([]);
+  const [isLoadingClubs, setIsLoadingClubs] = useState(true);
+
+  // NEW: Fetch user's clubs on load
+  useEffect(() => {
+    const fetchMyClubs = async () => {
+      try {
+        const res = await fetch('/api/my-clubs', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setMyClubs(data.clubs || []);
+        } else if (res.status === 401) {
+           // If session expired, redirect or warn
+           navigate('/');
+        }
+      } catch (err) {
+        console.error("Failed to load memberships", err);
+      } finally {
+        setIsLoadingClubs(false);
+      }
+    };
+
+    fetchMyClubs();
+  }, [navigate]);
 
   const showMessage = (text, isError = false) => {
     setMessage({ text, isError, show: true });
@@ -64,8 +90,9 @@ const EventForm = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
+    // Validate required fields
     if (!formData.eventName || !formData.eventDate || !formData.OrgCid) {
-      showMessage('Please fill in all required fields.', true);
+      showMessage('Please fill in all required fields, including the Organizing Club.', true);
       setIsSubmitting(false);
       return;
     }
@@ -107,6 +134,9 @@ const EventForm = () => {
         if (res.status === 401) {
           showMessage('Session expired. Please login again.', true);
           setTimeout(() => navigate('/'), 2000);
+        } else if (res.status === 403) {
+            showMessage('You are not authorized to organize events for this club.', true);
+            setIsSubmitting(false);
         } else {
           showMessage(result.error || 'Failed to create event', true);
           setIsSubmitting(false);
@@ -269,14 +299,14 @@ const EventForm = () => {
 
               <div className={`conditional-fields ${formData.isTeamEvent ? 'open' : ''}`}>
                 <div className="form-grid-2">
-                   <div className="input-group">
+                    <div className="input-group">
                       <label className="input-label">Min Team Size</label>
                       <input className="modern-input" type="number" name="minTeamSize" placeholder="2" value={formData.minTeamSize} onChange={handleChange} min="2" />
-                   </div>
-                   <div className="input-group">
+                    </div>
+                    <div className="input-group">
                       <label className="input-label">Max Team Size</label>
                       <input className="modern-input" type="number" name="maxTeamSize" placeholder="5" value={formData.maxTeamSize} onChange={handleChange} min="2" />
-                   </div>
+                    </div>
                 </div>
               </div>
 
@@ -296,11 +326,37 @@ const EventForm = () => {
             <div className="event-form-section">
               <span className="section-label">04. Payments & ID</span>
               
+              {/* === UPDATED DROPDOWN SECTION === */}
               <div className="form-grid-2">
                  <div className="input-group">
-                  <label className="input-label">Club ID (OrgCid)</label>
-                  <input className="modern-input" type="number" name="OrgCid" placeholder="ID" value={formData.OrgCid} onChange={handleChange} required />
+                  <label className="input-label">Organizing Club</label>
+                  {isLoadingClubs ? (
+                    <div className="modern-input" style={{display:'flex', alignItems:'center', color:'#888', fontStyle:'italic'}}>
+                        Fetching your clubs...
+                    </div>
+                  ) : myClubs.length > 0 ? (
+                    <select 
+                      className="modern-input" 
+                      name="OrgCid" 
+                      value={formData.OrgCid} 
+                      onChange={handleChange} 
+                      required
+                      style={{ appearance: 'auto', paddingRight: '1rem' }}
+                    >
+                      <option value="">-- Select Your Club --</option>
+                      {myClubs.map((club) => (
+                        <option key={club.cid} value={club.cid}>
+                          {club.cname || `Club ID: ${club.cid}`}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="modern-input" style={{border: '1px solid #ff4d4d', color: '#ff4d4d', fontSize: '0.9rem'}}>
+                       ⚠️ You are not a member of any club.
+                    </div>
+                  )}
                  </div>
+
                  <div className="input-group">
                   <label className="input-label">Registration Fee (₹)</label>
                   <input className="modern-input" type="number" name="registrationFee" placeholder="0" value={formData.registrationFee} onChange={handleChange} step="0.01" min="0" required />
@@ -333,7 +389,12 @@ const EventForm = () => {
 
             {/* --- SUBMIT --- */}
             <div className="submit-btn-container">
-              <button className="event-form-button" type="submit" disabled={isSubmitting}>
+              <button 
+                className="event-form-button" 
+                type="submit" 
+                disabled={isSubmitting || (myClubs.length === 0 && !isLoadingClubs)}
+                style={ (myClubs.length === 0 && !isLoadingClubs) ? {opacity: 0.5, cursor: 'not-allowed'} : {} }
+              >
                 {isSubmitting ? 'Publishing Event...' : 'Publish Event'}
               </button>
             </div>
@@ -346,5 +407,3 @@ const EventForm = () => {
 };
 
 export default EventForm;
-
-
