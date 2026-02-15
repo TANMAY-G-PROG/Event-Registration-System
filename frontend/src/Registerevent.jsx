@@ -166,82 +166,119 @@ function useSliderNavigation({ totalSlides, enableKeyboard = true }) {
   return { currentIndex, setCurrentIndex, goToNext, goToPrev, goToSlide };
 }
 
-function useSliderDrag({ onSwipeLeft, onSwipeRight }) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragX, setDragX] = useState(0);
+// ============================================================================
+// PERFORMANT DRAG HOOK
+// All drag tracking is done via refs — zero React re-renders during drag.
+// The track DOM element is updated directly via requestAnimationFrame.
+// ============================================================================
+
+function useSliderDrag({ trackRef, currentIndex, cardWidth, cardGap, onSwipeLeft, onSwipeRight }) {
+  const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
-  const currentXRef = useRef(0);
+  const dragXRef = useRef(0);
   const velocityRef = useRef(0);
+  const lastXRef = useRef(0);
   const lastTimeRef = useRef(0);
-  const animationRef = useRef();
-  // Track gesture axis so vertical swipes don't get stolen from the page
   const directionLockedRef = useRef(null); // 'x' | 'y' | null
+  const rafRef = useRef(null);
+  // Expose dragging state for cursor CSS only (not for re-rendering transforms)
+  const [isDragging, setIsDragging] = useState(false);
 
-  const animateToPosition = useCallback((target) => {
-    const animate = () => {
-      setDragX(current => {
-        const diff = target - current;
-        if (Math.abs(diff) < 0.5) return target;
-        return current + diff * SLIDER_CONSTANTS.MOMENTUM_EASING;
-      });
-      animationRef.current = requestAnimationFrame(animate);
-    };
-    animate();
-    setTimeout(() => {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      setDragX(target);
-    }, SLIDER_CONSTANTS.ANIMATION_TIMEOUT);
-  }, []);
+  const applyTransform = useCallback((dragOffset, animated) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const base = -(currentIndex * (cardWidth + cardGap));
+    el.style.transition = animated
+      ? 'transform 0.65s cubic-bezier(0.32, 0.72, 0, 1)'
+      : 'none';
+    el.style.transform = `translateX(calc(${base}px + ${dragOffset}px))`;
+  }, [trackRef, currentIndex, cardWidth, cardGap]);
 
   const handleDragStart = useCallback((e) => {
+    if (e.touches && e.touches.length > 1) return; // ignore pinch
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    startXRef.current = clientX - dragX / SLIDER_CONSTANTS.DRAG_RESISTANCE;
+    startXRef.current = clientX;
     startYRef.current = clientY;
+    dragXRef.current = 0;
+    lastXRef.current = clientX;
     lastTimeRef.current = Date.now();
     velocityRef.current = 0;
     directionLockedRef.current = null;
-    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    isDraggingRef.current = true;
     setIsDragging(true);
-  }, [dragX]);
+    // Kill any ongoing transition immediately
+    applyTransform(0, false);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  }, [applyTransform]);
 
   const handleDragMove = useCallback((e) => {
-    if (!isDragging) return;
+    if (!isDraggingRef.current) return;
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-    // Lock to first significant axis detected, so vertical scrolls pass through
+    // Determine axis lock on first 8px of movement
     if (directionLockedRef.current === null) {
-      const dx = Math.abs(clientX - (startXRef.current + dragX / SLIDER_CONSTANTS.DRAG_RESISTANCE));
+      const dx = Math.abs(clientX - startXRef.current);
       const dy = Math.abs(clientY - startYRef.current);
-      if (dx > 5 || dy > 5) {
+      if (dx > 8 || dy > 8) {
         directionLockedRef.current = dx > dy ? 'x' : 'y';
       }
+      return; // wait until locked before moving anything
     }
-    if (directionLockedRef.current === 'y') return;
 
-    const rawDragX = clientX - startXRef.current;
-    const resistedDragX = rawDragX * SLIDER_CONSTANTS.DRAG_RESISTANCE;
+    // Vertical gesture — let browser handle it, cancel our drag
+    if (directionLockedRef.current === 'y') {
+      isDraggingRef.current = false;
+      setIsDragging(false);
+      applyTransform(0, true);
+      return;
+    }
+
+    // Horizontal drag — update via rAF (not setState)
     const now = Date.now();
     const dt = now - lastTimeRef.current;
-    if (dt > 0) velocityRef.current = (resistedDragX - currentXRef.current) / dt;
-    currentXRef.current = resistedDragX;
+    const rawDelta = clientX - startXRef.current;
+    // Apply rubber-band resistance beyond ±150px
+    const maxPull = 150;
+    const sign = rawDelta > 0 ? 1 : -1;
+    const abs = Math.abs(rawDelta);
+    const resisted = abs > maxPull
+      ? maxPull + (abs - maxPull) * 0.15
+      : abs;
+    const resistedDragX = sign * resisted;
+
+    if (dt > 0) velocityRef.current = (clientX - lastXRef.current) / dt;
+    lastXRef.current = clientX;
     lastTimeRef.current = now;
-    setDragX(resistedDragX);
-  }, [isDragging, dragX]);
+    dragXRef.current = resistedDragX;
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      applyTransform(dragXRef.current, false);
+    });
+  }, [applyTransform]);
 
   const handleDragEnd = useCallback(() => {
-    if (!isDragging) return;
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
     setIsDragging(false);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
+    const dragX = dragXRef.current;
     const velocity = velocityRef.current;
     const threshold = window.innerWidth * SLIDER_CONSTANTS.SWIPE_THRESHOLD_PERCENT;
+
     if (dragX < -threshold || velocity < -SLIDER_CONSTANTS.VELOCITY_THRESHOLD) onSwipeLeft();
     else if (dragX > threshold || velocity > SLIDER_CONSTANTS.VELOCITY_THRESHOLD) onSwipeRight();
-    animateToPosition(0);
-  }, [isDragging, dragX, onSwipeLeft, onSwipeRight, animateToPosition]);
 
-  return { isDragging, dragX, handleDragStart, handleDragMove, handleDragEnd };
+    // Snap back to resting position with CSS transition
+    dragXRef.current = 0;
+    applyTransform(0, true);
+  }, [onSwipeLeft, onSwipeRight, applyTransform]);
+
+  return { isDragging, handleDragStart, handleDragMove, handleDragEnd };
 }
 
 function useSliderWheel({ sliderRef, onScrollLeft, onScrollRight, enabled }) {
@@ -567,10 +604,9 @@ function BentoGrid({ events, onOpen, renderControls }) {
 // EVENT GALLERY CARD
 // ============================================================================
 
-function EventGalleryCard({ event, isActive, dragOffset, index, currentIndex, onOpen, renderControls }) {
+function EventGalleryCard({ event, isActive, index, currentIndex, onOpen, renderControls }) {
   const [isHovered, setIsHovered] = useState(false);
   const distance = index - currentIndex;
-  const parallaxOffset = dragOffset * (0.08 * (distance + 1));
   const scale = isActive ? 1 : 0.84;
   const opacity = isActive ? 1 : Math.max(0.3, 1 - Math.abs(distance) * 0.25);
 
@@ -580,8 +616,8 @@ function EventGalleryCard({ event, isActive, dragOffset, index, currentIndex, on
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        // CHANGED: Removed rotateY to make cards flat as requested
-        transform: `translateX(${parallaxOffset}px) scale(${scale}) perspective(1200px) rotateY(0deg)`,
+        // Only scale/opacity — no perspective/rotateY (causes iOS layer flicker)
+        transform: `scale(${scale})`,
         opacity,
       }}
     >
@@ -776,10 +812,28 @@ export default function Registerevent() {
     enableKeyboard: !selectedEvent && !showTeamModal && !showUpiModal && viewMode === "gallery",
   });
 
-  const { isDragging, dragX, handleDragStart, handleDragMove, handleDragEnd } = useSliderDrag({
+  const trackRef = useRef(null);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const cardWidth = isMobile ? CARD_WIDTH_MOBILE : CARD_WIDTH_DESKTOP;
+  const cardGap = isMobile ? CARD_GAP_MOBILE : CARD_GAP_DESKTOP;
+
+  const { isDragging, handleDragStart, handleDragMove, handleDragEnd } = useSliderDrag({
+    trackRef,
+    currentIndex,
+    cardWidth,
+    cardGap,
     onSwipeLeft: goToNext,
     onSwipeRight: goToPrev,
   });
+
+  // Whenever currentIndex changes (arrow key, dot, filter), animate the track
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const base = -(currentIndex * (cardWidth + cardGap));
+    el.style.transition = 'transform 0.65s cubic-bezier(0.32, 0.72, 0, 1)';
+    el.style.transform = `translateX(calc(${base}px + 0px))`;
+  }, [currentIndex, cardWidth, cardGap]);
 
   useSliderWheel({
     sliderRef,
@@ -790,14 +844,6 @@ export default function Registerevent() {
 
   const colorMap = useColorExtraction(filteredEvents);
   const currentColors = colorMap[filteredEvents[currentIndex]?.eid] || DEFAULT_COLORS;
-
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const cardWidth = isMobile ? CARD_WIDTH_MOBILE : CARD_WIDTH_DESKTOP;
-  const cardGap = isMobile ? CARD_GAP_MOBILE : CARD_GAP_DESKTOP;
-
-  const sliderTransform = filteredEvents.length > 0
-    ? `translateX(calc(-${currentIndex * (cardWidth + cardGap)}px + ${dragX}px))`
-    : 'none';
 
   // ==================== ACTION HANDLERS ====================
 
@@ -1135,18 +1181,14 @@ export default function Registerevent() {
           onTouchEnd={handleDragEnd}
         >
           <div
+            ref={trackRef}
             className="re-gallery-track"
-            style={{
-              transform: sliderTransform,
-              transition: isDragging ? 'none' : 'transform 0.65s cubic-bezier(0.32, 0.72, 0, 1)',
-            }}
           >
             {filteredEvents.map((event, index) => (
               <EventGalleryCard
                 key={event.eid}
                 event={event}
                 isActive={index === currentIndex}
-                dragOffset={dragX}
                 index={index}
                 currentIndex={currentIndex}
                 onOpen={setSelectedEvent}
