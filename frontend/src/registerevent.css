@@ -309,17 +309,16 @@ body {
 .re-gallery-track {
   display: flex;
   align-items: center;
-  gap: 3rem;
-  /* Left offset so first card is centred */
-  padding-left: calc(50vw - 160px);
-  /* will-change set dynamically by JS only during drag — static will-change causes
-     iOS to create a permanent compositing layer which increases memory and flicker */
+  /* Gap in px so getBoundingClientRect reads back the same value */
+  gap: 48px;
+  /* NO padding-left/right — JS useSnapPoints measures each card's exact
+     centre position and computes the translateX directly. Padding would
+     shift the coordinate system and cause accumulating offset errors. */
 }
 
 @media (min-width: 768px) {
   .re-gallery-track {
-    gap: 3rem;
-    padding-left: calc(50vw - 240px);
+    gap: 48px;
   }
 }
 
@@ -499,7 +498,7 @@ body {
   margin-top: 6px;
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.85);
-  transition: opacity 0.3s ease 0.08s, transform 0.3s ease 0.08s;
+  opacity: 1;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -516,7 +515,6 @@ body {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  transition: opacity 0.3s ease 0.12s, transform 0.3s ease 0.12s;
 }
 
 .re-gallery-details-btn {
@@ -1246,20 +1244,13 @@ body {
   text-overflow: ellipsis;
 }
 
-/* Hover action buttons */
+/* Action buttons — always visible */
 .re-bento-actions {
   margin-top: 10px;
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.25s ease, transform 0.25s ease;
-  pointer-events: none;
-}
-.re-bento-actions.visible {
   opacity: 1;
-  transform: translateY(0);
   pointer-events: auto;
 }
 /* make registerevent-btn look good inside bento */
@@ -1301,7 +1292,7 @@ body {
   .re-bento-loc  { font-size: 0.62rem; }
   .re-bento-top  { gap: 4px; top: 8px; left: 8px; right: 8px; }
   .re-bento-bottom { padding: 10px 10px 12px; }
-  .re-bento-actions { display: none; } /* tap opens detail overlay on mobile */
+  .re-bento-actions { display: flex; } /* always show action buttons */
   .re-bento-status { font-size: 0.52rem; padding: 2px 6px; }
   .re-bento-fee, .re-bento-free { font-size: 0.56rem; padding: 2px 5px; }
 }
