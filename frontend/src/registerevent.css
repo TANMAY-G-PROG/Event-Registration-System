@@ -294,10 +294,16 @@ body {
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+  /* Allow vertical scroll to pass through on iOS; horizontal drag handled by JS */
+  touch-action: pan-y;
+  /* Prevents iOS callout/selection on long-press */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .re-gallery-slider.dragging {
   cursor: grabbing;
+  /* Hint to browser compositor during active drag */
+  will-change: transform;
 }
 
 .re-gallery-track {
@@ -306,7 +312,8 @@ body {
   gap: 3rem;
   /* Left offset so first card is centred */
   padding-left: calc(50vw - 160px);
-  will-change: transform;
+  /* will-change set dynamically by JS only during drag — static will-change causes
+     iOS to create a permanent compositing layer which increases memory and flicker */
 }
 
 @media (min-width: 768px) {
@@ -324,7 +331,12 @@ body {
   position: relative;
   flex-shrink: 0;
   transform-origin: center center;
+  /* Only animate scale/opacity (not translateX — that's handled by the track) */
   transition: transform 0.55s var(--re-ease-gallery), opacity 0.55s var(--re-ease-gallery);
+  /* Promote each card to its own layer so scale animations are GPU composited */
+  will-change: transform, opacity;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .re-gallery-card-frame {
