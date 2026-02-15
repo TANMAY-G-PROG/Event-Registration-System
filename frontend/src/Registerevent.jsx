@@ -24,10 +24,14 @@ const SLIDER_CONSTANTS = {
 
 const DEFAULT_COLORS = ["#1a1a2e", "#16213e", "#0f3460"];
 
+// Card dimensions — these MUST match the CSS values exactly.
+// Width: .re-gallery-image-container width. Gap: .re-gallery-track gap (3rem = 48px).
+// On mobile (<768px): width=320, gap=48. Desktop: width=480, gap=48.
+// We also measure from the DOM at runtime to be safe — see useSnapPoints().
 const CARD_WIDTH_DESKTOP = 480;
 const CARD_WIDTH_MOBILE = 320;
 const CARD_GAP_DESKTOP = 48;
-const CARD_GAP_MOBILE = 24;
+const CARD_GAP_MOBILE = 48; // 3rem matches CSS — was wrongly 24 before
 
 // Smart dots: max visible dots at a time
 const MAX_VISIBLE_DOTS = 7;
@@ -172,7 +176,7 @@ function useSliderNavigation({ totalSlides, enableKeyboard = true }) {
 // The track DOM element is updated directly via requestAnimationFrame.
 // ============================================================================
 
-function useSliderDrag({ trackRef, currentIndex, cardWidth, cardGap, onSwipeLeft, onSwipeRight }) {
+function useSliderDrag({ trackRef, currentIndex, snapPoints, cardWidth, cardGap, onSwipeLeft, onSwipeRight }) {
   const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
@@ -188,12 +192,13 @@ function useSliderDrag({ trackRef, currentIndex, cardWidth, cardGap, onSwipeLeft
   const applyTransform = useCallback((dragOffset, animated) => {
     const el = trackRef.current;
     if (!el) return;
-    const base = -(currentIndex * (cardWidth + cardGap));
+    // Use the pre-measured snap point for this index — pixel-perfect, no accumulation error
+    const base = snapPoints[currentIndex] ?? 0;
     el.style.transition = animated
       ? 'transform 0.65s cubic-bezier(0.32, 0.72, 0, 1)'
       : 'none';
-    el.style.transform = `translateX(calc(${base}px + ${dragOffset}px))`;
-  }, [trackRef, currentIndex, cardWidth, cardGap]);
+    el.style.transform = `translateX(${base + dragOffset}px)`;
+  }, [trackRef, currentIndex, snapPoints]);
 
   const handleDragStart = useCallback((e) => {
     if (e.touches && e.touches.length > 1) return; // ignore pinch
@@ -270,12 +275,21 @@ function useSliderDrag({ trackRef, currentIndex, cardWidth, cardGap, onSwipeLeft
     const velocity = velocityRef.current;
     const threshold = window.innerWidth * SLIDER_CONSTANTS.SWIPE_THRESHOLD_PERCENT;
 
+    dragXRef.current = 0;
+
+    const didSwipe =
+      dragX < -threshold || velocity < -SLIDER_CONSTANTS.VELOCITY_THRESHOLD ||
+      dragX > threshold  || velocity > SLIDER_CONSTANTS.VELOCITY_THRESHOLD;
+
     if (dragX < -threshold || velocity < -SLIDER_CONSTANTS.VELOCITY_THRESHOLD) onSwipeLeft();
     else if (dragX > threshold || velocity > SLIDER_CONSTANTS.VELOCITY_THRESHOLD) onSwipeRight();
 
-    // Snap back to resting position with CSS transition
-    dragXRef.current = 0;
-    applyTransform(0, true);
+    // If we swiped, the useEffect in the parent will reposition the track to the
+    // new currentIndex — don't call applyTransform here or we get a double-snap.
+    // If we did NOT swipe, snap back to current position ourselves.
+    if (!didSwipe) {
+      applyTransform(0, true);
+    }
   }, [onSwipeLeft, onSwipeRight, applyTransform]);
 
   return { isDragging, handleDragStart, handleDragMove, handleDragEnd };
@@ -320,6 +334,66 @@ function useColorExtraction(events) {
     });
   }, [events]);
   return colors;
+}
+
+// Computes the exact translateX needed to centre each card in the viewport.
+// Works by reading each card's actual DOM position — no accumulated math, no padding offsets.
+function useSnapPoints(trackRef, cardCount) {
+  const [snapPoints, setSnapPoints] = useState([]);
+  // Also expose cardWidth/cardGap for the drag threshold calculation
+  const [cardWidth, setCardWidth] = useState(CARD_WIDTH_MOBILE);
+  const [cardGap, setCardGap] = useState(CARD_GAP_MOBILE);
+
+  useEffect(() => {
+    function measure() {
+      const track = trackRef.current;
+      if (!track) return;
+      const cards = Array.from(track.querySelectorAll('.re-gallery-card'));
+      if (cards.length === 0) return;
+
+      // Reset transform so we measure natural positions
+      const prevTransition = track.style.transition;
+      const prevTransform = track.style.transform;
+      track.style.transition = 'none';
+      track.style.transform = 'none';
+
+      // Force reflow so the DOM positions are updated
+      track.getBoundingClientRect();
+
+      const viewportCentreX = window.innerWidth / 2;
+      const points = cards.map(card => {
+        const rect = card.getBoundingClientRect();
+        const cardCentreX = rect.left + rect.width / 2;
+        // translateX needed to move this card's centre to viewport centre
+        return viewportCentreX - cardCentreX;
+      });
+
+      setSnapPoints(points);
+
+      // Also capture card metrics for drag threshold
+      if (cards.length >= 1) setCardWidth(cards[0].getBoundingClientRect().width);
+      if (cards.length >= 2) {
+        const r0 = cards[0].getBoundingClientRect();
+        const r1 = cards[1].getBoundingClientRect();
+        setCardGap(r1.left - r0.right);
+      }
+
+      // Restore transform
+      track.style.transition = prevTransition;
+      track.style.transform = prevTransform;
+    }
+
+    const raf = requestAnimationFrame(measure);
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', measure);
+    };
+  // Re-measure whenever card count changes (filter change etc.)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackRef, cardCount]);
+
+  return { snapPoints, cardWidth, cardGap };
 }
 
 // ============================================================================
@@ -535,13 +609,9 @@ function SearchBar({ events, onSelect, currentIndex }) {
 // ============================================================================
 
 function BentoGridCard({ event, onOpen, renderControls }) {
-  const [hovered, setHovered] = useState(false);
-
   return (
     <div
-      className={`re-bento-card ${hovered ? 'hovered' : ''}`}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className="re-bento-card"
       onClick={() => onOpen(event)}
     >
       {/* Background image */}
@@ -571,8 +641,8 @@ function BentoGridCard({ event, onOpen, renderControls }) {
         <h3 className="re-bento-name">{event.ename}</h3>
         <p className="re-bento-loc">📍 {event.eventLoc}</p>
 
-        {/* Quick action — shown on hover */}
-        <div className={`re-bento-actions ${hovered ? 'visible' : ''}`} onClick={e => e.stopPropagation()}>
+        {/* Action buttons — always visible */}
+        <div className="re-bento-actions" onClick={e => e.stopPropagation()}>
           {renderControls(event, false)}
           <button className="re-bento-detail-btn" onClick={(e) => { e.stopPropagation(); onOpen(event); }}>
             Details ↗
@@ -605,16 +675,13 @@ function BentoGrid({ events, onOpen, renderControls }) {
 // ============================================================================
 
 function EventGalleryCard({ event, isActive, index, currentIndex, onOpen, renderControls }) {
-  const [isHovered, setIsHovered] = useState(false);
   const distance = index - currentIndex;
   const scale = isActive ? 1 : 0.84;
   const opacity = isActive ? 1 : Math.max(0.3, 1 - Math.abs(distance) * 0.25);
 
   return (
     <div
-      className={`re-gallery-card ${isActive ? 'active' : ''} ${isHovered ? 'hovered' : ''}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className={`re-gallery-card ${isActive ? 'active' : ''}`}
       style={{
         // Only scale/opacity — no perspective/rotateY (causes iOS layer flicker)
         transform: `scale(${scale})`,
@@ -636,29 +703,29 @@ function EventGalleryCard({ event, isActive, index, currentIndex, onOpen, render
           <div className={`re-gallery-status-badge ${event.status}`}>{event.status}</div>
           {event.is_team && <div className="re-gallery-team-badge">Team</div>}
 
-          {/* Gradient overlay — always on, taller on hover */}
+          {/* Gradient overlay */}
           <div className="re-gallery-gradient" style={{
             opacity: isActive ? 1 : 0.4,
-            height: isActive ? (isHovered ? '75%' : '55%') : '40%'
+            height: isActive ? '75%' : '40%'
           }} />
 
-          {/* Info overlay */}
+          {/* Info overlay — always visible on active card */}
           {isActive && (
             <div className="re-gallery-info">
-              <p className="re-gallery-year" style={{ transform: isHovered ? 'translateY(-4px)' : 'translateY(0)' }}>
+              <p className="re-gallery-year">
                 {new Date(event.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                 {' · '}{formatTime12h(event.eventTime)}
               </p>
-              <h2 className="re-gallery-title" style={{ transform: isHovered ? 'translateY(-4px)' : 'translateY(0)' }}>
+              <h2 className="re-gallery-title">
                 {event.ename}
               </h2>
-              <p className="re-gallery-artist" style={{ opacity: isHovered ? 1 : 0, transform: isHovered ? 'translateY(0)' : 'translateY(10px)' }}>
+              <p className="re-gallery-artist">
                 📍 {event.eventLoc}
                 {event.regFee > 0 ? <span className="re-gallery-fee"> · ₹{event.regFee}</span> : <span className="re-gallery-free"> · Free</span>}
               </p>
 
-              {/* Action buttons at bottom of card */}
-              <div className="re-gallery-card-actions" style={{ opacity: isHovered ? 1 : 0, transform: isHovered ? 'translateY(0)' : 'translateY(10px)' }}>
+              {/* Action buttons — always visible */}
+              <div className="re-gallery-card-actions">
                 {renderControls(event, false)}
                 <button className="re-gallery-details-btn" onClick={(e) => { e.stopPropagation(); onOpen(event); }}>
                   Details ↗
@@ -813,27 +880,27 @@ export default function Registerevent() {
   });
 
   const trackRef = useRef(null);
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const cardWidth = isMobile ? CARD_WIDTH_MOBILE : CARD_WIDTH_DESKTOP;
-  const cardGap = isMobile ? CARD_GAP_MOBILE : CARD_GAP_DESKTOP;
+  // Measure exact snap position for each card directly from the DOM
+  const { snapPoints, cardWidth, cardGap } = useSnapPoints(trackRef, filteredEvents.length);
 
   const { isDragging, handleDragStart, handleDragMove, handleDragEnd } = useSliderDrag({
     trackRef,
     currentIndex,
+    snapPoints,
     cardWidth,
     cardGap,
     onSwipeLeft: goToNext,
     onSwipeRight: goToPrev,
   });
 
-  // Whenever currentIndex changes (arrow key, dot, filter), animate the track
+  // Snap to current card whenever index or snap points change
   useEffect(() => {
     const el = trackRef.current;
-    if (!el) return;
-    const base = -(currentIndex * (cardWidth + cardGap));
+    if (!el || snapPoints.length === 0) return;
+    const base = snapPoints[currentIndex] ?? 0;
     el.style.transition = 'transform 0.65s cubic-bezier(0.32, 0.72, 0, 1)';
-    el.style.transform = `translateX(calc(${base}px + 0px))`;
-  }, [currentIndex, cardWidth, cardGap]);
+    el.style.transform = `translateX(${base}px)`;
+  }, [currentIndex, snapPoints]);
 
   useSliderWheel({
     sliderRef,
