@@ -105,8 +105,12 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  transition: background 0.65s var(--re-ease-gallery);
+  /* Avoid transitioning background-color directly (causes full repaints).
+     Instead JS swaps background instantly and we fade in via opacity on a pseudo layer. */
+  transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: background;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .re-gallery-blur-bg {
@@ -298,6 +302,9 @@ body {
   touch-action: pan-y;
   /* Prevents iOS callout/selection on long-press */
   -webkit-tap-highlight-color: transparent;
+  /* GPU layer for the overflow container itself */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .re-gallery-slider.dragging {
@@ -311,6 +318,12 @@ body {
   align-items: center;
   /* Gap in px so getBoundingClientRect reads back the same value */
   gap: 48px;
+  /* GPU layer for the whole track — JS will-change is set during drag only.
+     translateZ(0) keeps the layer alive between interactions on iOS Safari. */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   /* NO padding-left/right — JS useSnapPoints measures each card's exact
      centre position and computes the translateX directly. Padding would
      shift the coordinate system and cause accumulating offset errors. */
@@ -331,11 +344,15 @@ body {
   flex-shrink: 0;
   transform-origin: center center;
   /* Only animate scale/opacity (not translateX — that's handled by the track) */
-  transition: transform 0.55s var(--re-ease-gallery), opacity 0.55s var(--re-ease-gallery);
-  /* Promote each card to its own layer so scale animations are GPU composited */
+  transition: transform 0.55s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.55s cubic-bezier(0.32, 0.72, 0, 1);
+  /* Promote each card to its own GPU layer — critical for smooth iOS compositing */
   will-change: transform, opacity;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+  /* Force GPU layer on WebKit/Blink so scale doesn't cause repaints */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  isolation: isolate;
 }
 
 .re-gallery-card-frame {
@@ -396,6 +413,11 @@ body {
   user-select: none;
   -webkit-user-select: none;
   pointer-events: none;
+  /* Keep image on its own compositor layer */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 /* ---- Status badges ---- */
@@ -954,10 +976,11 @@ body {
   .re-mobile-view-toggle {
     display: flex;
     position: fixed;
-    /* Move toggle UP. Previous was bottom: 1.5rem. Now we push it up to allow dots below */
-    bottom: 5.5rem;
+    /* Sit just above the bottom safe area — not floating high over cards */
+    bottom: max(1.25rem, calc(0.75rem + env(safe-area-inset-bottom)));
     left: 50%;
     transform: translateX(-50%);
+    -webkit-transform: translateX(-50%);
     z-index: 50;
     background: rgba(10,10,15,0.92);
     border: 1px solid rgba(255,255,255,0.15);
@@ -968,6 +991,10 @@ body {
     -webkit-backdrop-filter: blur(20px);
     box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
     animation: re-fadeInUp 0.5s ease-out 0.3s both;
+    /* GPU layer — prevents iOS compositing lag */
+    -webkit-transform: translateX(-50%) translateZ(0);
+    transform: translateX(-50%) translateZ(0);
+    will-change: transform;
   }
 
   /* Hide the desktop toggle on mobile */
@@ -1377,8 +1404,8 @@ body {
 }
 
 @keyframes re-fadeInUp {
-  from { opacity: 0; transform: translateX(-50%) translateY(1rem); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateX(-50%) translateY(1rem) translateZ(0); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) translateZ(0); }
 }
 
 @keyframes re-fadeIn {
@@ -1670,12 +1697,12 @@ body {
   /* Bento grid: starts below the compact header + filter pill */
   .re-bento-grid-container {
     top: 110px;
-    padding: 0 0.6rem 8rem; /* larger bottom padding for the floating elements */
+    padding: 0 0.6rem max(6rem, calc(5rem + env(safe-area-inset-bottom))); /* enough bottom space for the toggle */
   }
 
-  /* Gallery slider: push down */
+  /* Gallery slider: push dots above the floating toggle */
   .re-gallery-dots { 
-    bottom: 2rem; /* Dots at bottom */
+    bottom: max(4.5rem, calc(4rem + env(safe-area-inset-bottom))); /* Always above the mobile toggle */
   }  
   
   /* Keyboard hint hide */
