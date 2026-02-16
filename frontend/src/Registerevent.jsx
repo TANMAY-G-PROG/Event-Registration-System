@@ -195,9 +195,10 @@ function useSliderDrag({ trackRef, currentIndex, snapPoints, cardWidth, cardGap,
     // Use the pre-measured snap point for this index — pixel-perfect, no accumulation error
     const base = snapPoints[currentIndex] ?? 0;
     el.style.transition = animated
-      ? 'transform 0.65s cubic-bezier(0.32, 0.72, 0, 1)'
+      ? 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
       : 'none';
-    el.style.transform = `translateX(${base + dragOffset}px)`;
+    // Include translateZ(0) to keep the track on the GPU compositor layer on iOS Safari
+    el.style.transform = `translateX(${base + dragOffset}px) translateZ(0)`;
   }, [trackRef, currentIndex, snapPoints]);
 
   const handleDragStart = useCallback((e) => {
@@ -683,9 +684,10 @@ function EventGalleryCard({ event, isActive, index, currentIndex, onOpen, render
     <div
       className={`re-gallery-card ${isActive ? 'active' : ''}`}
       style={{
-        // Only scale/opacity — no perspective/rotateY (causes iOS layer flicker)
-        transform: `scale(${scale})`,
+        // translateZ(0) keeps each card on the compositor — critical for iOS Safari smooth scale
+        transform: `scale(${scale}) translateZ(0)`,
         opacity,
+        WebkitTransform: `scale(${scale}) translateZ(0)`,
       }}
     >
       <div className="re-gallery-card-frame">
@@ -828,9 +830,17 @@ export default function Registerevent() {
       const response = await fetch(`/api/events/${eventId}/team-status`, { credentials: 'include' })
       if (response.ok) {
         const data = await response.json()
+        // Store the real data object (truthy = event exists and is valid)
         setTeamStates(prev => ({ ...prev, [eventId]: data }))
+      } else {
+        // Non-OK (404, etc.) = event deleted from DB. Store null as sentinel:
+        // null means "fetch done, event not found". undefined means "not fetched yet".
+        setTeamStates(prev => ({ ...prev, [eventId]: null }))
       }
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error(err)
+      // On network error, don't hide the event — leave as undefined so it stays visible
+    }
   }, []);
 
   useEffect(() => { loadEvents(); fetchMyRegistrations(); }, [loadEvents, fetchMyRegistrations])
@@ -862,8 +872,17 @@ export default function Registerevent() {
   }), [allEvents]);
 
   const filteredEvents = useMemo(() => {
-    return filter === "all" ? allEvents : allEvents.filter(e => e.status === filter)
-  }, [allEvents, filter])
+    const base = filter === "all" ? allEvents : allEvents.filter(e => e.status === filter)
+    return base.filter(e => {
+      // Completed events don't go through team-status — always show them
+      if (e.status === 'completed') return true
+      // null = fetch completed but event not found in DB (was deleted) → hide it
+      // undefined = fetch not yet started/completed → still show (Loading... state)
+      // object = fetch completed and event exists → show it
+      if (teamStates[e.eid] === null) return false
+      return true
+    })
+  }, [allEvents, filter, teamStates])
 
   useEffect(() => {
     if (showUpiModal) {
@@ -898,8 +917,8 @@ export default function Registerevent() {
     const el = trackRef.current;
     if (!el || snapPoints.length === 0) return;
     const base = snapPoints[currentIndex] ?? 0;
-    el.style.transition = 'transform 0.65s cubic-bezier(0.32, 0.72, 0, 1)';
-    el.style.transform = `translateX(${base}px)`;
+    el.style.transition = 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    el.style.transform = `translateX(${base}px) translateZ(0)`;
   }, [currentIndex, snapPoints]);
 
   useSliderWheel({
