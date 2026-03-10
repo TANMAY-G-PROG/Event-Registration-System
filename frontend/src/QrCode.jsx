@@ -2,8 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import './QrCode.css';
 
 const TOKEN_LIFETIME = 15;
-const PREFETCH_AT = 2;
-const QR_TOKEN_VALIDITY_MS = 15000; // must match server
+const PREFETCH_AT = 3;
 
 export default function QrCode() {
   const [error, setError] = useState(false);
@@ -11,13 +10,14 @@ export default function QrCode() {
   const [isWarning, setIsWarning] = useState(false);
   const [libLoaded, setLibLoaded] = useState(false);
 
-  const qrBoxRef = useRef(null);
-  const qrInstanceRef = useRef(null);
-  const intervalRef = useRef(null);
-  const pendingToken = useRef(null);
-  const eventIdRef = useRef(null);
-  const countRef = useRef(TOKEN_LIFETIME);
-  const swappingRef = useRef(false);
+  const qrBoxRef        = useRef(null);
+  const qrInstanceRef   = useRef(null);
+  const intervalRef     = useRef(null);
+  const pendingToken    = useRef(null);
+  const eventIdRef      = useRef(null);
+  const countRef        = useRef(TOKEN_LIFETIME);
+  const swappingRef     = useRef(false);
+  const prefetchingRef  = useRef(false); // guard: only one prefetch in-flight
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -30,14 +30,14 @@ export default function QrCode() {
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
     s.async = true;
-    s.onload = () => setLibLoaded(true);
+    s.onload  = () => setLibLoaded(true);
     s.onerror = () => setError(true);
     document.body.appendChild(s);
 
     return () => clearInterval(intervalRef.current);
   }, []);
 
-  // ── Fetch token from server ────────────────────────────────────────────────
+  // ── Fetch a fresh token from server ───────────────────────────────────────
   const fetchToken = useCallback(async () => {
     const eid = eventIdRef.current;
     if (!eid) return null;
@@ -45,26 +45,19 @@ export default function QrCode() {
       const res = await fetch(`/api/events/${eid}/qr-token`, { credentials: 'include' });
       if (!res.ok) throw new Error('Token fetch failed');
       const { token, timestamp } = await res.json();
-      return { token, timestamp };
+      return { token, timestamp: parseInt(timestamp, 10) };
     } catch {
       return null;
     }
   }, []);
 
-  // ── Compute actual remaining seconds using server timestamp ────────────────
-  const getRemainingSeconds = useCallback((tokenData) => {
-    const elapsed = Date.now() - parseInt(tokenData.timestamp, 10);
-    const remaining = Math.floor((QR_TOKEN_VALIDITY_MS - elapsed) / 1000);
-    return Math.max(1, Math.min(remaining, TOKEN_LIFETIME));
-  }, []);
-
-  // ── Render QR ──────────────────────────────────────────────────────────────
+  // ── Render QR — destroy + recreate to avoid double-QR bug ─────────────────
   const renderQR = useCallback((tokenData) => {
     const box = qrBoxRef.current;
     if (!box || !window.QRCode || !tokenData) return;
 
     if (qrInstanceRef.current) {
-      try { qrInstanceRef.current.clear(); } catch (_) { }
+      try { qrInstanceRef.current.clear(); } catch (_) {}
       qrInstanceRef.current = null;
     }
     box.innerHTML = '';
@@ -72,81 +65,78 @@ export default function QrCode() {
     const qrText = `eventId:${eventIdRef.current}:${tokenData.token}:${tokenData.timestamp}`;
 
     qrInstanceRef.current = new window.QRCode(box, {
-      text: qrText,
-      width: 220,
-      height: 220,
-      colorDark: '#0f172a',
-      colorLight: '#ffffff',
+      text:         qrText,
+      width:        220,
+      height:       220,
+      colorDark:    '#0f172a',
+      colorLight:   '#ffffff',
       correctLevel: window.QRCode.CorrectLevel.H,
     });
   }, []);
 
-  // ── Main cycle ─────────────────────────────────────────────────────────────
+  // ── Start the 1-second tick cycle ─────────────────────────────────────────
+  // Strategy: server stamps the token at issue time.
+  // We display it and run a simple 15→0 countdown.
+  // At 0 we swap to the pre-fetched token (already waiting).
+  // We pre-fetch ONLY when count hits PREFETCH_AT, not before.
   const startCycle = useCallback(async () => {
     clearInterval(intervalRef.current);
+    swappingRef.current  = false;
+    prefetchingRef.current = false;
+    pendingToken.current = null;
 
-    // Fetch and render first token
+    // 1. Fetch & show the first QR
     const first = await fetchToken();
     if (!first) { setError(true); return; }
     renderQR(first);
 
-    // Pre-fetch next token immediately
-    fetchToken().then(t => { pendingToken.current = t; });
+    countRef.current = TOKEN_LIFETIME;
+    setCountdown(TOKEN_LIFETIME);
+    setIsWarning(false);
 
-    // ✅ Use server timestamp to compute accurate countdown
-    const initialCount = getRemainingSeconds(first);
-    countRef.current = initialCount;
-    setCountdown(initialCount);
-    setIsWarning(initialCount <= 4);
-    swappingRef.current = false;
-
-    intervalRef.current = setInterval(() => {
+    // 2. Tick every second
+    intervalRef.current = setInterval(async () => {
       countRef.current -= 1;
       const c = countRef.current;
       setCountdown(c);
       setIsWarning(c <= 4);
 
-      // Background fetch when close to expiry
-      if (c === PREFETCH_AT && !pendingToken.current) {
-        fetchToken().then(t => { pendingToken.current = t; });
+      // 3. Pre-fetch next token when PREFETCH_AT seconds remain
+      //    Only one pre-fetch allowed at a time
+      if (c === PREFETCH_AT && !pendingToken.current && !prefetchingRef.current) {
+        prefetchingRef.current = true;
+        fetchToken().then(t => {
+          pendingToken.current   = t;   // store for swap
+          prefetchingRef.current = false;
+        });
       }
 
-      // Swap QR at 0
+      // 4. Swap at 0
       if (c <= 0 && !swappingRef.current) {
         swappingRef.current = true;
 
         const next = pendingToken.current;
-        pendingToken.current = null;
+        pendingToken.current   = null;
+        prefetchingRef.current = false;
 
-        if (next) {
-          renderQR(next);
-          // ✅ Sync countdown to actual server-issued timestamp
-          const nextCount = getRemainingSeconds(next);
-          countRef.current = nextCount;
-          setCountdown(nextCount);
-        } else {
-          // Rare fallback: fetch fresh token
-          fetchToken().then(t => {
-            if (t) {
-              renderQR(t);
-              const nextCount = getRemainingSeconds(t);
-              countRef.current = nextCount;
-              setCountdown(nextCount);
-            }
-          });
-          countRef.current = TOKEN_LIFETIME;
-          setCountdown(TOKEN_LIFETIME);
-        }
-
+        // Reset countdown immediately so UI updates without flicker
+        countRef.current = TOKEN_LIFETIME;
+        setCountdown(TOKEN_LIFETIME);
         setIsWarning(false);
 
-        // Pre-fetch the one after that
-        fetchToken().then(t => { pendingToken.current = t; });
+        if (next) {
+          // Happy path — pre-fetched token is ready
+          renderQR(next);
+        } else {
+          // Fallback — fetch synchronously (rare: slow network)
+          const fresh = await fetchToken();
+          if (fresh) renderQR(fresh);
+        }
 
         swappingRef.current = false;
       }
     }, 1000);
-  }, [fetchToken, renderQR, getRemainingSeconds]);
+  }, [fetchToken, renderQR]);
 
   // ── Kick off once lib is ready ─────────────────────────────────────────────
   useEffect(() => {
@@ -154,10 +144,10 @@ export default function QrCode() {
     return () => clearInterval(intervalRef.current);
   }, [libLoaded, startCycle]);
 
-  // ── SVG ring values ────────────────────────────────────────────────────────
-  const R = 20;
+  // ── SVG ring (kept for CSS compatibility) ─────────────────────────────────
+  const R            = 20;
   const circumference = 2 * Math.PI * R;
-  const dashOffset = circumference - (countdown / TOKEN_LIFETIME) * circumference;
+  const dashOffset   = circumference - (countdown / TOKEN_LIFETIME) * circumference;
 
   return (
     <div className="qr-code-page">
@@ -178,10 +168,11 @@ export default function QrCode() {
 
             <div className="card-header">
               <h2>Live Attendance QR</h2>
-              <p className="card-subtitle">Refreshes every {TOKEN_LIFETIME} seconds · Do not screenshot</p>
+              <p className="card-subtitle">
+                Refreshes every {TOKEN_LIFETIME} seconds · Do not screenshot
+              </p>
             </div>
 
-            {/* QR box — swaps in place without disappearing */}
             <div className="qr-code" ref={qrBoxRef} />
 
             <div className="countdown-strip">
