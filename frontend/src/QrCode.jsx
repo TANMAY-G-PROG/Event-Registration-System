@@ -1,288 +1,215 @@
-import { useState, useRef, useEffect } from 'react';
-import './Scanner.css';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import './QrCode.css';
 
-export default function Scanner() {
-  const [pageState, setPageState] = useState('loading');
-  const [errorMsg, setErrorMsg]   = useState(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [userRole, setUserRole]   = useState(null);
-  const [userUSN, setUserUSN]     = useState(null);
+const TOKEN_LIFETIME = 15;
+const PREFETCH_AT = 2; // start fetching next token when 2s remain
 
-  // Keep userRole accessible inside callbacks without stale closure
-  const userRoleRef = useRef(null);
-  const userUSNRef  = useRef(null);
+export default function QrCode() {
+  const [error, setError]       = useState(false);
+  const [countdown, setCountdown] = useState(TOKEN_LIFETIME);
+  const [isWarning, setIsWarning] = useState(false);
+  const [libLoaded, setLibLoaded] = useState(false);
 
-  const scannerInstanceRef = useRef(null);
-  const isMountedRef       = useRef(true);
+  const qrBoxRef      = useRef(null);  // the white box DOM node
+  const qrInstanceRef = useRef(null);
+  const intervalRef   = useRef(null);
+  const pendingToken  = useRef(null);  // { token, timestamp }
+  const eventIdRef    = useRef(null);
+  const countRef      = useRef(TOKEN_LIFETIME);
+  const swappingRef   = useRef(false); // guard against double-swap
 
+  // ── Bootstrap ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    isMountedRef.current = true;
+    const eid = new URLSearchParams(window.location.search).get('eventId');
+    if (!eid) { setError(true); return; }
+    eventIdRef.current = eid;
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const role = urlParams.get('role') === 'volunteer' ? 'volunteer' : 'participant';
-    setUserRole(role);
-    userRoleRef.current = role;
+    if (window.QRCode) { setLibLoaded(true); return; }
 
-    fetchUserData();
+    const s    = document.createElement('script');
+    s.src      = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.async    = true;
+    s.onload   = () => setLibLoaded(true);
+    s.onerror  = () => setError(true);
+    document.body.appendChild(s);
 
-    if (!window.Html5Qrcode) {
-      const script   = document.createElement('script');
-      script.src     = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
-      script.onload  = () => console.log('✅ QR Lib Loaded');
-      document.head.appendChild(script);
-    }
-
-    return () => {
-      isMountedRef.current = false;
-      stopScanner();
-    };
+    return () => clearInterval(intervalRef.current);
   }, []);
 
-  // ── Fetch current user ─────────────────────────────────────────────────────
-  const fetchUserData = async () => {
+  // ── Fetch token — returns { token, timestamp } ─────────────────────────────
+  const fetchToken = useCallback(async () => {
+    const eid = eventIdRef.current;
+    if (!eid) return null;
     try {
-      const response = await fetch('/api/me', { credentials: 'include' });
-      if (response.ok) {
-        const data = await response.json();
-        setUserUSN(data.userUSN);
-        userUSNRef.current = data.userUSN;
-        setPageState('scanning');
-      } else {
-        setErrorMsg('Please sign in first.');
-        setPageState('error');
-      }
+      const res = await fetch(`/api/events/${eid}/qr-token`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Token fetch failed');
+      const { token, timestamp } = await res.json();
+      return { token, timestamp };
     } catch {
-      setErrorMsg('Failed to load user.');
-      setPageState('error');
+      return null;
     }
-  };
+  }, []);
 
-  // ── Scanner start ──────────────────────────────────────────────────────────
-  const startScanner = async () => {
-    if (!window.Html5Qrcode) {
-      setTimeout(startScanner, 100);
-      return;
+  // ── Render QR — always destroy + recreate to avoid double-QR bug ──────────
+  const renderQR = useCallback((tokenData) => {
+    const box = qrBoxRef.current;
+    if (!box || !window.QRCode || !tokenData) return;
+
+    // Destroy previous instance completely
+    if (qrInstanceRef.current) {
+      try { qrInstanceRef.current.clear(); } catch (_) {}
+      qrInstanceRef.current = null;
     }
-    if (scannerInstanceRef.current) return;
+    box.innerHTML = '';
 
-    const config = {
-      fps:         10,
-      qrbox:       { width: 250, height: 250 },
-      aspectRatio: 1.0,
-      disableFlip: false,
-    };
+    // QR text format MUST match what Scanner.jsx parses:
+    // "eventId:EID:TOKEN:TIMESTAMP"
+    const qrText = `eventId:${eventIdRef.current}:${tokenData.token}:${tokenData.timestamp}`;
 
-    try {
-      const html5QrCode = new window.Html5Qrcode('reader');
-      scannerInstanceRef.current = html5QrCode;
+    qrInstanceRef.current = new window.QRCode(box, {
+      text:         qrText,
+      width:        220,
+      height:       220,
+      colorDark:    '#0f172a',
+      colorLight:   '#ffffff',
+      correctLevel: window.QRCode.CorrectLevel.H,
+    });
+  }, []);
 
-      await html5QrCode.start(
-        { facingMode: 'environment' },
-        config,
-        onScanSuccess,
-        () => {} // ignore per-frame errors
-      );
+  // ── Main cycle ─────────────────────────────────────────────────────────────
+  const startCycle = useCallback(async () => {
+    clearInterval(intervalRef.current);
 
-      if (isMountedRef.current) setIsScanning(true);
+    // Render first QR immediately
+    const first = await fetchToken();
+    if (!first) { setError(true); return; }
+    renderQR(first);
 
-    } catch (err) {
-      console.error('Camera Start Error:', err);
-      try {
-        if (scannerInstanceRef.current) {
-          await scannerInstanceRef.current.start(
-            { facingMode: { exact: 'environment' } },
-            config,
-            onScanSuccess,
-            () => {}
-          );
-          if (isMountedRef.current) setIsScanning(true);
+    // Pre-fetch the NEXT token right away so it's always ready
+    fetchToken().then(t => { pendingToken.current = t; });
+
+    countRef.current = TOKEN_LIFETIME;
+    setCountdown(TOKEN_LIFETIME);
+    setIsWarning(false);
+    swappingRef.current = false;
+
+    intervalRef.current = setInterval(() => {
+      countRef.current -= 1;
+      const c = countRef.current;
+      setCountdown(c);
+      setIsWarning(c <= 4);
+
+      // Background fetch when PREFETCH_AT seconds remain
+      if (c === PREFETCH_AT && !pendingToken.current) {
+        fetchToken().then(t => { pendingToken.current = t; });
+      }
+
+      // Swap at 0 — reset counter first so UI + QR change together
+      if (c <= 0 && !swappingRef.current) {
+        swappingRef.current = true;
+
+        const next = pendingToken.current;
+        pendingToken.current = null;
+
+        countRef.current = TOKEN_LIFETIME;
+        setCountdown(TOKEN_LIFETIME);
+        setIsWarning(false);
+
+        if (next) {
+          renderQR(next);
+        } else {
+          // rare fallback
+          fetchToken().then(t => renderQR(t));
         }
-      } catch {
-        setErrorMsg('Camera error. Please ensure you are on HTTPS and allowed camera permissions.');
-        setPageState('error');
-      }
-    }
-  };
 
-  const stopScanner = async () => {
-    if (scannerInstanceRef.current) {
-      try {
-        await scannerInstanceRef.current.stop();
-        scannerInstanceRef.current.clear();
-      } catch (err) {
-        console.warn('Failed to stop scanner', err);
-      }
-      scannerInstanceRef.current = null;
-      if (isMountedRef.current) setIsScanning(false);
-    }
-  };
+        // Pre-fetch the one after that
+        fetchToken().then(t => { pendingToken.current = t; });
 
+        swappingRef.current = false;
+      }
+    }, 1000);
+  }, [fetchToken, renderQR]);
+
+  // ── Kick off once lib is ready ─────────────────────────────────────────────
   useEffect(() => {
-    if (pageState === 'scanning') {
-      const t = setTimeout(startScanner, 100);
-      return () => clearTimeout(t);
-    }
-  }, [pageState]);
+    if (libLoaded && eventIdRef.current) startCycle();
+    return () => clearInterval(intervalRef.current);
+  }, [libLoaded, startCycle]);
 
-  // ── QR decode handler ──────────────────────────────────────────────────────
-  // Expected QR format: "eventId:EID:TOKEN:TIMESTAMP"
-  // This is exactly what QrCode.jsx encodes.
-  const onScanSuccess = async (decodedText) => {
-    if (!isMountedRef.current) return;
-    await stopScanner();
-    setPageState('processing');
+  // ── SVG ring values ────────────────────────────────────────────────────────
+  const R            = 20;
+  const circumference = 2 * Math.PI * R;
+  const dashOffset   = circumference - (countdown / TOKEN_LIFETIME) * circumference;
 
-    if (!decodedText.startsWith('eventId:')) {
-      setErrorMsg('Invalid QR. Please scan a valid Event QR code.');
-      setPageState('error');
-      return;
-    }
-
-    // Split on ':' — gives ['eventId', EID, TOKEN, TIMESTAMP]
-    // TOKEN is a 16-char hex string (no colons), so splitting on ':' is safe.
-    const parts = decodedText.split(':');
-
-    if (parts.length !== 4) {
-      setErrorMsg('QR code format is outdated. Please ask the organizer to show a fresh code.');
-      setPageState('error');
-      return;
-    }
-
-    const [, eventId, token, timestamp] = parts;
-    await markAttendance(eventId, token, timestamp);
-  };
-
-  // ── Mark attendance ────────────────────────────────────────────────────────
-  const markAttendance = async (eventId, token, timestamp) => {
-    try {
-      const role     = userRoleRef.current;
-      const usn      = userUSNRef.current;
-      const endpoint = role === 'volunteer'
-        ? '/api/mark-volunteer-attendance'
-        : '/api/mark-participant-attendance';
-
-      const res  = await fetch(endpoint, {
-        method:      'POST',
-        credentials: 'include',
-        headers:     { 'Content-Type': 'application/json' },
-        body:        JSON.stringify({ eventId, usn, token, timestamp }),
-      });
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        setPageState('success');
-      } else {
-        setErrorMsg(data.error || 'Attendance marking failed.');
-        setPageState('error');
-      }
-    } catch {
-      setErrorMsg('Network error. Please try again.');
-      setPageState('error');
-    }
-  };
-
-  // ── File upload fallback ───────────────────────────────────────────────────
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !window.Html5Qrcode) return;
-
-    try {
-      const scanner = new window.Html5Qrcode('reader');
-      const result  = await scanner.scanFile(file, true);
-      onScanSuccess(result);
-    } catch {
-      setErrorMsg('Could not read QR from image. Please try again.');
-      setPageState('error');
-    }
-  };
-
-  const reset  = () => { setErrorMsg(null); setPageState('scanning'); };
-  const goBack = () => window.history.back();
-
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="scanner-container">
-      <div className="scanner-card">
+    <div className="qr-code-page">
+      <div className="qr-container">
 
-        {/* Header */}
-        <div className="scanner-header">
-          <div className="scanner-icon">📱</div>
-          <h1 className="scanner-title">Mark Attendance</h1>
-          <p className="scanner-subtitle">
-            {userRole === 'volunteer' ? 'Volunteer' : 'Participant'} Mode
-          </p>
-          {userUSN && <p className="scanner-usn">{userUSN}</p>}
+        {/* Page header — NO event ID shown */}
+        <div className="qr-header">
+          <h1>Event Check-in</h1>
+          <p className="subtitle">Display this for participants &amp; volunteers to scan</p>
         </div>
 
-        {/* Loading */}
-        {pageState === 'loading' && (
-          <div className="status-box loading-box fade-in">
-            <div className="status-icon">⏳</div>
-            <p>Loading...</p>
+        {error ? (
+          <div className="qr-error-box">
+            <span>⚠️</span>
+            <p>Unable to generate QR code. Please go back and try again.</p>
           </div>
-        )}
+        ) : (
+          <div className="card">
 
-        {/* Error */}
-        {pageState === 'error' && (
-          <div className="status-box error-box fade-in">
-            <div className="status-icon">⚠️</div>
-            <p className="error-message">{errorMsg}</p>
-            <div className="button-group">
-              <button onClick={reset}  className="btn btn-danger">Try Again</button>
-              <button onClick={goBack} className="btn btn-secondary">Go Back</button>
-            </div>
-          </div>
-        )}
-
-        {/* Scanning */}
-        {pageState === 'scanning' && (
-          <div className="scanner-main fade-in">
-            <div className="scanner-video-container">
-              <div id="reader" style={{ width: '100%', height: '100%' }} />
-              {!isScanning && (
-                <div className="scanner-loading-overlay">
-                  <div className="org-spinner-dots" />
-                  <span style={{ marginTop: '10px', fontSize: '12px' }}>Starting Camera...</span>
-                </div>
-              )}
+            {/* Card title */}
+            <div className="card-header">
+              <h2>Live Attendance QR</h2>
+              <p className="card-subtitle">Refreshes every {TOKEN_LIFETIME} seconds · Do not screenshot</p>
             </div>
 
-            <div className="file-upload-box">
-              <p>Or upload QR image</p>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                style={{ display: 'none' }}
-                id="qr-file-input"
-              />
-              <label htmlFor="qr-file-input" className="btn btn-primary">
-                📁 Choose Image
-              </label>
+            {/* QR white box — content swaps inside without disappearing */}
+            <div className="qr-code" ref={qrBoxRef} />
+
+            {/* Countdown strip */}
+            <div className="countdown-strip">
+              <div className={`c-ring-wrap ${isWarning ? 'is-warning' : ''}`}>
+                <svg width="56" height="56" viewBox="0 0 56 56">
+                  {/* Track */}
+                  <circle
+                    cx="28" cy="28" r={R}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.18)"
+                    strokeWidth="3.5"
+                  />
+                  {/* Progress arc */}
+                  <circle
+                    cx="28" cy="28" r={R}
+                    fill="none"
+                    stroke={isWarning ? '#f87171' : '#4ade80'}
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={dashOffset}
+                    transform="rotate(-90 28 28)"
+                    style={{ transition: 'stroke-dashoffset 0.98s linear, stroke 0.3s ease' }}
+                  />
+                </svg>
+                {/* Number centred inside ring via absolute positioning */}
+                <span className="c-number">{countdown}</span>
+              </div>
+
+              <div className="c-text">
+                <span className="c-label">
+                  {isWarning ? '⚡ Refreshing soon' : '🔄 Auto-refreshing'}
+                </span>
+                <span className="c-sub">Next code in {countdown}s</span>
+              </div>
             </div>
+
           </div>
         )}
 
-        {/* Processing */}
-        {pageState === 'processing' && (
-          <div className="status-box loading-box fade-in">
-            <div className="org-spinner-dots" />
-            <p>Marking Attendance...</p>
-          </div>
-        )}
-
-        {/* Success */}
-        {pageState === 'success' && (
-          <div className="status-box success-box fade-in">
-            <div className="status-icon">✅</div>
-            <h2 className="success-title">Done!</h2>
-            <p>Attendance Marked Successfully</p>
-            <div className="button-group">
-              <button onClick={goBack} className="btn btn-success-light">Back</button>
-              <button onClick={reset}  className="btn btn-success-dark">Scan Next</button>
-            </div>
-          </div>
-        )}
+        <button className="back-btn" onClick={() => window.history.back()}>
+          ← Back to Event
+        </button>
 
       </div>
     </div>
