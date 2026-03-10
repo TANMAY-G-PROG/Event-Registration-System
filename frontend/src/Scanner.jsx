@@ -17,9 +17,9 @@ export default function Scanner() {
     const urlParams = new URLSearchParams(window.location.search);
     const role = urlParams.get('role');
     setUserRole(role === 'volunteer' ? 'volunteer' : 'participant');
-    
+
     fetchUserData();
-    
+
     // Load library dynamically
     if (!window.Html5Qrcode) {
       const script = document.createElement('script');
@@ -75,30 +75,30 @@ export default function Scanner() {
 
       // 4. Start Camera (Requesting "environment" explicitly)
       await html5QrCode.start(
-        { facingMode: "environment" }, 
+        { facingMode: "environment" },
         config,
         onScanSuccess,
         (errorMessage) => {
-           // Ignore frame read errors (common while moving camera)
+          // Ignore frame read errors (common while moving camera)
         }
       );
-      
-      if(isMountedRef.current) setIsScanning(true);
+
+      if (isMountedRef.current) setIsScanning(true);
 
     } catch (err) {
       console.error("Camera Start Error:", err);
       // Fallback: If "environment" fails, try generic back camera
       try {
-         if (scannerInstanceRef.current) {
-             await scannerInstanceRef.current.start(
-                { facingMode: { exact: "environment" } }, 
-                config, 
-                onScanSuccess
-             );
-         }
+        if (scannerInstanceRef.current) {
+          await scannerInstanceRef.current.start(
+            { facingMode: { exact: "environment" } },
+            config,
+            onScanSuccess
+          );
+        }
       } catch (retryErr) {
-         setErrorMsg("Camera error. Please ensure you are on HTTPS and allowed camera permissions.");
-         setPageState('error');
+        setErrorMsg("Camera error. Please ensure you are on HTTPS and allowed camera permissions.");
+        setPageState('error');
       }
     }
   };
@@ -112,7 +112,7 @@ export default function Scanner() {
         console.warn("Failed to stop scanner", err);
       }
       scannerInstanceRef.current = null;
-      if(isMountedRef.current) setIsScanning(false);
+      if (isMountedRef.current) setIsScanning(false);
     }
   };
 
@@ -125,32 +125,42 @@ export default function Scanner() {
     }
   }, [pageState]);
 
+  // Replace these two functions inside Scanner.jsx
+
   const onScanSuccess = async (decodedText) => {
     if (!isMountedRef.current) return;
-    
-    // Stop scanning immediately
     await stopScanner();
     setPageState('processing');
 
+    // New format: "eventId:EID:TOKEN:TIMESTAMP"
     if (decodedText.startsWith('eventId:')) {
-      const eventId = decodedText.split(':')[1];
-      await markAttendance(eventId);
+      const parts = decodedText.split(':');
+      // parts = ['eventId', EID, TOKEN, TIMESTAMP]
+      if (parts.length === 4) {
+        await markAttendance(parts[1], parts[2], parts[3]);
+      } else {
+        setErrorMsg('QR code is outdated. Please ask the organizer to refresh.');
+        setPageState('error');
+      }
     } else {
       setErrorMsg('Invalid QR. Please scan an Event QR.');
       setPageState('error');
     }
   };
 
-  const markAttendance = async (eventId) => {
+  const markAttendance = async (eventId, token, timestamp) => {
     try {
-      const endpoint = userRole === 'volunteer' ? '/api/mark-volunteer-attendance' : '/api/mark-participant-attendance';
+      const endpoint = userRole === 'volunteer'
+        ? '/api/mark-volunteer-attendance'
+        : '/api/mark-participant-attendance';
+
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId, usn: userUSN }),
+        body: JSON.stringify({ eventId, usn: userUSN, token, timestamp }),
       });
       const data = await res.json();
-      
+
       if (res.ok && data.success) {
         setPageState('success');
       } else {
@@ -187,7 +197,7 @@ export default function Scanner() {
   return (
     <div className="scanner-container">
       <div className="scanner-card">
-        
+
         {/* Header */}
         <div className="scanner-header">
           <div className="scanner-icon">📱</div>
@@ -224,15 +234,15 @@ export default function Scanner() {
             <div className="scanner-video-container">
               {/* Core API requires an empty div with an ID */}
               <div id="reader" style={{ width: "100%", height: "100%" }}></div>
-              
+
               {!isScanning && (
                 <div className="scanner-loading-overlay">
                   <div className="org-spinner-dots"></div>
-                  <span style={{marginTop: '10px', fontSize: '12px'}}>Starting Camera...</span>
+                  <span style={{ marginTop: '10px', fontSize: '12px' }}>Starting Camera...</span>
                 </div>
               )}
             </div>
-            
+
             <div className="file-upload-box">
               <p>Or upload QR image</p>
               <input
