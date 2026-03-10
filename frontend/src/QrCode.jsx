@@ -5,18 +5,18 @@ const TOKEN_LIFETIME = 15;
 const PREFETCH_AT = 2; // start fetching next token when 2s remain
 
 export default function QrCode() {
-  const [error, setError]       = useState(false);
+  const [error, setError] = useState(false);
   const [countdown, setCountdown] = useState(TOKEN_LIFETIME);
   const [isWarning, setIsWarning] = useState(false);
   const [libLoaded, setLibLoaded] = useState(false);
 
-  const qrBoxRef      = useRef(null);  // the white box DOM node
+  const qrBoxRef = useRef(null);  // the white box DOM node
   const qrInstanceRef = useRef(null);
-  const intervalRef   = useRef(null);
-  const pendingToken  = useRef(null);  // { token, timestamp }
-  const eventIdRef    = useRef(null);
-  const countRef      = useRef(TOKEN_LIFETIME);
-  const swappingRef   = useRef(false); // guard against double-swap
+  const intervalRef = useRef(null);
+  const pendingToken = useRef(null);  // { token, timestamp }
+  const eventIdRef = useRef(null);
+  const countRef = useRef(TOKEN_LIFETIME);
+  const swappingRef = useRef(false); // guard against double-swap
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -26,11 +26,11 @@ export default function QrCode() {
 
     if (window.QRCode) { setLibLoaded(true); return; }
 
-    const s    = document.createElement('script');
-    s.src      = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-    s.async    = true;
-    s.onload   = () => setLibLoaded(true);
-    s.onerror  = () => setError(true);
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.async = true;
+    s.onload = () => setLibLoaded(true);
+    s.onerror = () => setError(true);
     document.body.appendChild(s);
 
     return () => clearInterval(intervalRef.current);
@@ -57,7 +57,7 @@ export default function QrCode() {
 
     // Destroy previous instance completely
     if (qrInstanceRef.current) {
-      try { qrInstanceRef.current.clear(); } catch (_) {}
+      try { qrInstanceRef.current.clear(); } catch (_) { }
       qrInstanceRef.current = null;
     }
     box.innerHTML = '';
@@ -67,11 +67,11 @@ export default function QrCode() {
     const qrText = `eventId:${eventIdRef.current}:${tokenData.token}:${tokenData.timestamp}`;
 
     qrInstanceRef.current = new window.QRCode(box, {
-      text:         qrText,
-      width:        220,
-      height:       220,
-      colorDark:    '#0f172a',
-      colorLight:   '#ffffff',
+      text: qrText,
+      width: 220,
+      height: 220,
+      colorDark: '#0f172a',
+      colorLight: '#ffffff',
       correctLevel: window.QRCode.CorrectLevel.H,
     });
   }, []);
@@ -137,9 +137,9 @@ export default function QrCode() {
   }, [libLoaded, startCycle]);
 
   // ── SVG ring values ────────────────────────────────────────────────────────
-  const R            = 20;
+  const R = 20;
   const circumference = 2 * Math.PI * R;
-  const dashOffset   = circumference - (countdown / TOKEN_LIFETIME) * circumference;
+  const dashOffset = circumference - (countdown / TOKEN_LIFETIME) * circumference;
 
   return (
     <div className="qr-code-page">
@@ -170,31 +170,7 @@ export default function QrCode() {
 
             {/* Countdown strip */}
             <div className="countdown-strip">
-              <div className={`c-ring-wrap ${isWarning ? 'is-warning' : ''}`}>
-                <svg width="56" height="56" viewBox="0 0 56 56">
-                  {/* Track */}
-                  <circle
-                    cx="28" cy="28" r={R}
-                    fill="none"
-                    stroke="rgba(255,255,255,0.18)"
-                    strokeWidth="3.5"
-                  />
-                  {/* Progress arc */}
-                  <circle
-                    cx="28" cy="28" r={R}
-                    fill="none"
-                    stroke={isWarning ? '#f87171' : '#4ade80'}
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={dashOffset}
-                    transform="rotate(-90 28 28)"
-                    style={{ transition: 'stroke-dashoffset 0.98s linear, stroke 0.3s ease' }}
-                  />
-                </svg>
-                {/* Number centred inside ring via absolute positioning */}
-                <span className="c-number">{countdown}</span>
-              </div>
+
 
               <div className="c-text">
                 <span className="c-label">
