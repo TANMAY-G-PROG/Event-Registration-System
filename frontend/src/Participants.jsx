@@ -20,19 +20,16 @@ const Participants = () => {
   const [error, setError] = useState(null);
   const [userInfo, setUserInfo] = useState({ userName: '', userUSN: '' });
 
-  // NEW: store total activity points from API
-  const [totalActivityPoints, setTotalActivityPoints] = useState(0);
-
   const [generatingIds, setGeneratingIds] = useState(new Set());
   const [downloadLinks, setDownloadLinks] = useState({});
 
   // FAB Visibility Logic
   const [showFab, setShowFab] = useState(true);
-  const buttonRef = useRef(null); 
+  const buttonRef = useRef(null);
 
   // --- iOS Detection ---
   useEffect(() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const wrapper = document.querySelector('.participants-page');
     if (isIOS && wrapper) {
@@ -53,7 +50,7 @@ const Participants = () => {
       },
       {
         root: null,
-        threshold: 0.1, 
+        threshold: 0.1,
       }
     );
 
@@ -66,7 +63,7 @@ const Participants = () => {
         observer.unobserve(buttonRef.current);
       }
     };
-  }, [loading]); 
+  }, [loading]);
 
   // Cleanup object URLs
   useEffect(() => {
@@ -136,8 +133,6 @@ const Participants = () => {
       }
       const data = await response.json();
       setEvents(categorizeEvents(data.participantEvents || []));
-      // NEW: store totalActivityPoints from API response
-      setTotalActivityPoints(data.totalActivityPoints || 0);
       setLoading(false);
     } catch (err) {
       setError(err.message);
@@ -146,19 +141,20 @@ const Participants = () => {
   };
 
   // ─────────────────────────────────────────────────────────────────────────
-  // generateCertificate — now prints total activity points if > 0
+  // generateCertificate
+  // Shows THIS event's activity points on the certificate ONLY if attended
   // ─────────────────────────────────────────────────────────────────────────
   const generateCertificate = async (event) => {
     if (downloadLinks[event.eid]?.url) window.URL.revokeObjectURL(downloadLinks[event.eid].url);
     setGeneratingIds(prev => new Set(prev).add(event.eid));
-    
+
     try {
       if (!event.PartStatus) {
         alert('Certificate is only available for attended events.');
         setGeneratingIds(prev => { const next = new Set(prev); next.delete(event.eid); return next; });
         return;
       }
-      
+
       const t = new Date().getTime();
 
       if (!cachedTemplateBytes) {
@@ -175,59 +171,56 @@ const Participants = () => {
       let nameFont;
       try {
         if (!cachedFontBytes) {
-           const fontRes = await fetch(`/Allura-Regular.ttf?v=${t}`);
-           if (fontRes.ok) cachedFontBytes = await fontRes.arrayBuffer();
-           else throw new Error("Font missing");
+          const fontRes = await fetch(`/Allura-Regular.ttf?v=${t}`);
+          if (fontRes.ok) cachedFontBytes = await fontRes.arrayBuffer();
+          else throw new Error("Font missing");
         }
         nameFont = await pdfDoc.embedFont(cachedFontBytes);
-      } catch { 
-        nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold); 
+      } catch {
+        nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
       }
 
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
       const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
-      
+
       // Draw Name
       const nameText = userInfo.userName || "Participant";
       const nameWidth = nameFont.widthOfTextAtSize(nameText, 38);
       page.drawText(nameText, { x: (width - nameWidth) / 2, y: 250, size: 38, font: nameFont, color: rgb(0.97, 0.85, 0.57) });
-      
+
       // Draw USN & Date
-      page.drawText(userInfo.userUSN || "", { x: 170, y: 160, size: 19, font, color: rgb(1,1,1) });
-      page.drawText(formatDate(event.eventDate), { x: 510, y: 160, size: 16, font: boldFont, color: rgb(1,1,1) });
+      page.drawText(userInfo.userUSN || "", { x: 170, y: 160, size: 19, font, color: rgb(1, 1, 1) });
+      page.drawText(formatDate(event.eventDate), { x: 510, y: 160, size: 16, font: boldFont, color: rgb(1, 1, 1) });
 
       // Draw Description with wrapping
-      const descFont = font; 
+      const descFont = font;
       const contentText = event.certificate_info || event.eventdesc || event.ename;
       const words = contentText.split(' ');
-      
+
       let line = '', yPos = 225;
       words.forEach(word => {
         const testLine = line + word + ' ';
         if (descFont.widthOfTextAtSize(testLine, 10) > 450 && line !== '') {
-          page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1,1,1) });
+          page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1, 1, 1) });
           line = word + ' '; yPos -= 15;
         } else { line = testLine; }
       });
-      if (line) page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1,1,1) });
+      if (line) page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1, 1, 1) });
 
-      // ── NEW: Print activity points line below certificate info ──────────
-      // Only print if this event has activity_points > 0
-      if (totalActivityPoints > 0 && (event.activityPoints || 0) > 0) {
-        const pointsText = `This certificate is eligible for ${totalActivityPoints} Activity Point${totalActivityPoints !== 1 ? 's' : ''}`;
+      // ── Activity points: only printed if attended AND this event has points > 0 ──
+      if (event.PartStatus && (event.activityPoints || 0) > 0) {
+        const pointsText = `Activity Points Earned: ${event.activityPoints}`;
         const ptSize = 10;
         const ptWidth = boldFont.widthOfTextAtSize(pointsText, ptSize);
-        // Draw it 20px below the last description line, centred
         const ptY = yPos - 30;
         page.drawText(pointsText, {
           x: (width - ptWidth) / 2,
           y: ptY,
           size: ptSize,
           font: boldFont,
-          color: rgb(0.97, 0.85, 0.57)  // gold — matches the name colour
+          color: rgb(0.97, 0.85, 0.57) // gold — matches the name colour
         });
       }
-      // ────────────────────────────────────────────────────────────────────
 
       const pdfBytes = await pdfDoc.save();
       const url = window.URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
@@ -258,7 +251,7 @@ const Participants = () => {
       <div className="part-event-item-glass" key={event.eid}>
         <div className="part-event-info">
           <h4>{DOMPurify.sanitize(event.ename || 'N/A')}</h4>
-          
+
           <div className="part-meta-info">
             <span><i className="fas fa-calendar-alt"></i> {formatDate(event.eventDate)}</span>
             <span><i className="fas fa-clock"></i> {formatTime(event.eventTime)}</span>
@@ -266,10 +259,12 @@ const Participants = () => {
           </div>
 
           <div className="part-status">
-              Status: {event.PartStatus ? <span className="status-attended">Attended</span> : <span className="status-reg">Registered</span>}
+            Status: {event.PartStatus
+              ? <span className="status-attended">Attended</span>
+              : <span className="status-reg">Registered</span>}
           </div>
 
-          {/* NEW: Show per-event activity points badge if applicable */}
+          {/* Activity points badge — shown on card whenever event has points > 0 */}
           {(event.activityPoints || 0) > 0 && (
             <div className="part-activity-points">
               <i className="fas fa-star"></i> {event.activityPoints} Activity Point{event.activityPoints !== 1 ? 's' : ''}
@@ -303,33 +298,23 @@ const Participants = () => {
   return (
     <div className="participants-page">
       <div className="part-bg-layer"></div>
-      
+
       <div className="logout-container">
         <button id="backBtn" className="logout-btn" onClick={handleBack}>
           <i className="fas fa-arrow-left"></i> Back
         </button>
       </div>
 
-      {/* NEW: Total activity points summary banner — shown only when > 0 */}
-      {!loading && totalActivityPoints > 0 && (
-        <div className="part-total-points-banner">
-          <i className="fas fa-trophy"></i>
-          <span>
-            You have earned <strong>{totalActivityPoints} Activity Point{totalActivityPoints !== 1 ? 's' : ''}</strong> across all attended events
-          </span>
-        </div>
-      )}
-
       <section className="hero-section">
         <div className="container">
-          
+
           <div className="card-grid">
             <div className="card" id="completed-card">
               <div className="card__background"></div>
               <div className="card__content">
                 <h3 className="card__heading">Completed Events</h3>
                 <div className="card__details">
-                   {renderEventsList(events.completed, 'completed')}
+                  {renderEventsList(events.completed, 'completed')}
                 </div>
               </div>
             </div>
@@ -339,7 +324,7 @@ const Participants = () => {
               <div className="card__content">
                 <h3 className="card__heading">Ongoing Events</h3>
                 <div className="card__details">
-                   {renderEventsList(events.ongoing, 'ongoing')}
+                  {renderEventsList(events.ongoing, 'ongoing')}
                 </div>
               </div>
             </div>
@@ -349,7 +334,7 @@ const Participants = () => {
               <div className="card__content">
                 <h3 className="card__heading">Upcoming Events</h3>
                 <div className="card__details">
-                   {renderEventsList(events.upcoming, 'upcoming')}
+                  {renderEventsList(events.upcoming, 'upcoming')}
                 </div>
               </div>
             </div>
@@ -363,8 +348,8 @@ const Participants = () => {
           </div>
 
           {/* MOBILE FAB */}
-          <button 
-            className={`mobile-fab ${!showFab ? 'hidden' : ''}`} 
+          <button
+            className={`mobile-fab ${!showFab ? 'hidden' : ''}`}
             onClick={handleParticipateClick}
           >
             <i className="fas fa-plus"></i>
