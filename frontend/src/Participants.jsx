@@ -20,6 +20,9 @@ const Participants = () => {
   const [error, setError] = useState(null);
   const [userInfo, setUserInfo] = useState({ userName: '', userUSN: '' });
 
+  // NEW: store total activity points from API
+  const [totalActivityPoints, setTotalActivityPoints] = useState(0);
+
   const [generatingIds, setGeneratingIds] = useState(new Set());
   const [downloadLinks, setDownloadLinks] = useState({});
 
@@ -27,7 +30,7 @@ const Participants = () => {
   const [showFab, setShowFab] = useState(true);
   const buttonRef = useRef(null); 
 
-  // --- 1. iOS Detection ---
+  // --- iOS Detection ---
   useEffect(() => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -42,15 +45,14 @@ const Participants = () => {
     fetchParticipantEvents();
   }, []);
 
-  // --- 2. Observer Fix ---
+  // --- Observer Fix ---
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // Hide FAB if static button is visible
         setShowFab(!entry.isIntersecting);
       },
       {
-        root: null, // Relies on viewport (works best with native body scroll)
+        root: null,
         threshold: 0.1, 
       }
     );
@@ -119,10 +121,7 @@ const Participants = () => {
       else categorized.upcoming.push(event);
     });
 
-    // --- 3. Sort Events ---
-    // Upcoming: Soonest first
     categorized.upcoming.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
-    // Completed: Most recent first
     categorized.completed.sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
 
     return categorized;
@@ -137,6 +136,8 @@ const Participants = () => {
       }
       const data = await response.json();
       setEvents(categorizeEvents(data.participantEvents || []));
+      // NEW: store totalActivityPoints from API response
+      setTotalActivityPoints(data.totalActivityPoints || 0);
       setLoading(false);
     } catch (err) {
       setError(err.message);
@@ -144,6 +145,9 @@ const Participants = () => {
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // generateCertificate — now prints total activity points if > 0
+  // ─────────────────────────────────────────────────────────────────────────
   const generateCertificate = async (event) => {
     if (downloadLinks[event.eid]?.url) window.URL.revokeObjectURL(downloadLinks[event.eid].url);
     setGeneratingIds(prev => new Set(prev).add(event.eid));
@@ -157,7 +161,6 @@ const Participants = () => {
       
       const t = new Date().getTime();
 
-      // --- 4. Optimized Font/Template Loading ---
       if (!cachedTemplateBytes) {
         const res = await fetch(`/certificate-template.pdf?v=${t}`);
         if (!res.ok) throw new Error('Template not found');
@@ -208,6 +211,24 @@ const Participants = () => {
       });
       if (line) page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1,1,1) });
 
+      // ── NEW: Print activity points line below certificate info ──────────
+      // Only print if this event has activity_points > 0
+      if (totalActivityPoints > 0 && (event.activityPoints || 0) > 0) {
+        const pointsText = `This certificate is eligible for ${totalActivityPoints} Activity Point${totalActivityPoints !== 1 ? 's' : ''}`;
+        const ptSize = 10;
+        const ptWidth = boldFont.widthOfTextAtSize(pointsText, ptSize);
+        // Draw it 20px below the last description line, centred
+        const ptY = yPos - 30;
+        page.drawText(pointsText, {
+          x: (width - ptWidth) / 2,
+          y: ptY,
+          size: ptSize,
+          font: boldFont,
+          color: rgb(0.97, 0.85, 0.57)  // gold — matches the name colour
+        });
+      }
+      // ────────────────────────────────────────────────────────────────────
+
       const pdfBytes = await pdfDoc.save();
       const url = window.URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
       setDownloadLinks(prev => ({ ...prev, [event.eid]: { url, filename: `Certificate_${event.eid}.pdf` } }));
@@ -247,6 +268,13 @@ const Participants = () => {
           <div className="part-status">
               Status: {event.PartStatus ? <span className="status-attended">Attended</span> : <span className="status-reg">Registered</span>}
           </div>
+
+          {/* NEW: Show per-event activity points badge if applicable */}
+          {(event.activityPoints || 0) > 0 && (
+            <div className="part-activity-points">
+              <i className="fas fa-star"></i> {event.activityPoints} Activity Point{event.activityPoints !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
 
         <div className="part-event-actions">
@@ -281,6 +309,16 @@ const Participants = () => {
           <i className="fas fa-arrow-left"></i> Back
         </button>
       </div>
+
+      {/* NEW: Total activity points summary banner — shown only when > 0 */}
+      {!loading && totalActivityPoints > 0 && (
+        <div className="part-total-points-banner">
+          <i className="fas fa-trophy"></i>
+          <span>
+            You have earned <strong>{totalActivityPoints} Activity Point{totalActivityPoints !== 1 ? 's' : ''}</strong> across all attended events
+          </span>
+        </div>
+      )}
 
       <section className="hero-section">
         <div className="container">
@@ -317,7 +355,7 @@ const Participants = () => {
             </div>
           </div>
 
-          {/* STATIC BUTTON - Observer watches this */}
+          {/* STATIC BUTTON */}
           <div className="button-container static-action-btn" ref={buttonRef}>
             <button onClick={handleParticipateClick}>
               Participate in other Event
