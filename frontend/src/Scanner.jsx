@@ -125,20 +125,20 @@ export default function Scanner() {
   }, [pageState]);
 
   // ── QR decode handler ──────────────────────────────────────────────────────
-  // Expected QR format: "eventId:EID:TOKEN:TIMESTAMP"
+  // Expected QR format: "seid:SEID:TOKEN:TIMESTAMP"
   // This is exactly what QrCode.jsx encodes.
   const onScanSuccess = async (decodedText) => {
     if (!isMountedRef.current) return;
     await stopScanner();
     setPageState('processing');
 
-    if (!decodedText.startsWith('eventId:')) {
+    if (!decodedText.startsWith('seid:')) {
       setErrorMsg('Invalid QR. Please scan a valid Event QR code.');
       setPageState('error');
       return;
     }
 
-    // Split on ':' — gives ['eventId', EID, TOKEN, TIMESTAMP]
+    // Split on ':' — gives ['seid', SEID, TOKEN, TIMESTAMP]
     // TOKEN is a 16-char hex string (no colons), so splitting on ':' is safe.
     const parts = decodedText.split(':');
 
@@ -148,12 +148,12 @@ export default function Scanner() {
       return;
     }
 
-    const [, eventId, token, timestamp] = parts;
-    await markAttendance(eventId, token, timestamp);
+    const [, seid, token, timestamp] = parts;
+    await markAttendance(seid, token, timestamp);
   };
 
   // ── Mark attendance ────────────────────────────────────────────────────────
-  const markAttendance = async (eventId, token, timestamp) => {
+  const markAttendance = async (seid, token, timestamp) => {
     try {
       const role     = userRoleRef.current;
       const usn      = userUSNRef.current;
@@ -165,14 +165,18 @@ export default function Scanner() {
         method:      'POST',
         credentials: 'include',
         headers:     { 'Content-Type': 'application/json' },
-        body:        JSON.stringify({ eventId, usn, token, timestamp }),
+        body:        JSON.stringify({ seid, usn, token, timestamp }),
       });
       const data = await res.json();
 
       if (res.ok && data.success) {
         setPageState('success');
       } else {
-        setErrorMsg(data.error || 'Attendance marking failed.');
+        if (data.error === 'Attendance already marked for this sub-event') {
+          setErrorMsg('Attendance already marked for this sub-event');
+        } else {
+          setErrorMsg(data.error || 'Attendance marking failed.');
+        }
         setPageState('error');
       }
     } catch {

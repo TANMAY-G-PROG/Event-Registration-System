@@ -85,9 +85,8 @@ export default function OrganizerTicket() {
     window.location.href = '/organisers';
   };
 
-  const handleShowQR = () => {
-    // Navigate to QR display page
-    navigate(`/qr?eventId=${eventData.eid}`);
+  const handleManageSubEvents = () => {
+    navigate(`/sub-events?eventId=${eventData.eid}`);
   };
 
   const formatDate = (dateString) => {
@@ -200,11 +199,11 @@ export default function OrganizerTicket() {
             {/* Footer / Stub - REPLACED WITH QR ACTION */}
             <div className="tk-stub-content">
               <button 
-                onClick={handleShowQR}
+                onClick={handleManageSubEvents}
                 className="tk-scan-btn tk-org-btn"
               >
                 <i className="fas fa-qrcode"></i>
-                Show Event QR
+                Manage Sub-events
               </button>
               <div className="tk-lock-msg" style={{color: '#666', fontWeight: '500'}}>
                 For Attendance Scanning

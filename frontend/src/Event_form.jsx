@@ -21,7 +21,10 @@ const EventForm = () => {
     isTeamEvent: false,
     minTeamSize: '',
     maxTeamSize: '',
-    activityPoints: ''  // NEW
+    maxActivityPts: '',
+    volActivityPts: '',
+    minPartScans: '',
+    minVolnScans: ''
   });
 
   const [bannerFile, setBannerFile] = useState(null); 
@@ -104,7 +107,11 @@ const EventForm = () => {
     submissionData.append('isTeamEvent', formData.isTeamEvent);
     submissionData.append('minTeamSize', formData.minTeamSize || '');
     submissionData.append('maxTeamSize', formData.maxTeamSize || '');
-    submissionData.append('activityPoints', formData.activityPoints || '0'); // NEW
+    submissionData.append('activityPoints', formData.maxActivityPts || '0');
+    submissionData.append('maxActivityPts', formData.maxActivityPts || '0');
+    submissionData.append('volActivityPts', formData.volActivityPts || '0');
+    submissionData.append('minPartScans', formData.minPartScans || '1');
+    submissionData.append('minVolnScans', formData.minVolnScans || '1');
 
     if (bannerFile) {
       submissionData.append('banner', bannerFile);
@@ -381,21 +388,72 @@ const EventForm = () => {
               {/* ─── NEW: Activity Points ─── */}
               <div className="input-group">
                 <label className="input-label">
-                  Activity Points <span>(Optional)</span>
+                  Max Activity Points (Participants) <span>(Optional)</span>
                 </label>
                 <input
                   className="modern-input"
                   type="number"
-                  name="activityPoints"
+                  name="maxActivityPts"
                   placeholder="0 = No activity points"
-                  value={formData.activityPoints}
+                  value={formData.maxActivityPts}
                   onChange={handleChange}
                   min="0"
-                  max="100"
                 />
                 <div className="helper-text">
-                  Points awarded to participants who attend this event. Totals accumulate across events and are printed on each event's certificate.
+                  Maximum activity points that participants can earn by attending sub-events.
                 </div>
+              </div>
+
+              <div className="input-group">
+                <label className="input-label">
+                  Activity Points for Volunteers <span>(Optional)</span>
+                </label>
+                <input
+                  className="modern-input"
+                  type="number"
+                  name="volActivityPts"
+                  placeholder="0 = No activity points"
+                  value={formData.volActivityPts}
+                  onChange={handleChange}
+                  min="0"
+                />
+                <div className="helper-text">
+                  Fixed activity points awarded to volunteers who complete the event.
+                </div>
+              </div>
+
+              <div className="form-grid-2">
+                <div className="input-group">
+                  <label className="input-label">
+                    Min. Sub-event Scans for Participant Attendance
+                  </label>
+                  <input
+                    className="modern-input"
+                    type="number"
+                    name="minPartScans"
+                    placeholder="1"
+                    value={formData.minPartScans}
+                    onChange={handleChange}
+                    min="1"
+                  />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">
+                    Min. Sub-event Scans for Volunteer Attendance
+                  </label>
+                  <input
+                    className="modern-input"
+                    type="number"
+                    name="minVolnScans"
+                    placeholder="1"
+                    value={formData.minVolnScans}
+                    onChange={handleChange}
+                    min="1"
+                  />
+                </div>
+              </div>
+              <div className="helper-text">
+                Set to 1 if attendance should be granted after a single QR scan. Increase if participants/volunteers must scan multiple sub-event QRs to be marked as attended.
               </div>
             </div>
 
