@@ -232,22 +232,6 @@ const Participants = () => {
         });
       }
 
-      // Activity points entitlement text
-      if (event.PartStatus && (event.earnedActivityPts || 0) > 0) {
-        const entText = `This certificate entitles the holder to claim ${event.earnedActivityPts} activity point(s) earned through participation in ${event.ename}.`;
-        const words = entText.split(' ');
-        let entLine = '', entY = yPos - 50;
-        
-        words.forEach(word => {
-          const testLine = entLine + word + ' ';
-          if (boldFont.widthOfTextAtSize(testLine, 9) > 450 && entLine !== '') {
-            page.drawText(entLine.trim(), { x: 190, y: entY, size: 9, font: boldFont, color: rgb(0.97, 0.85, 0.57) });
-            entLine = word + ' '; entY -= 13;
-          } else { entLine = testLine; }
-        });
-        if (entLine) page.drawText(entLine.trim(), { x: 190, y: entY, size: 9, font: boldFont, color: rgb(0.97, 0.85, 0.57) });
-      }
-
       const pdfBytes = await pdfDoc.save();
       const url = window.URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
       setDownloadLinks(prev => ({ ...prev, [event.eid]: { url, filename: `Certificate_${event.eid}.pdf` } }));
@@ -339,7 +323,7 @@ const Participants = () => {
           {/* Activity points badge — shown on card whenever event has earned points > 0 */}
           {(event.earnedActivityPts || 0) > 0 && (
             <div className="part-activity-points">
-              <i className="fas fa-star"></i> {event.earnedActivityPts} Activity Point{event.earnedActivityPts !== 1 ? 's' : ''} Earned
+              <i className="fas fa-star"></i> {event.earnedActivityPts} Claimable Activity Point{event.earnedActivityPts !== 1 ? 's' : ''}
             </div>
           )}
         </div>
