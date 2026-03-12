@@ -11,7 +11,7 @@ const { createClient } = require('redis');
 const RedisStore = require('connect-redis').RedisStore;
 const Brevo = require('@getbrevo/brevo');
 const QR_TOKEN_SECRET = process.env.QR_TOKEN_SECRET || 'your-qr-secret-change-in-production';
-const QR_TOKEN_VALIDITY_MS = 15000; // 15s server-side window (5s grace for network lag)
+const QR_TOKEN_VALIDITY_MS = 18000; // 15s display + 3s grace
 
 // --- File Upload Dependencies ---
 const cloudinary = require('cloudinary').v2;
@@ -52,7 +52,6 @@ const redisClient = createClient({
 redisClient.on('error', (err) => console.log('❌ Redis Client Error', err));
 redisClient.on('connect', () => console.log('✅ Connected to Redis Cloud'));
 
-// Initialize Redis connection
 (async () => {
     try {
         await redisClient.connect();
@@ -61,12 +60,10 @@ redisClient.on('connect', () => console.log('✅ Connected to Redis Cloud'));
     }
 })();
 
-// --- Trust the proxy in production ---
 if (IS_PRODUCTION) {
     app.set('trust proxy', 1);
 }
 
-// --- Dynamic CORS Origin ---
 app.use(cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
@@ -75,7 +72,6 @@ app.use(cors({
     exposedHeaders: ['set-cookie']
 }));
 
-// Force credentials header for Safari/iOS
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Credentials", "true");
     next();
@@ -83,39 +79,35 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// Health check route for UptimeRobot
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
 });
 
-// --- Secure Session with Redis Store (UPDATED) ---
 app.use(session({
     store: new RedisStore({
         client: redisClient,
         prefix: 'sess:',
-        ttl: 3600, // 1 Hour in Seconds (Redis Auto-Delete)
+        ttl: 3600,
     }),
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: false, // Recommended: Don't save empty sessions
+    saveUninitialized: false,
     name: 'sessionId',
-    rolling: true, // Resets the 1hr timer if user is active
+    rolling: true,
     cookie: {
         httpOnly: true,
-        maxAge: 60 * 60 * 1000, // 1 Hour in Milliseconds (Browser Cookie)
+        maxAge: 60 * 60 * 1000,
         secure: IS_PRODUCTION ? true : false,
         sameSite: IS_PRODUCTION ? "lax" : "lax",
         path: '/'
     }
 }));
 
-// Debug middleware to log all requests
 app.use((req, res, next) => {
     console.log(`\n📝 ${req.method} ${req.url}`);
     next();
 });
 
-// Test Supabase connection
 async function testSupabaseConnection() {
     try {
         const { data, error } = await supabase.from('student').select('count').limit(1);
@@ -127,7 +119,6 @@ async function testSupabaseConnection() {
 }
 testSupabaseConnection();
 
-// Middleware to check if user is authenticated
 function requireAuth(req, res, next) {
     if (req.session.userUSN) {
         next();
@@ -149,10 +140,6 @@ const uploadFromBuffer = (buffer) => {
         streamifier.createReadStream(buffer).pipe(cld_upload_stream);
     });
 };
-
-// ... 
-// ... (The rest of your routes below this point remain EXACTLY the same)
-// ... 
 
 // Sign up endpoint
 app.post('/api/signup', async (req, res) => {
@@ -197,7 +184,6 @@ app.post('/api/signup', async (req, res) => {
             return res.status(500).json({ error: `Error registering student: ${error.message}` });
         }
 
-        // Create session
         req.session.userUSN = usn;
         req.session.userName = name;
         req.session.userEmail = email;
@@ -251,7 +237,6 @@ app.post('/api/signin', async (req, res) => {
             return res.status(401).json({ error: 'Invalid USN or password' });
         }
 
-        // Create session
         req.session.userUSN = student.usn;
         req.session.userName = student.sname;
         req.session.userEmail = student.emailid;
@@ -275,7 +260,6 @@ app.post('/api/signin', async (req, res) => {
     }
 });
 
-// Get current user info
 app.get('/api/me', requireAuth, async (req, res) => {
     try {
         const { data: rows, error } = await supabase
@@ -307,7 +291,6 @@ app.get('/api/me', requireAuth, async (req, res) => {
     }
 });
 
-// Sign out endpoint
 app.post('/api/signout', (req, res) => {
     const userUSN = req.session.userUSN;
     req.session.destroy((err) => {
@@ -320,7 +303,7 @@ app.post('/api/signout', (req, res) => {
     });
 });
 
-// --- CACHED Get all events (UPDATED WITH POSTER URL) ---
+// --- CACHED Get all events ---
 app.get('/api/events', requireAuth, async (req, res) => {
     try {
         const currentDate = new Date().toISOString().split('T')[0];
@@ -335,12 +318,11 @@ app.get('/api/events', requireAuth, async (req, res) => {
         } catch (cacheErr) { console.error('Redis error:', cacheErr); }
 
         if (!rows) {
-            // Select both poster_url and banner_url
             const { data, error } = await supabase
                 .from('event')
                 .select(`
                     eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                    upi_id, is_team, min_team_size, max_team_size, poster_url, banner_url,
+                    upi_id, is_team, min_team_size, max_team_size, poster_url, banner_url, activity_points,
                     club:orgcid(cname),
                     student:orgusn(sname)
                 `);
@@ -365,11 +347,12 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 maxVoln: event.maxvoln,
                 regFee: event.regfee,
                 upiId: event.upi_id,
-                posterUrl: event.poster_url, // Google Drive
-                bannerUrl: event.banner_url, // Cloudinary
+                posterUrl: event.poster_url,
+                bannerUrl: event.banner_url,
                 is_team: event.is_team,
                 min_team_size: event.min_team_size,
                 max_team_size: event.max_team_size,
+                activityPoints: event.activity_points || 0,
                 clubName: event.club?.cname,
                 organizerName: event.student?.sname
             };
@@ -387,7 +370,10 @@ app.get('/api/events', requireAuth, async (req, res) => {
     }
 });
 
-// Get user's participant events only (UPDATED)
+// ─────────────────────────────────────────────────────────────────────────────
+// Get user's participant events — NOW includes activity_points on each event
+// AND computes total_activity_points across all attended completed events
+// ─────────────────────────────────────────────────────────────────────────────
 app.get('/api/my-participant-events', requireAuth, async (req, res) => {
     try {
         const { data: participantEvents, error } = await supabase
@@ -395,7 +381,8 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             .select(`
                 partstatus, partusn,
                 event:parteid (
-                    eid, ename, eventdesc, certificate_info, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, poster_url,
+                    eid, ename, eventdesc, certificate_info, eventdate, eventtime, eventloc,
+                    maxpart, maxvoln, regfee, poster_url, activity_points,
                     club:orgcid(cname)
                 )
             `)
@@ -414,16 +401,32 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             maxPart: p.event?.maxpart,
             maxVoln: p.event?.maxvoln,
             regFee: p.event?.regfee,
-            posterUrl: p.event?.poster_url, // Added
+            posterUrl: p.event?.poster_url,
+            activityPoints: p.event?.activity_points || 0,
             clubName: p.event?.club?.cname,
             PartStatus: p.partstatus == true,
             PartUSN: p.partusn,
             role: 'participant'
         })).filter(e => e.eid);
 
+        // ── Compute total activity points across ALL attended completed events ──
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        const totalActivityPoints = transformedEvents.reduce((sum, event) => {
+            const eventDate = new Date(event.eventDate);
+            eventDate.setHours(0, 0, 0, 0);
+            // Only count attended + completed events with activity_points > 0
+            if (event.PartStatus && eventDate < now && event.activityPoints > 0) {
+                return sum + event.activityPoints;
+            }
+            return sum;
+        }, 0);
+
         res.json({
             participantEvents: transformedEvents,
-            userUSN: req.session.userUSN
+            userUSN: req.session.userUSN,
+            totalActivityPoints  // NEW — sent to frontend for certificate use
         });
     } catch (err) {
         console.error('Error fetching participant events:', err);
@@ -431,7 +434,6 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
     }
 });
 
-// Get user's volunteer events only
 app.get('/api/my-volunteer-events', requireAuth, async (req, res) => {
     try {
         const { data: volunteerEvents, error } = await supabase
@@ -473,14 +475,13 @@ app.get('/api/my-volunteer-events', requireAuth, async (req, res) => {
     }
 });
 
-// Get user's organized events only (UPDATED)
 app.get('/api/my-organized-events', requireAuth, async (req, res) => {
     try {
         const { data: organizerEvents, error } = await supabase
             .from('event')
             .select(`
                 eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                upi_id, poster_url,
+                upi_id, poster_url, activity_points,
                 club:orgcid(cname)
             `)
             .eq('orgusn', req.session.userUSN);
@@ -499,7 +500,8 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
             maxVoln: e.maxvoln,
             regFee: e.regfee,
             upiId: e.upi_id,
-            posterUrl: e.poster_url, // Added
+            posterUrl: e.poster_url,
+            activityPoints: e.activity_points || 0,
             clubName: e.club?.cname,
             role: 'organizer'
         }));
@@ -514,14 +516,16 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
     }
 });
 
-// Create/Organize a new event (UPDATED WITH POSTER URL)
+// ─────────────────────────────────────────────────────────────────────────────
+// Create/Organize a new event — NOW saves activity_points
+// ─────────────────────────────────────────────────────────────────────────────
 app.post('/api/events/create', requireAuth, upload.single('banner'), async (req, res) => {
     try {
         const {
             eventName,
             eventDescription,
             certificate_info,
-            posterUrl, // This is the Google Drive Link (Text)
+            posterUrl,
             eventDate,
             eventTime,
             eventLocation,
@@ -533,13 +537,13 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             upiId,
             isTeamEvent,
             minTeamSize,
-            maxTeamSize
+            maxTeamSize,
+            activityPoints  // NEW
         } = req.body;
 
-        const file = req.file; // This is the Banner Image (File)
+        const file = req.file;
         let finalBannerUrl = null;
 
-        // 1. Upload Banner to Cloudinary if present
         if (file) {
             try {
                 console.log('📤 Streaming banner to Cloudinary...');
@@ -555,6 +559,8 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
         const organizedClubId = (clubId || OrgCid) ? parseInt(clubId || OrgCid) : null;
         const fee = parseFloat(registrationFee) || 0;
         const isTeam = isTeamEvent === 'true' || isTeamEvent === true;
+        const points = parseInt(activityPoints) || 0; // NEW
+
         if (organizedClubId) {
             const { data: membershipCheck, error: memberError } = await supabase
                 .from('memberof')
@@ -574,6 +580,7 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
                 });
             }
         }
+
         if (!eventName || !eventDescription || !eventDate || !eventTime || !eventLocation) {
             return res.status(400).json({ error: 'Required fields missing' });
         }
@@ -586,8 +593,8 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             ename: eventName,
             eventdesc: eventDescription,
             certificate_info: certificate_info || null,
-            poster_url: posterUrl || null,   // Google Drive Link
-            banner_url: finalBannerUrl,      // Cloudinary Link
+            poster_url: posterUrl || null,
+            banner_url: finalBannerUrl,
             eventdate: eventDate,
             eventtime: eventTime,
             eventloc: eventLocation,
@@ -599,7 +606,8 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             orgcid: organizedClubId || null,
             is_team: isTeam,
             min_team_size: isTeam ? (parseInt(minTeamSize) || null) : null,
-            max_team_size: isTeam ? (parseInt(maxTeamSize) || null) : null
+            max_team_size: isTeam ? (parseInt(maxTeamSize) || null) : null,
+            activity_points: points  // NEW
         };
 
         const { data, error } = await supabase
@@ -645,7 +653,6 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Already joined this event' });
         }
 
-        // Check event details including regfee
         const { data: event, error: eventError } = await supabase
             .from('event')
             .select('maxpart, regfee')
@@ -663,7 +670,6 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
 
         const regFee = event[0].regfee || 0;
 
-        // THIS ENDPOINT IS NOW ONLY FOR FREE EVENTS
         if (regFee > 0) {
             return res.status(400).json({
                 error: 'This is a paid event. Please use the UPI payment flow.',
@@ -783,11 +789,9 @@ app.post('/api/events/:eventId/volunteer', requireAuth, async (req, res) => {
     }
 });
 
-// Get volunteer count for an event
 app.get('/api/events/:eventId/volunteer-count', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
-
         const { count, error } = await supabase
             .from('volunteer')
             .select('*', { count: 'exact', head: true })
@@ -805,11 +809,9 @@ app.get('/api/events/:eventId/volunteer-count', requireAuth, async (req, res) =>
     }
 });
 
-// Get participant count for an event
 app.get('/api/events/:eventId/participant-count', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
-
         const { count, error } = await supabase
             .from('participant')
             .select('*', { count: 'exact', head: true })
@@ -826,13 +828,12 @@ app.get('/api/events/:eventId/participant-count', requireAuth, async (req, res) 
         res.status(500).json({ error: 'Error fetching participant count' });
     }
 });
-// ==================== TICKET PAGE ENDPOINT (FIX FOR 404) ====================
+
 app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        // 1. Fetch Event Details
         const { data: event, error: eventError } = await supabase
             .from('event')
             .select(`
@@ -850,7 +851,6 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
 
         if (!event) return res.status(404).json({ error: 'Event not found' });
 
-        // 2. Check Participant Registration
         const { data: participant, error: partError } = await supabase
             .from('participant')
             .select('partstatus, payment_status')
@@ -863,7 +863,6 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
             return res.status(500).json({ error: 'Database error' });
         }
 
-        // 3. If not registered
         if (!participant) {
             return res.json({
                 isRegistered: false,
@@ -871,7 +870,6 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
             });
         }
 
-        // 4. Return Data expected by ParticipantTicket.jsx
         res.json({
             isRegistered: true,
             ename: event.ename,
@@ -882,7 +880,6 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
             eventdesc: event.eventdesc,
             regFee: event.regfee,
             maxPart: event.maxpart,
-            // If payment_status is null but fee is 0, consider it verified/free
             paymentStatus: participant.payment_status || (event.regfee > 0 ? 'pending' : 'verified')
         });
 
@@ -892,7 +889,6 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
     }
 });
 
-// Individual Event Details Route (for organizer ticket page) (UPDATED)
 app.get('/api/events/:eventId', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
@@ -904,7 +900,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
         const { data: rows, error } = await supabase
             .from('event')
             .select(`
-                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url,
+                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url, activity_points,
                 club:orgcid(cname),
                 student:orgusn(sname)
             `)
@@ -930,7 +926,8 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             maxPart: event.maxpart,
             maxVoln: event.maxvoln,
             regFee: event.regFee,
-            posterUrl: event.poster_url, // Added
+            posterUrl: event.poster_url,
+            activityPoints: event.activity_points || 0,
             clubName: event.club?.cname,
             organizerName: event.student?.sname,
             OrgUsn: event.orgusn
@@ -963,7 +960,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
         });
     }
 });
-// Get all clubs
+
 app.get('/api/clubs', requireAuth, async (req, res) => {
     try {
         const { data: rows, error } = await supabase
@@ -985,7 +982,6 @@ app.get('/api/clubs', requireAuth, async (req, res) => {
     }
 });
 
-// Get user's clubs
 app.get('/api/my-clubs', requireAuth, async (req, res) => {
     try {
         const { data: rows, error } = await supabase
@@ -1017,7 +1013,6 @@ app.get('/api/my-clubs', requireAuth, async (req, res) => {
     }
 });
 
-// Get all students
 app.get('/api/students', requireAuth, async (req, res) => {
     try {
         const { data: rows, error } = await supabase
@@ -1039,13 +1034,12 @@ app.get('/api/students', requireAuth, async (req, res) => {
     }
 });
 
-// Helper — validates the QR token
 function validateQRToken(eventId, token, timestamp) {
     const now = Date.now();
     const ts = parseInt(timestamp, 10);
 
     if (isNaN(ts) || now - ts > QR_TOKEN_VALIDITY_MS) {
-        return false; // expired
+        return false;
     }
 
     const payload = `${eventId}:${timestamp}`;
@@ -1061,7 +1055,6 @@ function validateQRToken(eventId, token, timestamp) {
     );
 }
 
-// Mark participant attendance (with token validation)
 app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
     try {
         const { eventId, usn, token, timestamp } = req.body;
@@ -1074,7 +1067,6 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'USN and Event ID are required' });
         }
 
-        // ── Token validation ──────────────────────────────────────────────────────
         if (!token || !timestamp) {
             return res.status(400).json({ error: 'QR code is outdated. Please scan a fresh code.' });
         }
@@ -1082,7 +1074,6 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
         if (!validateQRToken(eventId, token, timestamp)) {
             return res.status(401).json({ error: 'QR code has expired. Please ask the organizer to show a fresh code.' });
         }
-        // ─────────────────────────────────────────────────────────────────────────
 
         const { data: existing, error: existingError } = await supabase
             .from('participant')
@@ -1111,7 +1102,6 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
     }
 });
 
-// Mark volunteer attendance (with token validation)
 app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
     try {
         const { eventId, usn, token, timestamp } = req.body;
@@ -1124,7 +1114,6 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'USN and Event ID are required' });
         }
 
-        // ── Token validation ──────────────────────────────────────────────────────
         if (!token || !timestamp) {
             return res.status(400).json({ error: 'QR code is outdated. Please scan a fresh code.' });
         }
@@ -1132,7 +1121,6 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
         if (!validateQRToken(eventId, token, timestamp)) {
             return res.status(401).json({ error: 'QR code has expired. Please ask the organizer to show a fresh code.' });
         }
-        // ─────────────────────────────────────────────────────────────────────────
 
         const { data: existing, error: existingError } = await supabase
             .from('volunteer')
@@ -1160,9 +1148,6 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Error marking attendance: ' + err.message });
     }
 });
-
-
-
 
 // OLD scan-qr endpoint (DEPRECATED - kept for backward compatibility)
 app.get('/api/scan-qr', async (req, res) => {
@@ -1213,14 +1198,12 @@ app.get('/api/scan-qr', async (req, res) => {
 
 // ==================== PASSWORD RESET ENDPOINTS ====================
 
-// Forgot Password - Send reset email (BREVO VERSION)
 app.post('/api/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
 
         if (!email) return res.status(400).json({ error: 'Email is required' });
 
-        // 1. Check if user exists in Supabase
         const { data: user, error: userError } = await supabase
             .from('student')
             .select('usn, sname, emailid')
@@ -1232,7 +1215,6 @@ app.post('/api/forgot-password', async (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
 
-        // Security: Don't reveal if user exists
         if (!user || user.length === 0) {
             console.log('Reset requested for non-existent email:', email);
             return res.json({
@@ -1241,11 +1223,9 @@ app.post('/api/forgot-password', async (req, res) => {
             });
         }
 
-        // 2. Generate Token
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+        const resetTokenExpiry = new Date(Date.now() + 3600000);
 
-        // 3. Save Token to DB
         const { error: updateError } = await supabase
             .from('student')
             .update({
@@ -1261,11 +1241,9 @@ app.post('/api/forgot-password', async (req, res) => {
 
         const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
-        // 4. Send Email via Brevo
         const sendSmtpEmail = new Brevo.SendSmtpEmail();
-
         sendSmtpEmail.subject = "Password Reset Request - E-Pass";
-        sendSmtpEmail.sender = { "name": "E-Pass System", "email": "flopass333@gmail.com" }; // MUST be your verified sender in Brevo
+        sendSmtpEmail.sender = { "name": "E-Pass System", "email": "flopass333@gmail.com" };
         sendSmtpEmail.to = [{ "email": email, "name": user[0].sname }];
         sendSmtpEmail.htmlContent = `
             <html>
@@ -1294,13 +1272,11 @@ app.post('/api/forgot-password', async (req, res) => {
 
     } catch (err) {
         console.error('Error in forgot password:', err);
-        // Log detailed Brevo error if available
         if (err.body) console.error('Brevo Error Body:', err.body);
         res.status(500).json({ error: 'Failed to process request' });
     }
 });
 
-// Reset Password - Update password with token
 app.post('/api/reset-password', async (req, res) => {
     try {
         const { token, newPassword } = req.body;
@@ -1311,7 +1287,7 @@ app.post('/api/reset-password', async (req, res) => {
         if (newPassword.length < 6) {
             return res.status(400).json({ error: 'Password must be at least 6 characters long' });
         }
-        // Find user with valid token
+
         const { data: user, error: userError } = await supabase
             .from('student')
             .select('usn, sname, emailid, reset_token_expiry')
@@ -1325,14 +1301,14 @@ app.post('/api/reset-password', async (req, res) => {
         if (!user || user.length === 0) {
             return res.status(400).json({ error: 'Invalid or expired reset link' });
         }
-        // Check if token is expired
+
         const tokenExpiry = new Date(user[0].reset_token_expiry);
         if (tokenExpiry < new Date()) {
             return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
         }
-        // Hash new password
+
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        // Update password and clear reset token
+
         const { error: updateError } = await supabase
             .from('student')
             .update({
@@ -1346,6 +1322,7 @@ app.post('/api/reset-password', async (req, res) => {
             console.error('Error updating password:', updateError);
             return res.status(500).json({ error: 'Failed to reset password' });
         }
+
         console.log('✅ Password reset successful for:', user[0].usn);
         res.json({
             success: true,
@@ -1360,7 +1337,6 @@ app.post('/api/reset-password', async (req, res) => {
 
 // ==================== UPI PAYMENT ENDPOINTS ====================
 
-// Register for a paid event with UPI
 app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
@@ -1371,7 +1347,6 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Transaction ID is required' });
         }
 
-        // Check if already registered
         const { data: existing, error: existingError } = await supabase
             .from('participant')
             .select('*')
@@ -1388,7 +1363,6 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'You are already registered for this event' });
         }
 
-        // Get event fee
         const { data: eventData, error: eventError } = await supabase
             .from('event')
             .select('regfee, maxpart')
@@ -1407,7 +1381,6 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'This is not a paid event' });
         }
 
-        // Check participant limit
         if (maxPart > 0) {
             const { count, error: countError } = await supabase
                 .from('participant')
@@ -1423,7 +1396,6 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
             }
         }
 
-        // Insert payment record
         const { error: paymentError } = await supabase.from('payment').insert([{
             usn: userUSN,
             event_id: eventId,
@@ -1437,7 +1409,6 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Failed to save payment' });
         }
 
-        // Insert participant record
         const { error: insertError } = await supabase
             .from('participant')
             .insert([{
@@ -1464,8 +1435,8 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
     }
 });
 
-// ==================== PAYMENT VERIFICATION ENDPOINTS (NEW) ====================
-// Verify/Approve a payment (organizer only)
+// ==================== PAYMENT VERIFICATION ENDPOINTS ====================
+
 app.post('/api/payments/verify', requireAuth, async (req, res) => {
     try {
         const { participantUSN, eventId } = req.body;
@@ -1475,7 +1446,6 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Participant USN and Event ID are required' });
         }
 
-        // Verify organizer
         const { data: event, error: eventError } = await supabase
             .from('event')
             .select('orgusn, is_team')
@@ -1492,7 +1462,6 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
 
         const isTeamEvent = event[0].is_team;
 
-        // Check if this participant is a team leader
         if (isTeamEvent) {
             const { data: teamData } = await supabase
                 .from('team')
@@ -1503,9 +1472,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
 
             const teamId = teamData?.[0]?.id;
 
-            // If it's a team event and participant is a team leader
             if (teamId) {
-                // Get all team members
                 const { data: teamMembers, error: teamMembersError } = await supabase
                     .from('team_members')
                     .select('student_usn')
@@ -1519,7 +1486,6 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
 
                 const allTeamUSNs = teamMembers.map(m => m.student_usn);
 
-                // Update payment status for team leader (only leader has payment record)
                 const { error: paymentUpdateError } = await supabase
                     .from('payment')
                     .update({ status: 'verified' })
@@ -1532,7 +1498,6 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
                     return res.status(500).json({ error: 'Failed to update payment status' });
                 }
 
-                // Update participant payment status for ALL team members
                 const { error: participantUpdateError } = await supabase
                     .from('participant')
                     .update({ payment_status: 'verified' })
@@ -1554,7 +1519,6 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
             }
         }
 
-        // Single participant (not a team event or not a team leader)
         const { error: paymentUpdateError } = await supabase
             .from('payment')
             .update({ status: 'verified' })
@@ -1590,13 +1554,11 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
     }
 });
 
-// Get pending payments for an event (organizer only)
 app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        // Verify organizer
         const { data: event, error: eventError } = await supabase
             .from('event')
             .select('orgusn, ename, is_team')
@@ -1612,11 +1574,9 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
         }
 
         const isTeamEvent = event[0].is_team;
-
         let paymentsToShow = [];
 
         if (isTeamEvent) {
-            // For team events, ONLY show team leaders who have actually made payments
             const { data: pendingPayments, error: paymentsError } = await supabase
                 .from('payment')
                 .select(`
@@ -1639,7 +1599,6 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
                 return res.status(500).json({ error: 'Database error' });
             }
 
-            // For each payment, check if this person is a team leader
             for (const payment of pendingPayments || []) {
                 const { data: teamData } = await supabase
                     .from('team')
@@ -1648,9 +1607,7 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
                     .eq('leader_usn', payment.usn)
                     .limit(1);
 
-                // Only include if this person is a team leader
                 if (teamData && teamData.length > 0) {
-                    // Count team members
                     const { count: memberCount } = await supabase
                         .from('team_members')
                         .select('*', { count: 'exact', head: true })
@@ -1672,7 +1629,6 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
                 }
             }
         } else {
-            // For non-team events, show all participants with pending payments
             const { data: pendingPayments, error: paymentsError } = await supabase
                 .from('payment')
                 .select(`
@@ -1720,11 +1676,8 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
     }
 });
 
-
-
 // ==================== TEAM EVENTS ENDPOINTS ====================
 
-// Create a team for an event
 app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
@@ -1735,7 +1688,6 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Team name and member USNs are required' });
         }
 
-        // Check if event exists and is a team event
         const { data: event, error: eventError } = await supabase
             .from('event')
             .select('eid, ename, is_team, min_team_size, max_team_size, regfee')
@@ -1753,7 +1705,6 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
         const minSize = event[0].min_team_size;
         const maxSize = event[0].max_team_size;
 
-        // Validate team size (including leader)
         const totalMembers = memberUSNs.length + 1;
         if (maxSize && totalMembers > maxSize) {
             return res.status(400).json({
@@ -1761,7 +1712,6 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
             });
         }
 
-        // Check if leader already has a team with join_status = true for this event
         const { data: existingTeam } = await supabase
             .from('team_members')
             .select('team_id, join_status, team:team_id(event_id, leader_usn)')
@@ -1780,7 +1730,6 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
             }
         }
 
-        // Validate all member USNs exist in student table
         if (memberUSNs.length > 0) {
             const { data: students, error: studentError } = await supabase
                 .from('student')
@@ -1793,7 +1742,6 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
                 });
             }
 
-            // Check if any member has ACTUALLY JOINED another team for this event
             const { data: memberTeamCheck } = await supabase
                 .from('team_members')
                 .select('student_usn, join_status, team:team_id(event_id)')
@@ -1812,7 +1760,6 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
             }
         }
 
-        // Create team
         const { data: teamData, error: teamError } = await supabase
             .from('team')
             .insert([{
@@ -1830,14 +1777,12 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
 
         const teamId = teamData[0].id;
 
-        // Add leader as team member with join_status = true
         const teamMembersToInsert = [{
             team_id: teamId,
             student_usn: userUSN,
             join_status: true
         }];
 
-        // Add other members with join_status = false (pending invites)
         memberUSNs.forEach(usn => {
             teamMembersToInsert.push({
                 team_id: teamId,
@@ -1872,7 +1817,6 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
     }
 });
 
-// Join a team
 app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
@@ -1883,7 +1827,6 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Team leader USN is required' });
         }
 
-        // Check if user is already in any team for this event
         const { data: existingMembership } = await supabase
             .from('team_members')
             .select('team_id, team:team_id(event_id, registration_complete)')
@@ -1905,7 +1848,6 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             }
         }
 
-        // Find the team by leader USN and event ID
         const { data: team, error: teamError } = await supabase
             .from('team')
             .select('id, team_name, registration_complete, max_team_size:event_id(max_team_size)')
@@ -1927,7 +1869,6 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             });
         }
 
-        // Check if user is in the team members list
         const { data: membership, error: membershipError } = await supabase
             .from('team_members')
             .select('join_status')
@@ -1947,7 +1888,6 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             });
         }
 
-        // Update join status
         const { error: updateError } = await supabase
             .from('team_members')
             .update({ join_status: true })
@@ -1970,13 +1910,11 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
     }
 });
 
-// Get team status for current user and event
 app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        // Check if event is a team event
         const { data: event } = await supabase
             .from('event')
             .select('is_team, min_team_size, max_team_size, regfee')
@@ -1988,12 +1926,9 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
         }
 
         if (!event[0].is_team) {
-            return res.json({
-                isTeamEvent: false
-            });
+            return res.json({ isTeamEvent: false });
         }
 
-        // Check if user is a team leader for this event
         const { data: leaderTeam } = await supabase
             .from('team')
             .select('id, team_name, registration_complete')
@@ -2004,7 +1939,6 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
         if (leaderTeam && leaderTeam.length > 0) {
             const teamId = leaderTeam[0].id;
 
-            // Get team members and their join status
             const { data: members } = await supabase
                 .from('team_members')
                 .select('student_usn, join_status, student:student_usn(sname)')
@@ -2029,7 +1963,6 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
             });
         }
 
-        // Check if user has ACTUALLY JOINED any team for this event
         const { data: memberTeam } = await supabase
             .from('team_members')
             .select(`
@@ -2076,7 +2009,6 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
             }
         }
 
-        // User has NO JOINED team
         res.json({
             isTeamEvent: true,
             isLeader: false,
@@ -2092,13 +2024,11 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
     }
 });
 
-// Register team for event (only for team leader) - ONLY FOR FREE EVENTS
 app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        // Check if user is team leader for this event
         const { data: team, error: teamError } = await supabase
             .from('team')
             .select('id, registration_complete, event:event_id(regfee, min_team_size)')
@@ -2122,7 +2052,6 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
         const regFee = team[0].event?.regfee || 0;
         const minSize = team[0].event?.min_team_size || 2;
 
-        // Count joined members
         const { data: members } = await supabase
             .from('team_members')
             .select('student_usn, join_status')
@@ -2137,7 +2066,6 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
             });
         }
 
-        // If event has fee, tell frontend to show UPI modal
         if (regFee > 0) {
             return res.json({
                 success: true,
@@ -2148,7 +2076,6 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
             });
         }
 
-        // For free events, complete registration
         const { error: updateError } = await supabase
             .from('team')
             .update({ registration_complete: true })
@@ -2159,7 +2086,6 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
             return res.status(500).json({ error: 'Failed to complete registration' });
         }
 
-        // Add all team members to participant table
         const participantsToInsert = members.map(m => ({
             partusn: m.student_usn,
             parteid: eventId,
@@ -2189,7 +2115,6 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
     }
 });
 
-// Register a paid team with UPI
 app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
@@ -2200,7 +2125,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             return res.status(400).json({ error: 'Transaction ID is required' });
         }
 
-        // Check if user is team leader for this event
         const { data: team, error: teamError } = await supabase
             .from('team')
             .select('id, registration_complete, event:event_id(regfee, min_team_size, maxpart)')
@@ -2229,7 +2153,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             return res.status(400).json({ error: 'This is not a paid event' });
         }
 
-        // Count joined members
         const { data: members, error: memberError } = await supabase
             .from('team_members')
             .select('student_usn, join_status')
@@ -2248,7 +2171,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             });
         }
 
-        // Check event "team" limit
         if (maxPart > 0) {
             const { count, error: countError } = await supabase
                 .from('team')
@@ -2264,7 +2186,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             }
         }
 
-        // Insert payment record (for the leader)
         const { error: paymentError } = await supabase.from('payment').insert([{
             usn: userUSN,
             event_id: eventId,
@@ -2278,7 +2199,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             return res.status(500).json({ error: 'Failed to save payment' });
         }
 
-        // Mark team registration complete
         const { error: updateError } = await supabase
             .from('team')
             .update({ registration_complete: true })
@@ -2288,7 +2208,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             return res.status(500).json({ error: 'Failed to update team status' });
         }
 
-        // Insert all team members as participants
         const participantsToInsert = members.map(m => ({
             partusn: m.student_usn,
             parteid: eventId,
@@ -2316,7 +2235,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
     }
 });
 
-// Add team members to existing team
 app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
     try {
         const teamId = req.params.teamId;
@@ -2327,7 +2245,6 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Member USNs are required' });
         }
 
-        // Verify user is team leader
         const { data: team } = await supabase
             .from('team')
             .select('leader_usn, event_id, registration_complete, event:event_id(max_team_size)')
@@ -2348,7 +2265,6 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             });
         }
 
-        // Check current team size
         const { count: currentSize } = await supabase
             .from('team_members')
             .select('*', { count: 'exact', head: true })
@@ -2361,7 +2277,6 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             });
         }
 
-        // Validate USNs
         const { data: students } = await supabase
             .from('student')
             .select('usn')
@@ -2373,7 +2288,6 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             });
         }
 
-        // Check if members are already in another team for this event
         const { data: conflictCheck } = await supabase
             .from('team_members')
             .select('student_usn, team:team_id(event_id)')
@@ -2390,7 +2304,6 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             }
         }
 
-        // Add members
         const membersToInsert = memberUSNs.map(usn => ({
             team_id: teamId,
             student_usn: usn,
@@ -2416,13 +2329,11 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
     }
 });
 
-// Get team invites for current user for a specific event
 app.get('/api/events/:eventId/my-invites', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        // Find all teams for this event where user is invited
         const { data: invites, error } = await supabase
             .from('team_members')
             .select(`
@@ -2445,7 +2356,6 @@ app.get('/api/events/:eventId/my-invites', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
 
-        // Filter for this specific event
         const eventInvites = (invites || [])
             .filter(invite => invite.team?.event_id === parseInt(eventId))
             .map(invite => ({
@@ -2467,7 +2377,6 @@ app.get('/api/events/:eventId/my-invites', requireAuth, async (req, res) => {
     }
 });
 
-// Confirm join team (accept invite)
 app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
     try {
         const teamId = req.params.teamId;
@@ -2475,7 +2384,6 @@ app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
 
         console.log(`Confirming join for user ${userUSN} to team ${teamId}`);
 
-        // Verify user is a member of this team
         const { data: membership, error: membershipError } = await supabase
             .from('team_members')
             .select('join_status, team:team_id(event_id, registration_complete, team_name)')
@@ -2506,7 +2414,6 @@ app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
             });
         }
 
-        // Check if user has already joined another team for this event
         const { data: otherTeams } = await supabase
             .from('team_members')
             .select('team_id, team:team_id(event_id)')
@@ -2524,7 +2431,6 @@ app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
             }
         }
 
-        // Update join status to true
         const { error: updateError } = await supabase
             .from('team_members')
             .update({ join_status: true })
@@ -2555,7 +2461,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        // Verify organizer
         const { data: event, error: eventError } = await supabase
             .from('event')
             .select(`
@@ -2570,7 +2475,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
 
         const eventData = event[0];
 
-        // Participants (with nested student → payment)
         const { data: participants, error: participantError } = await supabase
             .from('participant')
             .select(`
@@ -2591,7 +2495,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             return res.status(500).json({ error: 'Database error (participants)' });
         }
 
-        // Volunteers
         const { data: volunteers, error: volunteerError } = await supabase
             .from('volunteer')
             .select(`
@@ -2606,7 +2509,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             return res.status(500).json({ error: 'Database error (volunteers)' });
         }
 
-        // Build Excel
         const workbook = new ExcelJS.Workbook();
         const ws = workbook.addWorksheet('Event Details');
 
@@ -2616,7 +2518,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             { width: 30 }, { width: 15 }
         ];
 
-        // Event Header
         const hdr = ws.addRow(['EVENT DETAILS']);
         hdr.font = { size: 16, bold: true };
         hdr.alignment = { horizontal: 'center' };
@@ -2635,7 +2536,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             ws.getRow(i).getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
         }
 
-        // Participants Section
         ws.addRow([]);
         const partHdr = ws.addRow(['PARTICIPANTS']);
         partHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -2669,7 +2569,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             ]);
         });
 
-        // Volunteers Section
         ws.addRow([]);
         const volHdr = ws.addRow(['VOLUNTEERS']);
         volHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -2689,7 +2588,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             ]);
         });
 
-        // Borders
         ws.eachRow(row => {
             row.eachCell(cell => {
                 cell.border = {
@@ -2701,7 +2599,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             });
         });
 
-        // Send file
         res.setHeader(
             'Content-Type',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -2723,13 +2620,11 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
 
 // ==================== DYNAMIC QR TOKEN ====================
 
-// Generate a short-lived signed token for QR display (organizer only)
 app.get('/api/events/:eventId/qr-token', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        // Verify the requester is the organizer
         const { data: event, error } = await supabase
             .from('event')
             .select('orgusn')
@@ -2750,7 +2645,7 @@ app.get('/api/events/:eventId/qr-token', requireAuth, async (req, res) => {
             .createHmac('sha256', QR_TOKEN_SECRET)
             .update(payload)
             .digest('hex')
-            .substring(0, 16); // 16-char hex — short enough for QR
+            .substring(0, 16);
 
         res.json({ token, timestamp });
     } catch (err) {
@@ -2759,7 +2654,6 @@ app.get('/api/events/:eventId/qr-token', requireAuth, async (req, res) => {
     }
 });
 
-// Start server
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Server running on port ${PORT}`);
     console.log(`📡 CORS enabled for ${process.env.FRONTEND_URL}`);
