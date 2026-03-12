@@ -371,8 +371,8 @@ app.get('/api/events', requireAuth, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Get user's participant events — NOW includes activity_points on each event
-// AND computes total_activity_points across all attended completed events
+// Get user's participant events
+// activity_points per event included — NO cumulative total
 // ─────────────────────────────────────────────────────────────────────────────
 app.get('/api/my-participant-events', requireAuth, async (req, res) => {
     try {
@@ -409,24 +409,9 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             role: 'participant'
         })).filter(e => e.eid);
 
-        // ── Compute total activity points across ALL attended completed events ──
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-
-        const totalActivityPoints = transformedEvents.reduce((sum, event) => {
-            const eventDate = new Date(event.eventDate);
-            eventDate.setHours(0, 0, 0, 0);
-            // Only count attended + completed events with activity_points > 0
-            if (event.PartStatus && eventDate < now && event.activityPoints > 0) {
-                return sum + event.activityPoints;
-            }
-            return sum;
-        }, 0);
-
         res.json({
             participantEvents: transformedEvents,
-            userUSN: req.session.userUSN,
-            totalActivityPoints  // NEW — sent to frontend for certificate use
+            userUSN: req.session.userUSN
         });
     } catch (err) {
         console.error('Error fetching participant events:', err);
@@ -517,7 +502,7 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Create/Organize a new event — NOW saves activity_points
+// Create/Organize a new event — saves activity_points
 // ─────────────────────────────────────────────────────────────────────────────
 app.post('/api/events/create', requireAuth, upload.single('banner'), async (req, res) => {
     try {
@@ -538,7 +523,7 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             isTeamEvent,
             minTeamSize,
             maxTeamSize,
-            activityPoints  // NEW
+            activityPoints
         } = req.body;
 
         const file = req.file;
@@ -559,7 +544,7 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
         const organizedClubId = (clubId || OrgCid) ? parseInt(clubId || OrgCid) : null;
         const fee = parseFloat(registrationFee) || 0;
         const isTeam = isTeamEvent === 'true' || isTeamEvent === true;
-        const points = parseInt(activityPoints) || 0; // NEW
+        const points = parseInt(activityPoints) || 0;
 
         if (organizedClubId) {
             const { data: membershipCheck, error: memberError } = await supabase
@@ -607,7 +592,7 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             is_team: isTeam,
             min_team_size: isTeam ? (parseInt(minTeamSize) || null) : null,
             max_team_size: isTeam ? (parseInt(maxTeamSize) || null) : null,
-            activity_points: points  // NEW
+            activity_points: points
         };
 
         const { data, error } = await supabase
@@ -925,7 +910,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             eventLoc: event.eventloc,
             maxPart: event.maxpart,
             maxVoln: event.maxvoln,
-            regFee: event.regFee,
+            regFee: event.regfee,
             posterUrl: event.poster_url,
             activityPoints: event.activity_points || 0,
             clubName: event.club?.cname,
