@@ -323,6 +323,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 .select(`
                     eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
                     upi_id, is_team, min_team_size, max_team_size, poster_url, banner_url, activity_points,
+                    max_activity_pts, vol_activity_pts, min_part_scans, min_voln_scans,
                     club:orgcid(cname),
                     student:orgusn(sname)
                 `);
@@ -353,6 +354,8 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 min_team_size: event.min_team_size,
                 max_team_size: event.max_team_size,
                 activityPoints: event.activity_points || 0,
+                maxActivityPts: event.max_activity_pts || 0,
+                volActivityPts: event.vol_activity_pts || 0,
                 clubName: event.club?.cname,
                 organizerName: event.student?.sname
             };
@@ -379,10 +382,11 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
         const { data: participantEvents, error } = await supabase
             .from('participant')
             .select(`
-                partstatus, partusn,
+                partstatus, partusn, parteid,
                 event:parteid (
                     eid, ename, eventdesc, certificate_info, eventdate, eventtime, eventloc,
                     maxpart, maxvoln, regfee, poster_url, activity_points,
+                    max_activity_pts,
                     club:orgcid(cname)
                 )
             `)
@@ -393,21 +397,50 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
 
-        const transformedEvents = (participantEvents || []).map(p => ({
-            ...p.event,
-            eventDate: p.event?.eventdate,
-            eventTime: p.event?.eventtime,
-            eventLoc: p.event?.eventloc,
-            maxPart: p.event?.maxpart,
-            maxVoln: p.event?.maxvoln,
-            regFee: p.event?.regfee,
-            posterUrl: p.event?.poster_url,
-            activityPoints: p.event?.activity_points || 0,
-            clubName: p.event?.club?.cname,
-            PartStatus: p.partstatus == true,
-            PartUSN: p.partusn,
-            role: 'participant'
-        })).filter(e => e.eid);
+        const userUSN = req.session.userUSN;
+        const transformedEvents = [];
+
+        for (const p of (participantEvents || [])) {
+            const event = p.event;
+            if (!event?.eid) continue;
+
+            let earnedActivityPts = 0;
+            const maxActivityPts = event.max_activity_pts || 0;
+
+            if (maxActivityPts > 0 && p.partstatus) {
+                const { data: attendanceData } = await supabase
+                    .from('sub_event_attendance')
+                    .select('seid, sub_event!inner(activity_pts)')
+                    .eq('eid', event.eid)
+                    .eq('usn', userUSN)
+                    .eq('role', 'participant');
+
+                if (attendanceData && attendanceData.length > 0) {
+                    const sumOfScannedPts = attendanceData.reduce((sum, row) => {
+                        return sum + (row.sub_event?.activity_pts || 0);
+                    }, 0);
+                    earnedActivityPts = Math.min(sumOfScannedPts, maxActivityPts);
+                }
+            }
+
+            transformedEvents.push({
+                ...event,
+                eventDate: event.eventdate,
+                eventTime: event.eventtime,
+                eventLoc: event.eventloc,
+                maxPart: event.maxpart,
+                maxVoln: event.maxvoln,
+                regFee: event.regfee,
+                posterUrl: event.poster_url,
+                activityPoints: event.activity_points || 0,
+                maxActivityPts: maxActivityPts,
+                earnedActivityPts: earnedActivityPts,
+                clubName: event.club?.cname,
+                PartStatus: p.partstatus == true,
+                PartUSN: p.partusn,
+                role: 'participant'
+            });
+        }
 
         res.json({
             participantEvents: transformedEvents,
@@ -424,9 +457,10 @@ app.get('/api/my-volunteer-events', requireAuth, async (req, res) => {
         const { data: volunteerEvents, error } = await supabase
             .from('volunteer')
             .select(`
-                volnstatus,
+                volnstatus, volnusn, volneid,
                 event:volneid (
                     eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
+                    vol_activity_pts,
                     club:orgcid(cname)
                 )
             `)
@@ -437,18 +471,25 @@ app.get('/api/my-volunteer-events', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
 
-        const transformedEvents = (volunteerEvents || []).map(v => ({
-            ...v.event,
-            eventDate: v.event?.eventdate,
-            eventTime: v.event?.eventtime,
-            eventLoc: v.event?.eventloc,
-            maxPart: v.event?.maxpart,
-            maxVoln: v.event?.maxvoln,
-            regFee: v.event?.regfee,
-            clubName: v.event?.club?.cname,
-            VolnStatus: v.volnstatus == true,
-            role: 'volunteer'
-        })).filter(e => e.eid);
+        const transformedEvents = (volunteerEvents || []).map(v => {
+            const volActivityPts = v.event?.vol_activity_pts || 0;
+            const earnedActivityPts = v.volnstatus ? volActivityPts : 0;
+
+            return {
+                ...v.event,
+                eventDate: v.event?.eventdate,
+                eventTime: v.event?.eventtime,
+                eventLoc: v.event?.eventloc,
+                maxPart: v.event?.maxpart,
+                maxVoln: v.event?.maxvoln,
+                regFee: v.event?.regfee,
+                volActivityPts: volActivityPts,
+                earnedActivityPts: earnedActivityPts,
+                clubName: v.event?.club?.cname,
+                VolnStatus: v.volnstatus == true,
+                role: 'volunteer'
+            };
+        }).filter(e => e.eid);
 
         res.json({
             volunteerEvents: transformedEvents,
@@ -523,7 +564,11 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             isTeamEvent,
             minTeamSize,
             maxTeamSize,
-            activityPoints
+            activityPoints,
+            maxActivityPts,
+            volActivityPts,
+            minPartScans,
+            minVolnScans
         } = req.body;
 
         const file = req.file;
@@ -592,7 +637,11 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             is_team: isTeam,
             min_team_size: isTeam ? (parseInt(minTeamSize) || null) : null,
             max_team_size: isTeam ? (parseInt(maxTeamSize) || null) : null,
-            activity_points: points
+            activity_points: points,
+            max_activity_pts: parseInt(maxActivityPts) || 0,
+            vol_activity_pts: parseInt(volActivityPts) || 0,
+            min_part_scans: parseInt(minPartScans) || 1,
+            min_voln_scans: parseInt(minVolnScans) || 1
         };
 
         const { data, error } = await supabase
@@ -602,12 +651,27 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
 
         if (error) throw error;
 
+        const newEventId = data[0]?.eid;
+
+        const { error: subEventError } = await supabase
+            .from('sub_event')
+            .insert([{
+                eid: newEventId,
+                se_name: eventName,
+                se_details: '',
+                activity_pts: parseInt(maxActivityPts) || 0
+            }]);
+
+        if (subEventError) {
+            console.error('Error creating default sub-event:', subEventError);
+        }
+
         if (redisClient.isOpen) await redisClient.del('events_list_raw');
 
         res.status(201).json({
             success: true,
             message: 'Event created successfully!',
-            eventId: data[0]?.eid
+            eventId: newEventId
         });
 
     } catch (err) {
@@ -874,6 +938,207 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
     }
 });
 
+app.get('/api/events/:eventId/sub-events', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+
+        const { data: subEvents, error } = await supabase
+            .from('sub_event')
+            .select('*')
+            .eq('eid', eventId)
+            .order('seid', { ascending: true })
+            .order('seid', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching sub-events:', error);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        const subEventsWithCount = await Promise.all((subEvents || []).map(async (se) => {
+            const { count } = await supabase
+                .from('sub_event_attendance')
+                .select('*', { count: 'exact', head: true })
+                .eq('seid', se.seid);
+
+            return {
+                ...se,
+                attendanceCount: count || 0
+            };
+        }));
+
+        res.json({ subEvents: subEventsWithCount });
+    } catch (err) {
+        console.error('Error fetching sub-events:', err);
+        res.status(500).json({ error: 'Error fetching sub-events' });
+    }
+});
+
+app.post('/api/events/:eventId/sub-events', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        const { se_name, activity_pts, se_details } = req.body;
+
+        if (!se_name) {
+            return res.status(400).json({ error: 'Sub-event name is required' });
+        }
+
+        if (activity_pts !== undefined && activity_pts < 0) {
+            return res.status(400).json({ error: 'Activity points cannot be negative' });
+        }
+
+        const { data: event, error: eventError } = await supabase
+            .from('event')
+            .select('orgusn')
+            .eq('eid', eventId)
+            .limit(1);
+
+        if (eventError || !event?.length) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        if (event[0].orgusn !== req.session.userUSN) {
+            return res.status(403).json({ error: 'Only the organizer can add sub-events' });
+        }
+
+        const { data: newSubEvent, error: insertError } = await supabase
+            .from('sub_event')
+            .insert([{
+                eid: eventId,
+                se_name: se_name,
+                se_details: se_details || '',
+                activity_pts: parseInt(activity_pts) || 0
+            }])
+            .select()
+            .single();
+
+        if (insertError) {
+            console.error('Error creating sub-event:', insertError);
+            return res.status(500).json({ error: 'Failed to create sub-event' });
+        }
+
+        res.status(201).json(newSubEvent);
+    } catch (err) {
+        console.error('Error creating sub-event:', err);
+        res.status(500).json({ error: 'Error creating sub-event' });
+    }
+});
+
+app.put('/api/sub-events/:seid', requireAuth, async (req, res) => {
+    try {
+        const seid = req.params.seid;
+        const { se_name, activity_pts, se_details } = req.body;
+
+        if (activity_pts !== undefined && activity_pts < 0) {
+            return res.status(400).json({ error: 'Activity points cannot be negative' });
+        }
+
+        const { data: subEvent, error: fetchError } = await supabase
+            .from('sub_event')
+            .select('eid')
+            .eq('seid', seid)
+            .limit(1);
+
+        if (fetchError || !subEvent?.length) {
+            return res.status(404).json({ error: 'Sub-event not found' });
+        }
+
+        const { data: event, error: eventError } = await supabase
+            .from('event')
+            .select('orgusn')
+            .eq('eid', subEvent[0].eid)
+            .limit(1);
+
+        if (eventError || !event?.length) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        if (event[0].orgusn !== req.session.userUSN) {
+            return res.status(403).json({ error: 'Only the organizer can update sub-events' });
+        }
+
+        const updateData = {};
+        if (se_name !== undefined) updateData.se_name = se_name;
+        if (activity_pts !== undefined) updateData.activity_pts = parseInt(activity_pts) || 0;
+        if (se_details !== undefined) updateData.se_details = se_details || '';
+
+        const { data: updatedSubEvent, error: updateError } = await supabase
+            .from('sub_event')
+            .update(updateData)
+            .eq('seid', seid)
+            .select()
+            .single();
+
+        if (updateError) {
+            console.error('Error updating sub-event:', updateError);
+            return res.status(500).json({ error: 'Failed to update sub-event' });
+        }
+
+        res.json(updatedSubEvent);
+    } catch (err) {
+        console.error('Error updating sub-event:', err);
+        res.status(500).json({ error: 'Error updating sub-event' });
+    }
+});
+
+app.delete('/api/sub-events/:seid', requireAuth, async (req, res) => {
+    try {
+        const seid = req.params.seid;
+
+        const { data: subEvent, error: fetchError } = await supabase
+            .from('sub_event')
+            .select('eid')
+            .eq('seid', seid)
+            .limit(1);
+
+        if (fetchError || !subEvent?.length) {
+            return res.status(404).json({ error: 'Sub-event not found' });
+        }
+
+        const { data: event, error: eventError } = await supabase
+            .from('event')
+            .select('orgusn')
+            .eq('eid', subEvent[0].eid)
+            .limit(1);
+
+        if (eventError || !event?.length) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        if (event[0].orgusn !== req.session.userUSN) {
+            return res.status(403).json({ error: 'Only the organizer can delete sub-events' });
+        }
+
+        const { count, error: countError } = await supabase
+            .from('sub_event')
+            .select('*', { count: 'exact', head: true })
+            .eq('eid', subEvent[0].eid);
+
+        if (countError) {
+            console.error('Error counting sub-events:', countError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (count <= 1) {
+            return res.status(400).json({ error: 'Cannot delete the last sub-event' });
+        }
+
+        const { error: deleteError } = await supabase
+            .from('sub_event')
+            .delete()
+            .eq('seid', seid);
+
+        if (deleteError) {
+            console.error('Error deleting sub-event:', deleteError);
+            return res.status(500).json({ error: 'Failed to delete sub-event' });
+        }
+
+        res.json({ success: true, message: 'Sub-event deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting sub-event:', err);
+        res.status(500).json({ error: 'Error deleting sub-event' });
+    }
+});
+
 app.get('/api/events/:eventId', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
@@ -886,6 +1151,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             .from('event')
             .select(`
                 eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url, activity_points,
+                max_activity_pts, vol_activity_pts, min_part_scans, min_voln_scans,
                 club:orgcid(cname),
                 student:orgusn(sname)
             `)
@@ -913,6 +1179,10 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             regFee: event.regfee,
             posterUrl: event.poster_url,
             activityPoints: event.activity_points || 0,
+            maxActivityPts: event.max_activity_pts || 0,
+            volActivityPts: event.vol_activity_pts || 0,
+            minPartScans: event.min_part_scans || 1,
+            minVolnScans: event.min_voln_scans || 1,
             clubName: event.club?.cname,
             organizerName: event.student?.sname,
             OrgUsn: event.orgusn
@@ -1019,7 +1289,7 @@ app.get('/api/students', requireAuth, async (req, res) => {
     }
 });
 
-function validateQRToken(eventId, token, timestamp) {
+function validateQRToken(seid, token, timestamp) {
     const now = Date.now();
     const ts = parseInt(timestamp, 10);
 
@@ -1027,7 +1297,7 @@ function validateQRToken(eventId, token, timestamp) {
         return false;
     }
 
-    const payload = `${eventId}:${timestamp}`;
+    const payload = `${seid}:${timestamp}`;
     const expected = crypto
         .createHmac('sha256', QR_TOKEN_SECRET)
         .update(payload)
@@ -1042,23 +1312,35 @@ function validateQRToken(eventId, token, timestamp) {
 
 app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
     try {
-        const { eventId, usn, token, timestamp } = req.body;
+        const { seid, usn, token, timestamp } = req.body;
 
         if (usn !== req.session.userUSN) {
             return res.status(403).json({ error: 'Unauthorized: USN mismatch' });
         }
 
-        if (!usn || !eventId) {
-            return res.status(400).json({ error: 'USN and Event ID are required' });
+        if (!usn || !seid) {
+            return res.status(400).json({ error: 'USN and Sub-event ID are required' });
         }
 
         if (!token || !timestamp) {
             return res.status(400).json({ error: 'QR code is outdated. Please scan a fresh code.' });
         }
 
-        if (!validateQRToken(eventId, token, timestamp)) {
+        if (!validateQRToken(seid, token, timestamp)) {
             return res.status(401).json({ error: 'QR code has expired. Please ask the organizer to show a fresh code.' });
         }
+
+        const { data: subEvent, error: subEventError } = await supabase
+            .from('sub_event')
+            .select('eid, se_name')
+            .eq('seid', seid)
+            .limit(1);
+
+        if (subEventError || !subEvent?.length) {
+            return res.status(404).json({ error: 'Sub-event not found' });
+        }
+
+        const eventId = subEvent[0].eid;
 
         const { data: existing, error: existingError } = await supabase
             .from('participant')
@@ -1069,18 +1351,70 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
 
         if (existingError) return res.status(500).json({ error: 'Database error' });
         if (!existing?.length) return res.status(404).json({ error: 'You are not registered for this event' });
-        if (existing[0].partstatus === true) return res.status(400).json({ error: 'Attendance already marked' });
+        if (existing[0].payment_status === 'pending_verification') {
+            return res.status(400).json({ error: 'Your payment is pending verification' });
+        }
 
-        const { error: updateError } = await supabase
-            .from('participant')
-            .update({ partstatus: true })
-            .eq('partusn', usn)
-            .eq('parteid', eventId);
+        const { data: existingAttendance, error: attendanceError } = await supabase
+            .from('sub_event_attendance')
+            .select('*')
+            .eq('seid', seid)
+            .eq('usn', usn)
+            .eq('role', 'participant')
+            .limit(1);
 
-        if (updateError) return res.status(500).json({ error: 'Failed to mark attendance' });
+        if (attendanceError) return res.status(500).json({ error: 'Database error' });
+        if (existingAttendance?.length) {
+            return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
+        }
 
-        console.log(`✅ Participant attendance: ${usn} for event ${eventId}`);
-        res.json({ success: true, message: 'Participant attendance marked successfully' });
+        const { error: insertError } = await supabase
+            .from('sub_event_attendance')
+            .insert([{
+                seid: parseInt(seid),
+                eid: eventId,
+                usn: usn,
+                role: 'participant'
+            }]);
+
+        if (insertError) return res.status(500).json({ error: 'Failed to mark attendance' });
+
+        const { count: scanCount, error: countError } = await supabase
+            .from('sub_event_attendance')
+            .select('*', { count: 'exact', head: true })
+            .eq('eid', eventId)
+            .eq('usn', usn)
+            .eq('role', 'participant');
+
+        if (countError) return res.status(500).json({ error: 'Database error' });
+
+        const { data: eventData, error: eventError } = await supabase
+            .from('event')
+            .select('min_part_scans')
+            .eq('eid', eventId)
+            .limit(1);
+
+        const minPartScans = eventData?.[0]?.min_part_scans || 1;
+        const thresholdMet = (scanCount || 0) >= minPartScans;
+
+        if (thresholdMet) {
+            const { error: updateError } = await supabase
+                .from('participant')
+                .update({ partstatus: true })
+                .eq('partusn', usn)
+                .eq('parteid', eventId);
+
+            if (updateError) return res.status(500).json({ error: 'Failed to update attendance status' });
+        }
+
+        console.log(`✅ Participant attendance: ${usn} for sub-event ${seid} (event ${eventId})`);
+        res.json({
+            success: true,
+            message: 'Attendance marked',
+            attendanceCount: scanCount || 0,
+            minRequired: minPartScans,
+            thresholdMet: thresholdMet
+        });
     } catch (err) {
         console.error('Error marking participant attendance:', err);
         res.status(500).json({ error: 'Error marking attendance: ' + err.message });
@@ -1089,23 +1423,35 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
 
 app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
     try {
-        const { eventId, usn, token, timestamp } = req.body;
+        const { seid, usn, token, timestamp } = req.body;
 
         if (usn !== req.session.userUSN) {
             return res.status(403).json({ error: 'Unauthorized: USN mismatch' });
         }
 
-        if (!usn || !eventId) {
-            return res.status(400).json({ error: 'USN and Event ID are required' });
+        if (!usn || !seid) {
+            return res.status(400).json({ error: 'USN and Sub-event ID are required' });
         }
 
         if (!token || !timestamp) {
             return res.status(400).json({ error: 'QR code is outdated. Please scan a fresh code.' });
         }
 
-        if (!validateQRToken(eventId, token, timestamp)) {
+        if (!validateQRToken(seid, token, timestamp)) {
             return res.status(401).json({ error: 'QR code has expired. Please ask the organizer to show a fresh code.' });
         }
+
+        const { data: subEvent, error: subEventError } = await supabase
+            .from('sub_event')
+            .select('eid, se_name')
+            .eq('seid', seid)
+            .limit(1);
+
+        if (subEventError || !subEvent?.length) {
+            return res.status(404).json({ error: 'Sub-event not found' });
+        }
+
+        const eventId = subEvent[0].eid;
 
         const { data: existing, error: existingError } = await supabase
             .from('volunteer')
@@ -1116,18 +1462,67 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
 
         if (existingError) return res.status(500).json({ error: 'Database error' });
         if (!existing?.length) return res.status(404).json({ error: 'You are not registered as a volunteer for this event' });
-        if (existing[0].volnstatus === true) return res.status(400).json({ error: 'Attendance already marked' });
 
-        const { error: updateError } = await supabase
-            .from('volunteer')
-            .update({ volnstatus: true })
-            .eq('volnusn', usn)
-            .eq('volneid', eventId);
+        const { data: existingAttendance, error: attendanceError } = await supabase
+            .from('sub_event_attendance')
+            .select('*')
+            .eq('seid', seid)
+            .eq('usn', usn)
+            .eq('role', 'volunteer')
+            .limit(1);
 
-        if (updateError) return res.status(500).json({ error: 'Failed to mark attendance' });
+        if (attendanceError) return res.status(500).json({ error: 'Database error' });
+        if (existingAttendance?.length) {
+            return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
+        }
 
-        console.log(`✅ Volunteer attendance: ${usn} for event ${eventId}`);
-        res.json({ success: true, message: 'Volunteer attendance marked successfully' });
+        const { error: insertError } = await supabase
+            .from('sub_event_attendance')
+            .insert([{
+                seid: parseInt(seid),
+                eid: eventId,
+                usn: usn,
+                role: 'volunteer'
+            }]);
+
+        if (insertError) return res.status(500).json({ error: 'Failed to mark attendance' });
+
+        const { count: scanCount, error: countError } = await supabase
+            .from('sub_event_attendance')
+            .select('*', { count: 'exact', head: true })
+            .eq('eid', eventId)
+            .eq('usn', usn)
+            .eq('role', 'volunteer');
+
+        if (countError) return res.status(500).json({ error: 'Database error' });
+
+        const { data: eventData, error: eventError } = await supabase
+            .from('event')
+            .select('min_voln_scans')
+            .eq('eid', eventId)
+            .limit(1);
+
+        const minVolnScans = eventData?.[0]?.min_voln_scans || 1;
+        const thresholdMet = (scanCount || 0) >= minVolnScans;
+
+        if (thresholdMet) {
+            const { error: updateError } = await supabase
+                .from('volunteer')
+                .update({ volnstatus: true })
+                .eq('volnusn', usn)
+                .eq('volneid', eventId);
+
+            if (updateError) return res.status(500).json({ error: 'Failed to update attendance status' });
+        }
+
+        console.log(`✅ Volunteer attendance: ${usn} for sub-event ${seid} (event ${eventId})`);
+        res.json({
+            success: true,
+            message: 'Attendance marked',
+            attendanceCount: scanCount || 0,
+            minRequired: minVolnScans,
+            thresholdMet: thresholdMet
+        });
     } catch (err) {
         console.error('Error marking volunteer attendance:', err);
         res.status(500).json({ error: 'Error marking attendance: ' + err.message });
@@ -2450,6 +2845,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             .from('event')
             .select(`
                 eid, ename, eventdate, eventtime, eventloc, orgusn,
+                max_activity_pts, vol_activity_pts,
                 student:orgusn(sname, usn)
             `)
             .eq('eid', eventId)
@@ -2500,7 +2896,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         ws.columns = [
             { width: 15 }, { width: 25 }, { width: 10 }, { width: 15 }, { width: 30 },
             { width: 15 }, { width: 20 }, { width: 20 },
-            { width: 30 }, { width: 15 }
+            { width: 30 }, { width: 15 }, { width: 20 }
         ];
 
         const hdr = ws.addRow(['EVENT DETAILS']);
@@ -2531,14 +2927,30 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         const partCols = ws.addRow([
             'USN', 'Name', 'Semester', 'Mobile No', 'Email',
             'Participation Status', 'Payment Status', 'Team Name',
-            'UPI Transaction ID', 'Payment Amount'
+            'UPI Transaction ID', 'Payment Amount', 'Activity Points Earned'
         ]);
         partCols.font = { bold: true };
         partCols.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
 
+        const maxActivityPts = eventData.max_activity_pts || 0;
+
+        const { data: attendanceMapData } = await supabase
+            .from('sub_event_attendance')
+            .select('usn, sub_event!inner(activity_pts)')
+            .eq('eid', eventId)
+            .eq('role', 'participant');
+
+        const usnToPtsMap = {};
+        (attendanceMapData || []).forEach(row => {
+            if (!usnToPtsMap[row.usn]) usnToPtsMap[row.usn] = 0;
+            usnToPtsMap[row.usn] += row.sub_event?.activity_pts || 0;
+        });
+
         (participants || []).forEach(p => {
             const payment = Array.isArray(p.student?.payment) ?
                 p.student.payment.find(pay => pay.upi_transaction_id) : p.student?.payment;
+
+            const earnedPts = p.partstatus ? Math.min(usnToPtsMap[p.partusn] || 0, maxActivityPts) : 0;
 
             ws.addRow([
                 p.partusn || 'N/A',
@@ -2550,7 +2962,8 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
                 p.payment_status || 'N/A',
                 p.team?.team_name || 'N/A',
                 payment?.upi_transaction_id || 'N/A',
-                payment?.amount ?? (p.payment_status === 'free' ? '0' : 'N/A')
+                payment?.amount ?? (p.payment_status === 'free' ? '0' : 'N/A'),
+                earnedPts
             ]);
         });
 
@@ -2558,18 +2971,22 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         const volHdr = ws.addRow(['VOLUNTEERS']);
         volHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
         volHdr.alignment = { horizontal: 'center' };
-        ws.mergeCells(`A${volHdr.number}:C${volHdr.number}`);
+        ws.mergeCells(`A${volHdr.number}:D${volHdr.number}`);
         volHdr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF70AD47' } };
 
-        const volCols = ws.addRow(['USN', 'Name', 'Volunteer Status']);
+        const volCols = ws.addRow(['USN', 'Name', 'Volunteer Status', 'Activity Points Earned']);
         volCols.font = { bold: true };
         volCols.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
 
+        const volActivityPts = eventData.vol_activity_pts || 0;
+
         (volunteers || []).forEach(v => {
+            const earnedPts = v.volnstatus ? volActivityPts : 0;
             ws.addRow([
                 v.volnusn || 'N/A',
                 v.student?.sname || 'N/A',
-                v.volnstatus ? 'Present' : 'Absent'
+                v.volnstatus ? 'Present' : 'Absent',
+                earnedPts
             ]);
         });
 
@@ -2605,18 +3022,30 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
 
 // ==================== DYNAMIC QR TOKEN ====================
 
-app.get('/api/events/:eventId/qr-token', requireAuth, async (req, res) => {
+app.get('/api/sub-events/:seid/qr-token', requireAuth, async (req, res) => {
     try {
-        const eventId = req.params.eventId;
+        const seid = req.params.seid;
         const userUSN = req.session.userUSN;
 
-        const { data: event, error } = await supabase
+        const { data: subEvent, error } = await supabase
+            .from('sub_event')
+            .select('eid, se_name')
+            .eq('seid', seid)
+            .limit(1);
+
+        if (error || !subEvent?.length) {
+            return res.status(404).json({ error: 'Sub-event not found' });
+        }
+
+        const eventId = subEvent[0].eid;
+
+        const { data: event, error: eventError } = await supabase
             .from('event')
             .select('orgusn')
             .eq('eid', eventId)
             .limit(1);
 
-        if (error || !event?.length) {
+        if (eventError || !event?.length) {
             return res.status(404).json({ error: 'Event not found' });
         }
 
@@ -2625,14 +3054,14 @@ app.get('/api/events/:eventId/qr-token', requireAuth, async (req, res) => {
         }
 
         const timestamp = Date.now().toString();
-        const payload = `${eventId}:${timestamp}`;
+        const payload = `${seid}:${timestamp}`;
         const token = crypto
             .createHmac('sha256', QR_TOKEN_SECRET)
             .update(payload)
             .digest('hex')
             .substring(0, 16);
 
-        res.json({ token, timestamp });
+        res.json({ token, timestamp, seid, eid: eventId, seName: subEvent[0].se_name });
     } catch (err) {
         console.error('QR token generation error:', err);
         res.status(500).json({ error: 'Failed to generate token' });

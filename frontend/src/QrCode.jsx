@@ -14,16 +14,17 @@ export default function QrCode() {
   const qrInstanceRef   = useRef(null);
   const intervalRef     = useRef(null);
   const pendingToken    = useRef(null);
-  const eventIdRef      = useRef(null);
+  const seidRef         = useRef(null);
+  const seNameRef       = useRef(null);
   const countRef        = useRef(TOKEN_LIFETIME);
   const swappingRef     = useRef(false);
   const prefetchingRef  = useRef(false); // guard: only one prefetch in-flight
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    const eid = new URLSearchParams(window.location.search).get('eventId');
-    if (!eid) { setError(true); return; }
-    eventIdRef.current = eid;
+    const seid = new URLSearchParams(window.location.search).get('seid');
+    if (!seid) { setError(true); return; }
+    seidRef.current = seid;
 
     if (window.QRCode) { setLibLoaded(true); return; }
 
@@ -39,13 +40,18 @@ export default function QrCode() {
 
   // ── Fetch a fresh token from server ───────────────────────────────────────
   const fetchToken = useCallback(async () => {
-    const eid = eventIdRef.current;
-    if (!eid) return null;
+    const seid = seidRef.current;
+    if (!seid) return null;
     try {
-      const res = await fetch(`/api/events/${eid}/qr-token`, { credentials: 'include' });
+      const res = await fetch(`/api/sub-events/${seid}/qr-token`, { credentials: 'include' });
       if (!res.ok) throw new Error('Token fetch failed');
-      const { token, timestamp } = await res.json();
-      return { token, timestamp: parseInt(timestamp, 10) };
+      const data = await res.json();
+      if (data.seName) {
+        seNameRef.current = data.seName;
+        const subtitle = document.getElementById('qr-subtitle');
+        if (subtitle) subtitle.textContent = `Sub-event: ${data.seName}`;
+      }
+      return { token: data.token, timestamp: parseInt(data.timestamp, 10) };
     } catch {
       return null;
     }
@@ -62,7 +68,7 @@ export default function QrCode() {
     }
     box.innerHTML = '';
 
-    const qrText = `eventId:${eventIdRef.current}:${tokenData.token}:${tokenData.timestamp}`;
+    const qrText = `seid:${seidRef.current}:${tokenData.token}:${tokenData.timestamp}`;
 
     qrInstanceRef.current = new window.QRCode(box, {
       text:         qrText,
@@ -140,7 +146,7 @@ export default function QrCode() {
 
   // ── Kick off once lib is ready ─────────────────────────────────────────────
   useEffect(() => {
-    if (libLoaded && eventIdRef.current) startCycle();
+    if (libLoaded && seidRef.current) startCycle();
     return () => clearInterval(intervalRef.current);
   }, [libLoaded, startCycle]);
 
@@ -154,8 +160,8 @@ export default function QrCode() {
       <div className="qr-container">
 
         <div className="qr-header">
-          <h1>Event Check-in</h1>
-          <p className="subtitle">Display this for participants &amp; volunteers to scan</p>
+          <h1>Sub-event Check-in</h1>
+          <p className="subtitle" id="qr-subtitle">Display this for participants &amp; volunteers to scan</p>
         </div>
 
         {error ? (

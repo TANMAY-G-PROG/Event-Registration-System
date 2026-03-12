@@ -26,6 +26,7 @@ import QrCode from './QrCode.jsx';
 import Scanner from './Scanner.jsx';
 import ForgotPassword from './ForgotPassword.jsx';
 import ResetPassword from './ResetPassword.jsx';
+import SubEventManager from './SubEventManager.jsx';
 
 // --- NEW COMPONENT TO HOLD ROUTES AND INACTIVITY LOGIC ---
 // This is necessary because hooks like useNavigate/useLocation 
@@ -113,6 +114,7 @@ function AppContent() {
       <Route path="/about-us" element={<AboutUs />} />
       <Route path="/qr" element={<QrCode />} />
       <Route path="/scanner" element={<Scanner />} />
+      <Route path="/sub-events" element={<SubEventManager />} />
       
       {/* This catch-all route now correctly sends users to your LandingPage */}
       <Route path="*" element={<Navigate to="/" replace />} />
