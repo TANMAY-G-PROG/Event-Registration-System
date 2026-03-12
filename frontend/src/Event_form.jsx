@@ -5,37 +5,31 @@ import './event_form.css';
 const EventForm = () => {
   const navigate = useNavigate();
   
-  // State for text fields
   const [formData, setFormData] = useState({
     eventName: '',
     eventDescription: '',
     certificateInfo: '',
-    posterUrl: '', // Stores the Google Drive Link
+    posterUrl: '',
     eventDate: '',
     eventTime: '',
     eventLocation: '',
     maxParticipants: '',
     maxVolunteers: '',
-    OrgCid: '', // Now selected from dropdown
+    OrgCid: '',
     registrationFee: '',
     upiId: '', 
     isTeamEvent: false,
     minTeamSize: '',
-    maxTeamSize: ''
+    maxTeamSize: '',
+    activityPoints: ''  // NEW
   });
 
-  // State specifically for the file upload
   const [bannerFile, setBannerFile] = useState(null); 
-  
-  // UI States
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // NEW: State for Clubs Dropdown
   const [myClubs, setMyClubs] = useState([]);
   const [isLoadingClubs, setIsLoadingClubs] = useState(true);
 
-  // NEW: Fetch user's clubs on load
   useEffect(() => {
     const fetchMyClubs = async () => {
       try {
@@ -44,7 +38,6 @@ const EventForm = () => {
           const data = await res.json();
           setMyClubs(data.clubs || []);
         } else if (res.status === 401) {
-           // If session expired, redirect or warn
            navigate('/');
         }
       } catch (err) {
@@ -53,7 +46,6 @@ const EventForm = () => {
         setIsLoadingClubs(false);
       }
     };
-
     fetchMyClubs();
   }, [navigate]);
 
@@ -90,7 +82,6 @@ const EventForm = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    // Validate required fields
     if (!formData.eventName || !formData.eventDate || !formData.OrgCid) {
       showMessage('Please fill in all required fields, including the Organizing Club.', true);
       setIsSubmitting(false);
@@ -113,6 +104,7 @@ const EventForm = () => {
     submissionData.append('isTeamEvent', formData.isTeamEvent);
     submissionData.append('minTeamSize', formData.minTeamSize || '');
     submissionData.append('maxTeamSize', formData.maxTeamSize || '');
+    submissionData.append('activityPoints', formData.activityPoints || '0'); // NEW
 
     if (bannerFile) {
       submissionData.append('banner', bannerFile);
@@ -326,7 +318,6 @@ const EventForm = () => {
             <div className="event-form-section">
               <span className="section-label">04. Payments & ID</span>
               
-              {/* === UPDATED DROPDOWN SECTION === */}
               <div className="form-grid-2">
                  <div className="input-group">
                   <label className="input-label">Organizing Club</label>
@@ -374,6 +365,7 @@ const EventForm = () => {
             {/* --- SECTION 5: EXTRAS --- */}
             <div className="event-form-section">
               <span className="section-label">05. Extras</span>
+
               <div className="input-group">
                 <label className="input-label">Certificate Information <span>(Optional)</span></label>
                 <textarea 
@@ -384,6 +376,26 @@ const EventForm = () => {
                   onChange={handleChange} 
                   rows="2" 
                 />
+              </div>
+
+              {/* ─── NEW: Activity Points ─── */}
+              <div className="input-group">
+                <label className="input-label">
+                  Activity Points <span>(Optional)</span>
+                </label>
+                <input
+                  className="modern-input"
+                  type="number"
+                  name="activityPoints"
+                  placeholder="0 = No activity points"
+                  value={formData.activityPoints}
+                  onChange={handleChange}
+                  min="0"
+                  max="100"
+                />
+                <div className="helper-text">
+                  Points awarded to participants who attend this event. Totals accumulate across events and are printed on each event's certificate.
+                </div>
               </div>
             </div>
 
