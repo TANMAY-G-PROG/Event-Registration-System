@@ -7,6 +7,7 @@ export default function OrganizerTicket() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userUSN, setUserUSN] = useState(null);
+  const [subEvents, setSubEvents] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,30 +20,23 @@ export default function OrganizerTicket() {
       return;
     }
 
-    fetchEventData(eventId);
+    fetchAllData(eventId);
   }, []);
 
-  const fetchUserData = async () => {
+  const fetchAllData = async (eventId) => {
     try {
-      const response = await fetch('/api/me', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to fetch user data`);
-      }
-      const data = await response.json();
-      return data.userUSN;
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      return null;
-    }
-  };
+      // Fetch user + event + sub-events all in parallel
+      const [userRes, eventRes] = await Promise.all([
+        fetch('/api/me', { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }),
+        fetch(`/api/events/${eventId}`, { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }),
+      ]);
 
-  const fetchEventData = async (eventId) => {
-    try {
-      const usn = await fetchUserData();
+      if (!userRes.ok) throw new Error(`HTTP ${userRes.status}: Failed to fetch user data`);
+      if (!eventRes.ok) throw new Error(`HTTP ${eventRes.status}: ${eventRes.statusText}`);
+
+      const [userData, eventData] = await Promise.all([userRes.json(), eventRes.json()]);
+
+      const usn = userData.userUSN;
       if (!usn) {
         setError('User not authenticated. Please sign in.');
         setLoading(false);
@@ -50,32 +44,29 @@ export default function OrganizerTicket() {
       }
       setUserUSN(usn);
 
-      const response = await fetch(`/api/events/${eventId}`, {
+      if (!eventData.eid) throw new Error('Invalid event data');
+      if (eventData.OrgUsn !== usn) {
+        setError('You are not the organizer of this event.');
+        setLoading(false);
+        return;
+      }
+
+      setEventData(eventData);
+
+      // Fetch sub-events now that we have the eventId confirmed
+      const subRes = await fetch(`/api/events/${eventId}/sub-events`, {
         method: 'GET',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (subRes.ok) {
+        const subData = await subRes.json();
+        setSubEvents(subData.subEvents || []);
       }
 
-      const data = await response.json();
-      
-      if (data.eid) {
-        // Check if user is the organizer
-        if (data.OrgUsn !== usn) {
-          setError('You are not the organizer of this event.');
-          setLoading(false);
-          return;
-        }
-        setEventData(data);
-        setLoading(false);
-      } else {
-        throw new Error('Invalid event data');
-      }
+      setLoading(false);
     } catch (err) {
-      console.error('Error fetching event:', err);
+      console.error('Error fetching data:', err);
       setError(`Could not load event details. ${err.message}`);
       setLoading(false);
     }
@@ -87,6 +78,15 @@ export default function OrganizerTicket() {
 
   const handleManageSubEvents = () => {
     navigate(`/sub-events?eventId=${eventData.eid}`);
+  };
+
+  // If only one sub-event, go straight to QR
+  const handleQROrManage = () => {
+    if (subEvents.length === 1) {
+      navigate(`/qr?seid=${subEvents[0].seid}`);
+    } else {
+      handleManageSubEvents();
+    }
   };
 
   const formatDate = (dateString) => {
@@ -196,17 +196,19 @@ export default function OrganizerTicket() {
               <div className="tk-notch tk-notch-right"></div>
             </div>
 
-            {/* Footer / Stub - REPLACED WITH QR ACTION */}
+            {/* Footer / Stub */}
             <div className="tk-stub-content">
               <button 
-                onClick={handleManageSubEvents}
+                onClick={handleQROrManage}
                 className="tk-scan-btn tk-org-btn"
               >
                 <i className="fas fa-qrcode"></i>
-                Manage Sub-events
+                {subEvents.length === 1 ? 'Show QR Code' : 'Manage Sub-events'}
               </button>
               <div className="tk-lock-msg" style={{color: '#666', fontWeight: '500'}}>
-                For Attendance Scanning
+                {subEvents.length === 1
+                  ? `Sub-event: ${subEvents[0].se_name}`
+                  : 'For Attendance Scanning'}
               </div>
             </div>
           </div>
