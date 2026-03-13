@@ -31,7 +31,9 @@ const SubEventManager = () => {
 
   const [savingId, setSavingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [password, setPassword] = useState('');
   const [deleteModal, setDeleteModal] = useState({ show: false, seid: null, name: '' });
+  const [updateModal, setUpdateModal] = useState({ show: false, seid: null, name: '' });
 
   const showToast = (message, type = 'error') => {
     setToast({ show: true, message, type });
@@ -161,7 +163,20 @@ const SubEventManager = () => {
     setEditData({ se_name: '', activity_pts: 0, se_details: '' });
   };
 
-  const handleEditSubmit = async (seid) => {
+  const handleEditSubmit = (seid) => {
+    const subEvent = subEvents.find(se => se.seid === seid);
+    setUpdateModal({ show: true, seid, name: subEvent ? subEvent.se_name : '' });
+    setPassword('');
+  };
+
+  const confirmEdit = async () => {
+    const seid = updateModal.seid;
+    if (!password) {
+      showToast('Password is required to confirm changes');
+      return;
+    }
+
+    setUpdateModal({ ...updateModal, show: false });
     setSavingId(seid);
 
     try {
@@ -169,7 +184,7 @@ const SubEventManager = () => {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editData)
+        body: JSON.stringify({ ...editData, password })
       });
 
       if (!response.ok) {
@@ -191,10 +206,16 @@ const SubEventManager = () => {
 
   const handleDelete = (seid, name) => {
     setDeleteModal({ show: true, seid, name });
+    setPassword('');
   };
 
   const confirmDelete = async () => {
     const seid = deleteModal.seid;
+    if (!password) {
+      showToast('Password is required to delete the sub-event');
+      return;
+    }
+
     setDeleteModal({ show: false, seid: null, name: '' });
     setDeletingId(seid);
 
@@ -202,7 +223,8 @@ const SubEventManager = () => {
       const response = await fetch(`/api/sub-events/${seid}`, {
         method: 'DELETE',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
       });
 
       if (!response.ok) {
@@ -222,6 +244,12 @@ const SubEventManager = () => {
 
   const cancelDelete = () => {
     setDeleteModal({ show: false, seid: null, name: '' });
+    setPassword('');
+  };
+
+  const cancelUpdate = () => {
+    setUpdateModal({ show: false, seid: null, name: '' });
+    setPassword('');
   };
 
   const handleShowQR = (seid) => {
@@ -231,6 +259,87 @@ const SubEventManager = () => {
   const handleBack = () => {
     navigate('/organisers');
   };
+
+  const renderModals = () => (
+    <>
+      {deleteModal.show && (
+        <div className="subevent-modal-overlay" onClick={cancelDelete}>
+          <div className="subevent-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="subevent-modal-icon">
+              <i className="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 className="subevent-modal-title">Delete Sub-event?</h3>
+            <p className="subevent-modal-message">
+              Are you sure you want to delete "<strong>{deleteModal.name}</strong>"?
+              This will also delete all attendance records for this sub-event.
+            </p>
+            <div className="subevent-modal-input-wrapper">
+              <label>Confirm with Password</label>
+              <input
+                type="password"
+                className="subevent-modal-input"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && confirmDelete()}
+              />
+            </div>
+            <div className="subevent-modal-buttons">
+              <button className="subevent-modal-btn cancel" onClick={cancelDelete}>
+                Cancel
+              </button>
+              <button
+                className="subevent-modal-btn delete"
+                onClick={confirmDelete}
+                disabled={deletingId !== null || !password}
+              >
+                {deletingId ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {updateModal.show && (
+        <div className="subevent-modal-overlay" onClick={cancelUpdate}>
+          <div className="subevent-modal warning" onClick={(e) => e.stopPropagation()}>
+            <div className="subevent-modal-icon">
+              <i className="fas fa-exclamation-circle"></i>
+            </div>
+            <h3 className="subevent-modal-title">Confirm Changes?</h3>
+            <p className="subevent-modal-message">
+              Please enter your password to save changes to "<strong>{updateModal.name}</strong>".
+            </p>
+            <div className="subevent-modal-input-wrapper">
+              <label>Verification Password</label>
+              <input
+                type="password"
+                className="subevent-modal-input"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && confirmEdit()}
+              />
+            </div>
+            <div className="subevent-modal-buttons">
+              <button className="subevent-modal-btn cancel" onClick={cancelUpdate}>
+                Cancel
+              </button>
+              <button
+                className="subevent-modal-btn confirm"
+                onClick={confirmEdit}
+                disabled={savingId !== null || !password}
+              >
+                {savingId === updateModal.seid ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   if (loading) {
     return (
@@ -242,32 +351,7 @@ const SubEventManager = () => {
             </div>
           </div>
         )}
-        {deleteModal.show && (
-          <div className="subevent-modal-overlay" onClick={cancelDelete}>
-            <div className="subevent-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="subevent-modal-icon">
-                <i className="fas fa-exclamation-triangle"></i>
-              </div>
-              <h3 className="subevent-modal-title">Delete Sub-event?</h3>
-              <p className="subevent-modal-message">
-                Are you sure you want to delete "<strong>{deleteModal.name}</strong>"?
-                This will also delete all attendance records for this sub-event.
-              </p>
-              <div className="subevent-modal-buttons">
-                <button className="subevent-modal-btn cancel" onClick={cancelDelete}>
-                  Cancel
-                </button>
-                <button
-                  className="subevent-modal-btn delete"
-                  onClick={confirmDelete}
-                  disabled={deletingId !== null}
-                >
-                  {deletingId ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {renderModals()}
         <div className="subevent-page">
           <div className="subevent-loading">
             <div className="subevent-spinner"></div>
@@ -288,37 +372,7 @@ const SubEventManager = () => {
             </div>
           </div>
         )}
-        {deleteModal.show && (
-          <div className="subevent-modal-overlay" onClick={cancelDelete}>
-            <div className="subevent-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="subevent-modal-icon">
-                <i className="fas fa-exclamation-triangle"></i>
-              </div>
-              <h3 className="subevent-modal-title">Delete Sub-event?</h3>
-              <p className="subevent-modal-message">
-                Are you sure you want to delete "<strong>{deleteModal.name}</strong>"?
-                This will also delete all attendance records for this sub-event.
-              </p>
-              <div className="subevent-modal-buttons">
-                <button className="subevent-modal-btn cancel" onClick={cancelDelete}>
-                  Cancel
-                </button>
-                <button
-                  className="subevent-modal-btn delete"
-                  onClick={confirmDelete}
-                  disabled={deletingId !== null}
-                >
-                  {deletingId ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        <div className="subevent-toast-wrapper">
-          <div className={`subevent-toast ${toast.type}`}>
-            {toast.message}
-          </div>
-        </div>
+        {renderModals()}
         <div className="subevent-page">
           <div className="subevent-error">
             <p>{error}</p>
@@ -339,32 +393,7 @@ const SubEventManager = () => {
         </div>
       )}
 
-      {deleteModal.show && (
-        <div className="subevent-modal-overlay" onClick={cancelDelete}>
-          <div className="subevent-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="subevent-modal-icon">
-              <i className="fas fa-exclamation-triangle"></i>
-            </div>
-            <h3 className="subevent-modal-title">Delete Sub-event?</h3>
-            <p className="subevent-modal-message">
-              Are you sure you want to delete "<strong>{deleteModal.name}</strong>"?
-              This will also delete all attendance records for this sub-event.
-            </p>
-            <div className="subevent-modal-buttons">
-              <button className="subevent-modal-btn cancel" onClick={cancelDelete}>
-                Cancel
-              </button>
-              <button
-                className="subevent-modal-btn delete"
-                onClick={confirmDelete}
-                disabled={deletingId !== null}
-              >
-                {deletingId ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {renderModals()}
 
       <div className="subevent-page">
         <div className="subevent-container">
@@ -447,7 +476,7 @@ const SubEventManager = () => {
                         <button
                           onClick={() => handleEditSubmit(se.seid)}
                           className="subevent-save-btn"
-                          disabled={savingId === se.seid}
+                          disabled={savingId === se.seid || !editData.se_name.trim()}
                         >
                           {savingId === se.seid ? 'Saving...' : 'Save'}
                         </button>
@@ -546,7 +575,11 @@ const SubEventManager = () => {
                     />
                   </div>
                 </div>
-                <button type="submit" className="subevent-submit-btn" disabled={savingId === 'adding'}>
+                <button 
+                  type="submit" 
+                  className="subevent-submit-btn" 
+                  disabled={savingId === 'adding' || !newSubEvent.se_name.trim()}
+                >
                   {savingId === 'adding' ? (
                     <>
                       <span className="subevent-spinner-sm"></span> Creating...

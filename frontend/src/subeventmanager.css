@@ -447,9 +447,9 @@ html, body {
 }
 
 .subevent-submit-btn:disabled {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.2);
+  opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Edit Form */
@@ -476,30 +476,31 @@ html, body {
   flex-wrap: wrap;
 }
 
-/* Save Button - Glassy Green */
+/* Save Button - Amber/Yellow */
 .subevent-save-btn {
   padding: 10px 20px;
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.4), rgba(76, 175, 80, 0.15));
-  border: 1px solid rgba(76, 175, 80, 0.5);
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.4), rgba(255, 152, 0, 0.15));
+  border: 1px solid rgba(255, 152, 0, 0.5);
   color: white;
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.2);
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.2);
 }
 
 .subevent-save-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4caf50, #388e3c);
+  background: linear-gradient(135deg, #ff9800, #f57c00);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
 }
 
 .subevent-save-btn:disabled {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.2);
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* Cancel Button - Glassy Red */
@@ -694,4 +695,80 @@ html, body {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+/* Update Confirmation Modal (Yellow) */
+.subevent-modal.warning .subevent-modal-icon {
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.2), rgba(255, 152, 0, 0.1));
+  border-color: rgba(255, 152, 0, 0.4);
+}
+
+.subevent-modal.warning .subevent-modal-icon i {
+  color: #ff9800;
+}
+
+.subevent-modal.warning .subevent-modal-btn.confirm {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+}
+
+.subevent-modal.warning .subevent-modal-btn.confirm:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.5);
+}
+
+.subevent-modal.warning .subevent-modal-btn.confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Modal Password Input */
+.subevent-modal-input-wrapper {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.subevent-modal-input-wrapper label {
+  display: block;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.subevent-modal-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.subevent-modal-input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+/* Responsive Modal Buttons */
+@media (max-width: 400px) {
+  .subevent-modal-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .subevent-modal-btn {
+    width: 100%;
+  }
 }

@@ -1026,10 +1026,30 @@ app.post('/api/events/:eventId/sub-events', requireAuth, async (req, res) => {
 app.put('/api/sub-events/:seid', requireAuth, async (req, res) => {
     try {
         const seid = req.params.seid;
-        const { se_name, activity_pts, se_details } = req.body;
+        const { se_name, activity_pts, se_details, password } = req.body;
+
+        if (!password) {
+            return res.status(400).json({ error: 'Password is required to confirm changes' });
+        }
 
         if (activity_pts !== undefined && activity_pts < 0) {
             return res.status(400).json({ error: 'Activity points cannot be negative' });
+        }
+
+        // Verify password
+        const { data: userData, error: userError } = await supabase
+            .from('student')
+            .select('password')
+            .eq('usn', req.session.userUSN)
+            .single();
+
+        if (userError || !userData) {
+            return res.status(401).json({ error: 'User verification failed' });
+        }
+
+        const isValid = await bcrypt.compare(password, userData.password);
+        if (!isValid) {
+            return res.status(401).json({ error: 'Incorrect password' });
         }
 
         const { data: subEvent, error: fetchError } = await supabase
@@ -1083,6 +1103,27 @@ app.put('/api/sub-events/:seid', requireAuth, async (req, res) => {
 app.delete('/api/sub-events/:seid', requireAuth, async (req, res) => {
     try {
         const seid = req.params.seid;
+        const { password } = req.body;
+
+        if (!password) {
+            return res.status(400).json({ error: 'Password is required to confirm deletion' });
+        }
+
+        // Verify password
+        const { data: userData, error: userError } = await supabase
+            .from('student')
+            .select('password')
+            .eq('usn', req.session.userUSN)
+            .single();
+
+        if (userError || !userData) {
+            return res.status(401).json({ error: 'User verification failed' });
+        }
+
+        const isValid = await bcrypt.compare(password, userData.password);
+        if (!isValid) {
+            return res.status(401).json({ error: 'Incorrect password' });
+        }
 
         const { data: subEvent, error: fetchError } = await supabase
             .from('sub_event')
