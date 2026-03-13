@@ -40,33 +40,26 @@ const SubEventManager = () => {
     setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 4000);
   };
 
-  const fetchUserDataAndEvent = async () => {
+  // ── FAST: fetch user, event, and sub-events all in parallel ──────────────
+  const fetchAllData = async () => {
     try {
-      const userRes = await fetch('/api/me', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const [userRes, eventRes, subRes] = await Promise.all([
+        fetch('/api/me', { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }),
+        fetch(`/api/events/${eventId}`, { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }),
+        fetch(`/api/events/${eventId}/sub-events`, { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }),
+      ]);
 
-      if (!userRes.ok) {
-        throw new Error('Failed to fetch user data');
-      }
+      if (!userRes.ok) throw new Error('Failed to fetch user data');
+      if (!eventRes.ok) throw new Error('Failed to fetch event data');
 
-      const userData = await userRes.json();
+      const [userData, eventData, subData] = await Promise.all([
+        userRes.json(),
+        eventRes.json(),
+        subRes.ok ? subRes.json() : Promise.resolve({ subEvents: [] }),
+      ]);
+
       const currentUserUSN = userData.userUSN;
       setUserUSN(currentUserUSN);
-
-      const eventRes = await fetch(`/api/events/${eventId}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!eventRes.ok) {
-        throw new Error('Failed to fetch event data');
-      }
-
-      const eventData = await eventRes.json();
       setEventData(eventData);
 
       if (eventData.OrgUsn !== currentUserUSN) {
@@ -75,7 +68,8 @@ const SubEventManager = () => {
         return;
       }
 
-      fetchSubEvents();
+      setSubEvents(subData.subEvents || []);
+      setLoading(false);
     } catch (err) {
       console.error('Error:', err);
       setError(err.message || 'An error occurred');
@@ -91,17 +85,13 @@ const SubEventManager = () => {
         headers: { 'Content-Type': 'application/json' }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch sub-events');
-      }
+      if (!response.ok) throw new Error('Failed to fetch sub-events');
 
       const data = await response.json();
       setSubEvents(data.subEvents || []);
-      setLoading(false);
     } catch (err) {
       console.error('Error fetching sub-events:', err);
-      setError('Failed to load sub-events');
-      setLoading(false);
+      showToast('Failed to refresh sub-events');
     }
   };
 
@@ -111,8 +101,7 @@ const SubEventManager = () => {
       setLoading(false);
       return;
     }
-
-    fetchUserDataAndEvent();
+    fetchAllData();
   }, [eventId]);
 
   const handleAddSubmit = async (e) => {
@@ -346,9 +335,7 @@ const SubEventManager = () => {
       <>
         {toast.show && (
           <div className="subevent-toast-wrapper">
-            <div className={`subevent-toast ${toast.type}`}>
-              {toast.message}
-            </div>
+            <div className={`subevent-toast ${toast.type}`}>{toast.message}</div>
           </div>
         )}
         {renderModals()}
@@ -367,9 +354,7 @@ const SubEventManager = () => {
       <>
         {toast.show && (
           <div className="subevent-toast-wrapper">
-            <div className={`subevent-toast ${toast.type}`}>
-              {toast.message}
-            </div>
+            <div className={`subevent-toast ${toast.type}`}>{toast.message}</div>
           </div>
         )}
         {renderModals()}
@@ -387,9 +372,7 @@ const SubEventManager = () => {
     <>
       {toast.show && (
         <div className="subevent-toast-wrapper">
-          <div className={`subevent-toast ${toast.type}`}>
-            {toast.message}
-          </div>
+          <div className={`subevent-toast ${toast.type}`}>{toast.message}</div>
         </div>
       )}
 
@@ -535,7 +518,8 @@ const SubEventManager = () => {
               onClick={() => setShowAddForm(!showAddForm)}
               className="subevent-add-btn"
             >
-              <i className={`fas ${showAddForm ? 'fa-times' : 'fa-plus'}`}></i> {showAddForm ? 'Cancel' : 'Add Sub-event'}
+              <i className={`fas ${showAddForm ? 'fa-times' : 'fa-plus'}`}></i>{' '}
+              {showAddForm ? 'Cancel' : 'Add Sub-event'}
             </button>
 
             {showAddForm && (
@@ -575,19 +559,15 @@ const SubEventManager = () => {
                     />
                   </div>
                 </div>
-                <button 
-                  type="submit" 
-                  className="subevent-submit-btn" 
+                <button
+                  type="submit"
+                  className="subevent-submit-btn"
                   disabled={savingId === 'adding' || !newSubEvent.se_name.trim()}
                 >
                   {savingId === 'adding' ? (
-                    <>
-                      <span className="subevent-spinner-sm"></span> Creating...
-                    </>
+                    <><span className="subevent-spinner-sm"></span> Creating...</>
                   ) : (
-                    <>
-                      <i className="fas fa-plus"></i> Create Sub-event
-                    </>
+                    <><i className="fas fa-plus"></i> Create Sub-event</>
                   )}
                 </button>
               </form>
