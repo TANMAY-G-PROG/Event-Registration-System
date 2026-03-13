@@ -53,7 +53,7 @@ const LightRays = ({
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
+      setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -80,25 +80,33 @@ const LightRays = ({
 
   useEffect(() => {
     if (!isVisible || !containerRef.current) return;
+    
     if (cleanupFunctionRef.current) {
       cleanupFunctionRef.current();
       cleanupFunctionRef.current = null;
     }
+
     const initializeWebGL = async () => {
       if (!containerRef.current) return;
       await new Promise(resolve => setTimeout(resolve, 10));
       if (!containerRef.current) return;
-      const maxDpr = isMobile ? 1.5 : 2;
+
+      // FIX 5: Force low DPR on mobile to prevent animation lag
+      const maxDpr = isMobile ? 1.0 : 1.5;
+      
       const renderer = new Renderer({
         dpr: Math.min(window.devicePixelRatio, maxDpr),
-        alpha: false, // Opaque canvas prevents underlying colors from showing
+        alpha: false,
+        width: containerRef.current.clientWidth,
+        height: containerRef.current.clientHeight,
       });
+      
       rendererRef.current = renderer;
       const gl = renderer.gl;
+      
       gl.canvas.style.width = '100%';
       gl.canvas.style.height = '100%';
-      // Ensure canvas is block element to avoid inline spacing issues
-      gl.canvas.style.display = 'block'; 
+      gl.canvas.style.display = 'block';
       
       while (containerRef.current.firstChild) {
         containerRef.current.removeChild(containerRef.current.firstChild);
@@ -176,8 +184,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   }
   fragColor.rgb *= raysColor;
   
-  // Mix with deep blue background to ensure full coverage
-  // This matches your hex #1a1a2e (0.1, 0.1, 0.18)
   vec3 bgColor = vec3(0.1, 0.1, 0.18);
   fragColor.rgb = mix(bgColor, fragColor.rgb, fragColor.a);
   fragColor.a = 1.0;
@@ -213,9 +219,13 @@ void main() {
       });
       const mesh = new Mesh(gl, { geometry, program });
       meshRef.current = mesh;
+
       const updatePlacement = () => {
         if (!containerRef.current || !renderer) return;
-        renderer.dpr = Math.min(window.devicePixelRatio, maxDpr);
+        const isMobileResize = window.innerWidth <= 768;
+        const resizeDpr = isMobileResize ? 1.0 : 1.5;
+        renderer.dpr = Math.min(window.devicePixelRatio, resizeDpr);
+        
         const { clientWidth: wCSS, clientHeight: hCSS } = containerRef.current;
         renderer.setSize(wCSS, hCSS);
         const dpr = renderer.dpr;
@@ -226,6 +236,7 @@ void main() {
         uniforms.rayPos.value = anchor;
         uniforms.rayDir.value = dir;
       };
+
       const loop = t => {
         if (!rendererRef.current || !uniformsRef.current || !meshRef.current) return;
         uniforms.iTime.value = t * 0.001;
@@ -242,9 +253,11 @@ void main() {
           console.warn('WebGL rendering error:', error);
         }
       };
+      
       window.addEventListener('resize', updatePlacement);
       updatePlacement();
       animationIdRef.current = requestAnimationFrame(loop);
+      
       cleanupFunctionRef.current = () => {
         if (animationIdRef.current) {
           cancelAnimationFrame(animationIdRef.current);
@@ -328,6 +341,17 @@ void main() {
 export default function Events() {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
+
+  // --- FIX 6: Detect iOS and Add Class ---
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    const wrapper = document.querySelector('.events-wrapper');
+    if (isIOS && wrapper) {
+      wrapper.classList.add('is-ios');
+    }
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -423,8 +447,9 @@ export default function Events() {
         {/* Card 1: Participants */}
         <article className="card card--1" onClick={() => navigate('/participants')}>
           <div className="card__img">
+            {/* FIX 7: Added ImageKit parameters for high quality on retina */}
             <img 
-              src="https://ik.imagekit.io/flopass/volunteers.png?tr=w-800,h-600,fo-auto" 
+              src="https://ik.imagekit.io/flopass/volunteers.png?tr=w-800,h-600,fo-auto,dpr-auto,q-100" 
               alt="Participants"
               style={imgStyle}
               loading="lazy"
@@ -442,7 +467,7 @@ export default function Events() {
         <article className="card card--2" onClick={() => navigate('/organisers')}>
           <div className="card__img">
             <img 
-              src="https://ik.imagekit.io/flopass/organisers.png?tr=w-800,h-600,fo-auto" 
+              src="https://ik.imagekit.io/flopass/organisers.png?tr=w-800,h-600,fo-auto,dpr-auto,q-100" 
               alt="Organisers"
               style={imgStyle}
               loading="lazy"
@@ -460,7 +485,7 @@ export default function Events() {
         <article className="card card--3" onClick={() => navigate('/volunteers')}>
           <div className="card__img">
             <img 
-              src="https://ik.imagekit.io/flopass/participants.png?tr=w-800,h-600,fo-auto" 
+              src="https://ik.imagekit.io/flopass/participants.png?tr=w-800,h-600,fo-auto,dpr-auto,q-100" 
               alt="Volunteers"
               style={imgStyle}
               loading="lazy"

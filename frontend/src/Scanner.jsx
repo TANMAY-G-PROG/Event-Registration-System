@@ -1,301 +1,259 @@
 import { useState, useRef, useEffect } from 'react';
-import './Scanner.css'; // This connects the design we created
+import './Scanner.css';
 
 export default function Scanner() {
   const [pageState, setPageState] = useState('loading');
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [lastResult, setLastResult] = useState('');
-  const [libraryLoaded, setLibraryLoaded] = useState(false);
+  const [errorMsg, setErrorMsg]   = useState(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [userRole, setUserRole] = useState(null);
-  const [userUSN, setUserUSN] = useState(null);
+  const [userRole, setUserRole]   = useState(null);
+  const [userUSN, setUserUSN]     = useState(null);
 
-  const scannerRef = useRef(null);
-  const html5QrcodeScannerRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const fileScannerRef = useRef(null);
+  // Keep userRole accessible inside callbacks without stale closure
+  const userRoleRef = useRef(null);
+  const userUSNRef  = useRef(null);
+
+  const scannerInstanceRef = useRef(null);
+  const isMountedRef       = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     const urlParams = new URLSearchParams(window.location.search);
-    const role = urlParams.get('role');
-    const detectedRole = role === 'volunteer' ? 'volunteer' : 'participant';
-    setUserRole(detectedRole);
-    console.log('✅ User role detected:', detectedRole);
+    const role = urlParams.get('role') === 'volunteer' ? 'volunteer' : 'participant';
+    setUserRole(role);
+    userRoleRef.current = role;
+
     fetchUserData();
-    loadQRLibrary();
+
+    if (!window.Html5Qrcode) {
+      const script   = document.createElement('script');
+      script.src     = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
+      script.onload  = () => console.log('✅ QR Lib Loaded');
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      isMountedRef.current = false;
+      stopScanner();
+    };
   }, []);
 
+  // ── Fetch current user ─────────────────────────────────────────────────────
   const fetchUserData = async () => {
     try {
-      const response = await fetch('/api/me', {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await fetch('/api/me', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setUserUSN(data.userUSN);
-        console.log('✅ User USN loaded:', data.userUSN);
+        userUSNRef.current = data.userUSN;
+        setPageState('scanning');
       } else {
-        setErrorMsg('User not authenticated. Please sign in first.');
+        setErrorMsg('Please sign in first.');
         setPageState('error');
       }
-    } catch (err) {
-      console.error('Error fetching user info:', err);
-      setErrorMsg('Failed to load user information. Please try again.');
+    } catch {
+      setErrorMsg('Failed to load user.');
       setPageState('error');
     }
   };
 
-  useEffect(() => {
-    if (pageState === 'loading' && userUSN && libraryLoaded) {
-      console.log('🚀 Prerequisites met. Switching to scanning state.');
-      setPageState('scanning');
+  // ── Scanner start ──────────────────────────────────────────────────────────
+  const startScanner = async () => {
+    if (!window.Html5Qrcode) {
+      setTimeout(startScanner, 100);
+      return;
     }
-  }, [pageState, userUSN, libraryLoaded]);
+    if (scannerInstanceRef.current) return;
+
+    const config = {
+      fps:         10,
+      qrbox:       { width: 250, height: 250 },
+      aspectRatio: 1.0,
+      disableFlip: false,
+    };
+
+    try {
+      const html5QrCode = new window.Html5Qrcode('reader');
+      scannerInstanceRef.current = html5QrCode;
+
+      await html5QrCode.start(
+        { facingMode: 'environment' },
+        config,
+        onScanSuccess,
+        () => {} // ignore per-frame errors
+      );
+
+      if (isMountedRef.current) setIsScanning(true);
+
+    } catch (err) {
+      console.error('Camera Start Error:', err);
+      try {
+        if (scannerInstanceRef.current) {
+          await scannerInstanceRef.current.start(
+            { facingMode: { exact: 'environment' } },
+            config,
+            onScanSuccess,
+            () => {}
+          );
+          if (isMountedRef.current) setIsScanning(true);
+        }
+      } catch {
+        setErrorMsg('Camera error. Please ensure you are on HTTPS and allowed camera permissions.');
+        setPageState('error');
+      }
+    }
+  };
+
+  const stopScanner = async () => {
+    if (scannerInstanceRef.current) {
+      try {
+        await scannerInstanceRef.current.stop();
+        scannerInstanceRef.current.clear();
+      } catch (err) {
+        console.warn('Failed to stop scanner', err);
+      }
+      scannerInstanceRef.current = null;
+      if (isMountedRef.current) setIsScanning(false);
+    }
+  };
 
   useEffect(() => {
     if (pageState === 'scanning') {
-      const timer = setTimeout(() => initScanner(), 100);
-      return () => clearTimeout(timer);
+      const t = setTimeout(startScanner, 100);
+      return () => clearTimeout(t);
     }
-    if (pageState !== 'scanning') {
-      cleanupScanner();
-    }
-    return () => cleanupScanner();
   }, [pageState]);
 
-  const cleanupScanner = () => {
-    if (html5QrcodeScannerRef.current) {
-      try {
-        html5QrcodeScannerRef.current.clear();
-        html5QrcodeScannerRef.current = null;
-        console.log('🧹 Scanner cleaned up');
-      } catch (err) {
-        console.error('Cleanup error:', err);
-      }
-    }
-  };
-
-  const loadQRLibrary = () => {
-    if (window.Html5QrcodeScanner) {
-      console.log('✅ QR library already loaded');
-      setLibraryLoaded(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
-    script.onload = () => {
-      console.log('✅ QR library loaded');
-      setLibraryLoaded(true);
-    };
-    script.onerror = () => {
-      setErrorMsg('Failed to load QR scanner library. Please refresh the page.');
-      setPageState('error');
-    };
-    document.head.appendChild(script);
-  };
-
-  const initScanner = () => {
-    if (!window.Html5QrcodeScanner || !scannerRef.current || html5QrcodeScannerRef.current) {
-      console.log('⚠️ Scanner not ready or already initialized');
-      return;
-    }
-    console.log('🎥 Initializing scanner');
-    try {
-      const scanner = new window.Html5QrcodeScanner(
-        'reader',
-        {
-          qrbox: { width: 250, height: 250 },
-          fps: 10,
-          aspectRatio: 1.0,
-          showTorchButtonIfSupported: true,
-          rememberLastUsedCamera: true,
-          videoConstraints: {
-            facingMode: { ideal: 'environment' },
-          },
-          supportedScanTypes: [0, 1],
-          formatsToSupport: [0, 1],
-        },
-        false
-      );
-      scanner.render(onScanSuccess, onScanError);
-      html5QrcodeScannerRef.current = scanner;
-      setIsScanning(true);
-      console.log('✅ Scanner rendered');
-    } catch (err) {
-      console.error('Scanner initialization error:', err);
-      setErrorMsg('Failed to initialize scanner. Check camera permissions and try again.');
-      setPageState('error');
-    }
-  };
-
+  // ── QR decode handler ──────────────────────────────────────────────────────
+  // Expected QR format: "seid:SEID:TOKEN:TIMESTAMP"
+  // This is exactly what QrCode.jsx encodes.
   const onScanSuccess = async (decodedText) => {
-    // Prevent multiple scans while processing
-    if (pageState !== 'scanning') return;
-    
-    console.log(`✅ QR Code detected: ${decodedText}`);
-    setIsScanning(false);
-    setPageState('processing'); // Temporary state to prevent duplicate scans
-    setLastResult(decodedText);
-    
-    // Stop scanner immediately
-    cleanupScanner();
-    
-    if (decodedText.startsWith('eventId:')) {
-      const eventId = decodedText.split(':')[1];
-      await markAttendance(eventId);
-    } else {
-      setErrorMsg('Invalid QR code format. Please scan the event QR code.');
-      setPageState('error');
-    }
-  };
+    if (!isMountedRef.current) return;
+    await stopScanner();
+    setPageState('processing');
 
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    console.log('📁 File selected:', file.name);
-    if (!window.Html5Qrcode) {
-      setErrorMsg('QR scanner library not loaded. Please refresh and try again.');
+    if (!decodedText.startsWith('seid:')) {
+      setErrorMsg('Invalid QR. Please scan a valid Event QR code.');
       setPageState('error');
       return;
     }
-    try {
-      if (!fileScannerRef.current) {
-        fileScannerRef.current = new window.Html5Qrcode('file-reader');
-      }
-      const decodedText = await fileScannerRef.current.scanFile(file, true);
-      console.log('✅ QR decoded from file:', decodedText);
-      await onScanSuccess(decodedText);
-    } catch (err) {
-      console.error('File scan error:', err);
-      setErrorMsg('Could not read QR code from image. Please try another image.');
-      setPageState('error');
-    } finally {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
 
-  const markAttendance = async (eventId) => {
-    if (!userUSN || !userRole) {
-      setErrorMsg('User session error. Please sign in again.');
+    // Split on ':' — gives ['seid', SEID, TOKEN, TIMESTAMP]
+    // TOKEN is a 16-char hex string (no colons), so splitting on ':' is safe.
+    const parts = decodedText.split(':');
+
+    if (parts.length !== 4) {
+      setErrorMsg('QR code format is outdated. Please ask the organizer to show a fresh code.');
       setPageState('error');
       return;
     }
-    console.log(`🎯 Marking attendance - Role: ${userRole}, USN: ${userUSN}, Event: ${eventId}`);
+
+    const [, seid, token, timestamp] = parts;
+    await markAttendance(seid, token, timestamp);
+  };
+
+  // ── Mark attendance ────────────────────────────────────────────────────────
+  const markAttendance = async (seid, token, timestamp) => {
     try {
-      const endpoint = userRole === 'volunteer' ? '/api/mark-volunteer-attendance' : '/api/mark-participant-attendance';
-      console.log(`📡 Calling endpoint: ${endpoint}`);
-      const response = await fetch(endpoint, {
-        method: 'POST',
+      const role     = userRoleRef.current;
+      const usn      = userUSNRef.current;
+      const endpoint = role === 'volunteer'
+        ? '/api/mark-volunteer-attendance'
+        : '/api/mark-participant-attendance';
+
+      const res  = await fetch(endpoint, {
+        method:      'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          eventId: eventId,
-          usn: userUSN,
-        }),
+        headers:     { 'Content-Type': 'application/json' },
+        body:        JSON.stringify({ seid, usn, token, timestamp }),
       });
-      const data = await response.json();
-      console.log('📥 Response:', data);
-      if (response.ok && data.success) {
+      const data = await res.json();
+
+      if (res.ok && data.success) {
         setPageState('success');
-        setErrorMsg(null);
-        console.log(`✅ ${userRole} attendance marked successfully`);
       } else {
-        setErrorMsg(data.error || 'Failed to mark attendance');
+        if (data.error === 'Attendance already marked for this sub-event') {
+          setErrorMsg('Attendance already marked for this sub-event');
+        } else {
+          setErrorMsg(data.error || 'Attendance marking failed.');
+        }
         setPageState('error');
       }
-    } catch (err) {
-      console.error('Error marking attendance:', err);
+    } catch {
       setErrorMsg('Network error. Please try again.');
       setPageState('error');
     }
   };
 
-  const onScanError = (errorMessage) => {
-    if (errorMessage.includes('NotFoundException') || errorMessage.includes('No MultiFormat Readers')) {
-      return;
+  // ── File upload fallback ───────────────────────────────────────────────────
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !window.Html5Qrcode) return;
+
+    try {
+      const scanner = new window.Html5Qrcode('reader');
+      const result  = await scanner.scanFile(file, true);
+      onScanSuccess(result);
+    } catch {
+      setErrorMsg('Could not read QR from image. Please try again.');
+      setPageState('error');
     }
-    console.log(`Scan error: ${errorMessage}`);
   };
 
-  const scanAgain = () => {
-    console.log('🔄 Restarting scanner');
-    setLastResult('');
-    setErrorMsg(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    setPageState('scanning');
-  };
+  const reset  = () => { setErrorMsg(null); setPageState('scanning'); };
+  const goBack = () => window.history.back();
 
-  const restartScanner = () => {
-    setErrorMsg(null);
-    setUserUSN(null);
-    setPageState('loading');
-    fetchUserData();
-  };
-
-  const goBack = () => {
-    window.history.back();
-  };
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="scanner-container">
-      <div id="file-reader" style={{ display: 'none' }} />
       <div className="scanner-card">
+
+        {/* Header */}
         <div className="scanner-header">
           <div className="scanner-icon">📱</div>
           <h1 className="scanner-title">Mark Attendance</h1>
           <p className="scanner-subtitle">
-            {userRole === 'volunteer' ? '🤝 Volunteer' : '🎫 Participant'} - Scan event QR code
+            {userRole === 'volunteer' ? 'Volunteer' : 'Participant'} Mode
           </p>
-          {userUSN && (
-            <p className="scanner-usn">
-              USN: {userUSN}
-            </p>
-          )}
+          {userUSN && <p className="scanner-usn">{userUSN}</p>}
         </div>
+
+        {/* Loading */}
         {pageState === 'loading' && (
           <div className="status-box loading-box fade-in">
             <div className="status-icon">⏳</div>
-            <p>Loading user data...</p>
+            <p>Loading...</p>
           </div>
         )}
+
+        {/* Error */}
         {pageState === 'error' && (
           <div className="status-box error-box fade-in">
             <div className="status-icon">⚠️</div>
             <p className="error-message">{errorMsg}</p>
             <div className="button-group">
-              <button onClick={restartScanner} className="btn btn-danger">
-                Try Again
-              </button>
-              <button onClick={goBack} className="btn btn-secondary">
-                Go Back
-              </button>
+              <button onClick={reset}  className="btn btn-danger">Try Again</button>
+              <button onClick={goBack} className="btn btn-secondary">Go Back</button>
             </div>
           </div>
         )}
+
+        {/* Scanning */}
         {pageState === 'scanning' && (
           <div className="scanner-main fade-in">
             <div className="scanner-video-container">
-              <div id="reader" ref={scannerRef}></div>
-              {isScanning && (
-                <div className="scanner-status-badge">
-                  🔍 Scanning...
+              <div id="reader" style={{ width: '100%', height: '100%' }} />
+              {!isScanning && (
+                <div className="scanner-loading-overlay">
+                  <div className="org-spinner-dots" />
+                  <span style={{ marginTop: '10px', fontSize: '12px' }}>Starting Camera...</span>
                 </div>
               )}
             </div>
+
             <div className="file-upload-box">
-              <p>Or upload QR code image</p>
+              <p>Or upload QR image</p>
               <input
-                ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handleFileUpload}
@@ -303,41 +261,34 @@ export default function Scanner() {
                 id="qr-file-input"
               />
               <label htmlFor="qr-file-input" className="btn btn-primary">
-                📁 Choose Image File
+                📁 Choose Image
               </label>
-            </div>
-            <div className="instructions-box">
-              <div className="instructions-title">📋 Instructions:</div>
-              <ul>
-                <li>Scan the <strong>organizer's QR code</strong> using camera</li>
-                <li>Or upload a screenshot/photo of the QR code</li>
-                <li>Your attendance will be automatically marked</li>
-                <li>Make sure you are registered for the event</li>
-              </ul>
             </div>
           </div>
         )}
+
+        {/* Processing */}
+        {pageState === 'processing' && (
+          <div className="status-box loading-box fade-in">
+            <div className="org-spinner-dots" />
+            <p>Marking Attendance...</p>
+          </div>
+        )}
+
+        {/* Success */}
         {pageState === 'success' && (
           <div className="status-box success-box fade-in">
             <div className="status-icon">✅</div>
-            <h2 className="success-title">
-              {userRole === 'volunteer' ? 'Volunteer' : 'Participant'} Attendance Marked!
-            </h2>
-            <p className="success-message">
-              Your attendance has been successfully recorded as a {userRole}.
-            </p>
+            <h2 className="success-title">Done!</h2>
+            <p>Attendance Marked Successfully</p>
             <div className="button-group">
-              <button onClick={goBack} className="btn btn-success-light">
-                ← Back to Event
-              </button>
-              <button onClick={scanAgain} className="btn btn-success-dark">
-                🔄 Scan Another Event
-              </button>
+              <button onClick={goBack} className="btn btn-success-light">Back</button>
+              <button onClick={reset}  className="btn btn-success-dark">Scan Next</button>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
 }
-

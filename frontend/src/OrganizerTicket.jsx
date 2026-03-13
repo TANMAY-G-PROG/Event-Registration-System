@@ -7,6 +7,8 @@ export default function OrganizerTicket() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userUSN, setUserUSN] = useState(null);
+  const [subEvents, setSubEvents] = useState([]);
+  const [subEventsLoaded, setSubEventsLoaded] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,30 +21,23 @@ export default function OrganizerTicket() {
       return;
     }
 
-    fetchEventData(eventId);
+    fetchAllData(eventId);
   }, []);
 
-  const fetchUserData = async () => {
+  const fetchAllData = async (eventId) => {
     try {
-      const response = await fetch('/api/me', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to fetch user data`);
-      }
-      const data = await response.json();
-      return data.userUSN;
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      return null;
-    }
-  };
+      // Fetch user + event in parallel
+      const [userRes, eventRes] = await Promise.all([
+        fetch('/api/me', { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }),
+        fetch(`/api/events/${eventId}`, { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }),
+      ]);
 
-  const fetchEventData = async (eventId) => {
-    try {
-      const usn = await fetchUserData();
+      if (!userRes.ok) throw new Error(`HTTP ${userRes.status}: Failed to fetch user data`);
+      if (!eventRes.ok) throw new Error(`HTTP ${eventRes.status}: ${eventRes.statusText}`);
+
+      const [userData, evtData] = await Promise.all([userRes.json(), eventRes.json()]);
+
+      const usn = userData.userUSN;
       if (!usn) {
         setError('User not authenticated. Please sign in.');
         setLoading(false);
@@ -50,34 +45,46 @@ export default function OrganizerTicket() {
       }
       setUserUSN(usn);
 
-      const response = await fetch(`/api/events/${eventId}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.eid) {
-        // Check if user is the organizer
-        if (data.OrgUsn !== usn) {
-          setError('You are not the organizer of this event.');
-          setLoading(false);
-          return;
-        }
-        setEventData(data);
+      if (!evtData.eid) throw new Error('Invalid event data');
+      if (evtData.OrgUsn !== usn) {
+        setError('You are not the organizer of this event.');
         setLoading(false);
-      } else {
-        throw new Error('Invalid event data');
+        return;
       }
+
+      setEventData(evtData);
+      setLoading(false); // render ticket immediately, button updates after sub-events arrive
+
+      // Fetch sub-events separately (non-blocking)
+      try {
+        const subRes = await fetch(`/api/events/${eventId}/sub-events`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        console.log('[OrganizerTicket] sub-events status:', subRes.status);
+
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          console.log('[OrganizerTicket] sub-events data:', JSON.stringify(subData));
+          setSubEvents(subData.subEvents || []);
+        } else {
+          console.warn('[OrganizerTicket] sub-events fetch failed:', subRes.status);
+          setSubEvents([]);
+        }
+      } catch (subErr) {
+        console.warn('[OrganizerTicket] sub-events fetch error:', subErr);
+        setSubEvents([]);
+      } finally {
+        setSubEventsLoaded(true);
+      }
+
     } catch (err) {
-      console.error('Error fetching event:', err);
+      console.error('Error fetching data:', err);
       setError(`Could not load event details. ${err.message}`);
       setLoading(false);
+      setSubEventsLoaded(true);
     }
   };
 
@@ -85,30 +92,40 @@ export default function OrganizerTicket() {
     window.location.href = '/organisers';
   };
 
-  const handleShowQR = () => {
-    // Navigate to QR display page
-    navigate(`/qr?eventId=${eventData.eid}`);
+  const handleQROrManage = () => {
+    if (subEventsLoaded && subEvents.length === 1) {
+      navigate(`/qr?seid=${subEvents[0].seid}`);
+    } else {
+      navigate(`/sub-events?eventId=${eventData.eid}`);
+    }
+  };
+
+  const getButtonLabel = () => {
+    if (!subEventsLoaded) return 'Loading...';
+    if (subEvents.length === 1) return 'Show QR Code';
+    return 'Manage Sub-events';
+  };
+
+  const getSubtitleLabel = () => {
+    if (!subEventsLoaded) return '...';
+    if (subEvents.length === 1) return `Sub-event: ${subEvents[0].se_name}`;
+    return 'For Attendance Scanning';
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Not specified';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric'
     });
   };
 
   const formatTime = (timeString) => {
     if (!timeString) return 'Not specified';
-    const timeParts = timeString.split(':');
-    let hours = parseInt(timeParts[0]);
-    const minutes = timeParts[1];
+    const [h, m] = timeString.split(':');
+    let hours = parseInt(h);
     const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    return `${hours}:${minutes} ${ampm}`;
+    hours = hours % 12 || 12;
+    return `${hours}:${m} ${ampm}`;
   };
 
   return (
@@ -136,21 +153,14 @@ export default function OrganizerTicket() {
 
         {!loading && !error && eventData && (
           <div className="tk-ticket-card">
-            {/* Texture Overlay */}
             <div className="tk-texture-overlay"></div>
-            
-            {/* Top Notch */}
             <div className="tk-top-notch"></div>
 
             <div className="tk-main-content">
-              {/* Header */}
               <div className="tk-club-name">{eventData.clubName || 'Event Organizer'}</div>
               <h1 className="tk-event-title">{eventData.ename || 'Untitled Event'}</h1>
-              
-              {/* Divider */}
               <div className="tk-separator-dots"></div>
 
-              {/* Grid Info */}
               <div className="tk-info-grid">
                 <div>
                   <div className="tk-info-label">DATE</div>
@@ -173,7 +183,6 @@ export default function OrganizerTicket() {
                 </div>
               </div>
 
-              {/* Stats for Organizer */}
               <div className="tk-info-grid">
                 <div>
                   <div className="tk-info-label">CAPACITY</div>
@@ -185,29 +194,28 @@ export default function OrganizerTicket() {
                 </div>
               </div>
 
-              {/* Description */}
               <p className="tk-details-text">
                 {eventData.eventdesc || 'No description provided.'}
               </p>
             </div>
 
-            {/* Tear-off Notches */}
             <div className="tk-notch-container">
               <div className="tk-notch tk-notch-left"></div>
               <div className="tk-notch tk-notch-right"></div>
             </div>
 
-            {/* Footer / Stub - REPLACED WITH QR ACTION */}
             <div className="tk-stub-content">
-              <button 
-                onClick={handleShowQR}
+              <button
+                onClick={handleQROrManage}
                 className="tk-scan-btn tk-org-btn"
+                disabled={!subEventsLoaded}
+                style={{ opacity: subEventsLoaded ? 1 : 0.6 }}
               >
-                <i className="fas fa-qrcode"></i>
-                Show Event QR
+                <i className={`fas ${subEventsLoaded && subEvents.length === 1 ? 'fa-qrcode' : 'fa-qrcode'}`}></i>
+                {getButtonLabel()}
               </button>
               <div className="tk-lock-msg" style={{color: '#666', fontWeight: '500'}}>
-                For Attendance Scanning
+                {getSubtitleLabel()}
               </div>
             </div>
           </div>
