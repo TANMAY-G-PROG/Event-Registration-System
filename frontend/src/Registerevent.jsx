@@ -3,210 +3,233 @@ import { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import QRCode from "qrcode"
 import "./registerevent.css"
-import TicketAnimation from './TicketAnimation';
+import TicketAnimation from './TicketAnimation'
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
-const FALLBACK_BANNER = "https://ik.imagekit.io/flopass/Aura.png";
-const DEFAULT_COLORS = ["#1a1a2e", "#16213e", "#0f3460"];
+const FALLBACK_BANNER = "https://ik.imagekit.io/flopass/Aura.png"
+const DEFAULT_COLORS  = ["#1a1a2e", "#16213e", "#0f3460"]
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
-function formatTime12h(timeString) {
-  if (!timeString) return "Time TBA"
-  const [hours, minutes] = String(timeString).split(":")
-  const hour24 = Number.parseInt(hours, 10)
-  if (Number.isNaN(hour24)) return "Time TBA"
-  const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
-  const ampm = hour24 >= 12 ? "PM" : "AM"
-  return `${hour12}:${minutes} ${ampm}`
+function fmt12h(t) {
+  if (!t) return "TBA"
+  const [h, m] = String(t).split(":")
+  const h24 = parseInt(h, 10)
+  if (isNaN(h24)) return "TBA"
+  const h12 = h24 === 0 ? 12 : h24 > 12 ? h24 - 12 : h24
+  return `${h12}:${m} ${h24 >= 12 ? "PM" : "AM"}`
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return "Date TBA"
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+function fmtDate(d) {
+  if (!d) return "TBA"
+  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
 }
 
-function resolveBanner(event) {
-  return event?.bannerUrl || FALLBACK_BANNER;
+function fmtDateLong(d) {
+  if (!d) return "TBA"
+  return new Date(d).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "long" })
+}
+
+const banner = e => e?.bannerUrl || FALLBACK_BANNER
+
+function rgbToHex(r, g, b) {
+  return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("")
+}
+
+function hexToRgb(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return m ? { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) } : null
 }
 
 // ============================================================================
 // COLOR EXTRACTION
 // ============================================================================
 
-async function extractColors(imageUrl) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
+async function extractColors(url) {
+  return new Promise(resolve => {
+    const img = new Image()
+    img.crossOrigin = "anonymous"
+    img.onerror = () => resolve(DEFAULT_COLORS)
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      if (!ctx) { resolve(DEFAULT_COLORS); return; }
-      const sampleSize = 50;
-      canvas.width = sampleSize; canvas.height = sampleSize;
-      ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
+      const c = document.createElement("canvas")
+      const ctx = c.getContext("2d")
+      if (!ctx) return resolve(DEFAULT_COLORS)
+      c.width = c.height = 50
+      ctx.drawImage(img, 0, 0, 50, 50)
       try {
-        const imageData = ctx.getImageData(0, 0, sampleSize, sampleSize);
-        const pixels = imageData.data;
-        const colorMap = new Map();
-        for (let i = 0; i < pixels.length; i += 4) {
-          const r = Math.min(255, Math.round(pixels[i] / 32) * 32);
-          const g = Math.min(255, Math.round(pixels[i + 1] / 32) * 32);
-          const b = Math.min(255, Math.round(pixels[i + 2] / 32) * 32);
-          const brightness = (r + g + b) / 3;
-          if (brightness < 20 || brightness > 240) continue;
-          const key = `${r},${g},${b}`;
-          const existing = colorMap.get(key);
-          if (existing) { existing.count++; } else { colorMap.set(key, { count: 1, r, g, b }); }
+        const px = ctx.getImageData(0, 0, 50, 50).data
+        const map = new Map()
+        for (let i = 0; i < px.length; i += 4) {
+          const r = Math.min(255, Math.round(px[i]   / 32) * 32)
+          const g = Math.min(255, Math.round(px[i+1] / 32) * 32)
+          const b = Math.min(255, Math.round(px[i+2] / 32) * 32)
+          const br = (r+g+b)/3
+          if (br < 20 || br > 240) continue
+          const k = `${r},${g},${b}`
+          const ex = map.get(k)
+          if (ex) ex.count++; else map.set(k, { count:1, r, g, b })
         }
-        const sortedColors = Array.from(colorMap.values()).sort((a, b) => b.count - a.count).slice(0, 10);
-        const distinctColors = [];
-        for (const color of sortedColors) {
-          const hex = rgbToHex(color.r, color.g, color.b);
-          const isDistinct = distinctColors.every((existing) => {
-            const existingRgb = hexToRgb(existing);
-            if (!existingRgb) return true;
-            const distance = Math.sqrt(Math.pow(color.r - existingRgb.r, 2) + Math.pow(color.g - existingRgb.g, 2) + Math.pow(color.b - existingRgb.b, 2));
-            return distance > 40;
-          });
-          if (isDistinct && distinctColors.length < 3) { distinctColors.push(hex); }
+        const sorted = [...map.values()].sort((a,b) => b.count - a.count).slice(0, 10)
+        const out = []
+        for (const col of sorted) {
+          const hex = rgbToHex(col.r, col.g, col.b)
+          const ok = out.every(ex => {
+            const rgb = hexToRgb(ex)
+            return !rgb || Math.sqrt((col.r-rgb.r)**2+(col.g-rgb.g)**2+(col.b-rgb.b)**2) > 40
+          })
+          if (ok && out.length < 3) out.push(hex)
         }
-        while (distinctColors.length < 3) {
-          const baseColor = hexToRgb(distinctColors[0] || "#1a1a2e");
-          if (baseColor) {
-            const shift = distinctColors.length === 1 ? -40 : 40;
-            distinctColors.push(rgbToHex(Math.min(255, Math.max(0, baseColor.r + shift)), Math.min(255, Math.max(0, baseColor.g + shift)), Math.min(255, Math.max(0, baseColor.b + shift))));
-          } else { distinctColors.push("#1a1a2e"); }
+        while (out.length < 3) {
+          const base = hexToRgb(out[0] || "#1a1a2e")
+          const s = out.length === 1 ? -40 : 40
+          out.push(base
+            ? rgbToHex(Math.min(255,Math.max(0,base.r+s)), Math.min(255,Math.max(0,base.g+s)), Math.min(255,Math.max(0,base.b+s)))
+            : "#1a1a2e")
         }
-        resolve(distinctColors);
-      } catch (e) { resolve(DEFAULT_COLORS); }
-    };
-    img.onerror = () => { resolve(DEFAULT_COLORS); };
-    img.src = imageUrl;
-  });
-}
-
-function rgbToHex(r, g, b) {
-  return "#" + [r, g, b].map(x => { const hex = x.toString(16); return hex.length === 1 ? "0" + hex : hex; }).join("");
-}
-
-function hexToRgb(hex) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+        resolve(out)
+      } catch { resolve(DEFAULT_COLORS) }
+    }
+    img.src = url
+  })
 }
 
 function useColorExtraction(events) {
-  const [colors, setColors] = useState({});
+  const [colors, setColors] = useState({})
   useEffect(() => {
-    events.forEach(event => {
-      const banner = resolveBanner(event);
-      extractColors(banner).then(extractedColors => {
-        setColors(prev => ({ ...prev, [event.eid]: extractedColors }));
-      });
-    });
-  }, [events]);
-  return colors;
+    events.forEach(ev => {
+      extractColors(banner(ev)).then(cols => setColors(p => ({ ...p, [ev.eid]: cols })))
+    })
+  }, [events])
+  return colors
 }
 
 // ============================================================================
-// CARD RAIL — horizontal scroll, shows partial next card as "peek"
+// SKELETON CARD
 // ============================================================================
 
-function CardRail({ events, onOpen, renderControls, registeredEvents, teamStates }) {
-  const railRef = useRef(null);
-  const [activeIdx, setActiveIdx] = useState(0);
-  const colorMap = useColorExtraction(events);
+function SkeletonCard() {
+  return (
+    <div className="sk-card">
+      <div className="sk-img" />
+      <div className="sk-body">
+        <div className="sk-line sk-line--sm" />
+        <div className="sk-line sk-line--lg" />
+        <div className="sk-line sk-line--md" />
+        <div className="sk-cta" />
+      </div>
+    </div>
+  )
+}
 
-  // Snap on scroll
+// ============================================================================
+// CARD RAIL  — horizontal scroll with peek + dots
+// ============================================================================
+
+function CardRail({ events, onOpen, renderControls }) {
+  const railRef   = useRef(null)
+  const [idx, setIdx] = useState(0)
+  const colorMap  = useColorExtraction(events)
+
+  // Track active card on scroll
   useEffect(() => {
-    const rail = railRef.current;
-    if (!rail) return;
-    const handleScroll = () => {
-      const cardW = rail.querySelector('.rc-card')?.offsetWidth || 300;
-      const gap = 16;
-      const idx = Math.round(rail.scrollLeft / (cardW + gap));
-      setActiveIdx(Math.max(0, Math.min(idx, events.length - 1)));
-    };
-    rail.addEventListener('scroll', handleScroll, { passive: true });
-    return () => rail.removeEventListener('scroll', handleScroll);
-  }, [events.length]);
+    const rail = railRef.current
+    if (!rail) return
+    const onScroll = () => {
+      const cardW = rail.querySelector(".rc-card")?.offsetWidth || 300
+      const i = Math.round(rail.scrollLeft / (cardW + 14))
+      setIdx(Math.max(0, Math.min(i, events.length - 1)))
+    }
+    rail.addEventListener("scroll", onScroll, { passive: true })
+    return () => rail.removeEventListener("scroll", onScroll)
+  }, [events.length])
 
-  const scrollTo = (idx) => {
-    const rail = railRef.current;
-    if (!rail) return;
-    const card = rail.querySelectorAll('.rc-card')[idx];
-    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    setActiveIdx(idx);
-  };
+  const scrollTo = i => {
+    const rail = railRef.current
+    if (!rail) return
+    const card = rail.querySelectorAll(".rc-card")[i]
+    card?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
+    setIdx(i)
+  }
 
-  if (events.length === 0) return (
+  if (!events.length) return (
     <div className="rc-empty">
-      <div className="rc-empty-icon">✦</div>
+      <span className="rc-empty-glyph">✦</span>
       <p>No events here yet</p>
     </div>
-  );
+  )
 
   return (
-    <div className="rc-rail-wrap">
-      {/* Horizontal scroll rail */}
+    <div className="rc-wrap">
       <div className="rc-rail" ref={railRef}>
-        {events.map((event, idx) => {
-          const cols = colorMap[event.eid] || DEFAULT_COLORS;
-          const isActive = idx === activeIdx;
-          const teamState = teamStates[event.eid];
-          const isRegistered = registeredEvents.has(event.eid);
-
+        {events.map((ev, i) => {
+          const cols = colorMap[ev.eid] || DEFAULT_COLORS
           return (
-            <div
-              key={event.eid}
-              className={`rc-card ${isActive ? 'rc-card--active' : ''}`}
-              style={{ '--c0': cols[0], '--c1': cols[1], '--c2': cols[2] }}
+            <article
+              key={ev.eid}
+              className={`rc-card ${i === idx ? "rc-card--active" : ""}`}
+              style={{ "--c0": cols[0], "--c1": cols[1], "--c2": cols[2] }}
             >
-              {/* Background image */}
-              <div className="rc-card-img" onClick={() => onOpen(event)}>
-                <img src={resolveBanner(event)} alt={event.ename} loading="lazy" draggable={false} />
+              {/* ── Glow halo from extracted colors ── */}
+              <div className="rc-card-glow" />
+
+              {/* ── Image ── */}
+              <div className="rc-card-img" onClick={() => onOpen(ev)}>
+                <img src={banner(ev)} alt={ev.ename} loading="lazy" draggable={false} />
                 <div className="rc-card-scrim" />
+
+                {/* Chips on image */}
+                <div className="rc-card-chips">
+                  <span className={`rc-chip rc-chip--${ev.status}`}>
+                    {ev.status === "ongoing" && <span className="rc-chip-dot" />}
+                    {ev.status}
+                  </span>
+                  {ev.is_team && <span className="rc-chip rc-chip--team">Team</span>}
+                  <span className="rc-chip rc-chip--fee" style={{ marginLeft: "auto" }}>
+                    {ev.regFee > 0 ? `₹${ev.regFee}` : "Free"}
+                  </span>
+                </div>
               </div>
 
-              {/* Top badges */}
-              <div className="rc-card-top">
-                <span className={`rc-badge rc-badge--${event.status}`}>{event.status}</span>
-                {event.is_team && <span className="rc-badge rc-badge--team">👥 Team</span>}
-                <span className="rc-badge rc-badge--fee" style={{ marginLeft: 'auto' }}>
-                  {event.regFee > 0 ? `₹${event.regFee}` : 'Free'}
-                </span>
+              {/* ── Body ── */}
+              <div className="rc-card-body" onClick={() => onOpen(ev)}>
+                <time className="rc-card-date">{fmtDate(ev.eventDate)} · {fmt12h(ev.eventTime)}</time>
+                <h3 className="rc-card-title">{ev.ename}</h3>
+                <p className="rc-card-loc">
+                  <svg width="9" height="11" viewBox="0 0 10 13" fill="currentColor" style={{flexShrink:0}}>
+                    <path d="M5 0C2.24 0 0 2.24 0 5c0 3.75 5 8 5 8s5-4.25 5-8c0-2.76-2.24-5-5-5zm0 6.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/>
+                  </svg>
+                  {ev.eventLoc}
+                </p>
               </div>
 
-              {/* Info */}
-              <div className="rc-card-body" onClick={() => onOpen(event)}>
-                <p className="rc-card-date">{formatDate(event.eventDate)} · {formatTime12h(event.eventTime)}</p>
-                <h3 className="rc-card-name">{event.ename}</h3>
-                <p className="rc-card-loc">📍 {event.eventLoc}</p>
-              </div>
-
-              {/* CTA */}
+              {/* ── CTA ── */}
               <div className="rc-card-cta" onClick={e => e.stopPropagation()}>
-                {renderControls(event, false)}
-                <button className="rc-details-btn" onClick={() => onOpen(event)}>Details ↗</button>
+                {renderControls(ev, false)}
+                <button className="rc-details-btn" onClick={() => onOpen(ev)}>
+                  Details
+                  <svg width="9" height="9" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <path d="M1 10L10 1M10 1H4M10 1v6"/>
+                  </svg>
+                </button>
               </div>
-            </div>
-          );
+            </article>
+          )
         })}
+        <div className="rc-rail-spacer" aria-hidden="true" />
       </div>
 
-      {/* Dot indicators — only if ≥2 events */}
+      {/* Dot indicators */}
       {events.length > 1 && (
-        <div className="rc-dots">
+        <div className="rc-dots" role="tablist">
           {events.map((_, i) => (
             <button
               key={i}
-              className={`rc-dot ${i === activeIdx ? 'rc-dot--active' : ''}`}
+              className={`rc-dot ${i === idx ? "rc-dot--active" : ""}`}
               onClick={() => scrollTo(i)}
               aria-label={`Event ${i + 1}`}
             />
@@ -214,7 +237,7 @@ function CardRail({ events, onOpen, renderControls, registeredEvents, teamStates
         </div>
       )}
     </div>
-  );
+  )
 }
 
 // ============================================================================
@@ -223,26 +246,36 @@ function CardRail({ events, onOpen, renderControls, registeredEvents, teamStates
 
 function GridCard({ event, onOpen, renderControls }) {
   return (
-    <div className="rg-card" onClick={() => onOpen(event)}>
-      <div className="rg-card-img">
-        <img src={resolveBanner(event)} alt={event.ename} loading="lazy" />
-        <span className={`rg-badge rg-badge--${event.status}`}>{event.status}</span>
-        {event.is_team && <span className="rg-badge rg-badge--team" style={{ left: 'auto', right: '10px' }}>👥</span>}
+    <article className="rg-card">
+      <div className="rg-card-img" onClick={() => onOpen(event)}>
+        <img src={banner(event)} alt={event.ename} loading="lazy" draggable={false} />
+        <div className="rg-card-scrim" />
+        <div className="rg-card-chips">
+          <span className={`rc-chip rc-chip--${event.status}`}>
+            {event.status === "ongoing" && <span className="rc-chip-dot" />}
+            {event.status}
+          </span>
+          {event.is_team && <span className="rc-chip rc-chip--team">Team</span>}
+        </div>
       </div>
       <div className="rg-card-body">
-        <p className="rg-card-date">{formatDate(event.eventDate)} · {formatTime12h(event.eventTime)}</p>
-        <h3 className="rg-card-name">{event.ename}</h3>
-        <p className="rg-card-loc">📍 {event.eventLoc}</p>
+        <time className="rg-card-date">{fmtDate(event.eventDate)} · {fmt12h(event.eventTime)}</time>
+        <h3 className="rg-card-title" onClick={() => onOpen(event)}>{event.ename}</h3>
+        <p className="rg-card-loc">{event.eventLoc}</p>
         <div className="rg-card-footer">
-          <span className="rg-card-fee">{event.regFee > 0 ? `₹${event.regFee}` : 'Free'}</span>
+          <span className="rg-card-fee">{event.regFee > 0 ? `₹${event.regFee}` : "Free"}</span>
           <div className="rg-card-actions" onClick={e => e.stopPropagation()}>
             {renderControls(event, false)}
-            <button className="rg-details-btn" onClick={(e) => { e.stopPropagation(); onOpen(event); }}>↗</button>
+            <button className="rg-icon-btn" onClick={() => onOpen(event)} title="Details">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M1 10L10 1M10 1H4M10 1v6"/>
+              </svg>
+            </button>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </article>
+  )
 }
 
 // ============================================================================
@@ -250,65 +283,157 @@ function GridCard({ event, onOpen, renderControls }) {
 // ============================================================================
 
 function SearchBar({ events, onSelect }) {
-  const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
-  const inputRef = useRef(null);
+  const [q, setQ]       = useState("")
+  const [open, setOpen] = useState(false)
+  const ref             = useRef(null)
 
   const results = useMemo(() => {
-    if (!query.trim()) return [];
-    const q = query.toLowerCase();
+    if (!q.trim()) return []
+    const lq = q.toLowerCase()
     return events
-      .map((e, i) => ({ event: e, index: i }))
-      .filter(({ event }) =>
-        event.ename?.toLowerCase().includes(q) ||
-        event.eventLoc?.toLowerCase().includes(q) ||
-        event.organizerName?.toLowerCase().includes(q)
+      .map((e, i) => ({ e, i }))
+      .filter(({ e }) =>
+        e.ename?.toLowerCase().includes(lq) ||
+        e.eventLoc?.toLowerCase().includes(lq) ||
+        e.organizerName?.toLowerCase().includes(lq)
       )
-      .slice(0, 5);
-  }, [query, events]);
+      .slice(0, 5)
+  }, [q, events])
 
   return (
-    <div className="rs-wrap">
-      <div className={`rs-input-wrap ${open ? 'rs-open' : ''}`}>
-        <svg className="rs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="14" height="14">
-          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+    <div className="sb-wrap">
+      <div className={`sb-pill ${open ? "sb-pill--open" : ""}`}>
+        <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="14" height="14">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
         <input
-          ref={inputRef}
-          className="rs-input"
+          ref={ref}
+          className="sb-input"
           placeholder="Search events…"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
+          value={q}
+          onChange={e => setQ(e.target.value)}
           onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => { setOpen(false); setQuery(""); }, 160)}
-          onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); setQuery(""); inputRef.current?.blur(); } e.stopPropagation(); }}
+          onBlur={() => setTimeout(() => { setOpen(false); setQ("") }, 160)}
+          onKeyDown={e => { if (e.key === "Escape") { setOpen(false); setQ(""); ref.current?.blur() } e.stopPropagation() }}
           autoComplete="off"
         />
-        {query && <button className="rs-clear" onMouseDown={e => { e.preventDefault(); setQuery(""); }}>×</button>}
+        {q && <button className="sb-clear" onMouseDown={e => { e.preventDefault(); setQ("") }}>×</button>}
       </div>
 
-      {open && query && (
-        <div className="rs-dropdown">
-          {results.length === 0 ? (
-            <div className="rs-no-result">No matches for "{query}"</div>
-          ) : results.map(({ event, index }) => (
-            <button
-              key={event.eid}
-              className="rs-result"
-              onMouseDown={e => { e.preventDefault(); onSelect(index); setOpen(false); setQuery(""); }}
-            >
-              <img src={resolveBanner(event)} alt="" className="rs-result-img" />
-              <div className="rs-result-info">
-                <span className="rs-result-name">{event.ename}</span>
-                <span className="rs-result-loc">{event.eventLoc}</span>
-              </div>
-              <span className={`rs-result-status rs-result-status--${event.status}`}>{event.status}</span>
-            </button>
-          ))}
+      {open && q && (
+        <div className="sb-dropdown">
+          {results.length === 0
+            ? <p className="sb-empty">No results for "{q}"</p>
+            : results.map(({ e, i }) => (
+              <button key={e.eid} className="sb-result"
+                onMouseDown={ev => { ev.preventDefault(); onSelect(i); setOpen(false); setQ("") }}>
+                <img src={banner(e)} alt="" className="sb-result-img" />
+                <div className="sb-result-info">
+                  <span className="sb-result-name">{e.ename}</span>
+                  <span className="sb-result-loc">{e.eventLoc}</span>
+                </div>
+                <span className={`rc-chip rc-chip--${e.status} rc-chip--xs`}>{e.status}</span>
+              </button>
+            ))
+          }
         </div>
       )}
     </div>
-  );
+  )
+}
+
+// ============================================================================
+// DETAIL SHEET
+// ============================================================================
+
+function DetailSheet({ event, onClose, renderControls }) {
+  useEffect(() => {
+    const h = e => { if (e.key === "Escape") onClose() }
+    window.addEventListener("keydown", h)
+    return () => window.removeEventListener("keydown", h)
+  }, [onClose])
+
+  return (
+    <>
+      <div className="ds-backdrop" onClick={onClose} />
+      <aside className="ds-sheet" role="dialog" aria-modal="true" aria-label={event.ename}>
+        <div className="ds-handle" />
+
+        {/* Hero */}
+        <div className="ds-hero">
+          <img src={banner(event)} alt={event.ename} />
+          <div className="ds-hero-scrim" />
+          <button className="ds-close" onClick={onClose} aria-label="Close">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M1 1l11 11M12 1L1 12"/>
+            </svg>
+          </button>
+          <div className="ds-hero-chips">
+            <span className={`rc-chip rc-chip--${event.status}`}>
+              {event.status === "ongoing" && <span className="rc-chip-dot" />}
+              {event.status}
+            </span>
+            {event.is_team && <span className="rc-chip rc-chip--team">Team Event</span>}
+            <span className="rc-chip rc-chip--fee" style={{ marginLeft: "auto" }}>
+              {event.regFee > 0 ? `₹${event.regFee}` : "Free"}
+            </span>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="ds-body">
+          <h2 className="ds-title">{event.ename}</h2>
+
+          <div className="ds-meta">
+            <div className="ds-meta-row">
+              <span className="ds-meta-icon">📅</span>
+              <div>
+                <span className="ds-meta-label">Date & Time</span>
+                <span className="ds-meta-val">{fmtDateLong(event.eventDate)} · {fmt12h(event.eventTime)}</span>
+              </div>
+            </div>
+            <div className="ds-meta-row">
+              <span className="ds-meta-icon">📍</span>
+              <div>
+                <span className="ds-meta-label">Venue</span>
+                <span className="ds-meta-val">{event.eventLoc}</span>
+              </div>
+            </div>
+            <div className="ds-meta-row">
+              <span className="ds-meta-icon">🏛️</span>
+              <div>
+                <span className="ds-meta-label">Organizer</span>
+                <span className="ds-meta-val">{event.organizerName || "Club"}</span>
+              </div>
+            </div>
+            {event.is_team && (
+              <div className="ds-meta-row">
+                <span className="ds-meta-icon">👥</span>
+                <div>
+                  <span className="ds-meta-label">Team Size</span>
+                  <span className="ds-meta-val">{event.min_team_size}–{event.max_team_size} members</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {event.eventdesc && (
+            <div className="ds-about">
+              <span className="ds-about-label">About</span>
+              <p>{event.eventdesc}</p>
+            </div>
+          )}
+
+          <div style={{ height: 100 }} />
+        </div>
+
+        {/* Sticky CTA */}
+        <div className="ds-cta">
+          {renderControls(event, true)}
+        </div>
+      </aside>
+    </>
+  )
 }
 
 // ============================================================================
@@ -318,314 +443,334 @@ function SearchBar({ events, onSelect }) {
 export default function Registerevent() {
   const navigate = useNavigate()
 
-  const [eventsData, setEventsData] = useState({ upcoming: [], ongoing: [], completed: [] })
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState("all")
-  const [viewMode, setViewMode] = useState("rail") // "rail" | "grid"
-  const [teamStates, setTeamStates] = useState({})
+  // ── data ──
+  const [eventsData, setEventsData]             = useState({ upcoming: [], ongoing: [], completed: [] })
+  const [loading, setLoading]                   = useState(true)
+  const [filter, setFilter]                     = useState("all")
+  const [viewMode, setViewMode]                 = useState("rail")
+  const [teamStates, setTeamStates]             = useState({})
   const [registeredEvents, setRegisteredEvents] = useState(new Set())
 
-  const [flash, setFlash] = useState({ type: "", message: "" })
-  const [modalFlash, setModalFlash] = useState({ type: "", message: "" })
+  // ── ui ──
+  const [flash, setFlash]               = useState({ type: "", message: "" })
+  const [modalFlash, setModalFlash]     = useState({ type: "", message: "" })
   const [selectedEvent, setSelectedEvent] = useState(null)
-  const [ticketInfo, setTicketInfo] = useState(null);
+  const [ticketInfo, setTicketInfo]     = useState(null)
 
-  const [showTeamModal, setShowTeamModal] = useState(null)
-  const [teamFormData, setTeamFormData] = useState({ teamName: '', memberUSNs: [''] })
-  const [teamInvites, setTeamInvites] = useState([])
-  const [showUpiModal, setShowUpiModal] = useState(null)
-  const [transactionId, setTransactionId] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState("")
+  // ── modals ──
+  const [showTeamModal, setShowTeamModal]   = useState(null)
+  const [teamFormData, setTeamFormData]     = useState({ teamName: "", memberUSNs: [""] })
+  const [teamInvites, setTeamInvites]       = useState([])
+  const [showUpiModal, setShowUpiModal]     = useState(null)
+  const [transactionId, setTransactionId]  = useState("")
+  const [isSubmitting, setIsSubmitting]    = useState(false)
+  const [qrCodeDataUrl, setQrCodeDataUrl]  = useState("")
 
-  const timerRef = useRef(null)
+  // ── ambient bg ──
+  const [hoveredEventId, setHoveredEventId] = useState(null)
+
+  const timerRef      = useRef(null)
   const modalTimerRef = useRef(null)
 
-  function showFlash(type, message) {
-    if (timerRef.current) clearTimeout(timerRef.current)
+  // ── flash helpers ──
+  const showFlash = useCallback((type, message) => {
+    clearTimeout(timerRef.current)
     setFlash({ type, message })
     timerRef.current = setTimeout(() => setFlash({ type: "", message: "" }), 4000)
-  }
+  }, [])
 
-  function showModalFlash(type, message) {
-    if (modalTimerRef.current) clearTimeout(modalTimerRef.current)
+  const showModalFlash = useCallback((type, message) => {
+    clearTimeout(modalTimerRef.current)
     setModalFlash({ type, message })
     modalTimerRef.current = setTimeout(() => setModalFlash({ type: "", message: "" }), 4000)
-  }
+  }, [])
 
-  function generateUpiUrl(upiId, eventName, amount, eventId) {
-    const params = new URLSearchParams({ pa: upiId, pn: eventName, am: amount.toString(), cu: "INR", tn: `Event Registration - ${eventId}` })
-    return `upi://pay?${params.toString()}`
-  }
-
+  // ── loaders ──
   const loadEvents = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/events', { method: "GET", credentials: "include" })
-      if (response.status === 401) { navigate('/'); return }
-      if (!response.ok) throw new Error("Failed")
-      const data = await response.json()
-      setEventsData({ upcoming: data?.events?.upcoming || [], ongoing: data?.events?.ongoing || [], completed: data?.events?.completed || [] })
-    } catch (err) { showFlash("error", "Failed to load events") }
+      const r = await fetch("/api/events", { credentials: "include" })
+      if (r.status === 401) { navigate("/"); return }
+      if (!r.ok) throw new Error()
+      const d = await r.json()
+      setEventsData({
+        upcoming:  d?.events?.upcoming  || [],
+        ongoing:   d?.events?.ongoing   || [],
+        completed: d?.events?.completed || [],
+      })
+    } catch { showFlash("error", "Failed to load events") }
     finally { setLoading(false) }
-  }, [navigate]);
+  }, [navigate, showFlash])
 
   const fetchMyRegistrations = useCallback(async () => {
     try {
-      const res = await fetch('/api/my-participant-events', { credentials: 'include' })
-      if (res.ok) {
-        const data = await res.json()
-        setRegisteredEvents(new Set(data.participantEvents.map(ev => ev.eid)))
+      const r = await fetch("/api/my-participant-events", { credentials: "include" })
+      if (r.ok) {
+        const d = await r.json()
+        setRegisteredEvents(new Set(d.participantEvents.map(ev => ev.eid)))
       }
-    } catch (err) { console.error(err) }
-  }, []);
+    } catch (e) { console.error(e) }
+  }, [])
 
   const loadTeamStatus = useCallback(async (eventId) => {
     try {
-      const response = await fetch(`/api/events/${eventId}/team-status`, { credentials: 'include' })
-      if (response.ok) {
-        const data = await response.json()
-        setTeamStates(prev => ({ ...prev, [eventId]: data }))
+      const r = await fetch(`/api/events/${eventId}/team-status`, { credentials: "include" })
+      setTeamStates(p => ({ ...p, [eventId]: r.ok ? null : null }))
+      if (r.ok) {
+        const d = await r.json()
+        setTeamStates(p => ({ ...p, [eventId]: d }))
       } else {
-        setTeamStates(prev => ({ ...prev, [eventId]: null }))
+        setTeamStates(p => ({ ...p, [eventId]: null }))
       }
-    } catch (err) { console.error(err) }
-  }, []);
+    } catch (e) { console.error(e) }
+  }, [])
 
-  useEffect(() => { loadEvents(); fetchMyRegistrations(); }, [loadEvents, fetchMyRegistrations])
+  useEffect(() => { loadEvents(); fetchMyRegistrations() }, [loadEvents, fetchMyRegistrations])
 
   useEffect(() => {
-    const activeEvents = [...(eventsData.upcoming || []), ...(eventsData.ongoing || [])];
-    if (activeEvents.length > 0) activeEvents.forEach(event => { loadTeamStatus(event.eid) })
+    const active = [...(eventsData.upcoming || []), ...(eventsData.ongoing || [])]
+    active.forEach(ev => loadTeamStatus(ev.eid))
   }, [eventsData, loadTeamStatus])
 
   useEffect(() => {
-    const shouldLock = selectedEvent || showTeamModal || showUpiModal;
-    document.body.style.overflow = shouldLock ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [selectedEvent, showTeamModal, showUpiModal]);
+    document.body.style.overflow = (selectedEvent || showTeamModal || showUpiModal) ? "hidden" : ""
+    return () => { document.body.style.overflow = "" }
+  }, [selectedEvent, showTeamModal, showUpiModal])
 
+  // ── derived ──
   const allEvents = useMemo(() => [
-    ...(eventsData.upcoming || []).map(e => ({ ...e, status: "upcoming" })),
-    ...(eventsData.ongoing || []).map(e => ({ ...e, status: "ongoing" })),
+    ...(eventsData.upcoming  || []).map(e => ({ ...e, status: "upcoming"  })),
+    ...(eventsData.ongoing   || []).map(e => ({ ...e, status: "ongoing"   })),
     ...(eventsData.completed || []).map(e => ({ ...e, status: "completed" })),
-  ], [eventsData]);
+  ], [eventsData])
+
+  // Global ambient bg — color from hovered event or first event
+  const globalColorMap = useColorExtraction(allEvents)
+  const ambientColors  = globalColorMap[hoveredEventId] || globalColorMap[allEvents[0]?.eid] || DEFAULT_COLORS
 
   const statusCounts = useMemo(() => ({
-    all: allEvents.length,
-    upcoming: allEvents.filter(e => e.status === "upcoming").length,
-    ongoing: allEvents.filter(e => e.status === "ongoing").length,
+    all:       allEvents.length,
+    upcoming:  allEvents.filter(e => e.status === "upcoming").length,
+    ongoing:   allEvents.filter(e => e.status === "ongoing").length,
     completed: allEvents.filter(e => e.status === "completed").length,
-  }), [allEvents]);
+  }), [allEvents])
 
   const filteredEvents = useMemo(() => {
     const base = filter === "all" ? allEvents : allEvents.filter(e => e.status === filter)
     return base.filter(e => {
-      if (e.status === 'completed') return true
+      if (e.status === "completed") return true
       if (teamStates[e.eid] === null) return false
       return true
     })
   }, [allEvents, filter, teamStates])
 
-  // Group events by status for the sectioned rail view
-  const eventsByStatus = useMemo(() => {
-    const sections = [];
-    const ongoing = filteredEvents.filter(e => e.status === 'ongoing');
-    const upcoming = filteredEvents.filter(e => e.status === 'upcoming');
-    const completed = filteredEvents.filter(e => e.status === 'completed');
-    if (ongoing.length) sections.push({ label: 'Happening Now', emoji: '🔴', events: ongoing });
-    if (upcoming.length) sections.push({ label: 'Coming Up', emoji: '📅', events: upcoming });
-    if (completed.length) sections.push({ label: 'Past Events', emoji: '✓', events: completed });
-    return sections;
-  }, [filteredEvents]);
+  const sections = useMemo(() => {
+    const s = []
+    const ongoing   = filteredEvents.filter(e => e.status === "ongoing")
+    const upcoming  = filteredEvents.filter(e => e.status === "upcoming")
+    const completed = filteredEvents.filter(e => e.status === "completed")
+    if (ongoing.length)   s.push({ key: "ongoing",   label: "Happening Now", emoji: "🔴", events: ongoing   })
+    if (upcoming.length)  s.push({ key: "upcoming",  label: "Coming Up",     emoji: "📅", events: upcoming  })
+    if (completed.length) s.push({ key: "completed", label: "Past Events",   emoji: "✓",  events: completed })
+    return s
+  }, [filteredEvents])
 
+  // QR generation
   useEffect(() => {
     if (showUpiModal) {
       const { event } = showUpiModal
-      const upiUrl = generateUpiUrl(event.upiId, event.ename, event.regFee, event.eid)
-      QRCode.toDataURL(upiUrl, { width: 280, margin: 2, color: { dark: '#000000', light: '#ffffff' } }).then(setQrCodeDataUrl)
-    } else { setQrCodeDataUrl("") }
+      const p = new URLSearchParams({ pa: event.upiId, pn: event.ename, am: String(event.regFee), cu: "INR", tn: `Event Registration - ${event.eid}` })
+      QRCode.toDataURL(`upi://pay?${p}`, { width: 280, margin: 2, color: { dark: "#000", light: "#fff" } }).then(setQrCodeDataUrl)
+    } else setQrCodeDataUrl("")
   }, [showUpiModal])
 
-  // ==================== ACTION HANDLERS ====================
+  // ============================================================
+  // ACTION HANDLERS
+  // ============================================================
 
   async function handleRegister(event) {
-    const hasFee = (event.regFee || 0) > 0; const eventId = event.eid
+    const hasFee = (event.regFee || 0) > 0
     if (hasFee) {
-      if (!event.upiId) { showFlash("error", "Payment not setup."); return }
+      if (!event.upiId) { showFlash("error", "Payment not configured"); return }
       setTransactionId(""); setModalFlash({ type: "", message: "" }); setShowUpiModal({ event, isTeam: false }); return
     }
     try {
-      const response = await fetch(`/api/events/${eventId}/join`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" } })
-      const data = await response.json()
-      if (!response.ok) { showFlash("error", data.error || "Failed"); return }
-      showFlash("success", "Registered successfully!")
-      setRegisteredEvents(prev => new Set(prev).add(eventId))
-      setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data.userUSN || "AUTHORIZED" })
+      const r = await fetch(`/api/events/${event.eid}/join`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" } })
+      const d = await r.json()
+      if (!r.ok) { showFlash("error", d.error || "Failed"); return }
+      showFlash("success", "Registered!")
+      setRegisteredEvents(p => new Set(p).add(event.eid))
+      setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: d.userUSN || "AUTHORIZED" })
       await loadEvents()
-    } catch (err) { showFlash("error", "Network error") }
+    } catch { showFlash("error", "Network error") }
   }
 
   async function handleCreateTeam(eventId) {
+    if (!teamFormData.teamName.trim()) { showModalFlash("error", "Team name required"); return }
     try {
-      const { teamName, memberUSNs } = teamFormData
-      if (!teamName.trim()) { showModalFlash('error', 'Team name required'); return }
-      const validUSNs = memberUSNs.filter(usn => usn.trim() !== '')
-      const response = await fetch(`/api/events/${eventId}/create-team`, {
-        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamName: teamName.trim(), memberUSNs: validUSNs })
+      const r = await fetch(`/api/events/${eventId}/create-team`, {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamName: teamFormData.teamName.trim(), memberUSNs: teamFormData.memberUSNs.filter(u => u.trim()) })
       })
-      const data = await response.json()
-      if (!response.ok) { showModalFlash('error', data.error); return }
-      showModalFlash('success', 'Team created!'); showFlash('success', 'Team created!')
-      setTimeout(() => { setShowTeamModal(null); setTeamFormData({ teamName: '', memberUSNs: [''] }); loadTeamStatus(eventId) }, 1500)
-    } catch (err) { showModalFlash('error', 'Error creating team') }
+      const d = await r.json()
+      if (!r.ok) { showModalFlash("error", d.error); return }
+      showModalFlash("success", "Team created!")
+      setTimeout(() => { setShowTeamModal(null); setTeamFormData({ teamName: "", memberUSNs: [""] }); loadTeamStatus(eventId) }, 1500)
+    } catch { showModalFlash("error", "Error creating team") }
   }
 
   async function handleViewInvites(eventId) {
     try {
-      const response = await fetch(`/api/events/${eventId}/my-invites`, { credentials: 'include' })
-      const data = await response.json()
-      if (!response.ok) { showFlash('error', data.error); return }
-      if (!data.invites?.length) { showFlash('error', 'No pending invites'); setTeamInvites([]) }
-      else { setTeamInvites(data.invites); setShowTeamModal({ eventId, mode: 'invites' }) }
-    } catch (err) { showFlash('error', 'Error loading invites') }
+      const r = await fetch(`/api/events/${eventId}/my-invites`, { credentials: "include" })
+      const d = await r.json()
+      if (!r.ok) { showFlash("error", d.error); return }
+      if (!d.invites?.length) { showFlash("error", "No pending invites"); return }
+      setTeamInvites(d.invites); setShowTeamModal({ eventId, mode: "invites" })
+    } catch { showFlash("error", "Error loading invites") }
   }
 
   async function handleConfirmJoin(teamId, eventId) {
     try {
-      const response = await fetch(`/api/teams/${teamId}/confirm-join`, { method: 'POST', credentials: 'include' })
-      if (!response.ok) { showModalFlash('error', 'Failed to join'); return }
-      showModalFlash('success', 'Joined team!');
+      const r = await fetch(`/api/teams/${teamId}/confirm-join`, { method: "POST", credentials: "include" })
+      if (!r.ok) { showModalFlash("error", "Failed to join"); return }
+      showModalFlash("success", "Joined team!")
       setTimeout(() => { setShowTeamModal(null); setTeamInvites([]); loadTeamStatus(eventId) }, 1500)
-    } catch (err) { showModalFlash('error', 'Error') }
+    } catch { showModalFlash("error", "Error") }
   }
 
-  async function handleRegisterTeam(event, teamState) {
-    const eventId = event.eid
+  async function handleRegisterTeam(event, ts) {
     try {
-      const response = await fetch(`/api/events/${eventId}/register-team`, { method: 'POST', credentials: 'include' })
-      const data = await response.json()
-      if (!response.ok) { showFlash('error', data.error); return }
-      if (data.requiresPayment) {
-        if (!event.upiId) { showFlash("error", "Payment not setup"); return }
-        setTransactionId(""); setShowUpiModal({ event, isTeam: true, teamId: teamState.teamId }); return
+      const r = await fetch(`/api/events/${event.eid}/register-team`, { method: "POST", credentials: "include" })
+      const d = await r.json()
+      if (!r.ok) { showFlash("error", d.error); return }
+      if (d.requiresPayment) {
+        if (!event.upiId) { showFlash("error", "Payment not configured"); return }
+        setTransactionId(""); setShowUpiModal({ event, isTeam: true, teamId: ts.teamId }); return
       }
-      showFlash('success', 'Team registered!');
-      setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data.userUSN });
-      await loadTeamStatus(eventId); await loadEvents(); await fetchMyRegistrations()
-    } catch (err) { showFlash('error', 'Error registering team') }
+      showFlash("success", "Team registered!")
+      setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: d.userUSN })
+      await loadTeamStatus(event.eid); await loadEvents(); await fetchMyRegistrations()
+    } catch { showFlash("error", "Error registering team") }
   }
 
   async function handleSubmitUpiPayment() {
-    if (!transactionId.trim()) { showModalFlash('error', 'Enter Transaction ID'); return }
-    if (isSubmitting) return; setIsSubmitting(true)
-    const { event, isTeam } = showUpiModal; const eventId = event.eid;
-    const url = isTeam ? `/api/events/${eventId}/register-team-upi` : `/api/events/${eventId}/register-upi`
+    if (!transactionId.trim()) { showModalFlash("error", "Enter Transaction ID"); return }
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    const { event, isTeam } = showUpiModal
+    const url = isTeam ? `/api/events/${event.eid}/register-team-upi` : `/api/events/${event.eid}/register-upi`
     try {
-      const response = await fetch(url, {
-        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transaction_id: transactionId.trim() })
-      })
-      const data = await response.json()
-      if (!response.ok) { showModalFlash('error', data.error); return }
-      showModalFlash('success', 'Submitted for verification!');
+      const r = await fetch(url, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transaction_id: transactionId.trim() }) })
+      const d = await r.json()
+      if (!r.ok) { showModalFlash("error", d.error); return }
+      showModalFlash("success", "Submitted for verification!")
       setTimeout(async () => {
-        setShowUpiModal(null); setTransactionId(""); showFlash('success', 'Submitted!');
-        setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data.userUSN || "PENDING" });
-        await loadEvents(); await loadTeamStatus(eventId); await fetchMyRegistrations()
+        setShowUpiModal(null); setTransactionId(""); showFlash("success", "Payment submitted!")
+        setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: d.userUSN || "PENDING" })
+        await loadEvents(); await loadTeamStatus(event.eid); await fetchMyRegistrations()
       }, 1500)
-    } catch (err) { showModalFlash('error', 'Error submitting') } finally { setIsSubmitting(false) }
+    } catch { showModalFlash("error", "Error submitting") }
+    finally { setIsSubmitting(false) }
   }
 
-  const handleOpenPoster = (e, url) => {
-    e.stopPropagation();
-    if (url) window.open(url, '_blank', 'noopener,noreferrer');
-  }
+  // ============================================================
+  // RENDER CONTROLS
+  // ============================================================
 
   function renderControls(event, isOverlay = false) {
-    const teamState = teamStates[event.eid]
+    const ts = teamStates[event.eid]
 
-    const posterBtn = (event.posterUrl && isOverlay) ? (
-      <button className="re-btn re-btn--ghost" onClick={(e) => handleOpenPoster(e, event.posterUrl)}>
+    const posterBtn = event.posterUrl && isOverlay && (
+      <button className="re-btn re-btn--ghost" onClick={e => { e.stopPropagation(); window.open(event.posterUrl, "_blank", "noopener") }}>
         View Poster ↗
       </button>
-    ) : null;
+    )
 
-    if (!teamState && (event.status !== 'completed')) return <button className="re-btn re-btn--muted">Loading…</button>
-    if (event.status === 'completed') return <button className="re-btn re-btn--muted" disabled>Completed</button>
+    if (event.status === "completed")
+      return <button className="re-btn re-btn--muted" disabled>Event Completed</button>
 
-    if (!teamState?.isTeamEvent) {
-      if (registeredEvents.has(event.eid)) {
+    if (!ts)
+      return <button className="re-btn re-btn--muted" disabled>
+        <span className="re-spinner-sm" />Loading…
+      </button>
+
+    // Solo event
+    if (!ts.isTeamEvent) {
+      if (registeredEvents.has(event.eid))
         return <div className="re-btn-row">
-          <button className="re-btn re-btn--success" disabled>✓ Registered</button>
+          <button className="re-btn re-btn--success" disabled>
+            <svg width="12" height="10" viewBox="0 0 12 10" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 5l3.5 3.5L11 1"/></svg>
+            Registered
+          </button>
           {posterBtn}
         </div>
-      }
       return <div className="re-btn-row">
-        <button className="re-btn re-btn--primary" onClick={(e) => { e.stopPropagation(); handleRegister(event); }}>
-          {(event.regFee || 0) > 0 ? `Pay ₹${event.regFee}` : "Register Free"}
+        <button className="re-btn re-btn--primary" onClick={e => { e.stopPropagation(); handleRegister(event) }}>
+          {event.regFee > 0 ? `Pay ₹${event.regFee}` : "Register — Free"}
         </button>
         {posterBtn}
       </div>
     }
 
-    if (teamState.registrationComplete) return (
-      <div className="re-btn-row">
-        <button className="re-btn re-btn--success" disabled>✓ Team Registered</button>
+    // Team event — done
+    if (ts.registrationComplete)
+      return <div className="re-btn-row">
+        <button className="re-btn re-btn--success" disabled>
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 5l3.5 3.5L11 1"/></svg>
+          Team Registered
+        </button>
         {posterBtn}
       </div>
-    )
 
-    if (teamState.hasJoinedTeam) {
-      const isLeader = teamState.isLeader
+    // Team event — in a team
+    if (ts.hasJoinedTeam) {
       return (
         <div className="re-team-block">
           {isOverlay && (
             <div className="re-team-hud">
-              <div className="re-team-hud-header">
-                <span className="re-team-hud-name">{teamState.teamName}</span>
-                <span className={`re-team-hud-count ${teamState.canRegister ? 'ready' : ''}`}>
-                  {teamState.joinedCount}/{teamState.minSize} members
+              <div className="re-team-hud-hd">
+                <span className="re-team-hud-name">{ts.teamName}</span>
+                <span className={`re-team-hud-count ${ts.canRegister ? "ready" : ""}`}>
+                  {ts.joinedCount}/{ts.minSize}
                 </span>
               </div>
               <div className="re-member-list">
-                {teamState.members?.map((member, idx) => (
-                  <div key={idx} className="re-member-row">
-                    <span>{member.student?.sname || member.student_usn}</span>
-                    <span className={`re-member-status ${member.join_status ? "joined" : "pending"}`}>
-                      {member.join_status ? "✓ Joined" : "Pending"}
+                {ts.members?.map((m, i) => (
+                  <div key={i} className="re-member-row">
+                    <span>{m.student?.sname || m.student_usn}</span>
+                    <span className={`re-member-status ${m.join_status ? "joined" : "pending"}`}>
+                      {m.join_status ? "✓ Joined" : "Pending"}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
           )}
-          <div className="re-btn-row" style={{ marginTop: isOverlay ? '16px' : '0' }}>
-            {isLeader ? (
-              <button
-                className={`re-btn ${teamState.canRegister ? "re-btn--primary" : "re-btn--muted"}`}
-                onClick={(e) => { e.stopPropagation(); teamState.canRegister && handleRegisterTeam(event, teamState); }}
-                disabled={!teamState.canRegister}
-                title={!teamState.canRegister ? `Need ${teamState.minSize} members` : ''}
-              >
-                {(teamState.regFee || 0) > 0 ? `Pay ₹${teamState.regFee}` : "Finalize Team"}
-              </button>
-            ) : (
-              <button className="re-btn re-btn--muted" disabled>Waiting for leader</button>
-            )}
+          <div className="re-btn-row" style={{ marginTop: isOverlay ? 14 : 0 }}>
+            {ts.isLeader
+              ? <button
+                  className={`re-btn ${ts.canRegister ? "re-btn--primary" : "re-btn--muted"}`}
+                  disabled={!ts.canRegister}
+                  onClick={e => { e.stopPropagation(); ts.canRegister && handleRegisterTeam(event, ts) }}
+                  title={!ts.canRegister ? `Need ${ts.minSize} members` : ""}
+                >
+                  {ts.regFee > 0 ? `Pay ₹${ts.regFee}` : "Finalize Team"}
+                </button>
+              : <button className="re-btn re-btn--muted" disabled>Waiting for leader</button>
+            }
             {posterBtn}
           </div>
         </div>
       )
     }
 
+    // Team event — not in a team
     return (
       <div className="re-btn-row">
-        <button className="re-btn re-btn--secondary" onClick={(e) => { e.stopPropagation(); setShowTeamModal({ eventId: event.eid, mode: 'create' }) }}>
+        <button className="re-btn re-btn--secondary" onClick={e => { e.stopPropagation(); setShowTeamModal({ eventId: event.eid, mode: "create" }) }}>
           Create Team
         </button>
-        <button className="re-btn re-btn--secondary" onClick={(e) => { e.stopPropagation(); handleViewInvites(event.eid) }}>
+        <button className="re-btn re-btn--secondary" onClick={e => { e.stopPropagation(); handleViewInvites(event.eid) }}>
           Invites
         </button>
         {posterBtn}
@@ -633,120 +778,141 @@ export default function Registerevent() {
     )
   }
 
-  // ==================== RENDER ====================
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   return (
     <main className="re-page">
       {ticketInfo && <TicketAnimation onClose={() => setTicketInfo(null)} {...ticketInfo} />}
 
-      {/* Flash toast */}
+      {/* ── DYNAMIC AMBIENT BACKGROUND ── */}
+      <div
+        className="re-ambient"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 55% at 15% 8%,  ${ambientColors[0]}48 0%, transparent 55%),
+            radial-gradient(ellipse 65% 50% at 85% 85%, ${ambientColors[1]}3a 0%, transparent 55%),
+            radial-gradient(ellipse 50% 45% at 55% 50%, ${ambientColors[2]}22 0%, transparent 60%),
+            #09090c
+          `,
+          transition: "background 0.85s cubic-bezier(0.4,0,0.2,1)",
+        }}
+        aria-hidden="true"
+      />
+      <div className="re-grain" aria-hidden="true" />
+
+      {/* ── TOAST ── */}
       {flash.message && (
-        <div className={`re-toast ${flash.type === 'success' ? 're-toast--success' : 're-toast--error'}`}>
-          {flash.type === 'success' ? '✓' : '!'} {flash.message}
+        <div className={`re-toast re-toast--${flash.type}`} role="alert">
+          {flash.type === "success"
+            ? <svg width="12" height="10" viewBox="0 0 12 10" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 5l3.5 3.5L11 1"/></svg>
+            : <span aria-hidden="true">!</span>}
+          {flash.message}
         </div>
       )}
 
       {/* ── HEADER ── */}
       <header className="re-header">
         <div className="re-header-left">
-          <button className="re-back-btn" onClick={() => navigate('/events')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M19 12H5M12 5l-7 7 7 7"/>
+          <button className="re-back-btn" onClick={() => navigate("/events")}>
+            <svg width="14" height="12" viewBox="0 0 14 12" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M13 6H1M6 1L1 6l5 5"/>
             </svg>
-            Dashboard
+            <span>Dashboard</span>
           </button>
           <div className="re-header-title">
             <h1>Events</h1>
-            {!loading && <span className="re-event-count">{filteredEvents.length} events</span>}
+            {!loading && <span className="re-event-count">{filteredEvents.length}</span>}
           </div>
         </div>
 
         <div className="re-header-right">
-          {/* Search */}
           {!loading && allEvents.length > 0 && (
-            <SearchBar
-              events={filteredEvents}
-              onSelect={(i) => { setViewMode("grid"); }}
-            />
+            <SearchBar events={filteredEvents} onSelect={() => setViewMode("grid")} />
           )}
-
-          {/* View toggle */}
-          <div className="re-view-toggle">
-            <button
-              className={`re-view-btn ${viewMode === 'rail' ? 'active' : ''}`}
-              onClick={() => setViewMode('rail')}
-              title="Card rail"
-            >
+          <div className="re-view-toggle" role="group" aria-label="View mode">
+            <button className={`re-view-btn ${viewMode === "rail" ? "active" : ""}`}
+              onClick={() => setViewMode("rail")} title="Card view">
               <svg viewBox="0 0 20 14" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="11">
                 <rect x="1" y="1" width="8" height="12" rx="2"/>
-                <rect x="11" y="1" width="8" height="12" rx="2" opacity="0.4"/>
+                <rect x="11" y="1" width="8" height="12" rx="2" opacity="0.35"/>
               </svg>
             </button>
-            <button
-              className={`re-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-              onClick={() => setViewMode('grid')}
-              title="Grid view"
-            >
-              <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+            <button className={`re-view-btn ${viewMode === "grid" ? "active" : ""}`}
+              onClick={() => setViewMode("grid")} title="Grid view">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13">
                 <rect x="0" y="0" width="7" height="7" rx="1.5"/>
-                <rect x="9" y="0" width="7" height="7" rx="1.5" opacity="0.5"/>
-                <rect x="0" y="9" width="7" height="7" rx="1.5" opacity="0.5"/>
-                <rect x="9" y="9" width="7" height="7" rx="1.5" opacity="0.5"/>
+                <rect x="9" y="0" width="7" height="7" rx="1.5" opacity="0.35"/>
+                <rect x="0" y="9" width="7" height="7" rx="1.5" opacity="0.35"/>
+                <rect x="9" y="9" width="7" height="7" rx="1.5" opacity="0.35"/>
               </svg>
             </button>
           </div>
         </div>
       </header>
 
-      {/* ── FILTER TABS ── */}
-      <div className="re-filter-bar">
+      {/* ── FILTER BAR ── */}
+      <nav className="re-filter-bar" aria-label="Filter events">
         {["all", "ongoing", "upcoming", "completed"].map(k => (
-          <button
-            key={k}
-            className={`re-filter-tab ${filter === k ? 'active' : ''}`}
-            onClick={() => setFilter(k)}
-          >
-            {k === 'ongoing' && <span className="re-live-dot" />}
-            {k.charAt(0).toUpperCase() + k.slice(1)}
+          <button key={k}
+            className={`re-filter-tab ${filter === k ? "active" : ""}`}
+            onClick={() => setFilter(k)}>
+            {k === "ongoing" && <span className="re-live-dot" aria-hidden="true" />}
+            {k === "all" ? "All Events" : k.charAt(0).toUpperCase() + k.slice(1)}
             <span className="re-filter-count">{statusCounts[k]}</span>
           </button>
         ))}
-      </div>
+      </nav>
 
       {/* ── CONTENT ── */}
       <div className="re-content">
         {loading ? (
-          <div className="re-loading">
-            <div className="re-spinner" />
-            <p>Loading events…</p>
+          /* Skeleton loading */
+          <div className="re-sections">
+            <section className="re-section">
+              <div className="re-section-header">
+                <div className="sk-heading" />
+              </div>
+              <div className="sk-rail">
+                {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
+              </div>
+            </section>
           </div>
         ) : filteredEvents.length === 0 ? (
           <div className="re-empty">
             <div className="re-empty-icon">✦</div>
             <h3>No events found</h3>
-            <p>Try a different filter</p>
-            {filter !== 'all' && (
-              <button className="re-btn re-btn--secondary" onClick={() => setFilter('all')}>
+            <p>Try a different filter or check back later.</p>
+            {filter !== "all" && (
+              <button className="re-btn re-btn--secondary" style={{ marginTop: 16 }} onClick={() => setFilter("all")}>
                 Show all events
               </button>
             )}
           </div>
-        ) : viewMode === 'rail' ? (
-          /* ── SECTIONED RAIL ── */
+        ) : viewMode === "rail" ? (
+          /* ── SECTIONED RAILS ── */
           <div className="re-sections">
-            {eventsByStatus.map(section => (
-              <section key={section.label} className="re-section">
+            {sections.map(sec => (
+              <section key={sec.key} className="re-section">
                 <div className="re-section-header">
-                  <span className="re-section-emoji">{section.emoji}</span>
-                  <h2 className="re-section-title">{section.label}</h2>
-                  <span className="re-section-count">{section.events.length}</span>
+                  <span className={`re-section-pip re-section-pip--${sec.key}`} aria-hidden="true" />
+                  <h2 className="re-section-title">{sec.label}</h2>
+                  <span className="re-section-count">{sec.events.length}</span>
+                </div>
+                {/* Wrap each card so we can track hover for ambient bg */}
+                <div className="rc-rail-hover-wrap">
+                  {sec.events.map(ev => (
+                    <div key={ev.eid} style={{ display: "contents" }}
+                      onMouseEnter={() => setHoveredEventId(ev.eid)}
+                      onMouseLeave={() => setHoveredEventId(null)}>
+                    </div>
+                  ))}
                 </div>
                 <CardRail
-                  events={section.events}
+                  events={sec.events}
                   onOpen={setSelectedEvent}
                   renderControls={renderControls}
-                  registeredEvents={registeredEvents}
-                  teamStates={teamStates}
                 />
               </section>
             ))}
@@ -754,13 +920,13 @@ export default function Registerevent() {
         ) : (
           /* ── GRID VIEW ── */
           <div className="re-grid">
-            {filteredEvents.map(event => (
-              <GridCard
-                key={event.eid}
-                event={event}
-                onOpen={setSelectedEvent}
-                renderControls={renderControls}
-              />
+            {filteredEvents.map((ev, i) => (
+              <div key={ev.eid}
+                style={{ animationDelay: `${Math.min(i * 0.04, 0.4)}s` }}
+                onMouseEnter={() => setHoveredEventId(ev.eid)}
+                onMouseLeave={() => setHoveredEventId(null)}>
+                <GridCard event={ev} onOpen={setSelectedEvent} renderControls={renderControls} />
+              </div>
             ))}
           </div>
         )}
@@ -768,192 +934,111 @@ export default function Registerevent() {
 
       {/* ── DETAIL SHEET ── */}
       {selectedEvent && (
-        <>
-          <div className="re-sheet-backdrop" onClick={() => setSelectedEvent(null)} />
-          <div className="re-sheet">
-            {/* Sheet handle */}
-            <div className="re-sheet-handle" />
-
-            {/* Hero image */}
-            <div className="re-sheet-hero">
-              <img src={resolveBanner(selectedEvent)} alt={selectedEvent.ename} />
-              <div className="re-sheet-hero-scrim" />
-              <button className="re-sheet-close" onClick={() => setSelectedEvent(null)}>×</button>
-
-              {/* Floating badges on hero */}
-              <div className="re-sheet-hero-badges">
-                <span className={`re-badge-pill re-badge-pill--${selectedEvent.status}`}>{selectedEvent.status}</span>
-                {selectedEvent.is_team && <span className="re-badge-pill re-badge-pill--team">👥 Team Event</span>}
-                <span className="re-badge-pill re-badge-pill--fee" style={{ marginLeft: 'auto' }}>
-                  {selectedEvent.regFee > 0 ? `₹${selectedEvent.regFee}` : 'Free'}
-                </span>
-              </div>
-            </div>
-
-            {/* Sheet body */}
-            <div className="re-sheet-body">
-              <h2 className="re-sheet-title">{selectedEvent.ename}</h2>
-
-              {/* Meta row */}
-              <div className="re-sheet-meta">
-                <div className="re-sheet-meta-item">
-                  <span className="re-sheet-meta-icon">📅</span>
-                  <div>
-                    <span className="re-sheet-meta-label">Date & Time</span>
-                    <span className="re-sheet-meta-value">
-                      {new Date(selectedEvent.eventDate).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'long' })}
-                      {' · '}{formatTime12h(selectedEvent.eventTime)}
-                    </span>
-                  </div>
-                </div>
-                <div className="re-sheet-meta-item">
-                  <span className="re-sheet-meta-icon">📍</span>
-                  <div>
-                    <span className="re-sheet-meta-label">Venue</span>
-                    <span className="re-sheet-meta-value">{selectedEvent.eventLoc}</span>
-                  </div>
-                </div>
-                <div className="re-sheet-meta-item">
-                  <span className="re-sheet-meta-icon">🏛️</span>
-                  <div>
-                    <span className="re-sheet-meta-label">Organizer</span>
-                    <span className="re-sheet-meta-value">{selectedEvent.organizerName || "Club"}</span>
-                  </div>
-                </div>
-                {selectedEvent.is_team && (
-                  <div className="re-sheet-meta-item">
-                    <span className="re-sheet-meta-icon">👥</span>
-                    <div>
-                      <span className="re-sheet-meta-label">Team Size</span>
-                      <span className="re-sheet-meta-value">{selectedEvent.min_team_size}–{selectedEvent.max_team_size} members</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Description */}
-              {selectedEvent.eventdesc && (
-                <div className="re-sheet-desc">
-                  <h3>About</h3>
-                  <p>{selectedEvent.eventdesc}</p>
-                </div>
-              )}
-
-              {/* Spacer for sticky CTA */}
-              <div style={{ height: '100px' }} />
-            </div>
-
-            {/* Sticky CTA */}
-            <div className="re-sheet-cta">
-              {renderControls(selectedEvent, true)}
-            </div>
-          </div>
-        </>
+        <DetailSheet
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          renderControls={renderControls}
+        />
       )}
 
       {/* ── TEAM MODAL ── */}
       {showTeamModal && (
         <div className="re-modal-overlay" onClick={() => setShowTeamModal(null)}>
-          <div className="re-modal" onClick={e => e.stopPropagation()}>
+          <div className="re-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
             <div className="re-modal-header">
-              <h2>{showTeamModal.mode === 'create' ? 'Create Team' : 'Pending Invites'}</h2>
-              <button className="re-modal-close" onClick={() => setShowTeamModal(null)}>×</button>
+              <h2>{showTeamModal.mode === "create" ? "Create Team" : "Pending Invites"}</h2>
+              <button className="re-modal-close" onClick={() => setShowTeamModal(null)}>
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 1l9 9M10 1L1 10"/></svg>
+              </button>
             </div>
             {modalFlash.message && (
-              <div className={`re-modal-flash ${modalFlash.type}`}>{modalFlash.message}</div>
+              <div className={`re-modal-flash re-modal-flash--${modalFlash.type}`}>{modalFlash.message}</div>
             )}
             <div className="re-modal-body">
-              {showTeamModal.mode === 'create' ? (
-                <div>
+              {showTeamModal.mode === "create" ? (
+                <>
                   <label className="re-label">Team Name</label>
-                  <input className="re-input" placeholder="Enter team name" value={teamFormData.teamName} onChange={e => setTeamFormData({ ...teamFormData, teamName: e.target.value })} />
+                  <input className="re-input" placeholder="e.g. Code Ninjas"
+                    value={teamFormData.teamName}
+                    onChange={e => setTeamFormData(p => ({ ...p, teamName: e.target.value }))} />
 
-                  <label className="re-label" style={{ marginTop: '16px' }}>Member USNs</label>
+                  <label className="re-label" style={{ marginTop: 20 }}>Member USNs</label>
                   {teamFormData.memberUSNs.map((usn, i) => (
                     <div key={i} className="re-usn-row">
-                      <input className="re-input" placeholder="Member USN" value={usn} onChange={e => {
-                        const newUsns = [...teamFormData.memberUSNs]; newUsns[i] = e.target.value; setTeamFormData({ ...teamFormData, memberUSNs: newUsns })
-                      }} />
-                      {i > 0 && <button className="re-usn-remove" onClick={() => {
-                        const newUsns = teamFormData.memberUSNs.filter((_, idx) => idx !== i);
-                        setTeamFormData({ ...teamFormData, memberUSNs: newUsns });
-                      }}>×</button>}
+                      <input className="re-input" placeholder={`Member ${i + 1} USN`} value={usn}
+                        onChange={e => { const a = [...teamFormData.memberUSNs]; a[i] = e.target.value; setTeamFormData(p => ({ ...p, memberUSNs: a })) }} />
+                      {i > 0 && (
+                        <button className="re-usn-remove"
+                          onClick={() => setTeamFormData(p => ({ ...p, memberUSNs: p.memberUSNs.filter((_, j) => j !== i) }))}>×</button>
+                      )}
                     </div>
                   ))}
-                  <button className="re-add-member-btn" onClick={() => setTeamFormData(prev => ({ ...prev, memberUSNs: [...prev.memberUSNs, ''] }))}>
+                  <button className="re-add-member-btn"
+                    onClick={() => setTeamFormData(p => ({ ...p, memberUSNs: [...p.memberUSNs, ""] }))}>
                     + Add Member
                   </button>
-                  <button className="re-btn re-btn--primary" style={{ width: '100%', marginTop: '24px' }} onClick={() => handleCreateTeam(showTeamModal.eventId)}>
+                  <button className="re-btn re-btn--primary" style={{ width: "100%", marginTop: 24 }}
+                    onClick={() => handleCreateTeam(showTeamModal.eventId)}>
                     Create Team
                   </button>
-                </div>
+                </>
               ) : (
-                <div>
-                  {!teamInvites.length ? (
-                    <p className="re-modal-empty">No pending invites.</p>
-                  ) : teamInvites.map((inv, i) => (
-                    <div key={i} className="re-invite-card">
-                      <div>
-                        <div className="re-invite-team">{inv.teamName}</div>
-                        <div className="re-invite-leader">Leader: {inv.leaderName}</div>
+                <>
+                  {!teamInvites.length
+                    ? <p className="re-modal-empty">No pending invites.</p>
+                    : teamInvites.map((inv, i) => (
+                      <div key={i} className="re-invite-card">
+                        <div>
+                          <div className="re-invite-team">{inv.teamName}</div>
+                          <div className="re-invite-leader">Leader: {inv.leaderName}</div>
+                        </div>
+                        {!inv.registrationComplete && !inv.joinStatus
+                          ? <button className="re-btn re-btn--primary" style={{ width: "auto", padding: "8px 20px" }}
+                              onClick={() => handleConfirmJoin(inv.teamId, showTeamModal.eventId)}>Join</button>
+                          : <span className="re-invite-joined">✓ Joined</span>
+                        }
                       </div>
-                      {!inv.registrationComplete && !inv.joinStatus && (
-                        <button className="re-btn re-btn--primary" style={{ width: 'auto', padding: '8px 20px' }} onClick={() => handleConfirmJoin(inv.teamId, showTeamModal.eventId)}>
-                          Join
-                        </button>
-                      )}
-                      {inv.joinStatus && <span className="re-invite-joined">✓ Joined</span>}
-                    </div>
-                  ))}
-                </div>
+                    ))
+                  }
+                </>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {/* ── UPI PAYMENT MODAL ── */}
+      {/* ── UPI MODAL ── */}
       {showUpiModal && (
         <div className="re-modal-overlay" onClick={() => !isSubmitting && setShowUpiModal(null)}>
-          <div className="re-modal" onClick={e => e.stopPropagation()}>
+          <div className="re-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
             <div className="re-modal-header">
               <h2>Complete Payment</h2>
-              <button className="re-modal-close" disabled={isSubmitting} onClick={() => setShowUpiModal(null)}>×</button>
+              <button className="re-modal-close" disabled={isSubmitting} onClick={() => setShowUpiModal(null)}>
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 1l9 9M10 1L1 10"/></svg>
+              </button>
             </div>
             {modalFlash.message && (
-              <div className={`re-modal-flash ${modalFlash.type}`}>{modalFlash.message}</div>
+              <div className={`re-modal-flash re-modal-flash--${modalFlash.type}`}>{modalFlash.message}</div>
             )}
             <div className="re-modal-body re-upi-body">
-              <div className="re-upi-amount">₹{showUpiModal.event.regFee}</div>
               <p className="re-upi-event">{showUpiModal.event.ename}</p>
-
+              <div className="re-upi-amount">₹{showUpiModal.event.regFee}</div>
               <div className="re-qr-box">
                 {qrCodeDataUrl
-                  ? <img src={qrCodeDataUrl} alt="QR Code" />
-                  : <div className="re-spinner" style={{ margin: '32px auto' }} />
+                  ? <img src={qrCodeDataUrl} alt="UPI QR Code" width={220} height={220} />
+                  : <div className="re-qr-loader"><div className="re-spinner" /></div>
                 }
               </div>
-
               <div className="re-upi-id-row">
                 <span className="re-upi-id-label">UPI ID</span>
                 <span className="re-upi-id-value">{showUpiModal.event.upiId}</span>
               </div>
-
-              <input
-                className="re-input"
-                placeholder="Transaction ID / UTR Number"
-                value={transactionId}
-                onChange={e => setTransactionId(e.target.value)}
-                disabled={isSubmitting}
-                style={{ marginTop: '16px' }}
-              />
-              <button
-                className="re-btn re-btn--primary"
-                style={{ width: '100%', marginTop: '12px' }}
-                onClick={handleSubmitUpiPayment}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Verifying…" : "Confirm Payment"}
+              <label className="re-label" style={{ marginTop: 20, display: "block", textAlign: "left" }}>Transaction ID (UTR)</label>
+              <input className="re-input" placeholder="e.g. 401234567890" value={transactionId}
+                onChange={e => setTransactionId(e.target.value)} disabled={isSubmitting} />
+              <button className="re-btn re-btn--primary" style={{ width: "100%", marginTop: 12 }}
+                onClick={handleSubmitUpiPayment} disabled={isSubmitting}>
+                {isSubmitting ? <><span className="re-spinner-sm" />Verifying…</> : "Confirm Payment"}
               </button>
             </div>
           </div>
