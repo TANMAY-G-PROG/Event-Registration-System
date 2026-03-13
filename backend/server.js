@@ -79,6 +79,11 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+// Root route (for Azure / browser check)
+app.get('/', (req, res) => {
+    res.send('🚀 Flobms backend server is running successfully');
+});
+
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
 });
@@ -3107,10 +3112,6 @@ app.get('/api/sub-events/:seid/qr-token', requireAuth, async (req, res) => {
         console.error('QR token generation error:', err);
         res.status(500).json({ error: 'Failed to generate token' });
     }
-});
-
-app.get("/", (req, res) => {
-  res.send("Flobms backend server is running successfully 🚀");
 });
 
 app.listen(PORT, '0.0.0.0', () => {
