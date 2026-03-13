@@ -2727,3 +2727,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`🔍 Session debugging ENABLED\n`);
     console.log(`🌱 Environment: ${IS_PRODUCTION ? 'production' : 'development'}`);
 });
+
+app.get("/", (req, res) => {
+  res.send("Flobms backend server is running successfully 🚀");
+});
