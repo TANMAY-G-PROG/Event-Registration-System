@@ -43,25 +43,35 @@ const PORT = process.env.PORT || 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // --- Redis Client (FOR CACHING ONLY - not sessions) ---
-const redisClient = createClient({
-    url: process.env.REDIS_URL,
-    socket: {
-        connectTimeout: 10000,
-        reconnectStrategy: (retries) => {
-            if (retries > 5) return false;
-            return retries * 1000;
-        }
-    }
-});
 
-redisClient.on('error', (err) => console.log('❌ Redis Cache Error (non-fatal):', err.message));
-redisClient.on('connect', () => console.log('✅ Connected to Redis Cloud (cache only)'));
+let redisClient = {
+    isOpen: false,
+    get: async () => null,
+    set: async () => null,
+    del: async () => null,
+    connect: async () => {}
+};
 
 (async () => {
     try {
-        await redisClient.connect();
+        const realClient = createClient({
+            url: process.env.REDIS_URL,
+            socket: {
+                connectTimeout: 5000,
+                reconnectStrategy: (retries) => {
+                    if (retries > 2) return false;
+                    return 1000;
+                }
+            }
+        });
+
+        realClient.on('error', () => {});
+        realClient.on('connect', () => console.log('✅ Connected to Redis Cloud (cache only)'));
+
+        await realClient.connect();
+        redisClient = realClient;
     } catch (err) {
-        console.error('Redis cache unavailable (app will still work without cache):', err.message);
+        console.log('⚠️ Redis unavailable — running without cache (non-fatal)');
     }
 })();
 
