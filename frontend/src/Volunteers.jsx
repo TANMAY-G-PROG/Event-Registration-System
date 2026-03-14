@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
+import { apiFetch } from "./api.js";
+
 const Volunteers = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState({
@@ -17,6 +19,16 @@ const Volunteers = () => {
 
   const [generatingIds, setGeneratingIds] = useState(new Set());
   const [downloadLinks, setDownloadLinks] = useState({});
+
+  // Scroll Assistant Refs & States
+  const completedRef = useRef(null);
+  const ongoingRef = useRef(null);
+  const upcomingRef = useRef(null);
+  const [scrollPositions, setScrollPositions] = useState({
+    completed: 'down',
+    ongoing: 'down',
+    upcoming: 'down'
+  });
 
   // --- FAB Visibility Logic ---
   const [showFab, setShowFab] = useState(true);
@@ -57,11 +69,7 @@ const Volunteers = () => {
 
   const fetchUserInfo = async () => {
     try {
-      const response = await fetch('/api/me', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await apiFetch('/api/me');
       if (response.ok) {
         const data = await response.json();
         setUserInfo({ userName: data.userName, userUSN: data.userUSN });
@@ -113,11 +121,7 @@ const Volunteers = () => {
 
   const fetchVolunteerEvents = async () => {
     try {
-      const response = await fetch('/api/my-volunteer-events', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await apiFetch('/api/my-volunteer-events');
 
       if (!response.ok) {
         if (response.status === 401) { navigate('/'); return; }
@@ -185,6 +189,8 @@ const Volunteers = () => {
       });
       if (line) page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1,1,1) });
 
+      // Activity points entitlement text for volunteers - REMOVED AS PER REQUEST
+      
       const pdfBytes = await pdfDoc.save();
       const url = window.URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
       setDownloadLinks(prev => ({ ...prev, [event.eid]: { url, filename: `Volunteer_Certificate_${event.eid}.pdf` } }));
@@ -202,6 +208,52 @@ const Volunteers = () => {
     } else {
       navigate(`/volunteer-ticket?eventId=${event.eid}`);
     }
+  };
+
+  const handleCardScroll = (e, key) => {
+    const el = e.target;
+    const isAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 10;
+    const newState = isAtBottom ? 'up' : 'down';
+    if (scrollPositions[key] !== newState) {
+      setScrollPositions(prev => ({ ...prev, [key]: newState }));
+    }
+  };
+
+  const executeCardScroll = (key) => {
+    const refs = { completed: completedRef, ongoing: ongoingRef, upcoming: upcomingRef };
+    const el = refs[key].current;
+    if (!el) return;
+
+    if (scrollPositions[key] === 'up') {
+      el.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      const items = el.querySelectorAll('.vol-event-item-glass');
+      let target = null;
+      for (let item of items) {
+        if (item.offsetTop > el.scrollTop + 20) {
+          target = item;
+          break;
+        }
+      }
+      if (target) {
+        el.scrollTo({ top: target.offsetTop - 16, behavior: 'smooth' });
+      } else {
+        el.scrollBy({ top: 150, behavior: 'smooth' });
+      }
+    }
+  };
+
+  const ScrollAssistant = ({ type }) => {
+    const icon = scrollPositions[type] === 'up' ? 'fa-chevron-up' : 'fa-chevron-down';
+    return (
+      <button 
+        className={`card-scroll-assistant ${scrollPositions[type]}`}
+        onClick={() => executeCardScroll(type)}
+        title={scrollPositions[type] === 'up' ? 'Scroll to Top' : 'Scroll Down'}
+      >
+        <i className={`fas ${icon}`}></i>
+      </button>
+    );
   };
 
   const handleVolunteerClick = () => {
@@ -230,6 +282,11 @@ const Volunteers = () => {
           <div className="vol-status">
               Status: {event.VolnStatus ? <span className="status-confirmed">Confirmed</span> : <span className="status-reg">Registered</span>}
           </div>
+          {(event.earnedActivityPts || 0) > 0 && (
+            <div className="part-activity-points">
+              <i className="fas fa-star"></i> {event.earnedActivityPts} Claimable Activity Point{event.earnedActivityPts !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
         <div className="vol-event-actions">
           {eventType === 'completed' ? (
@@ -274,9 +331,14 @@ const Volunteers = () => {
               <div className="card__background"></div>
               <div className="card__content">
                 <h3 className="card__heading">Completed Events</h3>
-                <div className="card__details">
+                <div 
+                  className="card__details"
+                  ref={completedRef}
+                  onScroll={(e) => handleCardScroll(e, 'completed')}
+                >
                    {renderEventsList(events.completed, 'completed')}
                 </div>
+                {events.completed?.length > 1 && <ScrollAssistant type="completed" />}
               </div>
             </div>
 
@@ -284,9 +346,14 @@ const Volunteers = () => {
               <div className="card__background"></div>
               <div className="card__content">
                 <h3 className="card__heading">Ongoing Events</h3>
-                <div className="card__details">
+                <div 
+                  className="card__details"
+                  ref={ongoingRef}
+                  onScroll={(e) => handleCardScroll(e, 'ongoing')}
+                >
                    {renderEventsList(events.ongoing, 'ongoing')}
                 </div>
+                {events.ongoing?.length > 1 && <ScrollAssistant type="ongoing" />}
               </div>
             </div>
 
@@ -294,9 +361,14 @@ const Volunteers = () => {
               <div className="card__background"></div>
               <div className="card__content">
                 <h3 className="card__heading">Upcoming Events</h3>
-                <div className="card__details">
+                <div 
+                  className="card__details"
+                  ref={upcomingRef}
+                  onScroll={(e) => handleCardScroll(e, 'upcoming')}
+                >
                    {renderEventsList(events.upcoming, 'upcoming')}
                 </div>
+                {events.upcoming?.length > 1 && <ScrollAssistant type="upcoming" />}
               </div>
             </div>
 

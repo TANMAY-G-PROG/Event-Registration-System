@@ -7,8 +7,11 @@ const bcrypt = require('bcrypt');
 const cors = require('cors');
 const crypto = require('crypto');
 const ExcelJS = require('exceljs');
-const { createClient } = require('redis'); // Import Redis
+const { createClient } = require('redis');
+const RedisStore = require('connect-redis').RedisStore;
 const Brevo = require('@getbrevo/brevo');
+const QR_TOKEN_SECRET = process.env.QR_TOKEN_SECRET || 'your-qr-secret-change-in-production';
+const QR_TOKEN_VALIDITY_MS = 18000; // 15s display + 3s grace
 
 // --- File Upload Dependencies ---
 const cloudinary = require('cloudinary').v2;
@@ -17,23 +20,21 @@ const streamifier = require('streamifier');
 
 // --- Cloudinary Config ---
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 // --- Multer Config (Efficient for 512MB RAM) ---
-// We use memory storage but STRICTLY limit file size to 5MB.
-// This prevents OOM errors on Render.
 const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
 // --- Brevo Configuration ---
 const apiInstance = new Brevo.TransactionalEmailsApi();
 const apiKey = apiInstance.authentications['apiKey'];
-apiKey.apiKey = process.env.BREVO_API_KEY; 
+apiKey.apiKey = process.env.BREVO_API_KEY;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,7 +43,6 @@ const PORT = process.env.PORT || 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // --- Redis Client Setup ---
-// Uses env variable or falls back to your provided connection string
 const redisUrl = process.env.REDIS_URL || 'redis://default:ovBfSh1ALdigQLS0BDbJApUwTOJ6nk3i@redis-10269.c81.us-east-1-2.ec2.cloud.redislabs.com:10269';
 
 const redisClient = createClient({
@@ -52,7 +52,6 @@ const redisClient = createClient({
 redisClient.on('error', (err) => console.log('❌ Redis Client Error', err));
 redisClient.on('connect', () => console.log('✅ Connected to Redis Cloud'));
 
-// Initialize Redis connection
 (async () => {
     try {
         await redisClient.connect();
@@ -61,36 +60,40 @@ redisClient.on('connect', () => console.log('✅ Connected to Redis Cloud'));
     }
 })();
 
-// --- Trust the proxy in production ---
 if (IS_PRODUCTION) {
     app.set('trust proxy', 1);
 }
 
-// --- Dynamic CORS Origin ---
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['set-cookie']
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['set-cookie']
 }));
 
-// Force credentials header for Safari/iOS
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Credentials", "true");
-  next();
+    res.header("Access-Control-Allow-Credentials", "true");
+    next();
 });
-
 
 app.use(express.json());
 
-// Health check route for UptimeRobot
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
+// Root route (for Azure / browser check)
+app.get('/', (req, res) => {
+    res.send('🚀 Flobms backend server is running successfully');
 });
 
-// --- Secure Session ---
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+});
+
 app.use(session({
+    store: new RedisStore({
+        client: redisClient,
+        prefix: 'sess:',
+        ttl: 3600,
+    }),
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
@@ -98,23 +101,18 @@ app.use(session({
     rolling: true,
     cookie: {
         httpOnly: true,
-        maxAge: 60 * 60 * 1000, 
-        secure: IS_PRODUCTION ? true : false,  
-        sameSite: IS_PRODUCTION ? "lax" : "lax", 
+        maxAge: 60 * 60 * 1000,
+        secure: IS_PRODUCTION ? true : false,
+        sameSite: IS_PRODUCTION ? "none" : "lax",
         path: '/'
     }
 }));
 
-
-// Debug middleware to log all requests
 app.use((req, res, next) => {
     console.log(`\n📝 ${req.method} ${req.url}`);
-    // console.log('📋 Session ID:', req.sessionID);
-    // console.log('👤 User USN:', req.session.userUSN || 'Not logged in');
     next();
 });
 
-// Test Supabase connection
 async function testSupabaseConnection() {
     try {
         const { data, error } = await supabase.from('student').select('count').limit(1);
@@ -126,8 +124,6 @@ async function testSupabaseConnection() {
 }
 testSupabaseConnection();
 
-
-// Middleware to check if user is authenticated
 function requireAuth(req, res, next) {
     if (req.session.userUSN) {
         next();
@@ -140,7 +136,7 @@ function requireAuth(req, res, next) {
 const uploadFromBuffer = (buffer) => {
     return new Promise((resolve, reject) => {
         const cld_upload_stream = cloudinary.uploader.upload_stream(
-            { folder: "event_banners" }, // Changed folder name
+            { folder: "event_banners" },
             (error, result) => {
                 if (result) resolve(result);
                 else reject(error);
@@ -154,7 +150,7 @@ const uploadFromBuffer = (buffer) => {
 app.post('/api/signup', async (req, res) => {
     try {
         const { name, usn, sem, mobno, email, password } = req.body;
-        
+
         if (!usn || !name || !email || !sem || !mobno || !password) {
             return res.status(400).json({ error: 'All fields are required' });
         }
@@ -164,18 +160,18 @@ app.post('/api/signup', async (req, res) => {
             .select('usn')
             .or(`usn.eq.${usn},emailid.eq.${email}`)
             .limit(1);
-        
+
         if (checkError) {
             console.error('Error checking existing user:', checkError);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         if (existingUser && existingUser.length > 0) {
             return res.status(400).json({ error: 'Student with this USN or email already exists' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        
+
         const { data, error } = await supabase
             .from('student')
             .insert([{
@@ -187,25 +183,24 @@ app.post('/api/signup', async (req, res) => {
                 password: hashedPassword
             }])
             .select();
-        
+
         if (error) {
             console.error('Error inserting student:', error);
             return res.status(500).json({ error: `Error registering student: ${error.message}` });
         }
-        
-        // Create session
+
         req.session.userUSN = usn;
         req.session.userName = name;
         req.session.userEmail = email;
-        
+
         req.session.save((err) => {
             if (err) {
                 console.error('❌ Session save error:', err);
                 return res.status(500).json({ error: 'Session error' });
             }
-            res.status(201).json({ 
+            res.status(201).json({
                 success: true,
-                message: 'Student registered successfully!', 
+                message: 'Student registered successfully!',
                 userUSN: usn,
                 userName: name
             });
@@ -220,46 +215,45 @@ app.post('/api/signup', async (req, res) => {
 app.post('/api/signin', async (req, res) => {
     try {
         const { usn, password } = req.body;
-        
+
         if (!usn || !password) {
             return res.status(400).json({ error: 'USN and password are required' });
         }
-        
+
         const { data: rows, error } = await supabase
             .from('student')
             .select('usn, sname, emailid, password')
             .eq('usn', usn)
             .limit(1);
-        
+
         if (error) {
             console.error('Error fetching student:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         if (!rows || rows.length === 0) {
             return res.status(401).json({ error: 'Invalid USN or password' });
         }
-        
+
         const student = rows[0];
-        
+
         const validPassword = await bcrypt.compare(password, student.password);
         if (!validPassword) {
             return res.status(401).json({ error: 'Invalid USN or password' });
         }
-        
-        // Create session
+
         req.session.userUSN = student.usn;
         req.session.userName = student.sname;
         req.session.userEmail = student.emailid;
-        
+
         req.session.save((err) => {
             if (err) {
                 console.error('❌ Session save error:', err);
                 return res.status(500).json({ error: 'Session error' });
             }
             console.log('✅ User signed in:', student.usn);
-            res.json({ 
-                success: true, 
+            res.json({
+                success: true,
                 message: 'Signed in successfully',
                 userUSN: student.usn,
                 userName: student.sname
@@ -271,7 +265,6 @@ app.post('/api/signin', async (req, res) => {
     }
 });
 
-// Get current user info
 app.get('/api/me', requireAuth, async (req, res) => {
     try {
         const { data: rows, error } = await supabase
@@ -279,16 +272,16 @@ app.get('/api/me', requireAuth, async (req, res) => {
             .select('usn, sname, sem, mobno, emailid')
             .eq('usn', req.session.userUSN)
             .limit(1);
-        
+
         if (error) {
             console.error('Error fetching user info:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         if (!rows || rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
-        
+
         const student = rows[0];
         res.json({
             userUSN: student.usn,
@@ -303,7 +296,6 @@ app.get('/api/me', requireAuth, async (req, res) => {
     }
 });
 
-// Sign out endpoint
 app.post('/api/signout', (req, res) => {
     const userUSN = req.session.userUSN;
     req.session.destroy((err) => {
@@ -316,7 +308,7 @@ app.post('/api/signout', (req, res) => {
     });
 });
 
-// --- CACHED Get all events (UPDATED WITH POSTER URL) ---
+// --- CACHED Get all events ---
 app.get('/api/events', requireAuth, async (req, res) => {
     try {
         const currentDate = new Date().toISOString().split('T')[0];
@@ -331,19 +323,19 @@ app.get('/api/events', requireAuth, async (req, res) => {
         } catch (cacheErr) { console.error('Redis error:', cacheErr); }
 
         if (!rows) {
-            // Select both poster_url and banner_url
             const { data, error } = await supabase
                 .from('event')
                 .select(`
                     eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                    upi_id, is_team, min_team_size, max_team_size, poster_url, banner_url,
+                    upi_id, is_team, min_team_size, max_team_size, poster_url, banner_url, activity_points,
+                    max_activity_pts, vol_activity_pts, min_part_scans, min_voln_scans,
                     club:orgcid(cname),
                     student:orgusn(sname)
                 `);
-            
+
             if (error) throw error;
             rows = data;
-            
+
             try {
                 if (redisClient.isOpen) await redisClient.set(cacheKey, JSON.stringify(rows), { EX: 600 });
             } catch (saveErr) { console.error('Redis write error:', saveErr); }
@@ -361,15 +353,18 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 maxVoln: event.maxvoln,
                 regFee: event.regfee,
                 upiId: event.upi_id,
-                posterUrl: event.poster_url, // Google Drive
-                bannerUrl: event.banner_url, // Cloudinary
+                posterUrl: event.poster_url,
+                bannerUrl: event.banner_url,
                 is_team: event.is_team,
                 min_team_size: event.min_team_size,
                 max_team_size: event.max_team_size,
+                activityPoints: event.activity_points || 0,
+                maxActivityPts: event.max_activity_pts || 0,
+                volActivityPts: event.vol_activity_pts || 0,
                 clubName: event.club?.cname,
                 organizerName: event.student?.sname
             };
-            
+
             const eventDate = new Date(event.eventdate).toISOString().split('T')[0];
             if (eventDate === currentDate) events.ongoing.push(transformedEvent);
             else if (eventDate < currentDate) events.completed.push(transformedEvent);
@@ -383,40 +378,75 @@ app.get('/api/events', requireAuth, async (req, res) => {
     }
 });
 
-// Get user's participant events only (UPDATED)
+// ─────────────────────────────────────────────────────────────────────────────
+// Get user's participant events
+// activity_points per event included — NO cumulative total
+// ─────────────────────────────────────────────────────────────────────────────
 app.get('/api/my-participant-events', requireAuth, async (req, res) => {
     try {
         const { data: participantEvents, error } = await supabase
             .from('participant')
             .select(`
-                partstatus, partusn,
+                partstatus, partusn, parteid,
                 event:parteid (
-                    eid, ename, eventdesc, certificate_info, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, poster_url,
+                    eid, ename, eventdesc, certificate_info, eventdate, eventtime, eventloc,
+                    maxpart, maxvoln, regfee, poster_url, activity_points,
+                    max_activity_pts,
                     club:orgcid(cname)
                 )
             `)
             .eq('partusn', req.session.userUSN);
-        
+
         if (error) {
             console.error('Error fetching participant events:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-        
-        const transformedEvents = (participantEvents || []).map(p => ({
-            ...p.event,
-            eventDate: p.event?.eventdate,
-            eventTime: p.event?.eventtime,
-            eventLoc: p.event?.eventloc,
-            maxPart: p.event?.maxpart,
-            maxVoln: p.event?.maxvoln,
-            regFee: p.event?.regfee,
-            posterUrl: p.event?.poster_url, // Added
-            clubName: p.event?.club?.cname,
-            PartStatus: p.partstatus==true,
-            PartUSN: p.partusn,
-            role: 'participant'
-        })).filter(e => e.eid);
-        
+
+        const userUSN = req.session.userUSN;
+        const transformedEvents = [];
+
+        for (const p of (participantEvents || [])) {
+            const event = p.event;
+            if (!event?.eid) continue;
+
+            let earnedActivityPts = 0;
+            const maxActivityPts = event.max_activity_pts || 0;
+
+            if (maxActivityPts > 0 && p.partstatus) {
+                const { data: attendanceData } = await supabase
+                    .from('sub_event_attendance')
+                    .select('seid, sub_event!inner(activity_pts)')
+                    .eq('eid', event.eid)
+                    .eq('usn', userUSN)
+                    .eq('role', 'participant');
+
+                if (attendanceData && attendanceData.length > 0) {
+                    const sumOfScannedPts = attendanceData.reduce((sum, row) => {
+                        return sum + (row.sub_event?.activity_pts || 0);
+                    }, 0);
+                    earnedActivityPts = Math.min(sumOfScannedPts, maxActivityPts);
+                }
+            }
+
+            transformedEvents.push({
+                ...event,
+                eventDate: event.eventdate,
+                eventTime: event.eventtime,
+                eventLoc: event.eventloc,
+                maxPart: event.maxpart,
+                maxVoln: event.maxvoln,
+                regFee: event.regfee,
+                posterUrl: event.poster_url,
+                activityPoints: event.activity_points || 0,
+                maxActivityPts: maxActivityPts,
+                earnedActivityPts: earnedActivityPts,
+                clubName: event.club?.cname,
+                PartStatus: p.partstatus == true,
+                PartUSN: p.partusn,
+                role: 'participant'
+            });
+        }
+
         res.json({
             participantEvents: transformedEvents,
             userUSN: req.session.userUSN
@@ -427,38 +457,45 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
     }
 });
 
-// Get user's volunteer events only
 app.get('/api/my-volunteer-events', requireAuth, async (req, res) => {
     try {
         const { data: volunteerEvents, error } = await supabase
             .from('volunteer')
             .select(`
-                volnstatus,
+                volnstatus, volnusn, volneid,
                 event:volneid (
                     eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
+                    vol_activity_pts,
                     club:orgcid(cname)
                 )
             `)
             .eq('volnusn', req.session.userUSN);
-        
+
         if (error) {
             console.error('Error fetching volunteer events:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-        
-        const transformedEvents = (volunteerEvents || []).map(v => ({
-            ...v.event,
-            eventDate: v.event?.eventdate,
-            eventTime: v.event?.eventtime,
-            eventLoc: v.event?.eventloc,
-            maxPart: v.event?.maxpart,
-            maxVoln: v.event?.maxvoln,
-            regFee: v.event?.regfee,
-            clubName: v.event?.club?.cname,
-            VolnStatus: v.volnstatus==true,
-            role: 'volunteer'
-        })).filter(e => e.eid);
-        
+
+        const transformedEvents = (volunteerEvents || []).map(v => {
+            const volActivityPts = v.event?.vol_activity_pts || 0;
+            const earnedActivityPts = v.volnstatus ? volActivityPts : 0;
+
+            return {
+                ...v.event,
+                eventDate: v.event?.eventdate,
+                eventTime: v.event?.eventtime,
+                eventLoc: v.event?.eventloc,
+                maxPart: v.event?.maxpart,
+                maxVoln: v.event?.maxvoln,
+                regFee: v.event?.regfee,
+                volActivityPts: volActivityPts,
+                earnedActivityPts: earnedActivityPts,
+                clubName: v.event?.club?.cname,
+                VolnStatus: v.volnstatus == true,
+                role: 'volunteer'
+            };
+        }).filter(e => e.eid);
+
         res.json({
             volunteerEvents: transformedEvents,
             userUSN: req.session.userUSN
@@ -469,23 +506,22 @@ app.get('/api/my-volunteer-events', requireAuth, async (req, res) => {
     }
 });
 
-// Get user's organized events only (UPDATED)
 app.get('/api/my-organized-events', requireAuth, async (req, res) => {
     try {
         const { data: organizerEvents, error } = await supabase
             .from('event')
             .select(`
                 eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
-                upi_id, poster_url,
+                upi_id, poster_url, activity_points,
                 club:orgcid(cname)
             `)
             .eq('orgusn', req.session.userUSN);
-        
+
         if (error) {
             console.error('Error fetching organized events:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         const transformedEvents = (organizerEvents || []).map(e => ({
             ...e,
             eventDate: e.eventdate,
@@ -495,11 +531,12 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
             maxVoln: e.maxvoln,
             regFee: e.regfee,
             upiId: e.upi_id,
-            posterUrl: e.poster_url, // Added
+            posterUrl: e.poster_url,
+            activityPoints: e.activity_points || 0,
             clubName: e.club?.cname,
             role: 'organizer'
         }));
-        
+
         res.json({
             organizerEvents: transformedEvents,
             userUSN: req.session.userUSN
@@ -510,32 +547,38 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
     }
 });
 
-// Create/Organize a new event (UPDATED WITH POSTER URL)
+// ─────────────────────────────────────────────────────────────────────────────
+// Create/Organize a new event — saves activity_points
+// ─────────────────────────────────────────────────────────────────────────────
 app.post('/api/events/create', requireAuth, upload.single('banner'), async (req, res) => {
     try {
-        const { 
-            eventName, 
-            eventDescription, 
+        const {
+            eventName,
+            eventDescription,
             certificate_info,
-            posterUrl, // This is the Google Drive Link (Text)
-            eventDate, 
-            eventTime, 
-            eventLocation, 
-            maxParticipants, 
-            maxVolunteers, 
+            posterUrl,
+            eventDate,
+            eventTime,
+            eventLocation,
+            maxParticipants,
+            maxVolunteers,
             registrationFee,
             clubId,
             OrgCid,
             upiId,
             isTeamEvent,
             minTeamSize,
-            maxTeamSize
+            maxTeamSize,
+            activityPoints,
+            maxActivityPts,
+            volActivityPts,
+            minPartScans,
+            minVolnScans
         } = req.body;
 
-        const file = req.file; // This is the Banner Image (File)
+        const file = req.file;
         let finalBannerUrl = null;
 
-        // 1. Upload Banner to Cloudinary if present
         if (file) {
             try {
                 console.log('📤 Streaming banner to Cloudinary...');
@@ -548,9 +591,30 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             }
         }
 
-        const organizedClubId = clubId || OrgCid;
+        const organizedClubId = (clubId || OrgCid) ? parseInt(clubId || OrgCid) : null;
         const fee = parseFloat(registrationFee) || 0;
         const isTeam = isTeamEvent === 'true' || isTeamEvent === true;
+        const points = parseInt(activityPoints) || 0;
+
+        if (organizedClubId) {
+            const { data: membershipCheck, error: memberError } = await supabase
+                .from('memberof')
+                .select('clubid')
+                .eq('studentusn', req.session.userUSN)
+                .eq('clubid', organizedClubId)
+                .limit(1);
+
+            if (memberError) {
+                console.error('Membership check failed:', memberError);
+                return res.status(500).json({ error: 'Database verification failed' });
+            }
+
+            if (!membershipCheck || membershipCheck.length === 0) {
+                return res.status(403).json({
+                    error: 'Unauthorized: You are not a member of this club and cannot organize events for it.'
+                });
+            }
+        }
 
         if (!eventName || !eventDescription || !eventDate || !eventTime || !eventLocation) {
             return res.status(400).json({ error: 'Required fields missing' });
@@ -564,8 +628,8 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             ename: eventName,
             eventdesc: eventDescription,
             certificate_info: certificate_info || null,
-            poster_url: posterUrl || null,   // Google Drive Link
-            banner_url: finalBannerUrl,      // Cloudinary Link
+            poster_url: posterUrl || null,
+            banner_url: finalBannerUrl,
             eventdate: eventDate,
             eventtime: eventTime,
             eventloc: eventLocation,
@@ -577,22 +641,42 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             orgcid: organizedClubId || null,
             is_team: isTeam,
             min_team_size: isTeam ? (parseInt(minTeamSize) || null) : null,
-            max_team_size: isTeam ? (parseInt(maxTeamSize) || null) : null
+            max_team_size: isTeam ? (parseInt(maxTeamSize) || null) : null,
+            activity_points: points,
+            max_activity_pts: parseInt(maxActivityPts) || 0,
+            vol_activity_pts: parseInt(volActivityPts) || 0,
+            min_part_scans: parseInt(minPartScans) || 1,
+            min_voln_scans: parseInt(minVolnScans) || 1
         };
 
         const { data, error } = await supabase
             .from('event')
             .insert([eventData])
             .select('eid');
-        
+
         if (error) throw error;
+
+        const newEventId = data[0]?.eid;
+
+        const { error: subEventError } = await supabase
+            .from('sub_event')
+            .insert([{
+                eid: newEventId,
+                se_name: eventName,
+                se_details: '',
+                activity_pts: parseInt(maxActivityPts) || 0
+            }]);
+
+        if (subEventError) {
+            console.error('Error creating default sub-event:', subEventError);
+        }
 
         if (redisClient.isOpen) await redisClient.del('events_list_raw');
 
-        res.status(201).json({ 
+        res.status(201).json({
             success: true,
-            message: 'Event created successfully!', 
-            eventId: data[0]?.eid 
+            message: 'Event created successfully!',
+            eventId: newEventId
         });
 
     } catch (err) {
@@ -606,46 +690,44 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
-        
+
         const { data: existing, error: existingError } = await supabase
             .from('participant')
             .select('*')
             .eq('partusn', userUSN)
             .eq('parteid', eventId)
             .limit(1);
-        
+
         if (existingError) {
             console.error('Error checking existing participation:', existingError);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         if (existing && existing.length > 0) {
             return res.status(400).json({ error: 'Already joined this event' });
         }
-        
-        // Check event details including regfee
+
         const { data: event, error: eventError } = await supabase
             .from('event')
             .select('maxpart, regfee')
             .eq('eid', eventId)
             .limit(1);
-        
+
         if (eventError) {
             console.error('Error fetching event:', eventError);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         if (!event || event.length === 0) {
             return res.status(404).json({ error: 'Event not found' });
         }
 
         const regFee = event[0].regfee || 0;
-        
-        // THIS ENDPOINT IS NOW ONLY FOR FREE EVENTS
+
         if (regFee > 0) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 error: 'This is a paid event. Please use the UPI payment flow.',
-                requiresPayment: true 
+                requiresPayment: true
             });
         }
 
@@ -665,7 +747,7 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
                 return res.status(400).json({ error: 'No more participant slots available' });
             }
         }
-        
+
         const { error: insertError } = await supabase
             .from('participant')
             .insert([{
@@ -674,13 +756,13 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
                 partstatus: false,
                 payment_status: 'free'
             }]);
-        
+
         if (insertError) {
             console.error('Error joining event:', insertError);
             return res.status(500).json({ error: 'Database error' });
         }
-        
-        res.json({ success: true, message: 'Successfully joined event!' ,userUSN:userUSN});
+
+        res.json({ success: true, message: 'Successfully joined event!', userUSN: userUSN });
     } catch (err) {
         console.error('Error joining event:', err);
         res.status(500).json({ error: 'Error joining event' });
@@ -692,34 +774,34 @@ app.post('/api/events/:eventId/volunteer', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
-        
+
         const { data: existing, error: existingError } = await supabase
             .from('volunteer')
             .select('*')
             .eq('volnusn', userUSN)
             .eq('volneid', eventId)
             .limit(1);
-        
+
         if (existingError) {
             console.error('Error checking existing volunteer:', existingError);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         if (existing && existing.length > 0) {
-            return res.status(400).json({ error: 'Already volunteered for this event'});
+            return res.status(400).json({ error: 'Already volunteered for this event' });
         }
-        
+
         const { data: event, error: eventError } = await supabase
             .from('event')
             .select('maxvoln')
             .eq('eid', eventId)
             .limit(1);
-        
+
         if (eventError) {
             console.error('Error fetching event:', eventError);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         if (!event || event.length === 0) {
             return res.status(404).json({ error: 'Event not found' });
         }
@@ -740,7 +822,7 @@ app.post('/api/events/:eventId/volunteer', requireAuth, async (req, res) => {
                 return res.status(400).json({ error: 'No more volunteer slots available' });
             }
         }
-        
+
         const { error: insertError } = await supabase
             .from('volunteer')
             .insert([{
@@ -748,12 +830,12 @@ app.post('/api/events/:eventId/volunteer', requireAuth, async (req, res) => {
                 volneid: eventId,
                 volnstatus: false
             }]);
-        
+
         if (insertError) {
             console.error('Error volunteering for event:', insertError);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         res.json({ success: true, message: 'Successfully volunteered for event!' });
     } catch (err) {
         console.error('Error volunteering for event:', err);
@@ -761,21 +843,19 @@ app.post('/api/events/:eventId/volunteer', requireAuth, async (req, res) => {
     }
 });
 
-// Get volunteer count for an event
 app.get('/api/events/:eventId/volunteer-count', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
-        
         const { count, error } = await supabase
             .from('volunteer')
             .select('*', { count: 'exact', head: true })
             .eq('volneid', eventId);
-        
+
         if (error) {
             console.error('Error fetching volunteer count:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         res.json({ count: count || 0 });
     } catch (err) {
         console.error('Error fetching volunteer count:', err);
@@ -783,21 +863,19 @@ app.get('/api/events/:eventId/volunteer-count', requireAuth, async (req, res) =>
     }
 });
 
-// Get participant count for an event
 app.get('/api/events/:eventId/participant-count', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
-        
         const { count, error } = await supabase
             .from('participant')
             .select('*', { count: 'exact', head: true })
             .eq('parteid', eventId);
-        
+
         if (error) {
             console.error('Error fetching participant count:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         res.json({ count: count || 0 });
     } catch (err) {
         console.error('Error fetching participant count:', err);
@@ -805,7 +883,308 @@ app.get('/api/events/:eventId/participant-count', requireAuth, async (req, res) 
     }
 });
 
-// Individual Event Details Route (for organizer ticket page) (UPDATED)
+app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        const userUSN = req.session.userUSN;
+
+        const { data: event, error: eventError } = await supabase
+            .from('event')
+            .select(`
+                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, regfee,
+                club:orgcid(cname)
+            `)
+            .eq('eid', eventId)
+            .limit(1)
+            .maybeSingle();
+
+        if (eventError) {
+            console.error('Error fetching event for ticket:', eventError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!event) return res.status(404).json({ error: 'Event not found' });
+
+        const { data: participant, error: partError } = await supabase
+            .from('participant')
+            .select('partstatus, payment_status')
+            .eq('parteid', eventId)
+            .eq('partusn', userUSN)
+            .maybeSingle();
+
+        if (partError) {
+            console.error('Error checking participant status:', partError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!participant) {
+            return res.json({
+                isRegistered: false,
+                ename: event.ename
+            });
+        }
+
+        res.json({
+            isRegistered: true,
+            ename: event.ename,
+            clubName: event.club?.cname,
+            eventDate: event.eventdate,
+            eventTime: event.eventtime,
+            eventLoc: event.eventloc,
+            eventdesc: event.eventdesc,
+            regFee: event.regfee,
+            maxPart: event.maxpart,
+            paymentStatus: participant.payment_status || (event.regfee > 0 ? 'pending' : 'verified')
+        });
+
+    } catch (err) {
+        console.error('Error in participant-status route:', err);
+        res.status(500).json({ error: 'Server Error' });
+    }
+});
+
+app.get('/api/events/:eventId/sub-events', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+
+        const { data: subEvents, error } = await supabase
+            .from('sub_event')
+            .select('*')
+            .eq('eid', eventId)
+            .order('seid', { ascending: true })
+            .order('seid', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching sub-events:', error);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        const subEventsWithCount = await Promise.all((subEvents || []).map(async (se) => {
+            const { count } = await supabase
+                .from('sub_event_attendance')
+                .select('*', { count: 'exact', head: true })
+                .eq('seid', se.seid);
+
+            return {
+                ...se,
+                attendanceCount: count || 0
+            };
+        }));
+
+        res.json({ subEvents: subEventsWithCount });
+    } catch (err) {
+        console.error('Error fetching sub-events:', err);
+        res.status(500).json({ error: 'Error fetching sub-events' });
+    }
+});
+
+app.post('/api/events/:eventId/sub-events', requireAuth, async (req, res) => {
+    try {
+        const eventId = req.params.eventId;
+        const { se_name, activity_pts, se_details } = req.body;
+
+        if (!se_name) {
+            return res.status(400).json({ error: 'Sub-event name is required' });
+        }
+
+        if (activity_pts !== undefined && activity_pts < 0) {
+            return res.status(400).json({ error: 'Activity points cannot be negative' });
+        }
+
+        const { data: event, error: eventError } = await supabase
+            .from('event')
+            .select('orgusn')
+            .eq('eid', eventId)
+            .limit(1);
+
+        if (eventError || !event?.length) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        if (event[0].orgusn !== req.session.userUSN) {
+            return res.status(403).json({ error: 'Only the organizer can add sub-events' });
+        }
+
+        const { data: newSubEvent, error: insertError } = await supabase
+            .from('sub_event')
+            .insert([{
+                eid: eventId,
+                se_name: se_name,
+                se_details: se_details || '',
+                activity_pts: parseInt(activity_pts) || 0
+            }])
+            .select()
+            .single();
+
+        if (insertError) {
+            console.error('Error creating sub-event:', insertError);
+            return res.status(500).json({ error: 'Failed to create sub-event' });
+        }
+
+        res.status(201).json(newSubEvent);
+    } catch (err) {
+        console.error('Error creating sub-event:', err);
+        res.status(500).json({ error: 'Error creating sub-event' });
+    }
+});
+
+app.put('/api/sub-events/:seid', requireAuth, async (req, res) => {
+    try {
+        const seid = req.params.seid;
+        const { se_name, activity_pts, se_details, password } = req.body;
+
+        if (!password) {
+            return res.status(400).json({ error: 'Password is required to confirm changes' });
+        }
+
+        if (activity_pts !== undefined && activity_pts < 0) {
+            return res.status(400).json({ error: 'Activity points cannot be negative' });
+        }
+
+        // Verify password
+        const { data: userData, error: userError } = await supabase
+            .from('student')
+            .select('password')
+            .eq('usn', req.session.userUSN)
+            .single();
+
+        if (userError || !userData) {
+            return res.status(401).json({ error: 'User verification failed' });
+        }
+
+        const isValid = await bcrypt.compare(password, userData.password);
+        if (!isValid) {
+            return res.status(401).json({ error: 'Incorrect password' });
+        }
+
+        const { data: subEvent, error: fetchError } = await supabase
+            .from('sub_event')
+            .select('eid')
+            .eq('seid', seid)
+            .limit(1);
+
+        if (fetchError || !subEvent?.length) {
+            return res.status(404).json({ error: 'Sub-event not found' });
+        }
+
+        const { data: event, error: eventError } = await supabase
+            .from('event')
+            .select('orgusn')
+            .eq('eid', subEvent[0].eid)
+            .limit(1);
+
+        if (eventError || !event?.length) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        if (event[0].orgusn !== req.session.userUSN) {
+            return res.status(403).json({ error: 'Only the organizer can update sub-events' });
+        }
+
+        const updateData = {};
+        if (se_name !== undefined) updateData.se_name = se_name;
+        if (activity_pts !== undefined) updateData.activity_pts = parseInt(activity_pts) || 0;
+        if (se_details !== undefined) updateData.se_details = se_details || '';
+
+        const { data: updatedSubEvent, error: updateError } = await supabase
+            .from('sub_event')
+            .update(updateData)
+            .eq('seid', seid)
+            .select()
+            .single();
+
+        if (updateError) {
+            console.error('Error updating sub-event:', updateError);
+            return res.status(500).json({ error: 'Failed to update sub-event' });
+        }
+
+        res.json(updatedSubEvent);
+    } catch (err) {
+        console.error('Error updating sub-event:', err);
+        res.status(500).json({ error: 'Error updating sub-event' });
+    }
+});
+
+app.delete('/api/sub-events/:seid', requireAuth, async (req, res) => {
+    try {
+        const seid = req.params.seid;
+        const { password } = req.body;
+
+        if (!password) {
+            return res.status(400).json({ error: 'Password is required to confirm deletion' });
+        }
+
+        // Verify password
+        const { data: userData, error: userError } = await supabase
+            .from('student')
+            .select('password')
+            .eq('usn', req.session.userUSN)
+            .single();
+
+        if (userError || !userData) {
+            return res.status(401).json({ error: 'User verification failed' });
+        }
+
+        const isValid = await bcrypt.compare(password, userData.password);
+        if (!isValid) {
+            return res.status(401).json({ error: 'Incorrect password' });
+        }
+
+        const { data: subEvent, error: fetchError } = await supabase
+            .from('sub_event')
+            .select('eid')
+            .eq('seid', seid)
+            .limit(1);
+
+        if (fetchError || !subEvent?.length) {
+            return res.status(404).json({ error: 'Sub-event not found' });
+        }
+
+        const { data: event, error: eventError } = await supabase
+            .from('event')
+            .select('orgusn')
+            .eq('eid', subEvent[0].eid)
+            .limit(1);
+
+        if (eventError || !event?.length) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        if (event[0].orgusn !== req.session.userUSN) {
+            return res.status(403).json({ error: 'Only the organizer can delete sub-events' });
+        }
+
+        const { count, error: countError } = await supabase
+            .from('sub_event')
+            .select('*', { count: 'exact', head: true })
+            .eq('eid', subEvent[0].eid);
+
+        if (countError) {
+            console.error('Error counting sub-events:', countError);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (count <= 1) {
+            return res.status(400).json({ error: 'Cannot delete the last sub-event' });
+        }
+
+        const { error: deleteError } = await supabase
+            .from('sub_event')
+            .delete()
+            .eq('seid', seid);
+
+        if (deleteError) {
+            console.error('Error deleting sub-event:', deleteError);
+            return res.status(500).json({ error: 'Failed to delete sub-event' });
+        }
+
+        res.json({ success: true, message: 'Sub-event deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting sub-event:', err);
+        res.status(500).json({ error: 'Error deleting sub-event' });
+    }
+});
+
 app.get('/api/events/:eventId', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
@@ -817,7 +1196,8 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
         const { data: rows, error } = await supabase
             .from('event')
             .select(`
-                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url,
+                eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url, activity_points,
+                max_activity_pts, vol_activity_pts, min_part_scans, min_voln_scans,
                 club:orgcid(cname),
                 student:orgusn(sname)
             `)
@@ -834,7 +1214,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
         }
 
         const event = rows[0];
-        
+
         const transformedEvent = {
             ...event,
             eventDate: event.eventdate,
@@ -842,8 +1222,13 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             eventLoc: event.eventloc,
             maxPart: event.maxpart,
             maxVoln: event.maxvoln,
-            regFee: event.regFee,
-            posterUrl: event.poster_url, // Added
+            regFee: event.regfee,
+            posterUrl: event.poster_url,
+            activityPoints: event.activity_points || 0,
+            maxActivityPts: event.max_activity_pts || 0,
+            volActivityPts: event.vol_activity_pts || 0,
+            minPartScans: event.min_part_scans || 1,
+            minVolnScans: event.min_voln_scans || 1,
             clubName: event.club?.cname,
             organizerName: event.student?.sname,
             OrgUsn: event.orgusn
@@ -851,7 +1236,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
 
         const { data: participantCheck } = await supabase
             .from('participant')
-            .select('partstatus, payment_status') 
+            .select('partstatus, payment_status')
             .eq('partusn', req.session.userUSN)
             .eq('parteid', eventId)
             .limit(1);
@@ -864,7 +1249,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             .limit(1);
 
         transformedEvent.isRegistered = participantCheck && participantCheck.length > 0;
-        transformedEvent.paymentStatus = participantCheck?.[0]?.payment_status || null; 
+        transformedEvent.paymentStatus = participantCheck?.[0]?.payment_status || null;
         transformedEvent.isVolunteer = volunteerCheck && volunteerCheck.length > 0;
         transformedEvent.isOrganizer = event.orgusn === req.session.userUSN;
 
@@ -872,22 +1257,22 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
     } catch (err) {
         console.error('Error fetching event details:', err);
         res.status(500).json({
-            error: 'Error fetching event details: ' + err.message 
+            error: 'Error fetching event details: ' + err.message
         });
     }
 });
-// Get all clubs
+
 app.get('/api/clubs', requireAuth, async (req, res) => {
     try {
         const { data: rows, error } = await supabase
             .from('club')
             .select('cid, cname, clubdesc');
-        
+
         if (error) {
             console.error('Error fetching clubs:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         res.json({
             clubs: rows || [],
             userUSN: req.session.userUSN
@@ -898,7 +1283,6 @@ app.get('/api/clubs', requireAuth, async (req, res) => {
     }
 });
 
-// Get user's clubs
 app.get('/api/my-clubs', requireAuth, async (req, res) => {
     try {
         const { data: rows, error } = await supabase
@@ -912,14 +1296,14 @@ app.get('/api/my-clubs', requireAuth, async (req, res) => {
                 )
             `)
             .eq('studentusn', req.session.userUSN);
-        
+
         if (error) {
             console.error('Error fetching user clubs:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         const clubs = (rows || []).map(row => row.club).filter(club => club);
-        
+
         res.json({
             clubs: clubs,
             userUSN: req.session.userUSN
@@ -930,18 +1314,17 @@ app.get('/api/my-clubs', requireAuth, async (req, res) => {
     }
 });
 
-// Get all students
 app.get('/api/students', requireAuth, async (req, res) => {
     try {
         const { data: rows, error } = await supabase
             .from('student')
             .select('usn, sname, sem, mobno, emailid');
-        
+
         if (error) {
             console.error('Error fetching students:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-        
+
         res.json({
             students: rows || [],
             currentUser: req.session.userUSN
@@ -952,23 +1335,59 @@ app.get('/api/students', requireAuth, async (req, res) => {
     }
 });
 
-// ==================== ATTENDANCE ENDPOINTS ====================
+function validateQRToken(seid, token, timestamp) {
+    const now = Date.now();
+    const ts = parseInt(timestamp, 10);
 
-// Mark participant attendance
+    if (isNaN(ts) || now - ts > QR_TOKEN_VALIDITY_MS) {
+        return false;
+    }
+
+    const payload = `${seid}:${timestamp}`;
+    const expected = crypto
+        .createHmac('sha256', QR_TOKEN_SECRET)
+        .update(payload)
+        .digest('hex')
+        .substring(0, 16);
+
+    return crypto.timingSafeEqual(
+        Buffer.from(token, 'utf8'),
+        Buffer.from(expected, 'utf8')
+    );
+}
+
 app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
     try {
-        const { eventId, usn } = req.body;
-        
-        // Verify the USN matches the logged-in user
+        const { seid, usn, token, timestamp } = req.body;
+
         if (usn !== req.session.userUSN) {
             return res.status(403).json({ error: 'Unauthorized: USN mismatch' });
         }
-        
-        if (!usn || !eventId) {
-            return res.status(400).json({ error: 'USN and Event ID are required' });
+
+        if (!usn || !seid) {
+            return res.status(400).json({ error: 'USN and Sub-event ID are required' });
         }
 
-        // Check if participant is registered for this event
+        if (!token || !timestamp) {
+            return res.status(400).json({ error: 'QR code is outdated. Please scan a fresh code.' });
+        }
+
+        if (!validateQRToken(seid, token, timestamp)) {
+            return res.status(401).json({ error: 'QR code has expired. Please ask the organizer to show a fresh code.' });
+        }
+
+        const { data: subEvent, error: subEventError } = await supabase
+            .from('sub_event')
+            .select('eid, se_name')
+            .eq('seid', seid)
+            .limit(1);
+
+        if (subEventError || !subEvent?.length) {
+            return res.status(404).json({ error: 'Sub-event not found' });
+        }
+
+        const eventId = subEvent[0].eid;
+
         const { data: existing, error: existingError } = await supabase
             .from('participant')
             .select('*')
@@ -976,37 +1395,71 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
             .eq('parteid', eventId)
             .limit(1);
 
-        if (existingError) {
-            console.error('Error checking participant:', existingError);
-            return res.status(500).json({ error: 'Database error' });
+        if (existingError) return res.status(500).json({ error: 'Database error' });
+        if (!existing?.length) return res.status(404).json({ error: 'You are not registered for this event' });
+        if (existing[0].payment_status === 'pending_verification') {
+            return res.status(400).json({ error: 'Your payment is pending verification' });
         }
 
-        if (!existing || existing.length === 0) {
-            return res.status(404).json({ error: 'You are not registered for this event' });
+        const { data: existingAttendance, error: attendanceError } = await supabase
+            .from('sub_event_attendance')
+            .select('*')
+            .eq('seid', seid)
+            .eq('usn', usn)
+            .eq('role', 'participant')
+            .limit(1);
+
+        if (attendanceError) return res.status(500).json({ error: 'Database error' });
+        if (existingAttendance?.length) {
+            return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
         }
 
-        if (existing[0].partstatus === true) {
-            return res.status(400).json({ error: 'Attendance already marked' });
+        const { error: insertError } = await supabase
+            .from('sub_event_attendance')
+            .insert([{
+                seid: parseInt(seid),
+                eid: eventId,
+                usn: usn,
+                role: 'participant'
+            }]);
+
+        if (insertError) return res.status(500).json({ error: 'Failed to mark attendance' });
+
+        const { count: scanCount, error: countError } = await supabase
+            .from('sub_event_attendance')
+            .select('*', { count: 'exact', head: true })
+            .eq('eid', eventId)
+            .eq('usn', usn)
+            .eq('role', 'participant');
+
+        if (countError) return res.status(500).json({ error: 'Database error' });
+
+        const { data: eventData, error: eventError } = await supabase
+            .from('event')
+            .select('min_part_scans')
+            .eq('eid', eventId)
+            .limit(1);
+
+        const minPartScans = eventData?.[0]?.min_part_scans || 1;
+        const thresholdMet = (scanCount || 0) >= minPartScans;
+
+        if (thresholdMet) {
+            const { error: updateError } = await supabase
+                .from('participant')
+                .update({ partstatus: true })
+                .eq('partusn', usn)
+                .eq('parteid', eventId);
+
+            if (updateError) return res.status(500).json({ error: 'Failed to update attendance status' });
         }
 
-        // Mark attendance
-        const { error: updateError } = await supabase
-            .from('participant')
-            .update({ partstatus: true })
-            .eq('partusn', usn)
-            .eq('parteid', eventId);
-        
-        if (updateError) {
-            console.error('Error updating participant status:', updateError);
-            return res.status(500).json({ error: 'Failed to mark attendance' });
-        }
-
-        console.log(`✅ Participant attendance marked: ${usn} for event ${eventId}`);
-        res.json({ 
-            success: true, 
-            message: 'Participant attendance marked successfully',
-            usn: usn,
-            eventId: eventId
+        console.log(`✅ Participant attendance: ${usn} for sub-event ${seid} (event ${eventId})`);
+        res.json({
+            success: true,
+            message: 'Attendance marked',
+            attendanceCount: scanCount || 0,
+            minRequired: minPartScans,
+            thresholdMet: thresholdMet
         });
     } catch (err) {
         console.error('Error marking participant attendance:', err);
@@ -1014,21 +1467,38 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
     }
 });
 
-// Mark volunteer attendance
 app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
     try {
-        const { eventId, usn } = req.body;
-        
-        // Verify the USN matches the logged-in user
+        const { seid, usn, token, timestamp } = req.body;
+
         if (usn !== req.session.userUSN) {
             return res.status(403).json({ error: 'Unauthorized: USN mismatch' });
         }
-        
-        if (!usn || !eventId) {
-            return res.status(400).json({ error: 'USN and Event ID are required' });
+
+        if (!usn || !seid) {
+            return res.status(400).json({ error: 'USN and Sub-event ID are required' });
         }
 
-        // Check if volunteer is registered for this event
+        if (!token || !timestamp) {
+            return res.status(400).json({ error: 'QR code is outdated. Please scan a fresh code.' });
+        }
+
+        if (!validateQRToken(seid, token, timestamp)) {
+            return res.status(401).json({ error: 'QR code has expired. Please ask the organizer to show a fresh code.' });
+        }
+
+        const { data: subEvent, error: subEventError } = await supabase
+            .from('sub_event')
+            .select('eid, se_name')
+            .eq('seid', seid)
+            .limit(1);
+
+        if (subEventError || !subEvent?.length) {
+            return res.status(404).json({ error: 'Sub-event not found' });
+        }
+
+        const eventId = subEvent[0].eid;
+
         const { data: existing, error: existingError } = await supabase
             .from('volunteer')
             .select('*')
@@ -1036,37 +1506,68 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
             .eq('volneid', eventId)
             .limit(1);
 
-        if (existingError) {
-            console.error('Error checking volunteer:', existingError);
-            return res.status(500).json({ error: 'Database error' });
+        if (existingError) return res.status(500).json({ error: 'Database error' });
+        if (!existing?.length) return res.status(404).json({ error: 'You are not registered as a volunteer for this event' });
+
+        const { data: existingAttendance, error: attendanceError } = await supabase
+            .from('sub_event_attendance')
+            .select('*')
+            .eq('seid', seid)
+            .eq('usn', usn)
+            .eq('role', 'volunteer')
+            .limit(1);
+
+        if (attendanceError) return res.status(500).json({ error: 'Database error' });
+        if (existingAttendance?.length) {
+            return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
         }
 
-        if (!existing || existing.length === 0) {
-            return res.status(404).json({ error: 'You are not registered as a volunteer for this event' });
+        const { error: insertError } = await supabase
+            .from('sub_event_attendance')
+            .insert([{
+                seid: parseInt(seid),
+                eid: eventId,
+                usn: usn,
+                role: 'volunteer'
+            }]);
+
+        if (insertError) return res.status(500).json({ error: 'Failed to mark attendance' });
+
+        const { count: scanCount, error: countError } = await supabase
+            .from('sub_event_attendance')
+            .select('*', { count: 'exact', head: true })
+            .eq('eid', eventId)
+            .eq('usn', usn)
+            .eq('role', 'volunteer');
+
+        if (countError) return res.status(500).json({ error: 'Database error' });
+
+        const { data: eventData, error: eventError } = await supabase
+            .from('event')
+            .select('min_voln_scans')
+            .eq('eid', eventId)
+            .limit(1);
+
+        const minVolnScans = eventData?.[0]?.min_voln_scans || 1;
+        const thresholdMet = (scanCount || 0) >= minVolnScans;
+
+        if (thresholdMet) {
+            const { error: updateError } = await supabase
+                .from('volunteer')
+                .update({ volnstatus: true })
+                .eq('volnusn', usn)
+                .eq('volneid', eventId);
+
+            if (updateError) return res.status(500).json({ error: 'Failed to update attendance status' });
         }
 
-        if (existing[0].volnstatus === true) {
-            return res.status(400).json({ error: 'Attendance already marked' });
-        }
-
-        // Mark attendance
-        const { error: updateError } = await supabase
-            .from('volunteer')
-            .update({ volnstatus: true })
-            .eq('volnusn', usn)
-            .eq('volneid', eventId);
-        
-        if (updateError) {
-            console.error('Error updating volunteer status:', updateError);
-            return res.status(500).json({ error: 'Failed to mark attendance' });
-        }
-
-        console.log(`✅ Volunteer attendance marked: ${usn} for event ${eventId}`);
-        res.json({ 
-            success: true, 
-            message: 'Volunteer attendance marked successfully',
-            usn: usn,
-            eventId: eventId
+        console.log(`✅ Volunteer attendance: ${usn} for sub-event ${seid} (event ${eventId})`);
+        res.json({
+            success: true,
+            message: 'Attendance marked',
+            attendanceCount: scanCount || 0,
+            minRequired: minVolnScans,
+            thresholdMet: thresholdMet
         });
     } catch (err) {
         console.error('Error marking volunteer attendance:', err);
@@ -1078,7 +1579,7 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
 app.get('/api/scan-qr', async (req, res) => {
     try {
         const { usn, eid } = req.query;
-        
+
         if (!usn || !eid) {
             return res.status(400).json({ error: 'USN and Event ID are required' });
         }
@@ -1108,7 +1609,7 @@ app.get('/api/scan-qr', async (req, res) => {
             .update({ partstatus: true })
             .eq('partusn', usn)
             .eq('parteid', eid);
-        
+
         if (updateError) {
             console.error('Error updating participant status:', updateError);
             return res.status(500).json({ error: 'Database error' });
@@ -1123,26 +1624,23 @@ app.get('/api/scan-qr', async (req, res) => {
 
 // ==================== PASSWORD RESET ENDPOINTS ====================
 
-// Forgot Password - Send reset email (BREVO VERSION)
 app.post('/api/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
-        
+
         if (!email) return res.status(400).json({ error: 'Email is required' });
 
-        // 1. Check if user exists in Supabase
         const { data: user, error: userError } = await supabase
             .from('student')
             .select('usn, sname, emailid')
             .eq('emailid', email)
             .limit(1);
-        
+
         if (userError) {
             console.error('Error finding user:', userError);
             return res.status(500).json({ error: 'Database error' });
         }
 
-        // Security: Don't reveal if user exists
         if (!user || user.length === 0) {
             console.log('Reset requested for non-existent email:', email);
             return res.json({
@@ -1151,11 +1649,9 @@ app.post('/api/forgot-password', async (req, res) => {
             });
         }
 
-        // 2. Generate Token
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+        const resetTokenExpiry = new Date(Date.now() + 3600000);
 
-        // 3. Save Token to DB
         const { error: updateError } = await supabase
             .from('student')
             .update({
@@ -1163,19 +1659,17 @@ app.post('/api/forgot-password', async (req, res) => {
                 reset_token_expiry: resetTokenExpiry.toISOString()
             })
             .eq('emailid', email);
-        
+
         if (updateError) {
             console.error('Error saving token:', updateError);
             return res.status(500).json({ error: 'Failed to generate link' });
         }
 
         const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-        
-        // 4. Send Email via Brevo
-        const sendSmtpEmail = new Brevo.SendSmtpEmail();
 
+        const sendSmtpEmail = new Brevo.SendSmtpEmail();
         sendSmtpEmail.subject = "Password Reset Request - E-Pass";
-        sendSmtpEmail.sender = { "name": "E-Pass System", "email": "flopass333@gmail.com" }; // MUST be your verified sender in Brevo
+        sendSmtpEmail.sender = { "name": "E-Pass System", "email": "flopass333@gmail.com" };
         sendSmtpEmail.to = [{ "email": email, "name": user[0].sname }];
         sendSmtpEmail.htmlContent = `
             <html>
@@ -1196,7 +1690,7 @@ app.post('/api/forgot-password', async (req, res) => {
 
         const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
         console.log('✅ Email sent via Brevo. Message ID:', data.messageId);
-        
+
         res.json({
             success: true,
             message: 'If an account exists, you will receive a reset link.'
@@ -1204,30 +1698,28 @@ app.post('/api/forgot-password', async (req, res) => {
 
     } catch (err) {
         console.error('Error in forgot password:', err);
-        // Log detailed Brevo error if available
         if (err.body) console.error('Brevo Error Body:', err.body);
         res.status(500).json({ error: 'Failed to process request' });
     }
 });
 
-// Reset Password - Update password with token
 app.post('/api/reset-password', async (req, res) => {
     try {
         const { token, newPassword } = req.body;
-        
+
         if (!token || !newPassword) {
             return res.status(400).json({ error: 'Token and new password are required' });
         }
         if (newPassword.length < 6) {
             return res.status(400).json({ error: 'Password must be at least 6 characters long' });
         }
-        // Find user with valid token
+
         const { data: user, error: userError } = await supabase
             .from('student')
             .select('usn, sname, emailid, reset_token_expiry')
             .eq('reset_token', token)
             .limit(1);
-        
+
         if (userError) {
             console.error('Error finding user with token:', userError);
             return res.status(500).json({ error: 'Database error' });
@@ -1235,14 +1727,14 @@ app.post('/api/reset-password', async (req, res) => {
         if (!user || user.length === 0) {
             return res.status(400).json({ error: 'Invalid or expired reset link' });
         }
-        // Check if token is expired
+
         const tokenExpiry = new Date(user[0].reset_token_expiry);
         if (tokenExpiry < new Date()) {
             return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
         }
-        // Hash new password
+
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        // Update password and clear reset token
+
         const { error: updateError } = await supabase
             .from('student')
             .update({
@@ -1251,11 +1743,12 @@ app.post('/api/reset-password', async (req, res) => {
                 reset_token_expiry: null
             })
             .eq('reset_token', token);
-        
+
         if (updateError) {
             console.error('Error updating password:', updateError);
             return res.status(500).json({ error: 'Failed to reset password' });
         }
+
         console.log('✅ Password reset successful for:', user[0].usn);
         res.json({
             success: true,
@@ -1270,7 +1763,6 @@ app.post('/api/reset-password', async (req, res) => {
 
 // ==================== UPI PAYMENT ENDPOINTS ====================
 
-// Register for a paid event with UPI
 app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
@@ -1281,7 +1773,6 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Transaction ID is required' });
         }
 
-        // Check if already registered
         const { data: existing, error: existingError } = await supabase
             .from('participant')
             .select('*')
@@ -1297,8 +1788,7 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
         if (existing && existing.length > 0) {
             return res.status(400).json({ error: 'You are already registered for this event' });
         }
-        
-        // Get event fee
+
         const { data: eventData, error: eventError } = await supabase
             .from('event')
             .select('regfee, maxpart')
@@ -1312,12 +1802,11 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
 
         const amount = eventData?.[0]?.regfee || 0;
         const maxPart = eventData?.[0]?.maxpart || 0;
-        
+
         if (amount <= 0) {
             return res.status(400).json({ error: 'This is not a paid event' });
         }
-        
-        // Check participant limit
+
         if (maxPart > 0) {
             const { count, error: countError } = await supabase
                 .from('participant')
@@ -1333,7 +1822,6 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
             }
         }
 
-        // Insert payment record
         const { error: paymentError } = await supabase.from('payment').insert([{
             usn: userUSN,
             event_id: eventId,
@@ -1347,7 +1835,6 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Failed to save payment' });
         }
 
-        // Insert participant record
         const { error: insertError } = await supabase
             .from('participant')
             .insert([{
@@ -1363,8 +1850,8 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
         }
 
         console.log(`✅ UPI registration submitted: ${userUSN} for event ${eventId}`);
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: 'Registration submitted! Your payment is pending verification by the organizer.',
             userUSN: userUSN
         });
@@ -1374,8 +1861,8 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
     }
 });
 
-// ==================== PAYMENT VERIFICATION ENDPOINTS (NEW) ====================
-// Verify/Approve a payment (organizer only)
+// ==================== PAYMENT VERIFICATION ENDPOINTS ====================
+
 app.post('/api/payments/verify', requireAuth, async (req, res) => {
     try {
         const { participantUSN, eventId } = req.body;
@@ -1385,7 +1872,6 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Participant USN and Event ID are required' });
         }
 
-        // Verify organizer
         const { data: event, error: eventError } = await supabase
             .from('event')
             .select('orgusn, is_team')
@@ -1402,7 +1888,6 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
 
         const isTeamEvent = event[0].is_team;
 
-        // Check if this participant is a team leader
         if (isTeamEvent) {
             const { data: teamData } = await supabase
                 .from('team')
@@ -1413,9 +1898,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
 
             const teamId = teamData?.[0]?.id;
 
-            // If it's a team event and participant is a team leader
             if (teamId) {
-                // Get all team members
                 const { data: teamMembers, error: teamMembersError } = await supabase
                     .from('team_members')
                     .select('student_usn')
@@ -1429,7 +1912,6 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
 
                 const allTeamUSNs = teamMembers.map(m => m.student_usn);
 
-                // Update payment status for team leader (only leader has payment record)
                 const { error: paymentUpdateError } = await supabase
                     .from('payment')
                     .update({ status: 'verified' })
@@ -1442,7 +1924,6 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
                     return res.status(500).json({ error: 'Failed to update payment status' });
                 }
 
-                // Update participant payment status for ALL team members
                 const { error: participantUpdateError } = await supabase
                     .from('participant')
                     .update({ payment_status: 'verified' })
@@ -1455,7 +1936,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
                 }
 
                 console.log(`✅ Payment verified for entire team (${allTeamUSNs.length} members): Team ID ${teamId} for event ${eventId} by ${organizerUSN}`);
-                
+
                 return res.json({
                     success: true,
                     message: `Payment verified for entire team (${allTeamUSNs.length} members)!`,
@@ -1464,7 +1945,6 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
             }
         }
 
-        // Single participant (not a team event or not a team leader)
         const { error: paymentUpdateError } = await supabase
             .from('payment')
             .update({ status: 'verified' })
@@ -1489,7 +1969,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
         }
 
         console.log(`✅ Payment verified: ${participantUSN} for event ${eventId} by ${organizerUSN}`);
-        
+
         return res.json({
             success: true,
             message: 'Payment verified successfully!'
@@ -1500,13 +1980,11 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
     }
 });
 
-// Get pending payments for an event (organizer only)
 app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        // Verify organizer
         const { data: event, error: eventError } = await supabase
             .from('event')
             .select('orgusn, ename, is_team')
@@ -1522,11 +2000,9 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
         }
 
         const isTeamEvent = event[0].is_team;
-
         let paymentsToShow = [];
 
         if (isTeamEvent) {
-            // For team events, ONLY show team leaders who have actually made payments
             const { data: pendingPayments, error: paymentsError } = await supabase
                 .from('payment')
                 .select(`
@@ -1549,7 +2025,6 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
                 return res.status(500).json({ error: 'Database error' });
             }
 
-            // For each payment, check if this person is a team leader
             for (const payment of pendingPayments || []) {
                 const { data: teamData } = await supabase
                     .from('team')
@@ -1558,9 +2033,7 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
                     .eq('leader_usn', payment.usn)
                     .limit(1);
 
-                // Only include if this person is a team leader
                 if (teamData && teamData.length > 0) {
-                    // Count team members
                     const { count: memberCount } = await supabase
                         .from('team_members')
                         .select('*', { count: 'exact', head: true })
@@ -1582,7 +2055,6 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
                 }
             }
         } else {
-            // For non-team events, show all participants with pending payments
             const { data: pendingPayments, error: paymentsError } = await supabase
                 .from('payment')
                 .select(`
@@ -1630,11 +2102,8 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
     }
 });
 
-
-
 // ==================== TEAM EVENTS ENDPOINTS ====================
 
-// Create a team for an event
 app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
@@ -1645,7 +2114,6 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Team name and member USNs are required' });
         }
 
-        // Check if event exists and is a team event
         const { data: event, error: eventError } = await supabase
             .from('event')
             .select('eid, ename, is_team, min_team_size, max_team_size, regfee')
@@ -1663,34 +2131,31 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
         const minSize = event[0].min_team_size;
         const maxSize = event[0].max_team_size;
 
-        // Validate team size (including leader)
         const totalMembers = memberUSNs.length + 1;
         if (maxSize && totalMembers > maxSize) {
-            return res.status(400).json({ 
-                error: `Team size cannot exceed ${maxSize} members (including leader)` 
+            return res.status(400).json({
+                error: `Team size cannot exceed ${maxSize} members (including leader)`
             });
         }
 
-        // Check if leader already has a team with join_status = true for this event
         const { data: existingTeam } = await supabase
             .from('team_members')
             .select('team_id, join_status, team:team_id(event_id, leader_usn)')
             .eq('student_usn', userUSN);
 
         if (existingTeam && existingTeam.length > 0) {
-            const joinedTeam = existingTeam.find(tm => 
-                tm.join_status === true && 
+            const joinedTeam = existingTeam.find(tm =>
+                tm.join_status === true &&
                 tm.team?.event_id === parseInt(eventId)
             );
-            
+
             if (joinedTeam) {
-                return res.status(400).json({ 
-                    error: 'You have already joined a team for this event. Leave that team first to create a new one.' 
+                return res.status(400).json({
+                    error: 'You have already joined a team for this event. Leave that team first to create a new one.'
                 });
             }
         }
 
-        // Validate all member USNs exist in student table
         if (memberUSNs.length > 0) {
             const { data: students, error: studentError } = await supabase
                 .from('student')
@@ -1698,12 +2163,11 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
                 .in('usn', memberUSNs);
 
             if (studentError || !students || students.length !== memberUSNs.length) {
-                return res.status(400).json({ 
-                    error: 'One or more member USNs are invalid' 
+                return res.status(400).json({
+                    error: 'One or more member USNs are invalid'
                 });
             }
 
-            // Check if any member has ACTUALLY JOINED another team for this event
             const { data: memberTeamCheck } = await supabase
                 .from('team_members')
                 .select('student_usn, join_status, team:team_id(event_id)')
@@ -1711,18 +2175,17 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
                 .eq('join_status', true);
 
             if (memberTeamCheck && memberTeamCheck.length > 0) {
-                const conflicts = memberTeamCheck.filter(m => 
+                const conflicts = memberTeamCheck.filter(m =>
                     m.team?.event_id === parseInt(eventId)
                 );
                 if (conflicts.length > 0) {
-                    return res.status(400).json({ 
-                        error: `Member ${conflicts[0].student_usn} has already joined another team for this event` 
+                    return res.status(400).json({
+                        error: `Member ${conflicts[0].student_usn} has already joined another team for this event`
                     });
                 }
             }
         }
 
-        // Create team
         const { data: teamData, error: teamError } = await supabase
             .from('team')
             .insert([{
@@ -1740,14 +2203,12 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
 
         const teamId = teamData[0].id;
 
-        // Add leader as team member with join_status = true
         const teamMembersToInsert = [{
             team_id: teamId,
             student_usn: userUSN,
             join_status: true
         }];
 
-        // Add other members with join_status = false (pending invites)
         memberUSNs.forEach(usn => {
             teamMembersToInsert.push({
                 team_id: teamId,
@@ -1782,7 +2243,6 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
     }
 });
 
-// Join a team
 app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
@@ -1793,29 +2253,27 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Team leader USN is required' });
         }
 
-        // Check if user is already in any team for this event
         const { data: existingMembership } = await supabase
             .from('team_members')
             .select('team_id, team:team_id(event_id, registration_complete)')
             .eq('student_usn', userUSN);
 
         if (existingMembership && existingMembership.length > 0) {
-            const inEventTeam = existingMembership.find(m => 
+            const inEventTeam = existingMembership.find(m =>
                 m.team?.event_id === parseInt(eventId)
             );
             if (inEventTeam) {
                 if (inEventTeam.team.registration_complete) {
-                    return res.status(400).json({ 
-                        error: 'Your team is already registered for this event' 
+                    return res.status(400).json({
+                        error: 'Your team is already registered for this event'
                     });
                 }
-                return res.status(400).json({ 
-                    error: 'You are already part of a team for this event' 
+                return res.status(400).json({
+                    error: 'You are already part of a team for this event'
                 });
             }
         }
 
-        // Find the team by leader USN and event ID
         const { data: team, error: teamError } = await supabase
             .from('team')
             .select('id, team_name, registration_complete, max_team_size:event_id(max_team_size)')
@@ -1824,20 +2282,19 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             .limit(1);
 
         if (teamError || !team || team.length === 0) {
-            return res.status(404).json({ 
-                error: 'Team not found. Please check the team leader USN.' 
+            return res.status(404).json({
+                error: 'Team not found. Please check the team leader USN.'
             });
         }
 
         const teamId = team[0].id;
 
         if (team[0].registration_complete) {
-            return res.status(400).json({ 
-                error: 'This team has already completed registration' 
+            return res.status(400).json({
+                error: 'This team has already completed registration'
             });
         }
 
-        // Check if user is in the team members list
         const { data: membership, error: membershipError } = await supabase
             .from('team_members')
             .select('join_status')
@@ -1846,18 +2303,17 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             .limit(1);
 
         if (membershipError || !membership || membership.length === 0) {
-            return res.status(403).json({ 
-                error: 'You are not invited to this team' 
+            return res.status(403).json({
+                error: 'You are not invited to this team'
             });
         }
 
         if (membership[0].join_status) {
-            return res.status(400).json({ 
-                error: 'You have already joined this team' 
+            return res.status(400).json({
+                error: 'You have already joined this team'
             });
         }
 
-        // Update join status
         const { error: updateError } = await supabase
             .from('team_members')
             .update({ join_status: true })
@@ -1880,13 +2336,11 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
     }
 });
 
-// Get team status for current user and event
 app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        // Check if event is a team event
         const { data: event } = await supabase
             .from('event')
             .select('is_team, min_team_size, max_team_size, regfee')
@@ -1898,12 +2352,9 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
         }
 
         if (!event[0].is_team) {
-            return res.json({ 
-                isTeamEvent: false 
-            });
+            return res.json({ isTeamEvent: false });
         }
 
-        // Check if user is a team leader for this event
         const { data: leaderTeam } = await supabase
             .from('team')
             .select('id, team_name, registration_complete')
@@ -1914,7 +2365,6 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
         if (leaderTeam && leaderTeam.length > 0) {
             const teamId = leaderTeam[0].id;
 
-            // Get team members and their join status
             const { data: members } = await supabase
                 .from('team_members')
                 .select('student_usn, join_status, student:student_usn(sname)')
@@ -1939,7 +2389,6 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
             });
         }
 
-        // Check if user has ACTUALLY JOINED any team for this event
         const { data: memberTeam } = await supabase
             .from('team_members')
             .select(`
@@ -1958,7 +2407,7 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
             .eq('join_status', true);
 
         if (memberTeam && memberTeam.length > 0) {
-            const teamInEvent = memberTeam.find(m => 
+            const teamInEvent = memberTeam.find(m =>
                 m.team?.event_id === parseInt(eventId)
             );
 
@@ -1986,7 +2435,6 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
             }
         }
 
-        // User has NO JOINED team
         res.json({
             isTeamEvent: true,
             isLeader: false,
@@ -2002,13 +2450,11 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
     }
 });
 
-// Register team for event (only for team leader) - ONLY FOR FREE EVENTS
 app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        // Check if user is team leader for this event
         const { data: team, error: teamError } = await supabase
             .from('team')
             .select('id, registration_complete, event:event_id(regfee, min_team_size)')
@@ -2017,14 +2463,14 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
             .limit(1);
 
         if (teamError || !team || team.length === 0) {
-            return res.status(404).json({ 
-                error: 'Team not found or you are not the team leader' 
+            return res.status(404).json({
+                error: 'Team not found or you are not the team leader'
             });
         }
 
         if (team[0].registration_complete) {
-            return res.status(400).json({ 
-                error: 'Team is already registered for this event' 
+            return res.status(400).json({
+                error: 'Team is already registered for this event'
             });
         }
 
@@ -2032,7 +2478,6 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
         const regFee = team[0].event?.regfee || 0;
         const minSize = team[0].event?.min_team_size || 2;
 
-        // Count joined members
         const { data: members } = await supabase
             .from('team_members')
             .select('student_usn, join_status')
@@ -2042,12 +2487,11 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
         const joinedCount = members?.length || 0;
 
         if (joinedCount < minSize) {
-            return res.status(400).json({ 
-                error: `Minimum ${minSize} members must join before registration. Currently ${joinedCount} members have joined.` 
+            return res.status(400).json({
+                error: `Minimum ${minSize} members must join before registration. Currently ${joinedCount} members have joined.`
             });
         }
 
-        // If event has fee, tell frontend to show UPI modal
         if (regFee > 0) {
             return res.json({
                 success: true,
@@ -2058,7 +2502,6 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
             });
         }
 
-        // For free events, complete registration
         const { error: updateError } = await supabase
             .from('team')
             .update({ registration_complete: true })
@@ -2069,7 +2512,6 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
             return res.status(500).json({ error: 'Failed to complete registration' });
         }
 
-        // Add all team members to participant table
         const participantsToInsert = members.map(m => ({
             partusn: m.student_usn,
             parteid: eventId,
@@ -2099,7 +2541,6 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
     }
 });
 
-// Register a paid team with UPI
 app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
@@ -2110,7 +2551,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             return res.status(400).json({ error: 'Transaction ID is required' });
         }
 
-        // Check if user is team leader for this event
         const { data: team, error: teamError } = await supabase
             .from('team')
             .select('id, registration_complete, event:event_id(regfee, min_team_size, maxpart)')
@@ -2119,14 +2559,14 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             .limit(1);
 
         if (teamError || !team || team.length === 0) {
-            return res.status(404).json({ 
-                error: 'Team not found or you are not the team leader' 
+            return res.status(404).json({
+                error: 'Team not found or you are not the team leader'
             });
         }
 
         if (team[0].registration_complete) {
-            return res.status(400).json({ 
-                error: 'Team is already registered for this event' 
+            return res.status(400).json({
+                error: 'Team is already registered for this event'
             });
         }
 
@@ -2139,7 +2579,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             return res.status(400).json({ error: 'This is not a paid event' });
         }
 
-        // Count joined members
         const { data: members, error: memberError } = await supabase
             .from('team_members')
             .select('student_usn, join_status')
@@ -2153,12 +2592,11 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
         const joinedCount = members?.length || 0;
 
         if (joinedCount < minSize) {
-            return res.status(400).json({ 
-                error: `Minimum ${minSize} members must join before registration.` 
+            return res.status(400).json({
+                error: `Minimum ${minSize} members must join before registration.`
             });
         }
 
-        // Check event "team" limit
         if (maxPart > 0) {
             const { count, error: countError } = await supabase
                 .from('team')
@@ -2174,7 +2612,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             }
         }
 
-        // Insert payment record (for the leader)
         const { error: paymentError } = await supabase.from('payment').insert([{
             usn: userUSN,
             event_id: eventId,
@@ -2188,7 +2625,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             return res.status(500).json({ error: 'Failed to save payment' });
         }
 
-        // Mark team registration complete
         const { error: updateError } = await supabase
             .from('team')
             .update({ registration_complete: true })
@@ -2198,7 +2634,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             return res.status(500).json({ error: 'Failed to update team status' });
         }
 
-        // Insert all team members as participants
         const participantsToInsert = members.map(m => ({
             partusn: m.student_usn,
             parteid: eventId,
@@ -2226,7 +2661,6 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
     }
 });
 
-// Add team members to existing team
 app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
     try {
         const teamId = req.params.teamId;
@@ -2237,7 +2671,6 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Member USNs are required' });
         }
 
-        // Verify user is team leader
         const { data: team } = await supabase
             .from('team')
             .select('leader_usn, event_id, registration_complete, event:event_id(max_team_size)')
@@ -2253,12 +2686,11 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
         }
 
         if (team[0].registration_complete) {
-            return res.status(400).json({ 
-                error: 'Cannot add members to a registered team' 
+            return res.status(400).json({
+                error: 'Cannot add members to a registered team'
             });
         }
 
-        // Check current team size
         const { count: currentSize } = await supabase
             .from('team_members')
             .select('*', { count: 'exact', head: true })
@@ -2266,41 +2698,38 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
 
         const maxSize = team[0].event?.max_team_size;
         if (maxSize && (currentSize + memberUSNs.length) > maxSize) {
-            return res.status(400).json({ 
-                error: `Cannot exceed maximum team size of ${maxSize}` 
+            return res.status(400).json({
+                error: `Cannot exceed maximum team size of ${maxSize}`
             });
         }
 
-        // Validate USNs
         const { data: students } = await supabase
             .from('student')
             .select('usn')
             .in('usn', memberUSNs);
 
         if (!students || students.length !== memberUSNs.length) {
-            return res.status(400).json({ 
-                error: 'One or more member USNs are invalid' 
+            return res.status(400).json({
+                error: 'One or more member USNs are invalid'
             });
         }
 
-        // Check if members are already in another team for this event
         const { data: conflictCheck } = await supabase
             .from('team_members')
             .select('student_usn, team:team_id(event_id)')
             .in('student_usn', memberUSNs);
 
         if (conflictCheck && conflictCheck.length > 0) {
-            const conflicts = conflictCheck.filter(m => 
+            const conflicts = conflictCheck.filter(m =>
                 m.team?.event_id === team[0].event_id
             );
             if (conflicts.length > 0) {
-                return res.status(400).json({ 
-                    error: `Member ${conflicts[0].student_usn} is already in another team` 
+                return res.status(400).json({
+                    error: `Member ${conflicts[0].student_usn} is already in another team`
                 });
             }
         }
 
-        // Add members
         const membersToInsert = memberUSNs.map(usn => ({
             team_id: teamId,
             student_usn: usn,
@@ -2326,13 +2755,11 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
     }
 });
 
-// Get team invites for current user for a specific event
 app.get('/api/events/:eventId/my-invites', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        // Find all teams for this event where user is invited
         const { data: invites, error } = await supabase
             .from('team_members')
             .select(`
@@ -2355,7 +2782,6 @@ app.get('/api/events/:eventId/my-invites', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Database error' });
         }
 
-        // Filter for this specific event
         const eventInvites = (invites || [])
             .filter(invite => invite.team?.event_id === parseInt(eventId))
             .map(invite => ({
@@ -2377,7 +2803,6 @@ app.get('/api/events/:eventId/my-invites', requireAuth, async (req, res) => {
     }
 });
 
-// Confirm join team (accept invite)
 app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
     try {
         const teamId = req.params.teamId;
@@ -2385,7 +2810,6 @@ app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
 
         console.log(`Confirming join for user ${userUSN} to team ${teamId}`);
 
-        // Verify user is a member of this team
         const { data: membership, error: membershipError } = await supabase
             .from('team_members')
             .select('join_status, team:team_id(event_id, registration_complete, team_name)')
@@ -2399,24 +2823,23 @@ app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
         }
 
         if (!membership || membership.length === 0) {
-            return res.status(404).json({ 
-                error: 'You are not invited to this team' 
+            return res.status(404).json({
+                error: 'You are not invited to this team'
             });
         }
 
         if (membership[0].join_status) {
-            return res.status(400).json({ 
-                error: 'You have already joined this team' 
+            return res.status(400).json({
+                error: 'You have already joined this team'
             });
         }
 
         if (membership[0].team.registration_complete) {
-            return res.status(400).json({ 
-                error: 'This team has already completed registration' 
+            return res.status(400).json({
+                error: 'This team has already completed registration'
             });
         }
 
-        // Check if user has already joined another team for this event
         const { data: otherTeams } = await supabase
             .from('team_members')
             .select('team_id, team:team_id(event_id)')
@@ -2424,17 +2847,16 @@ app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
             .eq('join_status', true);
 
         if (otherTeams && otherTeams.length > 0) {
-            const conflictTeam = otherTeams.find(t => 
+            const conflictTeam = otherTeams.find(t =>
                 t.team?.event_id === membership[0].team.event_id
             );
             if (conflictTeam) {
-                return res.status(400).json({ 
-                    error: 'You have already joined another team for this event' 
+                return res.status(400).json({
+                    error: 'You have already joined another team for this event'
                 });
             }
         }
 
-        // Update join status to true
         const { error: updateError } = await supabase
             .from('team_members')
             .update({ join_status: true })
@@ -2465,11 +2887,11 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        // Verify organizer
         const { data: event, error: eventError } = await supabase
             .from('event')
             .select(`
                 eid, ename, eventdate, eventtime, eventloc, orgusn,
+                max_activity_pts, vol_activity_pts,
                 student:orgusn(sname, usn)
             `)
             .eq('eid', eventId)
@@ -2480,7 +2902,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
 
         const eventData = event[0];
 
-        // Participants (with nested student → payment)
         const { data: participants, error: participantError } = await supabase
             .from('participant')
             .select(`
@@ -2501,7 +2922,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             return res.status(500).json({ error: 'Database error (participants)' });
         }
 
-        // Volunteers
         const { data: volunteers, error: volunteerError } = await supabase
             .from('volunteer')
             .select(`
@@ -2516,17 +2936,15 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             return res.status(500).json({ error: 'Database error (volunteers)' });
         }
 
-        // Build Excel
         const workbook = new ExcelJS.Workbook();
         const ws = workbook.addWorksheet('Event Details');
 
         ws.columns = [
             { width: 15 }, { width: 25 }, { width: 10 }, { width: 15 }, { width: 30 },
             { width: 15 }, { width: 20 }, { width: 20 },
-            { width: 30 }, { width: 15 }
+            { width: 30 }, { width: 15 }, { width: 20 }
         ];
 
-        // Event Header
         const hdr = ws.addRow(['EVENT DETAILS']);
         hdr.font = { size: 16, bold: true };
         hdr.alignment = { horizontal: 'center' };
@@ -2545,7 +2963,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             ws.getRow(i).getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
         }
 
-        // Participants Section
         ws.addRow([]);
         const partHdr = ws.addRow(['PARTICIPANTS']);
         partHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -2556,15 +2973,31 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         const partCols = ws.addRow([
             'USN', 'Name', 'Semester', 'Mobile No', 'Email',
             'Participation Status', 'Payment Status', 'Team Name',
-            'UPI Transaction ID', 'Payment Amount'
+            'UPI Transaction ID', 'Payment Amount', 'Activity Points Earned'
         ]);
         partCols.font = { bold: true };
         partCols.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
 
+        const maxActivityPts = eventData.max_activity_pts || 0;
+
+        const { data: attendanceMapData } = await supabase
+            .from('sub_event_attendance')
+            .select('usn, sub_event!inner(activity_pts)')
+            .eq('eid', eventId)
+            .eq('role', 'participant');
+
+        const usnToPtsMap = {};
+        (attendanceMapData || []).forEach(row => {
+            if (!usnToPtsMap[row.usn]) usnToPtsMap[row.usn] = 0;
+            usnToPtsMap[row.usn] += row.sub_event?.activity_pts || 0;
+        });
+
         (participants || []).forEach(p => {
-            const payment = Array.isArray(p.student?.payment) ? 
+            const payment = Array.isArray(p.student?.payment) ?
                 p.student.payment.find(pay => pay.upi_transaction_id) : p.student?.payment;
-            
+
+            const earnedPts = p.partstatus ? Math.min(usnToPtsMap[p.partusn] || 0, maxActivityPts) : 0;
+
             ws.addRow([
                 p.partusn || 'N/A',
                 p.student?.sname || 'N/A',
@@ -2575,43 +3008,45 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
                 p.payment_status || 'N/A',
                 p.team?.team_name || 'N/A',
                 payment?.upi_transaction_id || 'N/A',
-                payment?.amount ?? (p.payment_status === 'free' ? '0' : 'N/A')
+                payment?.amount ?? (p.payment_status === 'free' ? '0' : 'N/A'),
+                earnedPts
             ]);
         });
 
-        // Volunteers Section
         ws.addRow([]);
         const volHdr = ws.addRow(['VOLUNTEERS']);
         volHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
         volHdr.alignment = { horizontal: 'center' };
-        ws.mergeCells(`A${volHdr.number}:C${volHdr.number}`);
+        ws.mergeCells(`A${volHdr.number}:D${volHdr.number}`);
         volHdr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF70AD47' } };
 
-        const volCols = ws.addRow(['USN', 'Name', 'Volunteer Status']);
+        const volCols = ws.addRow(['USN', 'Name', 'Volunteer Status', 'Activity Points Earned']);
         volCols.font = { bold: true };
         volCols.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
 
+        const volActivityPts = eventData.vol_activity_pts || 0;
+
         (volunteers || []).forEach(v => {
+            const earnedPts = v.volnstatus ? volActivityPts : 0;
             ws.addRow([
                 v.volnusn || 'N/A',
                 v.student?.sname || 'N/A',
-                v.volnstatus ? 'Present' : 'Absent'
+                v.volnstatus ? 'Present' : 'Absent',
+                earnedPts
             ]);
         });
 
-        // Borders
         ws.eachRow(row => {
             row.eachCell(cell => {
-                cell.border = { 
-                    top: { style: 'thin' }, 
-                    left: { style: 'thin' }, 
-                    bottom: { style: 'thin' }, 
-                    right: { style: 'thin' } 
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
                 };
             });
         });
 
-        // Send file
         res.setHeader(
             'Content-Type',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -2630,100 +3065,59 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         res.status(500).json({ error: 'Error generating Excel file' });
     }
 });
-app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res) => {
+
+// ==================== DYNAMIC QR TOKEN ====================
+
+app.get('/api/sub-events/:seid/qr-token', requireAuth, async (req, res) => {
     try {
-        const eventId = req.params.eventId;
+        const seid = req.params.seid;
         const userUSN = req.session.userUSN;
 
-        if (!eventId || isNaN(eventId)) {
-            return res.status(400).json({ error: 'Invalid event ID' });
+        const { data: subEvent, error } = await supabase
+            .from('sub_event')
+            .select('eid, se_name')
+            .eq('seid', seid)
+            .limit(1);
+
+        if (error || !subEvent?.length) {
+            return res.status(404).json({ error: 'Sub-event not found' });
         }
 
-        // Fetch event details
-        const { data: eventRows, error: eventError } = await supabase
+        const eventId = subEvent[0].eid;
+
+        const { data: event, error: eventError } = await supabase
             .from('event')
-            .select(`
-                eid, ename, eventdesc, eventdate, eventtime, eventloc, 
-                maxpart, maxvoln, regfee, orgusn, poster_url,
-                club:orgcid(cname),
-                student:orgusn(sname)
-            `)
+            .select('orgusn')
             .eq('eid', eventId)
             .limit(1);
 
-        if (eventError) {
-            console.error('Error fetching event details:', eventError);
-            return res.status(500).json({ error: 'Database error' });
-        }
-
-        if (!eventRows || eventRows.length === 0) {
+        if (eventError || !event?.length) {
             return res.status(404).json({ error: 'Event not found' });
         }
 
-        const event = eventRows[0];
-        
-        // Transform event data
-        const transformedEvent = {
-            ...event,
-            eventDate: event.eventdate,
-            eventTime: event.eventtime,
-            eventLoc: event.eventloc,
-            maxPart: event.maxpart,
-            maxVoln: event.maxvoln,
-            regFee: event.regfee,
-            posterUrl: event.poster_url, // Added
-            clubName: event.club?.cname,
-            organizerName: event.student?.sname,
-            OrgUsn: event.orgusn
-        };
-
-        // Check if user is registered as participant
-        const { data: participantCheck, error: participantError } = await supabase
-            .from('participant')
-            .select('partstatus, payment_status')
-            .eq('partusn', userUSN)
-            .eq('parteid', eventId)
-            .limit(1);
-
-        if (participantError) {
-            console.error('Error checking participant status:', participantError);
-            return res.status(500).json({ error: 'Database error' });
+        if (event[0].orgusn !== userUSN) {
+            return res.status(403).json({ error: 'Only the organizer can generate QR tokens' });
         }
 
-        // User is registered as participant
-        if (participantCheck && participantCheck.length > 0) {
-            transformedEvent.isRegistered = true;
-            transformedEvent.paymentStatus = participantCheck[0].payment_status || null;
-            transformedEvent.attendanceMarked = participantCheck[0].partstatus || false;
+        const timestamp = Date.now().toString();
+        const payload = `${seid}:${timestamp}`;
+        const token = crypto
+            .createHmac('sha256', QR_TOKEN_SECRET)
+            .update(payload)
+            .digest('hex')
+            .substring(0, 16);
 
-            console.log(`✅ Participant status for ${userUSN} on event ${eventId}:`, {
-                isRegistered: true,
-                paymentStatus: transformedEvent.paymentStatus,
-                attendanceMarked: transformedEvent.attendanceMarked
-            });
-
-            return res.json(transformedEvent);
-        }
-
-        // User is not registered
-        console.log(`ℹ️ User ${userUSN} is not registered for event ${eventId}`);
-        return res.status(403).json({ 
-            error: 'You are not registered for this event',
-            isRegistered: false 
-        });
-
+        res.json({ token, timestamp, seid, eid: eventId, seName: subEvent[0].se_name });
     } catch (err) {
-        console.error('Error fetching participant event status:', err);
-        res.status(500).json({
-            error: 'Error fetching event details: ' + err.message 
-        });
+        console.error('QR token generation error:', err);
+        res.status(500).json({ error: 'Failed to generate token' });
     }
 });
 
-// Start server
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Server running on port ${PORT}`);
     console.log(`📡 CORS enabled for ${process.env.FRONTEND_URL}`);
     console.log(`🔍 Session debugging ENABLED\n`);
     console.log(`🌱 Environment: ${IS_PRODUCTION ? 'production' : 'development'}`);
 });
+

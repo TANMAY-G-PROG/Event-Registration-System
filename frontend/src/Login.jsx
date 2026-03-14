@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./style.css"; // make sure this file exists
 
+import { apiFetch } from "./api.js";
+
 export default function Login() {
   const navigate = useNavigate();
 
@@ -36,9 +38,8 @@ export default function Login() {
   // ── API Helpers ───────────────────────────────
   const checkAuthStatus = async () => {
     try {
-      const res = await fetch("/api/me", {
+      const res = await apiFetch("/api/me", {
         method: "GET",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
       });
       if (res.ok) {
@@ -62,9 +63,8 @@ export default function Login() {
     if (!usn || !password) return showMessage("Please fill in all fields", true);
 
     try {
-      const res = await fetch("/api/signin", {
+      const res = await apiFetch("/api/signin", {
         method: "POST",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usn, password }),
       });
@@ -94,9 +94,8 @@ export default function Login() {
     if (semNum < 1 || semNum > 8) return showMessage("Semester must be 1-8", true);
 
     try {
-      const res = await fetch("/api/signup", {
+      const res = await apiFetch("/api/signup", {
         method: "POST",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, usn, sem: semNum, mobno, email, password }),
       });

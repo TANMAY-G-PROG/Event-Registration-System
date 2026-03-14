@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './ticket.css';
 
+import { apiFetch } from "./api.js";
+
 export default function VolunteerTicket() {
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,11 +26,7 @@ export default function VolunteerTicket() {
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch('/api/me', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await apiFetch('/api/me');
       if (!response.ok) {
         throw new Error(`Failed to fetch user data`);
       }
@@ -50,9 +48,7 @@ export default function VolunteerTicket() {
       }
       setUserUSN(usn);
 
-      const response = await fetch('/api/my-volunteer-events', {
-        credentials: 'include',
-      });
+      const response = await apiFetch('/api/my-volunteer-events');
 
       if (!response.ok) {
         if (response.status === 401) {

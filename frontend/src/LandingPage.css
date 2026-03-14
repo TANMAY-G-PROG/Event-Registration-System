@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
 
-/* --- ROOT WRAPPER (Keeps styles isolated) --- */
+/* --- ROOT WRAPPER --- */
 .landing-page-root {
   width: 100%;
   margin: 0;
@@ -18,13 +18,21 @@
   background-color: #030303;
 }
 
-/* Prism Background Container */
+/* Background Container */
 .landing-page-root .hero-prism-background {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   z-index: 0; 
+}
+
+/* Galaxy Component Style */
+.galaxy-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
 }
 
 /* Content wrapper */
@@ -96,15 +104,11 @@
   z-index: 1; 
 }
 
-/* ------------------------------------------------ */
-/* --- BUTTON STYLES (Strictly Scoped) --- */
-/* ------------------------------------------------ */
-
+/* --- BUTTON STYLES --- */
 .landing-page-root .btn {
   display: flex;
   justify-content: center;
   align-items: center;
-  /* !important ensures the width stays 13rem even if global styles try to stretch it */
   width: 13rem !important; 
   height: 3rem !important;
   overflow: hidden;
@@ -125,7 +129,7 @@
     );
   background-origin: border-box;
   background-clip: content-box, border-box;
-  box-sizing: border-box; /* Crucial fix for elongation */
+  box-sizing: border-box; 
   text-decoration: none;
   margin: 0;
   padding: 0;
@@ -144,7 +148,7 @@
 
 .landing-page-root .btn strong {
   z-index: 2;
-  font-family: "Avalors Personal Use", sans-serif; /* Added fallback font */
+  font-family: "Avalors Personal Use", sans-serif;
   font-size: 12px;
   letter-spacing: 5px;
   color: #ffffff;

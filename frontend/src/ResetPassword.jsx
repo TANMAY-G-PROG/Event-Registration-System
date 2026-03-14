@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './style.css';
 
+import { apiFetch } from './api.js';
+
 export default function ResetPassword() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -48,12 +50,15 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/reset-password', {
-        method: 'POST',
+      const response = await apiFetch('/api/reset-password', {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({ token, newPassword })
+        body: JSON.stringify({
+          token,
+          newPassword
+        })
       });
 
       const data = await response.json();

@@ -1,7 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import './organisers.css';
+
+import { apiFetch } from './api.js';
 
 const Organisers = () => {
   const navigate = useNavigate();
@@ -14,12 +16,62 @@ const Organisers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [generatingExcel, setGeneratingExcel] = useState({});
+  
+  // Payment States
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedEventForPayments, setSelectedEventForPayments] = useState(null);
   const [pendingPayments, setPendingPayments] = useState([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [processingPayment, setProcessingPayment] = useState({});
   const [isTeamEvent, setIsTeamEvent] = useState(false);
+  
+  // Scroll Assistant Refs & States
+  const completedRef = useRef(null);
+  const ongoingRef = useRef(null);
+  const upcomingRef = useRef(null);
+  const [scrollPositions, setScrollPositions] = useState({
+    completed: 'down',
+    ongoing: 'down',
+    upcoming: 'down'
+  });
+
+  // FAB Visibility Logic
+  const [showFab, setShowFab] = useState(true);
+  const buttonRef = useRef(null);
+
+  // --- FIX 1: iOS Detection Logic ---
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    const wrapper = document.querySelector('.organisers-unique-wrapper');
+    if (isIOS && wrapper) {
+      wrapper.classList.add('is-ios');
+    }
+  }, []);
+
+  // --- FAB Visibility Observer ---
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowFab(!entry.isIntersecting);
+      },
+      {
+        root: null,
+        threshold: 0.1,
+      }
+    );
+
+    if (buttonRef.current) {
+      observer.observe(buttonRef.current);
+    }
+
+    return () => {
+      if (buttonRef.current) {
+        observer.unobserve(buttonRef.current);
+      }
+    };
+  }, [loading]);
 
   // --- Logic ---
   const categorizeEvents = useCallback((events) => {
@@ -52,9 +104,8 @@ const Organisers = () => {
 
   const fetchOrganizerEvents = async () => {
     try {
-      const response = await fetch('/api/my-organized-events', {
+      const response = await apiFetch('/api/my-organized-events', {
         method: 'GET',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });
 
@@ -103,9 +154,8 @@ const Organisers = () => {
     try {
       setGeneratingExcel((prev) => ({ ...prev, [eventId]: true }));
 
-      const response = await fetch(`/api/events/${eventId}/generate-details`, {
+      const response = await apiFetch(`/api/events/${eventId}/generate-details`, {
         method: 'GET',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });
 
@@ -145,9 +195,8 @@ const Organisers = () => {
     setLoadingPayments(true);
 
     try {
-      const response = await fetch(`/api/events/${event.eid}/pending-payments`, {
+      const response = await apiFetch(`/api/events/${event.eid}/pending-payments`, {
         method: 'GET',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });
 
@@ -173,9 +222,8 @@ const Organisers = () => {
     setProcessingPayment((prev) => ({ ...prev, [participantUSN]: 'verifying' }));
 
     try {
-      const response = await fetch('/api/payments/verify', {
+      const response = await apiFetch('/api/payments/verify', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ participantUSN, eventId }),
       });
@@ -208,27 +256,66 @@ const Organisers = () => {
   const handleOrganiseClick = () => navigate('/create-event');
   const handleBack = () => navigate('/events');
 
-  // Close modal handler
   const handleCloseModal = () => {
     setShowPaymentModal(false);
   };
 
-  // --- FIXED SCROLL LOGIC ---
-  // We lock the wrapper specifically because it is the scroll container
-  useEffect(() => {
-    const wrapper = document.querySelector('.organisers-unique-wrapper');
-    if (showPaymentModal && wrapper) {
-      // Lock scroll on the wrapper
-      wrapper.style.overflow = 'hidden';
-    } else if (wrapper) {
-      // Restore scroll
-      wrapper.style.overflow = 'auto'; // or 'overlay' or unset depending on CSS, 'auto' is safest
+  const handleCardScroll = (e, key) => {
+    const el = e.target;
+    const isAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 10;
+    const newState = isAtBottom ? 'up' : 'down';
+    if (scrollPositions[key] !== newState) {
+      setScrollPositions(prev => ({ ...prev, [key]: newState }));
     }
-    
-    // Cleanup
-    return () => {
-      if (wrapper) wrapper.style.overflow = 'auto';
-    };
+  };
+
+  const executeCardScroll = (key) => {
+    const refs = { completed: completedRef, ongoing: ongoingRef, upcoming: upcomingRef };
+    const el = refs[key].current;
+    if (!el) return;
+
+    if (scrollPositions[key] === 'up') {
+      el.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      const items = el.querySelectorAll('.part-event-item-glass');
+      let target = null;
+      for (let item of items) {
+        // Find first item whose top is below current scroll + padding offset
+        if (item.offsetTop > el.scrollTop + 20) {
+          target = item;
+          break;
+        }
+      }
+      if (target) {
+        // Subtract container padding (16px) to align perfectly at the top
+        el.scrollTo({ top: target.offsetTop - 16, behavior: 'smooth' });
+      } else {
+        el.scrollBy({ top: 150, behavior: 'smooth' });
+      }
+    }
+  };
+
+  const ScrollAssistant = ({ type }) => {
+    const icon = scrollPositions[type] === 'up' ? 'fa-chevron-up' : 'fa-chevron-down';
+    return (
+      <button 
+        className={`card-scroll-assistant ${scrollPositions[type]}`}
+        onClick={() => executeCardScroll(type)}
+        title={scrollPositions[type] === 'up' ? 'Scroll to Top' : 'Scroll Down'}
+      >
+        <i className={`fas ${icon}`}></i>
+      </button>
+    );
+  };
+
+  // --- FIX 2: Handle Body Scroll Lock when Modal is Open ---
+  useEffect(() => {
+    if (showPaymentModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
   }, [showPaymentModal]);
 
   // --- Render Event Item ---
@@ -238,27 +325,27 @@ const Organisers = () => {
     if (!eventsList || eventsList.length === 0) return <div className="org-event-message">No {eventType} events found.</div>;
 
     return eventsList.map((event) => (
-      <div className="org-event-item-glass" key={event.eid}>
-        <div className="org-event-info">
+      <div className="part-event-item-glass" key={event.eid}>
+        <div className="part-event-info">
           <h4>{DOMPurify.sanitize(event.ename || 'N/A')}</h4>
-          <p className="org-description">{DOMPurify.sanitize(event.eventdesc || 'No description')}</p>
+          <p className="part-description">{DOMPurify.sanitize(event.eventdesc || 'No description')}</p>
           
-          <div className="org-meta-info">
+          <div className="part-meta-info">
             <span><i className="fas fa-calendar-alt"></i> {formatDate(event.eventDate)}</span>
             <span><i className="fas fa-clock"></i> {formatTime(event.eventTime)}</span>
             <span><i className="fas fa-map-marker-alt"></i> {DOMPurify.sanitize(event.eventLoc || 'N/A')}</span>
           </div>
 
-          <div className="org-stats-info">
+          <div className="part-status">
              <span><i className="fas fa-users"></i> {event.maxPart || '∞'} Seats</span>
-             {event.regFee > 0 && <span className="org-fee-tag">₹{event.regFee}</span>}
+             {event.regFee > 0 && <span className="status-attended">₹{event.regFee}</span>}
           </div>
         </div>
 
-        <div className="org-event-actions">
+        <div className="part-event-actions">
           {eventType !== 'completed' && (
             <button
-              className="org-glass-btn secondary"
+              className="part-glass-btn secondary"
               onClick={() => handleEventButtonClick(event.eid)}
               title="View Event Page"
             >
@@ -266,9 +353,19 @@ const Organisers = () => {
             </button>
           )}
 
+          {eventType !== 'completed' && (
+            <button
+              className="part-glass-btn qr-btn"
+              onClick={() => navigate(`/sub-events?eventId=${event.eid}`)}
+              title="Manage Sub-events & QR"
+            >
+              <i className="fas fa-qrcode"></i> Sub-events
+            </button>
+          )}
+
           {event.regFee > 0 && eventType !== 'completed' && (
             <button
-              className="org-glass-btn primary org-pulse-border"
+              className="part-glass-btn primary org-pulse-border"
               onClick={() => handleViewPendingPayments(event)}
               title="Verify Payments"
             >
@@ -277,7 +374,7 @@ const Organisers = () => {
           )}
 
           <button
-            className="org-glass-btn tertiary"
+            className="part-glass-btn success"
             onClick={() => handleGenerateDetails(event.eid, event.ename)}
             disabled={generatingExcel[event.eid]}
             title="Download Excel"
@@ -291,64 +388,86 @@ const Organisers = () => {
 
   return (
     <>
+      <div className="org-bg-layer"></div>
       <div className="organisers-unique-wrapper">
-        {/* Shiny Back Button */}
         <div className="org-logout-container">
           <button className="org-logout-btn" onClick={handleBack}>
             <i className="fas fa-arrow-left"></i> Back
           </button>
         </div>
 
-        <section className="org-hero-section">
-          <div className="org-container">
+        <section className="hero-section">
+          <div className="container">
             
-            {/* Card Grid Layout */}
-            <div className="org-card-grid">
+            <div className="card-grid">
               
-              <div className="org-card" id="completed-card">
-                <div className="org-card__background"></div>
-                <div className="org-card__content">
-                  <h3 className="org-card__heading">Completed Events</h3>
-                  <div className="org-card__details">
+              <div className="card" id="completed-card">
+                <div className="card__background"></div>
+                <div className="card__content">
+                  <h3 className="card__heading">Completed Events</h3>
+                  <div 
+                    className="card__details" 
+                    ref={completedRef}
+                    onScroll={(e) => handleCardScroll(e, 'completed')}
+                  >
                      {renderEventsList(events.completed, 'completed')}
                   </div>
+                  {events.completed?.length > 1 && <ScrollAssistant type="completed" />}
                 </div>
               </div>
 
-              <div className="org-card" id="ongoing-card">
-                <div className="org-card__background"></div>
-                <div className="org-card__content">
-                  <h3 className="org-card__heading">Ongoing Events</h3>
-                  <div className="org-card__details">
+              <div className="card" id="ongoing-card">
+                <div className="card__background"></div>
+                <div className="card__content">
+                  <h3 className="card__heading">Ongoing Events</h3>
+                  <div 
+                    className="card__details" 
+                    ref={ongoingRef}
+                    onScroll={(e) => handleCardScroll(e, 'ongoing')}
+                  >
                      {renderEventsList(events.ongoing, 'ongoing')}
                   </div>
+                  {events.ongoing?.length > 1 && <ScrollAssistant type="ongoing" />}
                 </div>
               </div>
 
-              <div className="org-card" id="upcoming-card">
-                <div className="org-card__background"></div>
-                <div className="org-card__content">
-                  <h3 className="org-card__heading">Upcoming Events</h3>
-                  <div className="org-card__details">
+              <div className="card" id="upcoming-card">
+                <div className="card__background"></div>
+                <div className="card__content">
+                  <h3 className="card__heading">Upcoming Events</h3>
+                  <div 
+                    className="card__details" 
+                    ref={upcomingRef}
+                    onScroll={(e) => handleCardScroll(e, 'upcoming')}
+                  >
                      {renderEventsList(events.upcoming, 'upcoming')}
                   </div>
+                  {events.upcoming?.length > 1 && <ScrollAssistant type="upcoming" />}
                 </div>
               </div>
 
             </div>
 
-            {/* Animated Organise Button */}
-            <div className="org-button-container">
+            <div className="button-container static-action-btn" ref={buttonRef}>
               <button onClick={handleOrganiseClick}>
                  Organise New Event
               </button>
             </div>
+
           </div>
         </section>
       </div>
 
-      {/* --- MOVED OUTSIDE OF WRAPPER TO FIX POSITIONING --- */}
-      {/* Payment Modal - MOBILE OPTIMIZED */}
+      {/* MOBILE FAB */}
+      <button
+        className={`org-mobile-fab ${!showFab ? 'hidden' : ''}`}
+        onClick={handleOrganiseClick}
+      >
+        <i className="fas fa-plus"></i>
+        <span>Organise</span>
+      </button>
+
+      {/* Payment Modal */}
       {showPaymentModal && (
         <div 
           className="org-fintech-modal-overlay" 
