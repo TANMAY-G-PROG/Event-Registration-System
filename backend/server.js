@@ -2,16 +2,17 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const supabase = require('./lib/supabase');
-const session = require('express-session');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
 const crypto = require('crypto');
 const ExcelJS = require('exceljs');
 const { createClient } = require('redis');
-const RedisStore = require('connect-redis').RedisStore;
+const jwt = require('jsonwebtoken');
 const Brevo = require('@getbrevo/brevo');
+
 const QR_TOKEN_SECRET = process.env.QR_TOKEN_SECRET || 'your-qr-secret-change-in-production';
 const QR_TOKEN_VALIDITY_MS = 18000; // 15s display + 3s grace
+const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-change-in-production';
 
 // --- File Upload Dependencies ---
 const cloudinary = require('cloudinary').v2;
@@ -25,7 +26,7 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// --- Multer Config (Efficient for 512MB RAM) ---
+// --- Multer Config ---
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
@@ -39,24 +40,28 @@ apiKey.apiKey = process.env.BREVO_API_KEY;
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- PRODUCTION/DEVELOPMENT SETTINGS ---
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-// --- Redis Client Setup ---
-const redisUrl = process.env.REDIS_URL || 'redis://default:vIzb62keblwoEReORsVaa3U5o4pU04cQ@redis-15831.crce283.ap-south-1-2.ec2.cloud.redislabs.com:15831';
-
+// --- Redis Client (FOR CACHING ONLY - not sessions) ---
 const redisClient = createClient({
-    url: redisUrl
+    url: process.env.REDIS_URL,
+    socket: {
+        connectTimeout: 10000,
+        reconnectStrategy: (retries) => {
+            if (retries > 5) return false;
+            return retries * 1000;
+        }
+    }
 });
 
-redisClient.on('error', (err) => console.log('❌ Redis Client Error', err));
-redisClient.on('connect', () => console.log('✅ Connected to Redis Cloud'));
+redisClient.on('error', (err) => console.log('❌ Redis Cache Error (non-fatal):', err.message));
+redisClient.on('connect', () => console.log('✅ Connected to Redis Cloud (cache only)'));
 
 (async () => {
     try {
         await redisClient.connect();
     } catch (err) {
-        console.error('Failed to connect to Redis:', err);
+        console.error('Redis cache unavailable (app will still work without cache):', err.message);
     }
 })();
 
@@ -64,22 +69,32 @@ if (IS_PRODUCTION) {
     app.set('trust proxy', 1);
 }
 
+// --- CORS ---
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'https://www.flobms.com',
+    'https://flobms.com'
+].filter(Boolean);
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL,
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.log('❌ CORS blocked origin:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['set-cookie']
 }));
 
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Credentials", "true");
-    next();
-});
+app.options('*', cors());
 
 app.use(express.json());
 
-// Root route (for Azure / browser check)
+// Root route
 app.get('/', (req, res) => {
     res.send('🚀 Flobms backend server is running successfully');
 });
@@ -87,26 +102,6 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
 });
-
-app.use(session({
-    store: new RedisStore({
-        client: redisClient,
-        prefix: 'sess:',
-        ttl: 3600,
-    }),
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    name: 'sessionId',
-    rolling: true,
-    cookie: {
-        httpOnly: true,
-        maxAge: 60 * 60 * 1000,
-        secure: IS_PRODUCTION ? true : false,
-        sameSite: IS_PRODUCTION ? "none" : "lax",
-        path: '/'
-    }
-}));
 
 app.use((req, res, next) => {
     console.log(`\n📝 ${req.method} ${req.url}`);
@@ -124,12 +119,28 @@ async function testSupabaseConnection() {
 }
 testSupabaseConnection();
 
+// --- JWT Auth Middleware (replaces session-based requireAuth) ---
 function requireAuth(req, res, next) {
-    if (req.session.userUSN) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+        console.log('❌ User NOT authenticated - no token');
+        return res.status(401).json({ error: 'Please sign in first' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        // Keep req.session shape so all existing routes work without change
+        req.session = {
+            userUSN: decoded.usn,
+            userName: decoded.name,
+            userEmail: decoded.email
+        };
         next();
-    } else {
-        console.log('❌ User NOT authenticated - sending 401');
-        res.status(401).json({ error: 'Please sign in first' });
+    } catch (err) {
+        console.log('❌ Invalid/expired JWT token');
+        return res.status(401).json({ error: 'Session expired. Please sign in again.' });
     }
 }
 
@@ -145,6 +156,8 @@ const uploadFromBuffer = (buffer) => {
         streamifier.createReadStream(buffer).pipe(cld_upload_stream);
     });
 };
+
+// ==================== AUTH ENDPOINTS ====================
 
 // Sign up endpoint
 app.post('/api/signup', async (req, res) => {
@@ -189,21 +202,20 @@ app.post('/api/signup', async (req, res) => {
             return res.status(500).json({ error: `Error registering student: ${error.message}` });
         }
 
-        req.session.userUSN = usn;
-        req.session.userName = name;
-        req.session.userEmail = email;
+        // Generate JWT token
+        const token = jwt.sign(
+            { usn: usn, name: name, email: email },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
 
-        req.session.save((err) => {
-            if (err) {
-                console.error('❌ Session save error:', err);
-                return res.status(500).json({ error: 'Session error' });
-            }
-            res.status(201).json({
-                success: true,
-                message: 'Student registered successfully!',
-                userUSN: usn,
-                userName: name
-            });
+        console.log('✅ Student registered:', usn);
+        res.status(201).json({
+            success: true,
+            message: 'Student registered successfully!',
+            token: token,
+            userUSN: usn,
+            userName: name
         });
     } catch (err) {
         console.error('Error registering student:', err);
@@ -242,22 +254,20 @@ app.post('/api/signin', async (req, res) => {
             return res.status(401).json({ error: 'Invalid USN or password' });
         }
 
-        req.session.userUSN = student.usn;
-        req.session.userName = student.sname;
-        req.session.userEmail = student.emailid;
+        // Generate JWT token
+        const token = jwt.sign(
+            { usn: student.usn, name: student.sname, email: student.emailid },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
 
-        req.session.save((err) => {
-            if (err) {
-                console.error('❌ Session save error:', err);
-                return res.status(500).json({ error: 'Session error' });
-            }
-            console.log('✅ User signed in:', student.usn);
-            res.json({
-                success: true,
-                message: 'Signed in successfully',
-                userUSN: student.usn,
-                userName: student.sname
-            });
+        console.log('✅ User signed in:', student.usn);
+        res.json({
+            success: true,
+            message: 'Signed in successfully',
+            token: token,
+            userUSN: student.usn,
+            userName: student.sname
         });
     } catch (err) {
         console.error('Error signing in:', err);
@@ -296,16 +306,10 @@ app.get('/api/me', requireAuth, async (req, res) => {
     }
 });
 
+// Signout - client just deletes the token, server does nothing
 app.post('/api/signout', (req, res) => {
-    const userUSN = req.session.userUSN;
-    req.session.destroy((err) => {
-        if (err) {
-            console.error('❌ Session destroy error:', err);
-            return res.status(500).json({ error: 'Could not sign out' });
-        }
-        console.log('✅ User signed out:', userUSN);
-        res.json({ success: true, message: 'Signed out successfully' });
-    });
+    console.log('✅ User signed out (token invalidated client-side)');
+    res.json({ success: true, message: 'Signed out successfully' });
 });
 
 // --- CACHED Get all events ---
@@ -320,7 +324,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
                 const cachedData = await redisClient.get(cacheKey);
                 if (cachedData) rows = JSON.parse(cachedData);
             }
-        } catch (cacheErr) { console.error('Redis error:', cacheErr); }
+        } catch (cacheErr) { console.error('Redis read error:', cacheErr.message); }
 
         if (!rows) {
             const { data, error } = await supabase
@@ -338,7 +342,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
 
             try {
                 if (redisClient.isOpen) await redisClient.set(cacheKey, JSON.stringify(rows), { EX: 600 });
-            } catch (saveErr) { console.error('Redis write error:', saveErr); }
+            } catch (saveErr) { console.error('Redis write error:', saveErr.message); }
         }
 
         const events = { ongoing: [], completed: [], upcoming: [] };
@@ -378,10 +382,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Get user's participant events
-// activity_points per event included — NO cumulative total
-// ─────────────────────────────────────────────────────────────────────────────
 app.get('/api/my-participant-events', requireAuth, async (req, res) => {
     try {
         const { data: participantEvents, error } = await supabase
@@ -547,9 +548,7 @@ app.get('/api/my-organized-events', requireAuth, async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Create/Organize a new event — saves activity_points
-// ─────────────────────────────────────────────────────────────────────────────
+// Create/Organize a new event
 app.post('/api/events/create', requireAuth, upload.single('banner'), async (req, res) => {
     try {
         const {
@@ -671,7 +670,9 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             console.error('Error creating default sub-event:', subEventError);
         }
 
-        if (redisClient.isOpen) await redisClient.del('events_list_raw');
+        try {
+            if (redisClient.isOpen) await redisClient.del('events_list_raw');
+        } catch (e) { /* cache clear failure is non-fatal */ }
 
         res.status(201).json({
             success: true,
@@ -951,7 +952,6 @@ app.get('/api/events/:eventId/sub-events', requireAuth, async (req, res) => {
             .from('sub_event')
             .select('*')
             .eq('eid', eventId)
-            .order('seid', { ascending: true })
             .order('seid', { ascending: true });
 
         if (error) {
@@ -1041,7 +1041,6 @@ app.put('/api/sub-events/:seid', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Activity points cannot be negative' });
         }
 
-        // Verify password
         const { data: userData, error: userError } = await supabase
             .from('student')
             .select('password')
@@ -1114,7 +1113,6 @@ app.delete('/api/sub-events/:seid', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Password is required to confirm deletion' });
         }
 
-        // Verify password
         const { data: userData, error: userError } = await supabase
             .from('student')
             .select('password')
@@ -1642,7 +1640,6 @@ app.post('/api/forgot-password', async (req, res) => {
         }
 
         if (!user || user.length === 0) {
-            console.log('Reset requested for non-existent email:', email);
             return res.json({
                 success: true,
                 message: 'If an account exists, you will receive a reset link.'
@@ -1935,7 +1932,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
                     return res.status(500).json({ error: 'Failed to update participant status' });
                 }
 
-                console.log(`✅ Payment verified for entire team (${allTeamUSNs.length} members): Team ID ${teamId} for event ${eventId} by ${organizerUSN}`);
+                console.log(`✅ Payment verified for entire team (${allTeamUSNs.length} members)`);
 
                 return res.json({
                     success: true,
@@ -2006,16 +2003,8 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
             const { data: pendingPayments, error: paymentsError } = await supabase
                 .from('payment')
                 .select(`
-                    usn,
-                    amount,
-                    upi_transaction_id,
-                    created_at,
-                    status,
-                    student:usn (
-                        sname,
-                        emailid,
-                        mobno
-                    )
+                    usn, amount, upi_transaction_id, created_at, status,
+                    student:usn (sname, emailid, mobno)
                 `)
                 .eq('event_id', eventId)
                 .eq('status', 'pending_verification');
@@ -2058,16 +2047,8 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
             const { data: pendingPayments, error: paymentsError } = await supabase
                 .from('payment')
                 .select(`
-                    usn,
-                    amount,
-                    upi_transaction_id,
-                    created_at,
-                    status,
-                    student:usn (
-                        sname,
-                        emailid,
-                        mobno
-                    )
+                    usn, amount, upi_transaction_id, created_at, status,
+                    student:usn (sname, emailid, mobno)
                 `)
                 .eq('event_id', eventId)
                 .eq('status', 'pending_verification');
@@ -2163,9 +2144,7 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
                 .in('usn', memberUSNs);
 
             if (studentError || !students || students.length !== memberUSNs.length) {
-                return res.status(400).json({
-                    error: 'One or more member USNs are invalid'
-                });
+                return res.status(400).json({ error: 'One or more member USNs are invalid' });
             }
 
             const { data: memberTeamCheck } = await supabase
@@ -2264,13 +2243,9 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             );
             if (inEventTeam) {
                 if (inEventTeam.team.registration_complete) {
-                    return res.status(400).json({
-                        error: 'Your team is already registered for this event'
-                    });
+                    return res.status(400).json({ error: 'Your team is already registered for this event' });
                 }
-                return res.status(400).json({
-                    error: 'You are already part of a team for this event'
-                });
+                return res.status(400).json({ error: 'You are already part of a team for this event' });
             }
         }
 
@@ -2282,17 +2257,13 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             .limit(1);
 
         if (teamError || !team || team.length === 0) {
-            return res.status(404).json({
-                error: 'Team not found. Please check the team leader USN.'
-            });
+            return res.status(404).json({ error: 'Team not found. Please check the team leader USN.' });
         }
 
         const teamId = team[0].id;
 
         if (team[0].registration_complete) {
-            return res.status(400).json({
-                error: 'This team has already completed registration'
-            });
+            return res.status(400).json({ error: 'This team has already completed registration' });
         }
 
         const { data: membership, error: membershipError } = await supabase
@@ -2303,15 +2274,11 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             .limit(1);
 
         if (membershipError || !membership || membership.length === 0) {
-            return res.status(403).json({
-                error: 'You are not invited to this team'
-            });
+            return res.status(403).json({ error: 'You are not invited to this team' });
         }
 
         if (membership[0].join_status) {
-            return res.status(400).json({
-                error: 'You have already joined this team'
-            });
+            return res.status(400).json({ error: 'You have already joined this team' });
         }
 
         const { error: updateError } = await supabase
@@ -2392,16 +2359,8 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
         const { data: memberTeam } = await supabase
             .from('team_members')
             .select(`
-                team_id,
-                join_status,
-                team:team_id(
-                    id,
-                    team_name,
-                    leader_usn,
-                    registration_complete,
-                    event_id,
-                    leader:leader_usn(sname)
-                )
+                team_id, join_status,
+                team:team_id(id, team_name, leader_usn, registration_complete, event_id, leader:leader_usn(sname))
             `)
             .eq('student_usn', userUSN)
             .eq('join_status', true);
@@ -2463,15 +2422,11 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
             .limit(1);
 
         if (teamError || !team || team.length === 0) {
-            return res.status(404).json({
-                error: 'Team not found or you are not the team leader'
-            });
+            return res.status(404).json({ error: 'Team not found or you are not the team leader' });
         }
 
         if (team[0].registration_complete) {
-            return res.status(400).json({
-                error: 'Team is already registered for this event'
-            });
+            return res.status(400).json({ error: 'Team is already registered for this event' });
         }
 
         const teamId = team[0].id;
@@ -2559,15 +2514,11 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             .limit(1);
 
         if (teamError || !team || team.length === 0) {
-            return res.status(404).json({
-                error: 'Team not found or you are not the team leader'
-            });
+            return res.status(404).json({ error: 'Team not found or you are not the team leader' });
         }
 
         if (team[0].registration_complete) {
-            return res.status(400).json({
-                error: 'Team is already registered for this event'
-            });
+            return res.status(400).json({ error: 'Team is already registered for this event' });
         }
 
         const teamId = team[0].id;
@@ -2686,9 +2637,7 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
         }
 
         if (team[0].registration_complete) {
-            return res.status(400).json({
-                error: 'Cannot add members to a registered team'
-            });
+            return res.status(400).json({ error: 'Cannot add members to a registered team' });
         }
 
         const { count: currentSize } = await supabase
@@ -2698,9 +2647,7 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
 
         const maxSize = team[0].event?.max_team_size;
         if (maxSize && (currentSize + memberUSNs.length) > maxSize) {
-            return res.status(400).json({
-                error: `Cannot exceed maximum team size of ${maxSize}`
-            });
+            return res.status(400).json({ error: `Cannot exceed maximum team size of ${maxSize}` });
         }
 
         const { data: students } = await supabase
@@ -2709,9 +2656,7 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             .in('usn', memberUSNs);
 
         if (!students || students.length !== memberUSNs.length) {
-            return res.status(400).json({
-                error: 'One or more member USNs are invalid'
-            });
+            return res.status(400).json({ error: 'One or more member USNs are invalid' });
         }
 
         const { data: conflictCheck } = await supabase
@@ -2724,9 +2669,7 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
                 m.team?.event_id === team[0].event_id
             );
             if (conflicts.length > 0) {
-                return res.status(400).json({
-                    error: `Member ${conflicts[0].student_usn} is already in another team`
-                });
+                return res.status(400).json({ error: `Member ${conflicts[0].student_usn} is already in another team` });
             }
         }
 
@@ -2745,10 +2688,7 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Failed to add members' });
         }
 
-        res.json({
-            success: true,
-            message: 'Members added successfully!'
-        });
+        res.json({ success: true, message: 'Members added successfully!' });
     } catch (err) {
         console.error('Error adding members:', err);
         res.status(500).json({ error: 'Error adding members' });
@@ -2763,16 +2703,8 @@ app.get('/api/events/:eventId/my-invites', requireAuth, async (req, res) => {
         const { data: invites, error } = await supabase
             .from('team_members')
             .select(`
-                team_id,
-                join_status,
-                team:team_id (
-                    id,
-                    team_name,
-                    leader_usn,
-                    event_id,
-                    registration_complete,
-                    leader:leader_usn(sname)
-                )
+                team_id, join_status,
+                team:team_id (id, team_name, leader_usn, event_id, registration_complete, leader:leader_usn(sname))
             `)
             .eq('student_usn', userUSN)
             .eq('join_status', false);
@@ -2793,10 +2725,7 @@ app.get('/api/events/:eventId/my-invites', requireAuth, async (req, res) => {
                 registrationComplete: invite.team.registration_complete
             }));
 
-        res.json({
-            success: true,
-            invites: eventInvites
-        });
+        res.json({ success: true, invites: eventInvites });
     } catch (err) {
         console.error('Error fetching invites:', err);
         res.status(500).json({ error: 'Error fetching invites' });
@@ -2823,21 +2752,15 @@ app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
         }
 
         if (!membership || membership.length === 0) {
-            return res.status(404).json({
-                error: 'You are not invited to this team'
-            });
+            return res.status(404).json({ error: 'You are not invited to this team' });
         }
 
         if (membership[0].join_status) {
-            return res.status(400).json({
-                error: 'You have already joined this team'
-            });
+            return res.status(400).json({ error: 'You have already joined this team' });
         }
 
         if (membership[0].team.registration_complete) {
-            return res.status(400).json({
-                error: 'This team has already completed registration'
-            });
+            return res.status(400).json({ error: 'This team has already completed registration' });
         }
 
         const { data: otherTeams } = await supabase
@@ -2851,9 +2774,7 @@ app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
                 t.team?.event_id === membership[0].team.event_id
             );
             if (conflictTeam) {
-                return res.status(400).json({
-                    error: 'You have already joined another team for this event'
-                });
+                return res.status(400).json({ error: 'You have already joined another team for this event' });
             }
         }
 
@@ -2905,14 +2826,8 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         const { data: participants, error: participantError } = await supabase
             .from('participant')
             .select(`
-                partusn,
-                partstatus,
-                payment_status,
-                team_id,
-                student:partusn (
-                    sname, sem, mobno, emailid,
-                    payment!payment_usn_fkey (upi_transaction_id, amount)
-                ),
+                partusn, partstatus, payment_status, team_id,
+                student:partusn (sname, sem, mobno, emailid, payment!payment_usn_fkey (upi_transaction_id, amount)),
                 team:team_id (team_name)
             `)
             .eq('parteid', eventId);
@@ -2924,11 +2839,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
 
         const { data: volunteers, error: volunteerError } = await supabase
             .from('volunteer')
-            .select(`
-                volnusn,
-                volnstatus,
-                student:volnusn (sname)
-            `)
+            .select(`volnusn, volnstatus, student:volnusn (sname)`)
             .eq('volneid', eventId);
 
         if (volunteerError) {
@@ -3047,14 +2958,8 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             });
         });
 
-        res.setHeader(
-            'Content-Type',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        );
-        res.setHeader(
-            'Content-Disposition',
-            `attachment; filename=Event_${eventData.ename.replace(/\s+/g, '_')}_Details.xlsx`
-        );
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=Event_${eventData.ename.replace(/\s+/g, '_')}_Details.xlsx`);
 
         await workbook.xlsx.write(res);
         res.end();
@@ -3116,8 +3021,7 @@ app.get('/api/sub-events/:seid/qr-token', requireAuth, async (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Server running on port ${PORT}`);
-    console.log(`📡 CORS enabled for ${process.env.FRONTEND_URL}`);
-    console.log(`🔍 Session debugging ENABLED\n`);
-    console.log(`🌱 Environment: ${IS_PRODUCTION ? 'production' : 'development'}`);
+    console.log(`📡 CORS enabled for: ${allowedOrigins.join(', ')}`);
+    console.log(`🔐 Auth: JWT (stateless)`);
+    console.log(`🌱 Environment: ${IS_PRODUCTION ? 'production' : 'development'}\n`);
 });
-
