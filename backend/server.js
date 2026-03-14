@@ -103,7 +103,7 @@ app.use(session({
         httpOnly: true,
         maxAge: 60 * 60 * 1000,
         secure: IS_PRODUCTION ? true : false,
-        sameSite: IS_PRODUCTION ? "lax" : "lax",
+        sameSite: IS_PRODUCTION ? "none" : "lax",
         path: '/'
     }
 }));
