@@ -58,6 +58,8 @@ let redisClient = {
             url: process.env.REDIS_URL,
             socket: {
                 connectTimeout: 5000,
+                tls : true,
+                rejectUnauthorized: false,
                 reconnectStrategy: (retries) => {
                     if (retries > 2) return false;
                     return 1000;
