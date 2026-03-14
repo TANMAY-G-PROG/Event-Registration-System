@@ -93,7 +93,6 @@ const LightRays = ({
       await new Promise(resolve => setTimeout(resolve, 10));
       if (!containerRef.current) return;
 
-      // FIX 5: Force low DPR on mobile to prevent animation lag
       const maxDpr = isMobile ? 1.0 : 1.5;
       
       const renderer = new Renderer({
@@ -344,7 +343,6 @@ export default function Events() {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
 
-  // --- FIX 6: Detect iOS and Add Class ---
   useEffect(() => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -369,14 +367,18 @@ export default function Events() {
   }, []);
 
   const checkAuth = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/');
+      return;
+    }
     try {
       const response = await apiFetch('/api/me', {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
       if (!response.ok) {
+        localStorage.removeItem('token');
         navigate('/');
       }
     } catch (error) {
@@ -387,21 +389,16 @@ export default function Events() {
 
   const handleLogout = async () => {
     try {
-      const response = await apiFetch('/api/signout', {
+      await apiFetch('/api/signout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
-      const data = await response.json();
-      if (data.success) {
-        navigate('/');
-      } else {
-        alert('Error logging out. Please try again.');
-      }
     } catch (error) {
       console.error('Logout error:', error);
-      alert('Error logging out. Please try again.');
+    } finally {
+      // Always remove token regardless of API response
+      localStorage.removeItem('token');
+      navigate('/');
     }
   };
 
@@ -447,7 +444,6 @@ export default function Events() {
         {/* Card 1: Participants */}
         <article className="card card--1" onClick={() => navigate('/participants')}>
           <div className="card__img">
-            {/* FIX 7: Added ImageKit parameters for high quality on retina */}
             <img 
               src="https://ik.imagekit.io/flopass/volunteers.png?tr=w-800,h-600,fo-auto,dpr-auto,q-100" 
               alt="Participants"

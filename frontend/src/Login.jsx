@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./style.css"; // make sure this file exists
+import "./style.css";
 
 import { apiFetch } from "./api.js";
 
 export default function Login() {
   const navigate = useNavigate();
 
-  // ── State ─────────────────────────────────────
-  const [isActive, setIsActive] = useState(false); // true → sign-up panel active
+  const [isActive, setIsActive] = useState(false);
   const [message, setMessage] = useState({ text: "", isError: false, show: false });
   const [showPassword, setShowPassword] = useState({ signIn: false, signUp: false });
 
-  // Form data
   const [signInData, setSignInData] = useState({ usn: "", password: "" });
   const [signUpData, setSignUpData] = useState({
     name: "",
@@ -23,7 +21,6 @@ export default function Login() {
     password: "",
   });
 
-  // ── Effects ───────────────────────────────────
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -35,8 +32,10 @@ export default function Login() {
     }
   }, [message.show]);
 
-  // ── API Helpers ───────────────────────────────
   const checkAuthStatus = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
     try {
       const res = await apiFetch("/api/me", {
         method: "GET",
@@ -46,6 +45,9 @@ export default function Login() {
         const data = await res.json();
         showMessage(`Already logged in as ${data.userName}. Redirecting...`);
         setTimeout(() => navigate("/events"), 1500);
+      } else {
+        // Token invalid/expired — clear it
+        localStorage.removeItem('token');
       }
     } catch (err) {
       console.log("Not authenticated");
@@ -56,7 +58,6 @@ export default function Login() {
     setMessage({ text, isError, show: true });
   };
 
-  // ── Handlers ───────────────────────────────────
   const handleSignIn = async (e) => {
     e?.preventDefault();
     const { usn, password } = signInData;
@@ -71,6 +72,8 @@ export default function Login() {
       const data = await res.json();
 
       if (data.success) {
+        // Save JWT token to localStorage
+        localStorage.setItem('token', data.token);
         showMessage(`Welcome back, ${data.userName || usn}!`);
         setTimeout(() => navigate("/events"), 1500);
       } else {
@@ -103,6 +106,8 @@ export default function Login() {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        // Save JWT token to localStorage
+        localStorage.setItem('token', data.token);
         showMessage(`Account created! Welcome, ${data.userName || name}!`);
         setSignUpData({ name: "", usn: "", sem: "", mobno: "", email: "", password: "" });
         setTimeout(() => navigate("/events"), 2000);
@@ -139,16 +144,13 @@ export default function Login() {
   const goTo = (path) => () => navigate(path);
   const goToContact = () => navigate("/about-us#connect-section");
 
-  // ── Render ─────────────────────────────────────
   return (
     <div className="login-page">
-      {/* Font Awesome */}
       <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
       />
 
-      {/* Top navigation buttons */}
       <div className="top-nav-buttons">
         <button className="button" onClick={goTo("/about-us")}>
           {[1, 2, 3, 4, 5, 6, 7].map((i) => (
@@ -164,14 +166,13 @@ export default function Login() {
         </button>
       </div>
 
-      {/* Toast message */}
       {message.show && (
         <div className={`message ${message.isError ? "error" : "success"}`}>
           {message.text}
         </div>
       )}
 
-      {/* ── Desktop View (Sliding panels) ───────────────────── */}
+      {/* Desktop View */}
       <div className={`container desktop-view ${isActive ? "active" : ""}`} id="container">
         {/* Sign-up form */}
         <div className="form-container sign-up">
@@ -296,7 +297,7 @@ export default function Login() {
         </div>
       </div>
 
-      {/* ── Mobile View (Premium bottom sheet) ───────────────────── */}
+      {/* Mobile View */}
       <div className="mobile-view-wrapper">
         <div className="m-hero-section">
           <div className="m-hero-content">
@@ -317,7 +318,6 @@ export default function Login() {
           <div className="m-form-scroll">
             <form onSubmit={isActive ? handleSignUp : handleSignIn}>
               {!isActive ? (
-                // Sign-in fields
                 <div className="m-form-group">
                   <MobileInput
                     label="University Serial No."
@@ -350,7 +350,6 @@ export default function Login() {
                   </div>
                 </div>
               ) : (
-                // Sign-up fields
                 <div className="m-form-group">
                   <MobileInput
                     label="Name"
@@ -419,7 +418,7 @@ export default function Login() {
   );
 }
 
-// ── Mobile Input Component ─────────────────────
+// Mobile Input Component
 const MobileInput = ({
   label,
   name,
