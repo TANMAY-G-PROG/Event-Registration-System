@@ -43,7 +43,7 @@ const PORT = process.env.PORT || 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // --- Redis Client Setup ---
-const redisUrl = process.env.REDIS_URL || 'redis://default:ovBfSh1ALdigQLS0BDbJApUwTOJ6nk3i@redis-10269.c81.us-east-1-2.ec2.cloud.redislabs.com:10269';
+const redisUrl = process.env.REDIS_URL || 'redis://default:PASSWORD@redis-15831.crce283.ap-south-1-2.ec2.cloud.redislabs.com:15831';
 
 const redisClient = createClient({
     url: redisUrl
