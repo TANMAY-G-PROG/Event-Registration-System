@@ -216,7 +216,7 @@ app.post('/api/signup', async (req, res) => {
         const token = jwt.sign(
             { usn: usn, name: name, email: email },
             JWT_SECRET,
-            { expiresIn: '30m' }
+            { expiresIn: '1d' }
         );
 
         console.log('✅ Student registered:', usn);
@@ -268,7 +268,7 @@ app.post('/api/signin', async (req, res) => {
         const token = jwt.sign(
             { usn: student.usn, name: student.sname, email: student.emailid },
             JWT_SECRET,
-            { expiresIn: '30m' }
+            { expiresIn: '1d' }
         );
 
         console.log('✅ User signed in:', student.usn);
