@@ -5,6 +5,8 @@ import QRCode from "qrcode"
 import "./registerevent.css"
 import TicketAnimation from './TicketAnimation';
 
+import { apiFetch } from "./api.js";
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -806,7 +808,9 @@ export default function Registerevent() {
   const loadEvents = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/events', { method: "GET", credentials: "include" })
+      const response = await apiFetch('/api/events', {
+        method: "GET"
+      });
       if (response.status === 401) { navigate('/'); return }
       if (!response.ok) throw new Error("Failed")
       const data = await response.json()
@@ -817,7 +821,7 @@ export default function Registerevent() {
 
   const fetchMyRegistrations = useCallback(async () => {
     try {
-      const res = await fetch('/api/my-participant-events', { credentials: 'include' })
+      const res = await apiFetch('/api/my-participant-events');
       if (res.ok) {
         const data = await res.json()
         setRegisteredEvents(new Set(data.participantEvents.map(ev => ev.eid)))
@@ -827,7 +831,7 @@ export default function Registerevent() {
 
   const loadTeamStatus = useCallback(async (eventId) => {
     try {
-      const response = await fetch(`/api/events/${eventId}/team-status`, { credentials: 'include' })
+      const response = await apiFetch(`/api/events/${eventId}/team-status`);
       if (response.ok) {
         const data = await response.json()
         // Store the real data object (truthy = event exists and is valid)
@@ -940,7 +944,10 @@ export default function Registerevent() {
       setTransactionId(""); setModalFlash({ type: "", message: "" }); setShowUpiModal({ event, isTeam: false }); return
     }
     try {
-      const response = await fetch(`/api/events/${eventId}/join`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" } })
+      const response = await apiFetch(`/api/events/${eventId}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
       const data = await response.json()
       if (!response.ok) { showFlash("error", data.error || "Failed"); return }
       showFlash("success", "Registered successfully!")
@@ -955,10 +962,18 @@ export default function Registerevent() {
       const { teamName, memberUSNs } = teamFormData
       if (!teamName.trim()) { showModalFlash('error', 'Team name required'); return }
       const validUSNs = memberUSNs.filter(usn => usn.trim() !== '')
-      const response = await fetch(`/api/events/${eventId}/create-team`, {
-        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamName: teamName.trim(), memberUSNs: validUSNs })
-      })
+
+      const response = await apiFetch(`/api/events/${eventId}/create-team`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          teamName: teamName.trim(),
+          memberUSNs: validUSNs
+        })
+      });
+
       const data = await response.json()
       if (!response.ok) { showModalFlash('error', data.error); return }
       showModalFlash('success', 'Team created!'); showFlash('success', 'Team created!')
@@ -968,7 +983,7 @@ export default function Registerevent() {
 
   async function handleViewInvites(eventId) {
     try {
-      const response = await fetch(`/api/events/${eventId}/my-invites`, { credentials: 'include' })
+      const response = await apiFetch(`/api/events/${eventId}/my-invites`);
       const data = await response.json()
       if (!response.ok) { showFlash('error', data.error); return }
       if (!data.invites?.length) { showFlash('error', 'No pending invites'); setTeamInvites([]) }
@@ -978,7 +993,10 @@ export default function Registerevent() {
 
   async function handleConfirmJoin(teamId, eventId) {
     try {
-      const response = await fetch(`/api/teams/${teamId}/confirm-join`, { method: 'POST', credentials: 'include' })
+      const response = await apiFetch(`/api/teams/${teamId}/confirm-join`, {
+        method: "POST"
+      });
+
       if (!response.ok) { showModalFlash('error', 'Failed to join'); return }
       showModalFlash('success', 'Joined team!');
       setTimeout(() => { setShowTeamModal(null); setTeamInvites([]); loadTeamStatus(eventId) }, 1500)
@@ -988,8 +1006,12 @@ export default function Registerevent() {
   async function handleRegisterTeam(event, teamState) {
     const eventId = event.eid
     try {
-      const response = await fetch(`/api/events/${eventId}/register-team`, { method: 'POST', credentials: 'include' })
+      const response = await apiFetch(`/api/events/${eventId}/register-team`, { 
+        method: "POST"
+      });
+
       const data = await response.json()
+
       if (!response.ok) { showFlash('error', data.error); return }
       if (data.requiresPayment) {
         if (!event.upiId) { showFlash("error", "Payment not setup"); return }
@@ -1007,10 +1029,15 @@ export default function Registerevent() {
     const { event, isTeam } = showUpiModal; const eventId = event.eid;
     const url = isTeam ? `/api/events/${eventId}/register-team-upi` : `/api/events/${eventId}/register-upi`
     try {
-      const response = await fetch(url, {
-        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transaction_id: transactionId.trim() })
-      })
+      const response = await apiFetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          transaction_id: transactionId.trim()
+        })
+      });
       const data = await response.json()
       if (!response.ok) { showModalFlash('error', data.error); return }
       showModalFlash('success', 'Submitted for verification!');

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import './QrCode.css';
 
+import { apiFetch } from './api.js';
+
 const TOKEN_LIFETIME = 15;
 const PREFETCH_AT = 3;
 
@@ -43,7 +45,9 @@ export default function QrCode() {
     const seid = seidRef.current;
     if (!seid) return null;
     try {
-      const res = await fetch(`/api/sub-events/${seid}/qr-token`, { credentials: 'include' });
+      const res = await apiFetch(`/api/sub-events/${seid}/qr-token`, {
+        method: 'GET'
+      });
       if (!res.ok) throw new Error('Token fetch failed');
       const data = await res.json();
       if (data.seName) {

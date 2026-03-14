@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './style.css';
 
+import { apiFetch } from './api.js';
+
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -35,12 +37,11 @@ export default function ForgotPassword() {
 
     try {
       // 2. Send request to backend
-      const response = await fetch('/api/forgot-password', {
+      const response = await apiFetch('/api/forgot-password', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        credentials: 'include', // Important for cookies/sessions if needed
         body: JSON.stringify({ email })
       });
 

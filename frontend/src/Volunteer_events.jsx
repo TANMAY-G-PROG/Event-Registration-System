@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './volunteer_events.css';
 
+import { apiFetch } from "./api.js";
+
 // ⛔️ REMOVED: const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function VolunteerEvents() {
@@ -44,11 +46,7 @@ export default function VolunteerEvents() {
     try {
       setIsLoading(true);
       // ✅ CHANGED: Using relative path
-      const response = await fetch('/api/events', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await apiFetch('/api/events');
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -86,10 +84,7 @@ export default function VolunteerEvents() {
       uniqueEvents.forEach(async (event, index) => {
         try {
           // ✅ CHANGED: Using relative path
-          const countResponse = await fetch(`/api/events/${event.eid}/volunteer-count`, {
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }
-          });
+          const countResponse = await apiFetch(`/api/events/${event.eid}/volunteer-count`);
           const countData = await countResponse.json();
           
           // Update the specific event's count
@@ -139,10 +134,11 @@ export default function VolunteerEvents() {
 
     try {
       // ✅ CHANGED: Using relative path
-      const response = await fetch(`/api/events/${eventId}/volunteer`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
+      const response = await apiFetch(`/api/events/${eventId}/volunteer`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
       });
 
       const data = await response.json();

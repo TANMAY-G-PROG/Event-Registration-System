@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
 import './events.css';
 
+import { apiFetch } from './api.js';
+
 const DEFAULT_COLOR = '#ffffff';
 
 const hexToRgb = hex => {
@@ -368,9 +370,8 @@ export default function Events() {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch('/api/me', {
+      const response = await apiFetch('/api/me', {
         method: 'GET',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         }
@@ -386,9 +387,8 @@ export default function Events() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/signout', {
+      const response = await apiFetch('/api/signout', {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         }

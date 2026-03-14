@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './subeventmanager.css';
 
+import { apiFetch } from "./api.js";
+
 const SubEventManager = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -44,9 +46,9 @@ const SubEventManager = () => {
   const fetchAllData = async () => {
     try {
       const [userRes, eventRes, subRes] = await Promise.all([
-        fetch('/api/me', { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }),
-        fetch(`/api/events/${eventId}`, { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }),
-        fetch(`/api/events/${eventId}/sub-events`, { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }),
+        apiFetch('/api/me'),
+        apiFetch(`/api/events/${eventId}`),
+        apiFetch(`/api/events/${eventId}/sub-events`)
       ]);
 
       if (!userRes.ok) throw new Error('Failed to fetch user data');
@@ -79,11 +81,7 @@ const SubEventManager = () => {
 
   const fetchSubEvents = async () => {
     try {
-      const response = await fetch(`/api/events/${eventId}/sub-events`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await apiFetch(`/api/events/${eventId}/sub-events`);
 
       if (!response.ok) throw new Error('Failed to fetch sub-events');
 
@@ -114,10 +112,11 @@ const SubEventManager = () => {
     setSavingId('adding');
 
     try {
-      const response = await fetch(`/api/events/${eventId}/sub-events`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await apiFetch(`/api/events/${eventId}/sub-events`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify(newSubEvent)
       });
 
@@ -169,10 +168,11 @@ const SubEventManager = () => {
     setSavingId(seid);
 
     try {
-      const response = await fetch(`/api/sub-events/${seid}`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await apiFetch(`/api/sub-events/${seid}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({ ...editData, password })
       });
 
@@ -209,10 +209,11 @@ const SubEventManager = () => {
     setDeletingId(seid);
 
     try {
-      const response = await fetch(`/api/sub-events/${seid}`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await apiFetch(`/api/sub-events/${seid}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({ password })
       });
 

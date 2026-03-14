@@ -5,6 +5,8 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import DOMPurify from 'dompurify';
 
+import { apiFetch } from './api.js';
+
 // Cache fonts outside component to prevent re-fetching on every click
 let cachedFontBytes = null;
 let cachedTemplateBytes = null;
@@ -86,7 +88,9 @@ const Participants = () => {
 
   const fetchUserInfo = async () => {
     try {
-      const response = await fetch('/api/me');
+      const response = await apiFetch('/api/me', {
+        method: 'GET'
+      });
       if (response.ok) {
         const data = await response.json();
         setUserInfo({ userName: data.userName, userUSN: data.userUSN });
@@ -136,7 +140,9 @@ const Participants = () => {
 
   const fetchParticipantEvents = async () => {
     try {
-      const response = await fetch('/api/my-participant-events');
+      const response = await apiFetch('/api/my-participant-events', {
+        method: 'GET'
+      });
       if (!response.ok) {
         if (response.status === 401) { navigate('/'); return; }
         throw new Error(`HTTP error! status: ${response.status}`);

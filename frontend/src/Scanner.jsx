@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import './Scanner.css';
 
+import { apiFetch } from "./api.js";
+
 export default function Scanner() {
   const [pageState, setPageState] = useState('loading');
   const [errorMsg, setErrorMsg]   = useState(null);
@@ -41,7 +43,7 @@ export default function Scanner() {
   // ── Fetch current user ─────────────────────────────────────────────────────
   const fetchUserData = async () => {
     try {
-      const response = await fetch('/api/me', { credentials: 'include' });
+      const response = await apiFetch('/api/me');
       if (response.ok) {
         const data = await response.json();
         setUserUSN(data.userUSN);
@@ -161,11 +163,17 @@ export default function Scanner() {
         ? '/api/mark-volunteer-attendance'
         : '/api/mark-participant-attendance';
 
-      const res  = await fetch(endpoint, {
-        method:      'POST',
-        credentials: 'include',
-        headers:     { 'Content-Type': 'application/json' },
-        body:        JSON.stringify({ seid, usn, token, timestamp }),
+      const res = await apiFetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          seid,
+          usn,
+          token,
+          timestamp
+        })
       });
       const data = await res.json();
 

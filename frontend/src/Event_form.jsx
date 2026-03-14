@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './event_form.css';
 
+import { apiFetch } from './api.js';
+
 const EventForm = () => {
   const navigate = useNavigate();
   
@@ -36,7 +38,7 @@ const EventForm = () => {
   useEffect(() => {
     const fetchMyClubs = async () => {
       try {
-        const res = await fetch('/api/my-clubs', { credentials: 'include' });
+        const res = await apiFetch('/api/my-clubs');;
         if (res.ok) {
           const data = await res.json();
           setMyClubs(data.clubs || []);
@@ -118,10 +120,9 @@ const EventForm = () => {
     }
 
     try {
-      const res = await fetch('/api/events/create', {
+      const res = await apiFetch('/api/events/create', {
         method: 'POST',
-        credentials: 'include',
-        body: submissionData 
+        body: submissionData
       });
 
       const result = await res.json();

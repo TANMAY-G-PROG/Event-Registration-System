@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
+import { apiFetch } from "./api.js";
+
 const Volunteers = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState({
@@ -67,11 +69,7 @@ const Volunteers = () => {
 
   const fetchUserInfo = async () => {
     try {
-      const response = await fetch('/api/me', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await apiFetch('/api/me');
       if (response.ok) {
         const data = await response.json();
         setUserInfo({ userName: data.userName, userUSN: data.userUSN });
@@ -123,11 +121,7 @@ const Volunteers = () => {
 
   const fetchVolunteerEvents = async () => {
     try {
-      const response = await fetch('/api/my-volunteer-events', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await apiFetch('/api/my-volunteer-events');
 
       if (!response.ok) {
         if (response.status === 401) { navigate('/'); return; }

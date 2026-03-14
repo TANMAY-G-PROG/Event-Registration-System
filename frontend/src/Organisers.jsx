@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import './organisers.css';
 
+import { apiFetch } from './api.js';
+
 const Organisers = () => {
   const navigate = useNavigate();
 
@@ -102,9 +104,8 @@ const Organisers = () => {
 
   const fetchOrganizerEvents = async () => {
     try {
-      const response = await fetch('/api/my-organized-events', {
+      const response = await apiFetch('/api/my-organized-events', {
         method: 'GET',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });
 
@@ -153,9 +154,8 @@ const Organisers = () => {
     try {
       setGeneratingExcel((prev) => ({ ...prev, [eventId]: true }));
 
-      const response = await fetch(`/api/events/${eventId}/generate-details`, {
+      const response = await apiFetch(`/api/events/${eventId}/generate-details`, {
         method: 'GET',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });
 
@@ -195,9 +195,8 @@ const Organisers = () => {
     setLoadingPayments(true);
 
     try {
-      const response = await fetch(`/api/events/${event.eid}/pending-payments`, {
+      const response = await apiFetch(`/api/events/${event.eid}/pending-payments`, {
         method: 'GET',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });
 
@@ -223,9 +222,8 @@ const Organisers = () => {
     setProcessingPayment((prev) => ({ ...prev, [participantUSN]: 'verifying' }));
 
     try {
-      const response = await fetch('/api/payments/verify', {
+      const response = await apiFetch('/api/payments/verify', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ participantUSN, eventId }),
       });

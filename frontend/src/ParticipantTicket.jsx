@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './ticket.css';
 
+import { apiFetch } from './api.js';
+
 export default function ParticipantTicket() {
   const [eventData, setEventData] = useState(null);
   const [userData, setUserData] = useState(null); // State for User Data (USN)
@@ -31,9 +33,8 @@ export default function ParticipantTicket() {
   // Fetch User Data (USN)
   const fetchUserData = async () => {
     try {
-      const response = await fetch('/api/me', {
+      const response = await apiFetch('/api/me', {
         method: 'GET',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
       if (response.ok) {
@@ -47,9 +48,8 @@ export default function ParticipantTicket() {
 
   const fetchEventData = async (eventId) => {
     try {
-      const response = await fetch(`/api/events/${eventId}/participant-status`, {
+      const response = await apiFetch(`/api/events/${eventId}/participant-status`, {
         method: 'GET',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
 

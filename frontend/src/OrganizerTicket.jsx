@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ticket.css';
 
+import { apiFetch } from './api.js';
+
 export default function OrganizerTicket() {
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,8 +30,14 @@ export default function OrganizerTicket() {
     try {
       // Fetch user + event in parallel
       const [userRes, eventRes] = await Promise.all([
-        fetch('/api/me', { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }),
-        fetch(`/api/events/${eventId}`, { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }),
+        apiFetch('/api/me', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }),
+        apiFetch(`/api/events/${eventId}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }),
       ]);
 
       if (!userRes.ok) throw new Error(`HTTP ${userRes.status}: Failed to fetch user data`);
@@ -57,9 +65,8 @@ export default function OrganizerTicket() {
 
       // Fetch sub-events separately (non-blocking)
       try {
-        const subRes = await fetch(`/api/events/${eventId}/sub-events`, {
+        const subRes = await apiFetch(`/api/events/${eventId}/sub-events`, {
           method: 'GET',
-          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
         });
 
