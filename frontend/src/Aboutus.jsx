@@ -85,7 +85,7 @@ const AboutUs = () => {
   }, []);
 
   return (
-    <div className="about-page">
+    <div className="about-page" style={{ height: '100vh', overflowY: 'scroll' }}>
       
       {/* Fixed Nav / Back Button */}
       <div className="logout-container">

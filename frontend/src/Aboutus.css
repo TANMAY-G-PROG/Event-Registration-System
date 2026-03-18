@@ -4,6 +4,11 @@
 
 .about-page {
   min-height: 100vh;
+  height: auto;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
   background: var(--nb-bg);
   background-image:
     linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
@@ -11,15 +16,21 @@
   background-size: 40px 40px;
   font-family: 'Space Grotesk', sans-serif;
   padding-bottom: 60px;
+  padding-top: 56px;
+  position: relative;
 }
 
-/* ===== NAV / BACK BUTTON ===== */
+.about-page::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+
 .about-page .logout-container {
   position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-  background: var(--nb-black); 
+  height: 56px;
+  background: var(--nb-black);
   border-bottom: 4px solid var(--nb-black);
-  padding: 12px 20px; display: flex; align-items: center;
+  padding: 0 20px; display: flex; align-items: center;
 }
+
 
 .about-page .back-btn {
   display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px;
@@ -37,7 +48,7 @@
 /* ===== HERO ===== */
 .about-hero {
   background: var(--nb-black);
-  padding: 100px 40px 60px;
+  padding: 48px 40px 60px;
   position: relative;
   overflow: hidden;
   border-bottom: 4px solid var(--nb-black);
@@ -163,7 +174,7 @@
 }
 
 @media (max-width: 640px) {
-  .about-hero { padding: 90px 20px 40px; }
+  .about-hero { padding: 32px 20px 40px; }
   .about-section { padding: 40px 20px 0; }
   
   /* Single column on mobile gives profile cards enough room to render properly */

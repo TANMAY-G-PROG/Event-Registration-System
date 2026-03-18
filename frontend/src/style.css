@@ -8,18 +8,19 @@
 
 /* ── DESIGN TOKENS ── */
 :root {
-  --forest:       #1C3A2F;
-  --forest-mid:   #2D5444;
-  --forest-lite:  #3D6E59;
-  --sand:         #F2EBD9;
-  --sand-deep:    #E6DBBF;
-  --sand-border:  #C8BD9F;
-  --cream:        #FBF8F2;
-  --ink:          #1A1A18;
-  --ink-muted:    #7A7468;
-  --gold:         #B5903A;
-  --error:        #B03A2E;
-  --success:      #2D6A4F;
+  /* neo-brutalism palette — matches events/organisers/participants */
+  --forest:       #0D0D0D;   /* was dark green  → app black         */
+  --forest-mid:   #2A2A2A;   /* was mid green   → dark grey         */
+  --forest-lite:  #0047FF;   /* was lite green  → brand blue        */
+  --sand:         #F5EFE0;   /* was warm sand   → app cream         */
+  --sand-deep:    #EDE4CF;   /* was deep sand   → slightly deeper cream */
+  --sand-border:  #C8BD9F;   /* unchanged — still works             */
+  --cream:        #FFFFFF;   /* was off-white   → pure white panels */
+  --ink:          #0D0D0D;   /* was warm ink    → app black         */
+  --ink-muted:    #888888;   /* was warm muted  → neutral grey      */
+  --gold:         #FFD600;   /* brand yellow — matches participants/events/organisers */
+  --error:        #FF4D4D;   /* was dark red    → brighter red      */
+  --success:      #00C98F;   /* was dark green  → app mint          */
 
   --border:       2px solid var(--forest);
   --border-sand:  1.5px solid var(--sand-border);
@@ -152,7 +153,7 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
 
 /* ── LEFT: BRAND PANEL ── */
 .flo-brand-panel {
-  background: var(--forest);
+  background: linear-gradient(90deg, #fcff9e 0%, #c67700 100%);
   border-right: var(--border);
   padding: 44px 38px 38px;
   display: flex;
@@ -162,14 +163,14 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
   overflow: hidden;
 }
 
-/* diagonal stripe texture */
+/* diagonal stripe texture — black lines on yellow */
 .flo-brand-panel::before {
   content: '';
   position: absolute; inset: 0;
   background: repeating-linear-gradient(
     135deg,
     transparent, transparent 18px,
-    rgba(255,255,255,.016) 18px, rgba(255,255,255,.016) 19px
+    rgba(0,0,0,0.06) 18px, rgba(0,0,0,0.06) 19px
   );
   pointer-events: none;
 }
@@ -183,7 +184,7 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
   font-weight: 600;
   font-style: italic;
   letter-spacing: -2px;
-  color: var(--sand);
+  color: #0D0D0D;
   line-height: 1;
   display: inline-flex;
   align-items: flex-start;
@@ -193,7 +194,7 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
   display: inline-block;
   width: 8px; height: 8px;
   border-radius: 50%;
-  background: var(--gold);
+  background: #0D0D0D;
   margin-top: 10px;
   flex-shrink: 0;
 }
@@ -204,7 +205,7 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
 
 .flo-logo-rule {
   width: 36px; height: 2.5px;
-  background: var(--gold);
+  background: #0D0D0D;
   margin: 10px 0 22px;
 }
 
@@ -213,8 +214,7 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
   font-size: 28px;
   font-style: italic;
   font-weight: 600;
-  color: var(--sand);
-  line-height: 1.2;
+  color: #0D0D0D;
   letter-spacing: -.3px;
   margin-bottom: 14px;
   white-space: pre-line;
@@ -224,7 +224,7 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
   font-family: 'DM Mono', monospace;
   font-size: 10.5px;
   letter-spacing: .4px;
-  color: rgba(242,235,217,.42);
+  color: rgba(13,13,13,0.50);
   line-height: 1.7;
   margin-bottom: 30px;
   transition: color .3s;
@@ -239,18 +239,18 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
   font-size: 10px;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--forest);
-  background: var(--sand);
-  border: 2px solid var(--sand);
-  box-shadow: var(--sh-gold);
+  color: #FFD600;
+  background: #0D0D0D;
+  border: 2px solid #0D0D0D;
+  box-shadow: 5px 5px 0 rgba(13,13,13,0.25);
   transition: transform var(--ease), box-shadow var(--ease),
               background var(--ease), color var(--ease), border-color var(--ease);
 }
 .flo-brand-cta:hover {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: var(--cream);
-  box-shadow: 4px 4px 0 var(--sand);
+  background: #1A1A1A;
+  border-color: #1A1A1A;
+  color: #FFD600;
+  box-shadow: 4px 4px 0 rgba(13,13,13,0.4);
   transform: translate(-2px, -2px);
 }
 .flo-brand-cta:active { transform: translate(2px, 2px); box-shadow: none; }
@@ -263,29 +263,29 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
   font-size: 9px;
   letter-spacing: 2.5px;
   text-transform: uppercase;
-  color: rgba(242,235,217,.22);
+  color: rgba(13,13,13,0.30);
 }
 
-/* decorative concentric circles */
+/* decorative concentric circles — black on yellow */
 .flo-brand-deco {
   position: absolute;
   bottom: -40px; right: -40px;
   width: 200px; height: 200px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,.055);
+  border: 1.5px solid rgba(0,0,0,0.12);
   pointer-events: none;
 }
 .flo-brand-deco::before {
   content: '';
   position: absolute; inset: 24px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,.035);
+  border: 1.5px solid rgba(0,0,0,0.08);
 }
 .flo-brand-deco::after {
   content: '';
   position: absolute; inset: 48px;
   border-radius: 50%;
-  background: rgba(181,144,58,.055);
+  background: rgba(0,0,0,0.05);
 }
 
 /* ── RIGHT: FORM PANEL ── */
@@ -540,7 +540,10 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
     width: 100%;
     height: 100dvh;
     position: relative;
-    background: var(--forest);
+    background-color: #FFD600;
+    background-image: linear-gradient(90deg, #fcff9e 0%, #c67700 100%), radial-gradient(circle, rgba(0,0,0,0.18) 1.5px, transparent 1.5px);
+    background-size: auto, 16px 16px;
+    background-blend-mode: multiply;
   }
 
   /* Premium Mobile View */
@@ -560,7 +563,7 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
     font-size: 60px;
     font-weight: 600;
     font-style: italic;
-    color: var(--sand);
+    color: #0D0D0D;
     margin: 0;
     letter-spacing: -1.5px;
     line-height: 1;
@@ -572,14 +575,13 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
   .m-divider {
     height: 3px;
     width: 60px;
-    background-color: var(--gold);
+    background-color: #0D0D0D;
     margin: 16px 0;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   }
   
   .m-tagline {
     font-family: 'DM Mono', monospace;
-    color: rgba(242,235,217,.6);
+    color: rgba(13,13,13,0.50);
     font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.2em;

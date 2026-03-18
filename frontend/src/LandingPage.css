@@ -1,120 +1,328 @@
-/* ===== LANDING PAGE - NEO BRUTALISM ===== */
-@import './neo-brutalism.css';
+/* ================================================================
+   LANDING PAGE — Neo-Brutalism · LineWaves white/silver
+   ================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@400;700;900&display=swap');
 
-.landing-page-root {
-  min-height: 100vh;
-  width: 100%;
-  background: var(--nb-black);
+:root {
+  --black:  #0D0D0D;
+  --yellow: #FFD600;
+  --cream:  #F5EFE0;
+  --blue:   #0047FF;
+  --white:  #FFFFFF;
+  --mono:   'Space Mono', monospace;
+  --sans:   'Outfit', sans-serif;
+}
+
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ── ROOT ── */
+.lp-root {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: var(--black);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  position: relative;
+  font-family: var(--sans);
 }
 
-.hero-geometric-container {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  background: var(--nb-black);
-}
-
-.hero-prism-background { display: none !important; }
-
-.hero-geometric-container::before {
-  content: '';
+/* ── LINEWAVES CANVAS ── */
+.lw-wrap {
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(255,229,0,0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,229,0,0.06) 1px, transparent 1px);
-  background-size: 60px 60px;
+  z-index: 0;
   pointer-events: none;
 }
+.lw-wrap canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: auto;
+  display: block;
+}
 
-.hero-content-wrapper {
+/* ── VIGNETTE ──
+   Strong radial dark mask — keeps centre deep black,
+   waves are visible only on the outer edges/corners.
+   This is the key to balance: waves = texture, not hero. */
+.lp-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 60% 60% at 50% 50%,
+    rgba(13,13,13,0.82) 0%,
+    rgba(13,13,13,0.60) 45%,
+    rgba(13,13,13,0.15) 75%,
+    transparent 100%
+  );
+}
+
+/* ── DOT GRID ──
+   Same 22px cream-dot pattern used across all pages */
+.lp-dotgrid {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(245,239,224,0.055) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* ── CORNER BRACKETS ── */
+.lp-bracket {
+  position: absolute;
+  z-index: 3;
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+}
+.lp-bracket--tl {
+  top: 22px; left: 22px;
+  border-top: 2px solid rgba(255,214,0,0.4);
+  border-left: 2px solid rgba(255,214,0,0.4);
+}
+.lp-bracket--br {
+  bottom: 22px; right: 22px;
+  border-bottom: 2px solid rgba(255,214,0,0.4);
+  border-right: 2px solid rgba(255,214,0,0.4);
+}
+
+/* ── CENTRE CONTENT ── */
+.lp-center {
   position: relative;
   z-index: 10;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: 40px 20px;
-}
-
-.hero-content {
-  display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 32px;
-  max-width: 700px;
-  width: 100%;
+  gap: 18px;
+  text-align: center;
+  padding: 0 24px;
 }
 
-.hero-title { text-align: center; margin: 0; }
-
-.title-part-1 {
-  display: inline-block;
-  font-family: 'Space Mono', monospace;
-  font-size: clamp(14px, 3vw, 22px);
+/* ── EYEBROW ── */
+.lp-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.lp-eyebrow-rule {
+  display: block;
+  width: 28px;
+  height: 1px;
+  background: rgba(245,239,224,0.28);
+}
+.lp-eyebrow-text {
+  font-family: var(--mono);
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.4em;
-  color: var(--nb-white);
-  padding: 6px 20px;
-  margin-bottom: 12px;
-  border: 2px solid rgba(255,229,0,0.4);
-  background: transparent;
+  letter-spacing: 0.38em;
+  color: rgba(245,239,224,0.38);
 }
 
-.title-part-2 {
-  display: block;
-  font-family: 'Space Mono', monospace;
-  font-size: clamp(72px, 20vw, 180px);
+/* ── WORDMARK ── */
+.lp-wordmark {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: clamp(86px, 20vw, 192px);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: -0.04em;
   line-height: 0.88;
-  color: var(--nb-yellow);
-  text-shadow: 6px 6px 0px rgba(0,71,255,0.4), 12px 12px 0px rgba(255,229,0,0.15);
+  color: var(--yellow);
+  /* Neo-brutalist hard offset — no blur, just stark offset */
+  text-shadow:
+    4px  4px 0 rgba(13,13,13,1),
+    7px  7px 0 rgba(0,68,255,0.55),
+    11px 11px 0 rgba(0,68,255,0.18);
 }
 
-.hero-overlay { display: none; }
-
-.btn {
-  position: relative;
-  padding: 18px 56px;
-  font-family: 'Space Mono', monospace;
-  font-size: 15px;
+/* ── SUB LABEL ── */
+.lp-sub {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  background: var(--nb-yellow);
-  color: var(--nb-black);
-  border: 4px solid var(--nb-white);
-  box-shadow: 7px 7px 0px var(--nb-white);
-  cursor: pointer;
-  transition: all 0.1s ease;
-  outline: none;
+  letter-spacing: 0.30em;
+  color: rgba(245,239,224,0.28);
+}
+
+/* ================================================================
+   NEO-BRUTAL GLOW BUTTON
+   Based on the UIverse.io pill button, mutated:
+   — Square corners (border-radius: 0) instead of pill → brutal
+   — Yellow accent replaces pink as the primary glow colour
+   — Hard 4px offset box-shadow on hover (neo-brutalist tell)
+   — Space Mono font
+   — Active state: yellow border, yellow glow, yellow shadow
+   ================================================================ */
+.nb-glow-btn {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 14rem;
+  height: 3.2rem;
   overflow: hidden;
+  cursor: pointer;
+  /* Square, not pill */
+  border-radius: 0;
+  /* Animated gradient border — same mechanism, new palette */
+  background-size: 300% 300%;
+  animation: nb-gradient 5s ease infinite;
+  border: double 4px transparent;
+  background-image:
+    linear-gradient(var(--black), var(--black)),
+    linear-gradient(
+      137.48deg,
+      #FFD600 10%,   /* yellow */
+      #FF2D8A 40%,   /* pink */
+      #8F51EA 65%,   /* purple */
+      #0044FF 87%    /* blue */
+    );
+  background-origin: border-box;
+  background-clip: content-box, border-box;
+  /* Hard neo-brutalist box-shadow */
+  box-shadow: 4px 4px 0 rgba(255,214,0,0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  margin-top: 8px;
 }
 
-.btn strong { position: relative; z-index: 5; }
+/* Stars container */
+.nb-glow-btn #container-stars {
+  position: absolute;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0;
+  transition: 0.5s;
+  backdrop-filter: blur(1rem);
+}
 
-.btn:hover {
+/* Glow orbs */
+.nb-glow-btn #glow {
+  position: absolute;
+  display: flex;
+  width: 12rem;
+  z-index: 0;
+}
+.nb-glow-btn .circle {
+  width: 100%;
+  height: 28px;
+  filter: blur(1.8rem);
+  animation: nb-pulse 4s infinite;
+  z-index: -1;
+}
+.nb-glow-btn .circle:nth-of-type(1) { background: rgba(255,214,0,0.55); }  /* yellow */
+.nb-glow-btn .circle:nth-of-type(2) { background: rgba(0,71,255,0.50); }   /* blue */
+
+/* Label */
+.nb-glow-btn strong {
+  position: relative;
+  z-index: 2;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 0 0 6px rgba(255,214,0,0.6);
+}
+
+/* Hover — reveal stars, push shadow out */
+.nb-glow-btn:hover #container-stars {
+  z-index: 1;
+  background: var(--black);
+}
+.nb-glow-btn:hover {
   transform: translate(-3px, -3px);
-  box-shadow: 10px 10px 0px var(--nb-white);
-  background: var(--nb-white);
+  box-shadow: 7px 7px 0 rgba(255,214,0,0.55);
 }
 
-.btn:active { transform: translate(3px, 3px); box-shadow: none; }
+/* Active — yellow hard border, flatten shadow */
+.nb-glow-btn:active {
+  border: double 4px var(--yellow);
+  background-origin: border-box;
+  background-clip: content-box, border-box;
+  animation: none;
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 var(--yellow);
+}
+.nb-glow-btn:active .circle { background: rgba(255,214,0,0.8); }
 
-#container-stars, #stars, #glow, .btn .circle { display: none !important; }
+/* Stars animation — unchanged from original */
+#stars {
+  position: relative;
+  background: transparent;
+  width: 200rem;
+  height: 200rem;
+}
+#stars::after {
+  content: "";
+  position: absolute;
+  top: -10rem; left: -100rem;
+  width: 100%; height: 100%;
+  animation: nb-star-rotate 90s linear infinite;
+  background-image: radial-gradient(#ffffff 1px, transparent 1%);
+  background-size: 50px 50px;
+}
+#stars::before {
+  content: "";
+  position: absolute;
+  top: 0; left: -50%;
+  width: 170%; height: 500%;
+  animation: nb-star-move 60s linear infinite;
+  background-image: radial-gradient(#ffffff 1px, transparent 1%);
+  background-size: 50px 50px;
+  opacity: 0.5;
+}
 
+/* ── VERSION TAG ── */
+.lp-version {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(245,239,224,0.15);
+  pointer-events: none;
+}
+
+/* ── KEYFRAMES ── */
+@keyframes nb-gradient {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes nb-pulse {
+  0%   { transform: scale(0.75); box-shadow: 0 0 0 0 rgba(0,0,0,0.7); }
+  70%  { transform: scale(1);    box-shadow: 0 0 0 10px rgba(0,0,0,0); }
+  100% { transform: scale(0.75); box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+}
+@keyframes nb-star-move {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-135rem); }
+}
+@keyframes nb-star-rotate {
+  from { transform: rotate(360deg); }
+  to   { transform: rotate(0deg); }
+}
+
+/* ── MOBILE ── */
 @media (max-width: 480px) {
-  .title-part-2 { font-size: 72px; }
-  .btn { padding: 14px 36px; font-size: 13px; }
+  .lp-wordmark { font-size: 78px; }
+  .nb-glow-btn { width: 12rem; }
 }
