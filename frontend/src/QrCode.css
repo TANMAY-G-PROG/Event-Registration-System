@@ -1,0 +1,119 @@
+/* ===== QR CODE - NEO BRUTALISM ===== */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+@import './neo-brutalism.css';
+
+.qr-page {
+  min-height: 100vh;
+  background: var(--nb-bg);
+  background-image:
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  font-family: 'Space Grotesk', sans-serif;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 80px 20px 40px;
+}
+
+.qr-card {
+  width: 100%; max-width: 400px;
+  background: var(--nb-white);
+  border: 4px solid var(--nb-black);
+  box-shadow: 8px 8px 0px var(--nb-black);
+  overflow: hidden;
+}
+
+.qr-card-header {
+  background: var(--nb-black); padding: 14px 20px;
+  font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--nb-yellow);
+}
+
+.qr-card-body {
+  padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+
+.qr-wrapper {
+  padding: 14px; background: #fff;
+  border: 4px solid var(--nb-black); box-shadow: 4px 4px 0px var(--nb-black);
+}
+
+.qr-id {
+  font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700;
+  color: var(--nb-blue); text-align: center; word-break: break-all;
+  padding: 8px 14px; border: 2px solid var(--nb-black); background: #f9f9f9; width: 100%;
+}
+
+.qr-name {
+  font-family: 'Space Mono', monospace; font-size: 14px; font-weight: 700;
+  text-transform: uppercase; color: var(--nb-black); text-align: center;
+}
+
+.qr-btn {
+  width: 100%; padding: 13px;
+  font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  background: var(--nb-yellow); color: var(--nb-black);
+  border: 3px solid var(--nb-black); box-shadow: 4px 4px 0px var(--nb-black);
+  cursor: pointer; transition: all 0.1s ease;
+}
+
+.qr-btn:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0px var(--nb-black); }
+
+/* ===== QrCode.jsx class aliases ===== */
+.qr-code-page {
+  min-height: 100vh; background: var(--nb-bg);
+  background-image: linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 40px 40px; font-family: 'Space Grotesk', sans-serif;
+  display: flex; flex-direction: column; align-items: center; padding: 40px 20px;
+}
+
+.qr-container {
+  width: 100%; max-width: 440px;
+  background: var(--nb-white); border: 4px solid var(--nb-black); box-shadow: 8px 8px 0px var(--nb-black);
+  overflow: hidden;
+}
+
+.qr-header {
+  background: var(--nb-black); padding: 20px 24px; text-align: center;
+}
+
+.qr-header h1 {
+  font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700;
+  text-transform: uppercase; color: var(--nb-yellow); margin: 0 0 6px;
+}
+
+.subtitle {
+  font-size: 12px; color: rgba(255,255,255,0.55); font-family: 'Space Mono', monospace;
+  text-transform: uppercase; letter-spacing: 0.04em; margin: 0;
+}
+
+.qr-error-box {
+  background: var(--nb-red); color: #fff; border: 3px solid var(--nb-black); padding: 12px 16px;
+  font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; text-transform: uppercase; margin: 20px;
+}
+
+.qr-container .card {
+  margin: 20px; border: 3px solid var(--nb-black); box-shadow: 4px 4px 0px var(--nb-black); background: #f9f9f9;
+}
+
+.card-header { background: var(--nb-black); padding: 12px 16px; }
+.card-header h2 { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--nb-yellow); margin: 0 0 3px; }
+.card-subtitle { font-size: 11px; color: rgba(255,255,255,0.5); font-family: 'Space Mono', monospace; margin: 0; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.qr-code { padding: 20px; display: flex; justify-content: center; background: #fff; }
+.qr-code canvas { border: 4px solid var(--nb-black) !important; box-shadow: 4px 4px 0px var(--nb-black); display: block; }
+
+.countdown-strip { background: var(--nb-yellow); border-top: 3px solid var(--nb-black); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; }
+.c-text { display: flex; flex-direction: column; }
+.c-label { font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--nb-black); }
+.c-sub { font-size: 11px; color: var(--nb-black); font-weight: 600; font-family: 'Space Mono', monospace; }
+
+.back-btn {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 20px;
+  padding: 12px 24px; font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  background: var(--nb-black); color: var(--nb-yellow);
+  border: 3px solid var(--nb-black); box-shadow: 4px 4px 0px var(--nb-black);
+  cursor: pointer; transition: all 0.1s ease;
+}
+.back-btn:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0px var(--nb-black); }

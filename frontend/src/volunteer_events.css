@@ -1,0 +1,186 @@
+/* ================================================================
+   VOLUNTEER EVENTS PAGE — Neo-Brutalism + Memphis
+   ================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --cream: #F5EFE0; --black: #0D0D0D; --yellow: #FFD600;
+  --blue: #0047FF; --pink: #FF2D8A; --mint: #00C98F;
+  --coral: #FF4D4D; --orange: #FF6B00; --white: #FFFFFF;
+  --border: 4px solid #0D0D0D; --border-thin: 2px solid #0D0D0D;
+  --shadow: 5px 5px 0 #0D0D0D; --shadow-sm: 3px 3px 0 #0D0D0D;
+  --shadow-lg: 7px 7px 0 #0D0D0D;
+  --font-display: 'Space Mono', monospace; --font-body: 'DM Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ── PAGE ─────────────────────────────────────────────────────── */
+.volunteer-events-wrapper {
+  min-height: 100vh; min-height: 100dvh;
+  background-color: var(--cream);
+  background-image: radial-gradient(circle, rgba(13,13,13,0.08) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  font-family: var(--font-body); color: var(--black);
+}
+.ve-texture { display: none; }
+
+/* ── TOAST ─────────────────────────────────────────────────── */
+.ve-message {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 9999;
+  padding: 12px 28px; font-family: var(--font-display); font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  background: var(--yellow); color: var(--black);
+  border: var(--border); box-shadow: var(--shadow-lg); white-space: nowrap;
+  animation: ve-in 0.18s ease;
+}
+@keyframes ve-in { from { opacity:0; transform: translateX(-50%) translateY(-10px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+.ve-message.error   { background: var(--coral); color: #fff; }
+.ve-message.success { background: var(--mint);  color: var(--black); }
+
+/* ── NAV ─────────────────────────────────────────────────────── */
+.ve-nav-container {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: var(--black); border-bottom: var(--border); padding: 12px 20px;
+  /* Memphis horizontal stripe in nav */
+  background-image: repeating-linear-gradient(
+    90deg, transparent, transparent 24px,
+    rgba(255,214,0,0.06) 24px, rgba(255,214,0,0.06) 28px
+  );
+}
+
+.ve-back-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  background: var(--pink); color: #fff;
+  border: var(--border-thin); box-shadow: 3px 3px 0 var(--pink);
+  cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;
+}
+.ve-back-btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--pink); }
+
+/* ── MAIN CONTAINER ─────────────────────────────────────────── */
+.ve-container {
+  padding: 76px 24px 60px; max-width: 820px; margin: 0 auto;
+}
+.ve-content-box {}
+
+/* ── HEADER ─────────────────────────────────────────────────── */
+.ve-header {
+  font-family: var(--font-display); font-size: clamp(18px, 4vw, 28px); font-weight: 700;
+  text-transform: uppercase; letter-spacing: -0.01em; color: var(--black);
+  margin: 0 0 24px; padding-bottom: 16px;
+  border-bottom: var(--border);
+  position: relative;
+}
+/* Memphis triangle accent */
+.ve-header::after {
+  content: '';
+  position: absolute; bottom: -4px; right: 0;
+  width: 0; height: 0;
+  border-left: 16px solid transparent; border-right: 0;
+  border-bottom: 16px solid var(--pink);
+}
+
+/* ── EVENT LIST ─────────────────────────────────────────────── */
+.ve-events-list { display: flex; flex-direction: column; gap: 0; }
+
+.ve-event-item {
+  background: var(--white); border: var(--border);
+  margin-top: -4px; overflow: hidden; transition: transform 0.1s, box-shadow 0.1s;
+}
+.ve-event-item:first-child { margin-top: 0; }
+.ve-event-item:hover { transform: translate(-3px,-3px); box-shadow: var(--shadow-lg); z-index: 5; }
+
+/* Left accent bar */
+.ve-event-item::before {
+  content: ''; display: block; height: 5px;
+  background: repeating-linear-gradient(90deg, var(--pink) 0px, var(--pink) 12px, var(--black) 12px, var(--black) 16px);
+}
+
+/* Info section */
+.ve-event-info { padding: 16px 18px; }
+
+.ve-event-name {
+  font-family: var(--font-display); font-size: 14px; font-weight: 700;
+  text-transform: uppercase; color: var(--black); margin: 0 0 10px;
+  padding-bottom: 10px; border-bottom: var(--border-thin);
+}
+
+/* legacy .ve-event-name from old JSX */
+p.ve-event-name { font-family: var(--font-display); font-size: 14px; font-weight: 700; text-transform: uppercase; }
+
+.ve-event-details { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.ve-event-details span { font-size: 12px; color: #555; display: flex; align-items: center; gap: 6px; }
+.ve-event-details i { color: var(--pink); font-size: 11px; }
+
+/* Also style the plain <p> tags from old JSX */
+.ve-event-info > p { font-size: 13px; color: #555; margin: 0 0 4px; }
+.ve-event-info > p strong { color: var(--black); font-weight: 700; }
+
+.ve-event-desc { font-size: 12px; line-height: 1.6; color: #666; margin-bottom: 8px; }
+
+/* Actions */
+.ve-event-actions {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 12px 18px; border-top: var(--border-thin);
+  background-image: repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(0,0,0,0.03) 5px, rgba(0,0,0,0.03) 10px);
+  background-color: #fafaf8;
+}
+
+/* Old JSX uses .ve-button.ve-volunteer-btn */
+.ve-btn, .ve-button {
+  padding: 9px 16px;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border: var(--border-thin); box-shadow: var(--shadow-sm);
+  cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--yellow); color: var(--black);
+}
+.ve-btn:hover, .ve-button:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--black); }
+.ve-btn:active, .ve-button:active { transform: translate(1px,1px); box-shadow: none; }
+.ve-btn-primary, .ve-volunteer-btn { background: var(--pink); color: #fff; }
+.ve-btn-secondary { background: var(--yellow); color: var(--black); }
+.ve-btn-success   { background: var(--mint);   color: var(--black); }
+.ve-btn:disabled, .ve-button:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+.ve-already-vol {
+  display: inline-block; padding: 4px 12px;
+  font-family: var(--font-display); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; background: var(--mint); color: var(--black);
+  border: var(--border-thin);
+}
+
+.ve-volunteered-badge {
+  display: inline-block; padding: 3px 10px; margin-bottom: 8px;
+  font-family: var(--font-display); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; background: var(--mint); color: var(--black); border: var(--border-thin);
+}
+
+.ve-no-volunteers {
+  font-family: var(--font-display); font-size: 10px; color: #aaa;
+  text-transform: uppercase; letter-spacing: 0.06em; margin: 0;
+}
+
+.ve-loading, .ve-error, .ve-no-events, .ve-empty {
+  font-family: var(--font-display); font-size: 11px; color: #aaa;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  text-align: center; padding: 32px; border: 2px dashed #ccc; margin-top: 0;
+}
+.ve-error { color: var(--coral); border-color: var(--coral); }
+
+/* Ripple from old Volunteer_events.jsx */
+.ripple {
+  position: absolute; border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  transform: scale(0); animation: ripple 0.6s linear;
+  pointer-events: none;
+}
+@keyframes ripple { to { transform: scale(4); opacity: 0; } }
+
+/* ── RESPONSIVE ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .ve-container { padding: 70px 16px 48px; }
+  .ve-event-info { padding: 12px 14px; }
+  .ve-event-actions { padding: 10px 14px; }
+}

@@ -1,0 +1,120 @@
+/* ===== LANDING PAGE - NEO BRUTALISM ===== */
+@import './neo-brutalism.css';
+
+.landing-page-root {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--nb-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.hero-geometric-container {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: var(--nb-black);
+}
+
+.hero-prism-background { display: none !important; }
+
+.hero-geometric-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,229,0,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,229,0,0.06) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+}
+
+.hero-content-wrapper {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 40px 20px;
+}
+
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  max-width: 700px;
+  width: 100%;
+}
+
+.hero-title { text-align: center; margin: 0; }
+
+.title-part-1 {
+  display: inline-block;
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(14px, 3vw, 22px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4em;
+  color: var(--nb-white);
+  padding: 6px 20px;
+  margin-bottom: 12px;
+  border: 2px solid rgba(255,229,0,0.4);
+  background: transparent;
+}
+
+.title-part-2 {
+  display: block;
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(72px, 20vw, 180px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  line-height: 0.88;
+  color: var(--nb-yellow);
+  text-shadow: 6px 6px 0px rgba(0,71,255,0.4), 12px 12px 0px rgba(255,229,0,0.15);
+}
+
+.hero-overlay { display: none; }
+
+.btn {
+  position: relative;
+  padding: 18px 56px;
+  font-family: 'Space Mono', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  background: var(--nb-yellow);
+  color: var(--nb-black);
+  border: 4px solid var(--nb-white);
+  box-shadow: 7px 7px 0px var(--nb-white);
+  cursor: pointer;
+  transition: all 0.1s ease;
+  outline: none;
+  overflow: hidden;
+}
+
+.btn strong { position: relative; z-index: 5; }
+
+.btn:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 10px 10px 0px var(--nb-white);
+  background: var(--nb-white);
+}
+
+.btn:active { transform: translate(3px, 3px); box-shadow: none; }
+
+#container-stars, #stars, #glow, .btn .circle { display: none !important; }
+
+@media (max-width: 480px) {
+  .title-part-2 { font-size: 72px; }
+  .btn { padding: 14px 36px; font-size: 13px; }
+}

@@ -1,0 +1,263 @@
+/* ================================================================
+   EVENT FORM — Neo-Brutalism LIGHT / Colorful
+   Numbered sections, cream background, bold colored section headers
+   ================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --cream:   #F5EFE0;
+  --white:   #FFFFFF;
+  --black:   #0D0D0D;
+  --yellow:  #FFD600;
+  --blue:    #0047FF;
+  --pink:    #FF2D8A;
+  --mint:    #00C98F;
+  --coral:   #FF4D4D;
+  --orange:  #FF6B35;
+  --border:  3px solid #0D0D0D;
+  --border-thin: 2px solid #0D0D0D;
+  --shadow:  4px 4px 0 #0D0D0D;
+  --shadow-sm: 3px 3px 0 #0D0D0D;
+  --shadow-lg: 6px 6px 0 #0D0D0D;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Outfit', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── PAGE ── */
+.event-form-container {
+  min-height: 100vh;
+  background-color: var(--cream);
+  background-image: radial-gradient(circle, rgba(13,13,13,0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+  font-family: var(--sans);
+  color: var(--black);
+  position: relative;
+}
+
+/* ── TOAST ── */
+.event-form-message {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 9999;
+  padding: 12px 28px; font-family: var(--mono); font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  background: var(--yellow); color: var(--black);
+  border: var(--border); box-shadow: var(--shadow-lg); white-space: nowrap;
+}
+.event-form-message-error   { background: var(--coral) !important; color: #fff !important; }
+.event-form-message-success { background: var(--mint)  !important; color: var(--black) !important; }
+
+/* ── LAYOUT ── */
+.event-form-wrap { display: flex; min-height: 100vh; }
+
+/* ── LEFT SIDEBAR ── accent color stripe + step numbers */
+.event-form-left {
+  width: 80px; flex-shrink: 0;
+  background: var(--black);
+  border-right: var(--border);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 80px 0 40px;
+  gap: 12px;
+  position: sticky; top: 0; height: 100vh; overflow: hidden;
+}
+
+.form-step-dot {
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  color: rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: transparent; cursor: default;
+  transition: all 0.15s;
+}
+.form-step-dot.active { background: var(--yellow); color: var(--black); border-color: var(--yellow); }
+
+.event-form-logo-text {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.2em;
+  color: rgba(255,214,0,0.2);
+  writing-mode: vertical-lr; transform: rotate(180deg);
+  position: absolute; bottom: 20px;
+}
+
+/* ── MOBILE HEADER ── */
+.event-form-mobile-header {
+  display: none;
+  background: var(--black); padding: 14px 20px;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1001;
+  border-bottom: 3px solid var(--yellow);
+  align-items: center; gap: 12px;
+}
+.event-form-neon { font-family: var(--mono); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--yellow); }
+.event-form-neon-alt { color: rgba(255,255,255,0.35); }
+
+/* ── BACK BUTTON ── */
+.back-button-top {
+  position: fixed; top: 16px; left: 96px; z-index: 1002;
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px;
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  background: var(--black); color: var(--yellow);
+  border: var(--border); box-shadow: var(--shadow-sm);
+  cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;
+}
+.back-button-top:hover { transform: translate(-2px,-2px); box-shadow: var(--shadow); }
+
+/* ── MAIN CONTENT ── */
+.event-form-right {
+  flex: 1; padding: 72px 48px 60px;
+  max-width: 760px;
+}
+
+/* ── PAGE HEADER ── */
+.form-header {
+  margin-bottom: 32px; padding-bottom: 20px;
+  border-bottom: 3px solid var(--black);
+}
+.event-form-title {
+  font-family: var(--mono); font-size: clamp(22px, 3.5vw, 32px); font-weight: 700;
+  text-transform: uppercase; letter-spacing: -0.01em;
+  color: var(--black); margin: 0 0 6px;
+}
+.event-form-title span { color: var(--blue); }
+.form-subtitle {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.12em; color: #888;
+}
+
+/* ── FORM SECTION ── */
+.event-form-section {
+  margin-bottom: 24px;
+  background: var(--white);
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* Numbered section label with color */
+.section-label {
+  display: flex; align-items: center;
+  border-bottom: var(--border-thin);
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  padding: 0; background: #f5f5f0;
+}
+.section-label-num {
+  padding: 11px 18px;
+  font-size: 13px; font-weight: 700;
+  border-right: var(--border-thin);
+  min-width: 52px; text-align: center;
+  color: #fff;
+}
+/* Color per section number */
+.section-label-num.n1 { background: var(--blue); }
+.section-label-num.n2 { background: var(--pink); }
+.section-label-num.n3 { background: var(--mint); color: var(--black); }
+.section-label-num.n4 { background: var(--yellow); color: var(--black); }
+.section-label-num.n5 { background: var(--orange); }
+
+.section-label-text {
+  padding: 11px 18px; flex: 1; color: var(--black);
+}
+
+/* Section body */
+.section-body {
+  padding: 22px 24px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+/* ── INPUT GROUPS ── */
+.input-group { display: flex; flex-direction: column; gap: 6px; }
+
+.input-label {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.09em; color: var(--black);
+  display: flex; align-items: center; gap: 5px;
+}
+.input-label span { font-weight: 400; color: #aaa; }
+.input-label .req { color: var(--coral); }
+
+/* Inputs — light cream, sharp border */
+.modern-input, .modern-select, .modern-textarea {
+  width: 100%; padding: 11px 14px;
+  font-family: var(--sans); font-size: 14px; font-weight: 500;
+  background: var(--cream); color: var(--black);
+  border: var(--border-thin); box-shadow: var(--shadow-sm);
+  outline: none; transition: transform 0.1s, box-shadow 0.1s;
+  appearance: auto;
+}
+.modern-input::placeholder, .modern-textarea::placeholder { color: #aaa; font-weight: 400; }
+.modern-input:focus, .modern-select:focus, .modern-textarea:focus {
+  transform: translate(-2px,-2px);
+  box-shadow: 5px 5px 0 var(--blue);
+}
+.modern-select { cursor: pointer; }
+.modern-textarea { resize: vertical; min-height: 80px; }
+
+/* 2-column grid */
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ── TOGGLE ROW ── */
+.toggle-wrapper {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--yellow); border: var(--border-thin);
+  cursor: pointer; transition: box-shadow 0.1s, transform 0.1s;
+}
+.toggle-wrapper:hover { transform: translate(-2px,-2px); box-shadow: var(--shadow-sm); }
+.toggle-label { font-family: var(--mono); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--black); }
+.toggle-checkbox { width: 20px; height: 20px; accent-color: var(--black); cursor: pointer; flex-shrink: 0; }
+
+/* ── CONDITIONAL FIELDS ── */
+.conditional-fields { display: none; }
+.conditional-fields.open { display: block; }
+.conditional-inner {
+  border: 2px dashed var(--black); padding: 16px;
+  background: #fffbe6; display: flex; flex-direction: column; gap: 14px;
+  margin-top: 4px;
+}
+
+/* ── HELPER TEXT ── */
+.helper-text {
+  font-family: var(--mono); font-size: 10px; color: #888;
+  letter-spacing: 0.04em; line-height: 1.5; margin-top: -8px;
+}
+
+/* ── FILE UPLOAD ── */
+.file-upload-area {
+  position: relative; border: 2px dashed var(--black); padding: 22px; text-align: center;
+  background: var(--cream); cursor: pointer; transition: all 0.1s;
+}
+.file-upload-area:hover { background: var(--yellow); border-style: solid; transform: translate(-2px,-2px); box-shadow: var(--shadow-sm); }
+.file-upload-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.file-upload-text { font-family: var(--mono); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #888; }
+.file-upload-text i { display: block; font-size: 20px; margin-bottom: 6px; }
+.file-name-preview { font-family: var(--mono); font-size: 11px; color: var(--blue); font-weight: 700; margin-top: 6px; }
+
+/* ── CLUB STATES ── */
+.club-loading { font-family: var(--mono); font-size: 11px; color: #888; text-transform: uppercase; padding: 11px 0; }
+.club-error { padding: 11px 14px; background: #fff0f0; border: var(--border-thin); font-family: var(--mono); font-size: 12px; color: var(--coral); border-color: var(--coral); }
+
+/* ── SUBMIT ── */
+.submit-btn-container { margin-top: 8px; }
+.event-form-button {
+  width: 100%; padding: 18px;
+  font-family: var(--mono); font-size: 14px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  background: var(--black); color: var(--yellow);
+  border: var(--border); box-shadow: var(--shadow);
+  cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+}
+.event-form-button:hover { transform: translate(-3px,-3px); box-shadow: var(--shadow-lg); background: var(--yellow); color: var(--black); }
+.event-form-button:active { transform: translate(2px,2px); box-shadow: none; }
+.event-form-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: var(--shadow); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .event-form-left { display: none; }
+  .event-form-mobile-header { display: flex; }
+  .event-form-right { padding: 72px 16px 48px; max-width: 100%; }
+  .back-button-top { left: 16px; top: 70px; }
+  .form-grid-2 { grid-template-columns: 1fr; }
+  .section-body { padding: 16px; }
+}

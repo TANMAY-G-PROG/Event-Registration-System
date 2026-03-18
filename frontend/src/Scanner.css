@@ -1,0 +1,151 @@
+/* ================================================================
+   SCANNER — Neo-Brutalism
+   ================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --cream: #F5EFE0; --black: #0D0D0D; --yellow: #FFD600;
+  --pink: #FF2D8A; --mint: #00C98F; --coral: #FF4D4D;
+  --white: #FFFFFF;
+  --border: 4px solid #0D0D0D; --border-thin: 2px solid #0D0D0D;
+  --shadow: 4px 4px 0 #0D0D0D; --shadow-lg: 8px 8px 0 #0D0D0D;
+  --font-display: 'Space Mono', monospace; --font-body: 'DM Sans', sans-serif;
+}
+
+.scanner-page {
+  min-height: 100vh;
+  background-color: var(--cream);
+  background-image: radial-gradient(circle, rgba(13,13,13,0.08) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  font-family: var(--font-body); color: var(--black);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 80px 20px 40px;
+}
+
+/* ── NAV / BACK BUTTON ── */
+.scanner-page .logout-container {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: var(--black); border-bottom: var(--border);
+  padding: 12px 20px; display: flex; align-items: center;
+}
+.scanner-page .logout-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  background: var(--yellow); color: var(--black);
+  border: var(--border-thin); box-shadow: 3px 3px 0 var(--yellow);
+  cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;
+}
+.scanner-page .logout-btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--yellow); }
+
+/* ── MAIN CARD ── */
+.scanner-card {
+  width: 100%; max-width: 440px;
+  background: var(--white);
+  border: var(--border);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+
+.scanner-header {
+  background: var(--black); padding: 24px 20px; text-align: center;
+  position: relative; overflow: hidden;
+}
+.scanner-header::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.05) 25%, transparent 25%);
+  background-size: 8px 8px; pointer-events: none;
+}
+.scanner-icon { font-size: 32px; margin-bottom: 12px; position: relative; z-index: 2; }
+.scanner-title { 
+  font-family: var(--font-display); font-size: 20px; font-weight: 800; 
+  text-transform: uppercase; color: var(--yellow); margin: 0 0 6px; 
+  position: relative; z-index: 2;
+}
+.scanner-subtitle { 
+  font-family: var(--font-display); font-size: 11px; font-weight: 700;
+  color: #fff; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 8px; 
+  position: relative; z-index: 2;
+}
+.scanner-usn { 
+  display: inline-block; padding: 4px 10px; background: var(--pink); color: #fff;
+  font-family: var(--font-display); font-size: 11px; font-weight: 800;
+  text-transform: uppercase; border: var(--border-thin);
+  position: relative; z-index: 2;
+}
+
+/* ── SCANNER VIEWPORT ── */
+.scanner-main { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+
+.scanner-video-container {
+  width: 100%; aspect-ratio: 1/1; 
+  background: #000; border: var(--border); box-shadow: var(--shadow);
+  position: relative; overflow: hidden;
+}
+
+#reader { width: 100%; height: 100%; }
+#reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
+
+/* Hide ugly html5-qrcode injected elements */
+#reader__dashboard_section_csr, #reader__dashboard_section_swaplink { display: none !important; }
+
+.scanner-loading-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.8);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: var(--yellow); font-family: var(--font-display); font-size: 12px; font-weight: 700; text-transform: uppercase;
+}
+
+/* ── BUTTONS ── */
+.file-upload-box {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding-top: 16px; border-top: 2px dashed #ccc;
+}
+.file-upload-box p { margin: 0; font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-display); }
+
+.btn-brutal {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 14px 20px;
+  font-family: var(--font-display); font-size: 12px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border: var(--border-thin); box-shadow: var(--shadow-sm);
+  cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; text-decoration: none;
+}
+.btn-brutal:hover { transform: translate(-2px,-2px); box-shadow: var(--shadow); }
+.btn-brutal:active { transform: translate(1px,1px); box-shadow: none; }
+
+.btn-yellow { background: var(--yellow); color: var(--black); }
+.btn-pink   { background: var(--pink); color: #fff; }
+.btn-white  { background: var(--white); color: var(--black); }
+.btn-black  { background: var(--black); color: var(--yellow); }
+
+/* ── STATUS BOXES ── */
+.status-box { padding: 40px 24px; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
+
+.loading-box { background: var(--white); }
+.loading-box p { font-family: var(--font-display); font-size: 14px; font-weight: 700; text-transform: uppercase; margin: 0; }
+
+.error-box { background: #FFE5E5; }
+.error-box .status-icon { font-size: 48px; margin-bottom: 8px; }
+.error-message { font-family: var(--font-body); font-size: 15px; color: var(--coral); font-weight: 700; margin: 0 0 12px; line-height: 1.4; }
+
+.success-box { background: #E6FFF5; }
+.success-box .status-icon { font-size: 48px; margin-bottom: 8px; }
+.success-title { font-family: var(--font-display); font-size: 24px; font-weight: 800; text-transform: uppercase; color: var(--mint); margin: 0; text-shadow: 1px 1px 0 var(--black); }
+.success-box p { font-family: var(--font-body); font-size: 15px; font-weight: 600; color: var(--black); margin: 0 0 16px; }
+
+.button-group { display: flex; gap: 12px; width: 100%; }
+
+/* Animations */
+.fade-in { animation: fadeIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Simple custom spinner */
+.brutal-spinner {
+  width: 40px; height: 40px;
+  border: 4px solid var(--border);
+  border-top-color: var(--yellow);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

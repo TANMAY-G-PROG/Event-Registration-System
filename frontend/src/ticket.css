@@ -1,0 +1,369 @@
+/* ================================================================
+   TICKET — Neo-Brutalism + Memphis  v2
+   Fixes: proper vertical centering, more Memphis texture
+   Design: Dark background, cream ticket card, punchy yellow/pink
+   ================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --bg:      #0e0e0e;
+  --cream:   #F0EBD8;
+  --black:   #0D0D0D;
+  --yellow:  #FFD600;
+  --green:   #00E5A0;
+  --pink:    #FF2D8A;
+  --blue:    #4D8DFF;
+  --coral:   #FF4D4D;
+  --white:   #FFFFFF;
+  --surface: #161616;
+  --border:  #2a2a2a;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Outfit', sans-serif;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+/* ── PAGE ── dark bg so ticket stands out */
+.ticket-page-wrapper {
+  min-height:100vh; min-height:100dvh;
+  background:var(--bg);
+  background-image:radial-gradient(circle, rgba(255,214,0,0.04) 1px, transparent 1px);
+  background-size:28px 28px;
+  font-family:var(--sans);
+  color:var(--black);
+  display:flex;
+  flex-direction:column;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+
+/* ── NAV ── film strip with yellow bottom border */
+.tk-nav-container {
+  position:fixed; top:0; left:0; right:0; z-index:1000;
+  height:52px;
+  background:rgba(14,14,14,0.97);
+  border-bottom:2px solid var(--yellow);
+  padding:0 20px;
+  display:flex; align-items:center;
+  backdrop-filter:blur(20px);
+  /* Film strip holes */
+  background-image:
+    repeating-linear-gradient(90deg, transparent, transparent 26px,
+      rgba(255,214,0,0.06) 26px, rgba(255,214,0,0.06) 30px);
+}
+.tk-nav-container::after {
+  content:'EVENT TICKET';
+  position:absolute; left:50%; transform:translateX(-50%);
+  font-family:var(--mono); font-size:11px; font-weight:700;
+  letter-spacing:0.22em; color:rgba(255,214,0,0.4);
+}
+.tk-nav-btn {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:7px 14px;
+  font-family:var(--mono); font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.06em;
+  color:var(--yellow); background:transparent;
+  border:1px solid var(--yellow); cursor:pointer;
+  transition:background 0.12s, color 0.12s;
+}
+.tk-nav-btn:hover { background:var(--yellow); color:#000; }
+
+/* ── LOADING / ERROR ── */
+.tk-loading-container, .tk-error-container {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:16px;
+  font-family:var(--mono); font-size:12px;
+  text-transform:uppercase; letter-spacing:0.07em; color:#555;
+}
+.tk-spinner {
+  width:32px; height:32px;
+  border:4px solid #222; border-top-color:var(--yellow);
+  border-radius:50%; animation:tk-spin 0.7s linear infinite;
+}
+@keyframes tk-spin { to { transform:rotate(360deg); } }
+.tk-error-container h3 { color:var(--coral); font-size:18px; font-family:var(--mono); text-transform:uppercase; }
+
+/* ── TICKET CONTAINER: true vertical + horizontal centering ── */
+.tk-ticket-container {
+  flex:1;
+  display:flex;
+  align-items:center;      /* vertical center */
+  justify-content:center;  /* horizontal center */
+  padding:72px 24px 40px;  /* 72px top = nav height + breathing room */
+}
+
+/* ── THE TICKET ── cream card on dark bg */
+.tk-ticket-card {
+  width:100%; max-width:440px;
+  position:relative;
+  /* Memphis offset shadow — the signature NB move */
+  box-shadow: 8px 8px 0 var(--yellow);
+  transition:transform 0.2s ease, box-shadow 0.2s ease;
+}
+.tk-ticket-card:hover {
+  transform:translate(-3px, -3px);
+  box-shadow:11px 11px 0 var(--yellow);
+}
+
+.tk-texture-overlay, .tk-top-notch { display:none; }
+
+/* ── MAIN BODY (cream) ── */
+.tk-main-content {
+  background:var(--cream);
+  border:3px solid var(--black);
+  border-bottom:none;
+  overflow:hidden;
+}
+
+/* Film-strip top ── Memphis signature stripe */
+.tk-main-content::before {
+  content:'';
+  display:block; height:10px;
+  background:repeating-linear-gradient(
+    90deg,
+    var(--yellow) 0, var(--yellow) 18px,
+    var(--black)  18px, var(--black)  22px
+  );
+  border-bottom:3px solid var(--black);
+}
+
+/* ── BLACK HERO ZONE ── */
+.tk-hero-zone {
+  background:var(--black);
+  padding:20px 22px 18px;
+  border-bottom:3px solid var(--black);
+  position:relative; overflow:hidden;
+}
+
+/* Memphis dots cluster */
+.tk-hero-zone::before {
+  content:'';
+  position:absolute; right:-8px; top:-8px;
+  width:80px; height:80px;
+  background-image:radial-gradient(circle, rgba(255,214,0,.35) 2px, transparent 2px);
+  background-size:10px 10px;
+  transform:rotate(10deg);
+  pointer-events:none;
+}
+
+/* Memphis diagonal lines */
+.tk-hero-zone::after {
+  content:'';
+  position:absolute; left:0; bottom:-2px;
+  width:100%; height:6px;
+  background:repeating-linear-gradient(
+    90deg, transparent, transparent 10px,
+    rgba(255,214,0,.2) 10px, rgba(255,214,0,.2) 20px
+  );
+}
+
+.tk-event-title {
+  font-family:var(--sans); font-size:clamp(28px,7vw,40px);
+  font-weight:900; text-transform:uppercase; letter-spacing:-0.01em;
+  color:var(--yellow); margin:0 0 14px; line-height:0.95;
+  position:relative; z-index:2;
+}
+
+/* Badge row */
+.tk-badge-row {
+  display:flex; flex-wrap:wrap; gap:7px;
+  position:relative; z-index:2;
+}
+.tk-role-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:5px 12px;
+  font-family:var(--mono); font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.07em;
+  border:2px solid;
+}
+.tk-role-badge.participant { background:var(--blue); color:#fff; border-color:var(--blue); }
+.tk-role-badge.organiser   { background:var(--yellow); color:#000; border-color:var(--yellow); }
+.tk-role-badge.volunteer   { background:var(--pink); color:#fff; border-color:var(--pink); }
+
+.tk-club-badge, .tk-club-name {
+  display:inline-block; padding:5px 12px;
+  font-family:var(--mono); font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.07em;
+  background:var(--yellow); color:#000; border:2px solid var(--black);
+}
+
+/* ── PAYMENT STRIPE ── */
+.tk-payment-stripe {
+  display:flex; align-items:center; gap:8px;
+  padding:9px 22px;
+  border-bottom:2px solid var(--black);
+  font-family:var(--mono); font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.08em;
+}
+.tk-payment-stripe.verified { background:var(--green); color:#000; }
+.tk-payment-stripe.pending  { background:var(--yellow); color:#000; }
+.tk-payment-stripe.rejected { background:var(--coral); color:#fff; }
+.tk-payment-stripe.required { background:#333; color:#888; }
+
+/* ── INFO GRID ── cream background, sharp borders */
+.tk-info-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+}
+.tk-info-grid div {
+  padding:13px 18px;
+  border-right:2px solid var(--black);
+  border-bottom:2px solid var(--black);
+  background:var(--cream);
+}
+.tk-info-grid div:nth-child(2n) { border-right:none; }
+.tk-info-grid div:nth-last-child(-n+2) { border-bottom:none; }
+
+.tk-info-full {
+  grid-column:1/-1; border-right:none !important;
+}
+.tk-info-label {
+  font-family:var(--mono); font-size:9px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.12em; color:#888;
+  display:block; margin-bottom:5px;
+}
+.tk-info-value {
+  font-family:var(--mono); font-size:14px; font-weight:700;
+  color:var(--black); display:block; line-height:1.2;
+}
+
+/* ── DESCRIPTION ── */
+.tk-details-text {
+  margin:0; padding:14px 22px;
+  font-family:var(--sans); font-size:13px; line-height:1.6; color:#666;
+  font-style:italic; border-top:2px solid #ddd;
+  background:var(--cream);
+}
+
+/* ── PERFORATED TEAR LINE ── */
+.tk-notch-container {
+  position:relative; height:28px;
+  background:var(--cream);
+  border-left:3px solid var(--black); border-right:3px solid var(--black);
+  display:flex; align-items:center; overflow:visible;
+}
+/* Dashed line */
+.tk-notch-container::before {
+  content:'';
+  position:absolute; left:20px; right:20px;
+  border-top:3px dashed rgba(13,13,13,0.3);
+}
+/* TEAR HERE label */
+.tk-notch-container::after {
+  content:'✂  TEAR HERE  ✂';
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  font-family:var(--mono); font-size:8px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.15em;
+  color:rgba(13,13,13,0.2);
+  background:var(--cream); padding:0 8px;
+  white-space:nowrap;
+}
+.tk-notch {
+  position:absolute; top:50%; width:28px; height:28px;
+  transform:translateY(-50%);
+  background:var(--bg);
+  border:3px solid var(--black);
+  border-radius:50%; z-index:10;
+}
+.tk-notch-left  { left:-18px; }
+.tk-notch-right { right:-18px; }
+
+/* ── STUB ── black bottom */
+.tk-stub-content {
+  background:var(--black);
+  border:3px solid var(--black);
+  border-top:none;
+  padding:18px 22px 20px;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  position:relative; overflow:hidden;
+}
+/* Memphis diagonal in stub */
+.tk-stub-content::before {
+  content:'';
+  position:absolute; inset:0;
+  background-image:repeating-linear-gradient(
+    -45deg, transparent, transparent 8px,
+    rgba(255,214,0,.03) 8px, rgba(255,214,0,.03) 16px
+  );
+  pointer-events:none;
+}
+
+/* Serial bar */
+.tk-serial-bar {
+  width:100%; display:flex; justify-content:space-between;
+  border-top:1px solid rgba(255,255,255,.07);
+  padding-top:8px;
+  position:relative; z-index:2;
+}
+.tk-serial-text {
+  font-family:var(--mono); font-size:9px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.15em;
+  color:rgba(255,255,255,.2);
+}
+
+/* ── ACTION BUTTONS ── */
+.tk-scan-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:10px; width:100%; padding:16px 20px;
+  font-family:var(--mono); font-size:13px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.1em;
+  background:var(--yellow); color:#000;
+  border:none;
+  cursor:pointer; transition:transform .1s, filter .1s;
+  position:relative; z-index:2;
+  /* Memphis inner dashed border */
+  outline:2px dashed rgba(0,0,0,0.2); outline-offset:-6px;
+}
+.tk-scan-btn:hover { filter:brightness(1.1); transform:translateY(-1px); }
+.tk-scan-btn:active { transform:translateY(1px); }
+.tk-scan-btn.disabled { background:#222; color:#444; cursor:not-allowed; transform:none !important; filter:none; outline-color:transparent; }
+.tk-scan-btn:disabled { opacity:0.45; cursor:not-allowed; transform:none !important; }
+
+.tk-org-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:10px; width:100%; padding:16px 20px;
+  font-family:var(--mono); font-size:13px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.1em;
+  background:var(--blue); color:#fff;
+  border:none; cursor:pointer;
+  transition:transform .1s, filter .1s;
+  position:relative; z-index:2;
+  outline:2px dashed rgba(255,255,255,0.2); outline-offset:-6px;
+}
+.tk-org-btn:hover { filter:brightness(1.12); transform:translateY(-1px); }
+.tk-org-btn:disabled { opacity:0.45; cursor:not-allowed; transform:none !important; }
+
+.tk-lock-msg {
+  font-family:var(--mono); font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.1em;
+  color:rgba(255,255,255,.25); text-align:center;
+  position:relative; z-index:2;
+}
+
+/* Legacy compat */
+.tk-stamp-badge {
+  display:inline-flex; align-items:center; gap:6px; padding:5px 12px;
+  font-family:var(--mono); font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.07em; border:2px solid;
+}
+.tk-stamp-badge.verified { background:var(--green); color:#000; border-color:var(--green); }
+.tk-stamp-badge.pending  { background:var(--yellow); color:#000; border-color:var(--yellow); }
+.tk-stamp-badge.rejected { background:var(--coral); color:#fff; border-color:var(--coral); }
+.tk-stamp-badge.required { background:#333; color:#888; border-color:#444; }
+
+.tk-volunteer-badge {
+  display:inline-block; padding:5px 12px;
+  font-family:var(--mono); font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.07em;
+  background:var(--pink); color:#fff; border:2px solid var(--pink);
+}
+.tk-separator-dots {
+  height:2px; margin:6px 0;
+  background:repeating-linear-gradient(90deg, var(--black) 0,var(--black) 4px,transparent 4px,transparent 10px);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width:480px) {
+  .tk-ticket-container { padding:68px 16px 32px; align-items:flex-start; }
+  .tk-info-grid { grid-template-columns:1fr; }
+  .tk-info-grid div { border-right:none; }
+  .tk-event-title { font-size:28px; }
+}

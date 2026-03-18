@@ -1,0 +1,199 @@
+/* ===================================================
+   NEO-BRUTALISM DESIGN SYSTEM
+   Colors: Black, White, Yellow (#FFE500), Electric Blue (#0047FF), Red (#FF3B30)
+   Rules: Heavy black borders (3-4px), bold shadows (4-6px offset), flat backgrounds
+   =================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --nb-black: #0a0a0a;
+  --nb-white: #f5f0e8;
+  --nb-yellow: #FFE500;
+  --nb-blue: #0047FF;
+  --nb-red: #FF3B30;
+  --nb-green: #00C851;
+  --nb-pink: #FF2D8A;
+  --nb-orange: #FF6B00;
+  --nb-bg: #f5f0e8;
+  --nb-border: 3px solid #0a0a0a;
+  --nb-border-thick: 4px solid #0a0a0a;
+  --nb-shadow: 4px 4px 0px #0a0a0a;
+  --nb-shadow-lg: 6px 6px 0px #0a0a0a;
+  --nb-shadow-hover: 2px 2px 0px #0a0a0a;
+  --nb-radius: 0px;
+  --nb-font-display: 'Space Mono', monospace;
+  --nb-font-body: 'Space Grotesk', sans-serif;
+  --nb-transition: all 0.12s ease;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ===== SHARED NB UTILITY CLASSES ===== */
+.nb-page {
+  min-height: 100vh;
+  background-color: var(--nb-bg);
+  font-family: var(--nb-font-body);
+  color: var(--nb-black);
+}
+
+.nb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-family: var(--nb-font-display);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--nb-yellow);
+  color: var(--nb-black);
+  border: var(--nb-border-thick);
+  box-shadow: var(--nb-shadow);
+  cursor: pointer;
+  transition: var(--nb-transition);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nb-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--nb-shadow-lg);
+}
+
+.nb-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.nb-btn-black {
+  background: var(--nb-black);
+  color: var(--nb-white);
+}
+
+.nb-btn-blue {
+  background: var(--nb-blue);
+  color: var(--nb-white);
+}
+
+.nb-btn-red {
+  background: var(--nb-red);
+  color: var(--nb-white);
+}
+
+.nb-btn-white {
+  background: var(--nb-white);
+  color: var(--nb-black);
+}
+
+.nb-btn-green {
+  background: var(--nb-green);
+  color: var(--nb-black);
+}
+
+.nb-card {
+  background: var(--nb-white);
+  border: var(--nb-border-thick);
+  box-shadow: var(--nb-shadow-lg);
+  padding: 20px;
+}
+
+.nb-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-family: var(--nb-font-body);
+  font-size: 15px;
+  font-weight: 500;
+  background: #fff;
+  border: var(--nb-border-thick);
+  box-shadow: var(--nb-shadow);
+  outline: none;
+  transition: var(--nb-transition);
+  color: var(--nb-black);
+}
+
+.nb-input:focus {
+  box-shadow: 6px 6px 0px var(--nb-blue);
+  transform: translate(-2px, -2px);
+}
+
+.nb-input::placeholder {
+  color: #888;
+  font-weight: 400;
+}
+
+.nb-label {
+  display: block;
+  font-family: var(--nb-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+  color: var(--nb-black);
+}
+
+.nb-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  font-family: var(--nb-font-display);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 2px solid var(--nb-black);
+  background: var(--nb-yellow);
+  color: var(--nb-black);
+}
+
+.nb-tag-blue { background: var(--nb-blue); color: #fff; }
+.nb-tag-red { background: var(--nb-red); color: #fff; }
+.nb-tag-green { background: var(--nb-green); color: var(--nb-black); }
+
+.nb-title {
+  font-family: var(--nb-font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--nb-black);
+}
+
+.nb-divider {
+  height: 4px;
+  background: var(--nb-black);
+  width: 100%;
+  margin: 20px 0;
+}
+
+.nb-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 14px 24px;
+  font-family: var(--nb-font-display);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--nb-yellow);
+  color: var(--nb-black);
+  border: var(--nb-border-thick);
+  box-shadow: var(--nb-shadow-lg);
+  white-space: nowrap;
+}
+
+.nb-toast-error {
+  background: var(--nb-red);
+  color: #fff;
+}
+
+.nb-toast-success {
+  background: var(--nb-green);
+  color: var(--nb-black);
+}

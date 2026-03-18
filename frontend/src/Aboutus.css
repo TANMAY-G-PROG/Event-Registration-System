@@ -1,0 +1,179 @@
+/* ===== ABOUT US - NEO BRUTALISM ===== */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+@import './neo-brutalism.css';
+
+.about-page {
+  min-height: 100vh;
+  background: var(--nb-bg);
+  background-image:
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  font-family: 'Space Grotesk', sans-serif;
+  padding-bottom: 60px;
+}
+
+/* ===== NAV / BACK BUTTON ===== */
+.about-page .logout-container {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: var(--nb-black); 
+  border-bottom: 4px solid var(--nb-black);
+  padding: 12px 20px; display: flex; align-items: center;
+}
+
+.about-page .back-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px;
+  font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  background: var(--nb-yellow); color: var(--nb-black);
+  border: 2px solid var(--nb-black); box-shadow: 3px 3px 0px var(--nb-black);
+  cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; text-decoration: none;
+}
+
+.about-page .back-btn:hover {
+  transform: translate(-2px, -2px); box-shadow: 5px 5px 0px var(--nb-black);
+}
+
+/* ===== HERO ===== */
+.about-hero {
+  background: var(--nb-black);
+  padding: 100px 40px 60px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 4px solid var(--nb-black);
+}
+
+.about-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,229,0,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,229,0,0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+.about-hero-inner {
+  max-width: 1000px; margin: 0 auto; position: relative; z-index: 2;
+}
+
+.about-hero h1 {
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(36px, 8vw, 80px); font-weight: 700;
+  text-transform: uppercase; letter-spacing: -0.03em;
+  color: var(--nb-yellow); margin: 0 0 16px 0; line-height: 0.95;
+}
+
+.hero-underline { 
+  height: 6px; width: 100px; 
+  background: var(--nb-pink, #FF2D8A); /* Fallback pink if variable missing */
+  margin-bottom: 24px; 
+}
+
+.about-hero-desc {
+  font-size: 16px; line-height: 1.7; color: rgba(255,255,255,0.8);
+  max-width: 650px; margin: 0;
+}
+
+/* ===== CONTENT SECTIONS ===== */
+.about-section { 
+  max-width: 1000px; margin: 0 auto; padding: 60px 40px 0; 
+}
+
+.about-section-title {
+  font-family: 'Space Mono', monospace; font-size: clamp(24px, 4vw, 32px); font-weight: 800;
+  text-transform: uppercase; letter-spacing: -0.02em; color: var(--nb-black); 
+  margin: 0 0 40px 0; padding-bottom: 16px; 
+  border-bottom: 4px solid var(--nb-black);
+}
+
+/* ===== TEAM GRID (Reimagined Layout) ===== */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 32px; /* Explicit gaps instead of negative margins */
+  margin-bottom: 48px;
+}
+
+.card-wrapper {
+  background: var(--nb-white);
+  border: 4px solid var(--nb-black);
+  box-shadow: 8px 8px 0px var(--nb-black);
+  overflow: hidden; 
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s;
+}
+
+/* Memphis Staggered Rotations */
+.card-wrapper:nth-child(1) { transform: rotate(-2deg); }
+.card-wrapper:nth-child(2) { transform: rotate(1.5deg); }
+.card-wrapper:nth-child(3) { transform: rotate(-1deg); }
+.card-wrapper:nth-child(4) { transform: rotate(2deg); }
+
+.card-wrapper:hover {
+  transform: translate(-4px, -4px) rotate(0deg); 
+  box-shadow: 12px 12px 0px var(--nb-black); 
+  z-index: 5;
+}
+
+/* Force ProfileCard inside the wrapper to behave */
+.card-wrapper > div { height: 100%; }
+.profile-card-overrides .pc-card {
+  border: none !important; /* Wrapper handles the border */
+  box-shadow: none !important; /* Wrapper handles the shadow */
+  background: transparent;
+  border-radius: 0;
+  width: 100%; height: 100%;
+}
+
+/* ===== CONNECT SECTION ===== */
+.connect-container {
+  border: 4px solid var(--nb-black);
+  box-shadow: 8px 8px 0px var(--nb-black);
+  overflow: hidden;
+  background: var(--nb-white);
+}
+
+.connect-header {
+  background: var(--nb-black); padding: 16px 24px;
+  font-family: 'Space Mono', monospace; font-size: 14px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--nb-yellow);
+}
+
+.connect-body {
+  padding: 32px; display: flex; flex-wrap: wrap; gap: 16px;
+}
+
+.social-link {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 14px 24px;
+  font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  background: var(--nb-white); color: var(--nb-black);
+  border: 3px solid var(--nb-black); box-shadow: 4px 4px 0px var(--nb-black);
+  text-decoration: none; transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.social-link:hover {
+  transform: translate(-4px, -4px); box-shadow: 8px 8px 0px var(--nb-black);
+  background: var(--nb-yellow);
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 900px) {
+  .team-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+}
+
+@media (max-width: 640px) {
+  .about-hero { padding: 90px 20px 40px; }
+  .about-section { padding: 40px 20px 0; }
+  
+  /* Single column on mobile gives profile cards enough room to render properly */
+  .team-grid { 
+    grid-template-columns: minmax(200px, 320px); 
+    justify-content: center;
+    gap: 32px; 
+  }
+  
+  /* Tone down rotation on mobile so it doesn't break screen edges */
+  .card-wrapper:nth-child(n) { transform: rotate(0deg); box-shadow: 6px 6px 0 var(--nb-black); }
+  .card-wrapper:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--nb-black); }
+}
