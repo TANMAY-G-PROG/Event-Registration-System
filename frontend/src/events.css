@@ -4,7 +4,15 @@
    ================================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@400;600;700;800;900&display=swap');
 
-html, body { margin:0; padding:0; width:100%; height:100%; overflow-x:hidden; }
+/* FIX: Removed `html, body { overflow-x: hidden }` from here.
+   In a React SPA every imported CSS file stays active for the whole
+   session regardless of which route is currently rendered.
+   Putting overflow/margin/padding rules on html or body inside a
+   page-specific file poisons those properties globally — so the
+   Event Form page (and every other page) inherited overflow-x:hidden
+   on body, which causes mobile browsers (especially Safari) to
+   silently kill overflow-y scrolling as well.
+   overflow-x containment is now scoped only to .events-wrapper below. */
 
 :root {
   --cream:   #F5EFE0;
@@ -25,8 +33,11 @@ html, body { margin:0; padding:0; width:100%; height:100%; overflow-x:hidden; }
 
 /* ── PAGE ── */
 .events-wrapper {
-  min-height: 100vh; min-height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
+  /* overflow-x scoped here — only affects this wrapper, not html/body */
+  overflow-x: hidden;
   background-color: var(--cream);
   background-image: radial-gradient(circle, rgba(13,13,13,0.07) 1px, transparent 1px);
   background-size: 22px 22px;
@@ -34,7 +45,6 @@ html, body { margin:0; padding:0; width:100%; height:100%; overflow-x:hidden; }
   display: flex;
   flex-direction: column;
   padding-bottom: env(safe-area-inset-bottom);
-  overflow-x: hidden;
 }
 
 /* ── TOP NAV ── */

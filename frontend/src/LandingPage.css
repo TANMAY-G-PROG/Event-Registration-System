@@ -13,7 +13,13 @@
   --sans:   'Outfit', sans-serif;
 }
 
-html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+/* FIX: was `html, body { overflow: hidden }` which is global and
+   bleeds into every other page in this React SPA — because CSS
+   imported by any component stays loaded for the whole session.
+   Targeting html/body from a page-specific file poisons scroll
+   for ALL routes. Removed entirely; overflow is now controlled
+   only on .lp-root itself (which unmounts when you navigate away).
+   The LandingPage.jsx useEffect handles body overflow cleanup. */
 *, *::before, *::after { box-sizing: border-box; }
 
 /* ── ROOT ── */
@@ -21,11 +27,13 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   position: relative;
   width: 100vw;
   height: 100vh;
+  /* overflow scoped here — only affects the landing page element,
+     not html/body, so other pages are never impacted */
+  overflow: hidden;
   background: var(--black);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   font-family: var(--sans);
 }
 

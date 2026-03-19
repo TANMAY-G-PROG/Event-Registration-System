@@ -195,6 +195,20 @@ export default function HeroGeometric({
   title2 = "FLO.",
 }) {
   const navigate = useNavigate()
+
+  // FIX: Lock body scroll while the landing page is mounted,
+  // then restore it when the user navigates away.
+  // Previously this was done via `html, body { overflow: hidden }` in
+  // LandingPage.css — which is a global rule that persisted for the
+  // entire SPA session and broke scrolling on every other page.
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
   const fadeUp = {
     hidden: { opacity: 0, y: 36 },
     visible: (i) => ({

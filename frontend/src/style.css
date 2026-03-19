@@ -37,16 +37,18 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
 
 /* ══════════════════════════════════════
    ROOT PAGE
+   FIX: was `position: fixed; inset: 0` which traps layout and
+   breaks scrolling when content overflows the viewport.
+   Now uses normal block flow with min-height instead.
 ══════════════════════════════════════ */
 .flo-root {
-  position: fixed;
-  inset: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: 'DM Sans', sans-serif;
   color: var(--ink);
-  overflow-y: auto;
   padding: 24px 20px;
 
   /* warm sand background with subtle linen grid */
@@ -516,8 +518,6 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
   .flo-form-panel { padding: 40px 34px; }
 }
 
-/* ... All your desktop CSS stays exactly the same above this line ... */
-
 /* ══════════════════════════════════════
    MOBILE — NEW MODERN LAYOUT (Theme Adapted)
 ══════════════════════════════════════ */
@@ -525,15 +525,20 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
 .mobile-view-wrapper { display: none; }
 
 @media screen and (max-width: 768px) {
-  .flo-root { 
-    padding: 0; 
+  .flo-root {
+    padding: 0;
     align-items: flex-start;
     display: block;
+    /* FIX: was `overflow: hidden` which completely killed scrolling.
+       Use `overflow: clip` instead — it prevents the root element from
+       scrolling without creating a scroll container, so inner
+       scrollable children (like .m-form-scroll) still work correctly. */
+    overflow: clip;
+    min-height: 100dvh;
     height: 100dvh;
-    overflow: hidden;
   }
   .flo-desk.desktop-view { display: none !important; }
-  
+
   .mobile-view-wrapper {
     display: flex;
     flex-direction: column;
@@ -557,7 +562,7 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
     position: relative;
     z-index: 10;
   }
-  
+
   .m-logo {
     font-family: 'Cormorant Garamond', serif;
     font-size: 60px;
@@ -571,14 +576,14 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
     align-items: flex-start;
     gap: 4px;
   }
-  
+
   .m-divider {
     height: 3px;
     width: 60px;
     background-color: #0D0D0D;
     margin: 16px 0;
   }
-  
+
   .m-tagline {
     font-family: 'DM Mono', monospace;
     color: rgba(13,13,13,0.50);
@@ -602,10 +607,10 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
     overflow: hidden;
     animation: slide-up-mobile 0.5s ease-out;
   }
-  
-  @keyframes slide-up-mobile { 
-    from { transform: translateY(100%); opacity: 0; } 
-    to { transform: translateY(0); opacity: 1; } 
+
+  @keyframes slide-up-mobile {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 
   .m-sheet-header {
@@ -616,7 +621,7 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
     justify-content: space-between;
     align-items: flex-end;
   }
-  
+
   .m-sheet-title {
     font-family: 'Cormorant Garamond', serif;
     font-size: 28px;
@@ -625,7 +630,7 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
     color: var(--forest);
     margin: 0;
   }
-  
+
   .m-toggle-link {
     font-family: 'DM Mono', monospace;
     font-size: 10px;
@@ -640,9 +645,9 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
     cursor: pointer;
     transition: color var(--ease), border-color var(--ease);
   }
-  .m-toggle-link:hover { 
-    color: var(--gold); 
-    border-bottom-color: var(--gold); 
+  .m-toggle-link:hover {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
   }
 
   .m-form-scroll {
@@ -658,7 +663,7 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
   .m-row { display: flex; justify-content: space-between; gap: 10px; }
   .m-input-wrapper { margin-bottom: 20px; width: 100%; position: relative; }
   .m-half { width: 48%; }
-  
+
   .m-label {
     display: block;
     font-family: 'DM Mono', monospace;
@@ -669,9 +674,9 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
     letter-spacing: 2px;
     margin-bottom: 8px;
   }
-  
+
   .m-input-container { position: relative; }
-  
+
   .m-input-field {
     width: 100%;
     background: transparent;
@@ -688,7 +693,7 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
   }
   .m-input-field:focus { border-bottom: 2px solid var(--forest); }
   .m-input-field::placeholder { color: var(--ink-muted); opacity: 0.5; }
-  
+
   .m-pass-toggle {
     position: absolute;
     right: 0;
@@ -730,12 +735,12 @@ input  { font-family: inherit; border-radius: 0; -webkit-appearance: none; }
   }
   .m-submit-btn:active { transform: translate(2px, 2px); box-shadow: none; }
   .m-submit-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
-  
+
   .m-arrow { transition: transform 0.2s; font-size: 16px; }
   .m-submit-btn:hover .m-arrow { transform: translateX(4px); }
 
   .m-forgot-wrapper { display: flex; justify-content: flex-end; margin-top: -10px; margin-bottom: 20px; }
-  
+
   .m-forgot-link {
     font-family: 'DM Mono', monospace;
     font-size: 9px;
