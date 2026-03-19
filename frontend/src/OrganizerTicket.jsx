@@ -73,6 +73,22 @@ export default function OrganizerTicket() {
     return `${hr}:${m} ${ap}`;
   };
 
+  /* Shared stub content rendered in both in-card and fixed positions */
+  const StubContent = () => (
+    <>
+      <button
+        onClick={handleQROrManage}
+        className="tk-scan-btn tk-org-btn"
+        disabled={!subEventsLoaded}
+        style={{ opacity: subEventsLoaded ? 1 : 0.6 }}
+      >
+        <i className="fas fa-qrcode"></i>
+        {getButtonLabel()}
+      </button>
+      <p className="tk-lock-msg">{getSubtitleLabel()}</p>
+    </>
+  );
+
   return (
     <div className="ticket-page-wrapper">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
@@ -176,27 +192,25 @@ export default function OrganizerTicket() {
               </p>
             </div>
 
-            {/* PERFORATED DIVIDER */}
+            {/* PERFORATED DIVIDER (hidden on mobile via CSS) */}
             <div className="tk-notch-container">
               <div className="tk-notch tk-notch-left"></div>
               <div className="tk-notch tk-notch-right"></div>
             </div>
 
-            {/* STUB */}
+            {/* STUB (desktop only — hidden on mobile via CSS) */}
             <div className="tk-stub-content">
-              <button
-                onClick={handleQROrManage}
-                className="tk-scan-btn tk-org-btn"
-                disabled={!subEventsLoaded}
-                style={{ opacity: subEventsLoaded ? 1 : 0.6 }}
-              >
-                <i className="fas fa-qrcode"></i>
-                {getButtonLabel()}
-              </button>
-              <p className="tk-lock-msg">{getSubtitleLabel()}</p>
+              <StubContent />
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* ── FIXED STUB (mobile only) ── */}
+      {!loading && !error && eventData && (
+        <div className="tk-stub-fixed">
+          <StubContent />
         </div>
       )}
     </div>

@@ -72,6 +72,25 @@ export default function ParticipantTicket() {
   };
   const badge = getPaymentBadge();
 
+  /* Shared stub content rendered in both in-card and fixed positions */
+  const StubContent = () => (
+    <>
+      <button
+        onClick={handleScanQR}
+        className={`tk-scan-btn ${!canScan ? 'disabled' : ''}`}
+        disabled={!canScan}
+      >
+        <i className="fas fa-qrcode" style={{fontSize:18}}></i>
+        {canScan ? 'Scan to Mark Attendance' : 'Locked — Verify Payment'}
+      </button>
+      {!canScan && (
+        <p className="tk-lock-msg">
+          {isPaymentPending ? '⏳ Awaiting organizer approval' : '💳 Complete payment to unlock'}
+        </p>
+      )}
+    </>
+  );
+
   return (
     <div className="ticket-page-wrapper">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
@@ -105,9 +124,7 @@ export default function ParticipantTicket() {
             {/* ── MAIN BODY ── */}
             <div className="tk-main-content">
 
-              {/* Memphis stripe rendered via CSS ::before */}
-
-              {/* Hero zone with Memphis decoration */}
+              {/* Hero zone */}
               <div className="tk-hero-zone">
                 <h1 className="tk-event-title">
                   {eventData.ename || 'Untitled Event'}
@@ -162,36 +179,25 @@ export default function ParticipantTicket() {
               </p>
             </div>
 
-            {/* ── PERFORATED DIVIDER ── */}
+            {/* ── PERFORATED DIVIDER (hidden on mobile via CSS) ── */}
             <div className="tk-notch-container">
               <div className="tk-notch tk-notch-left"></div>
               <div className="tk-notch tk-notch-right"></div>
             </div>
 
-            {/* ── STUB ── */}
+            {/* ── STUB (desktop only — hidden on mobile via CSS) ── */}
             <div className="tk-stub-content">
-              <div className="tk-serial-bar">
-                <span className="tk-serial-text">
-                  FLO-{String(eventData.eid||'').slice(-4).toUpperCase()}-{(userData?.userUSN||'').slice(-4).toUpperCase()}
-                </span>
-                <span className="tk-serial-text">ADMIT ONE</span>
-              </div>
-              <button
-                onClick={handleScanQR}
-                className={`tk-scan-btn ${!canScan ? 'disabled' : ''}`}
-                disabled={!canScan}
-              >
-                <i className="fas fa-qrcode" style={{fontSize:18}}></i>
-                {canScan ? 'Scan to Mark Attendance' : 'Locked — Verify Payment'}
-              </button>
-              {!canScan && (
-                <p className="tk-lock-msg">
-                  {isPaymentPending ? '⏳ Awaiting organizer approval' : '💳 Complete payment to unlock'}
-                </p>
-              )}
+              <StubContent />
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* ── FIXED STUB (mobile only) ── */}
+      {!loading && !error && eventData && (
+        <div className="tk-stub-fixed">
+          <StubContent />
         </div>
       )}
     </div>
