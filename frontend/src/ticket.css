@@ -1,6 +1,6 @@
 /* ================================================================
-   TICKET — Neo-Brutalism + Memphis  v2
-   Fixes: proper vertical centering, more Memphis texture
+   TICKET — Neo-Brutalism + Memphis  v3
+   Changes: sticky stub on mobile, removed tear-here text
    Design: Dark background, cream ticket card, punchy yellow/pink
    ================================================================ */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
@@ -45,7 +45,6 @@
   padding:0 20px;
   display:flex; align-items:center;
   backdrop-filter:blur(20px);
-  /* Film strip holes */
   background-image:
     repeating-linear-gradient(90deg, transparent, transparent 26px,
       rgba(255,214,0,0.06) 26px, rgba(255,214,0,0.06) 30px);
@@ -82,22 +81,25 @@
 @keyframes tk-spin { to { transform:rotate(360deg); } }
 .tk-error-container h3 { color:var(--coral); font-size:18px; font-family:var(--mono); text-transform:uppercase; }
 
-/* ── TICKET CONTAINER: true vertical + horizontal centering ── */
+/* ── TICKET CONTAINER ── */
 .tk-ticket-container {
   flex:1;
   display:flex;
-  align-items:center;      /* vertical center */
-  justify-content:center;  /* horizontal center */
-  padding:72px 24px 40px;  /* 72px top = nav height + breathing room */
+  align-items:center;
+  justify-content:center;
+  padding:52px 24px 40px;
 }
 
-/* ── THE TICKET ── cream card on dark bg */
+/* ── THE TICKET ── */
 .tk-ticket-card {
   width:100%; max-width:440px;
   position:relative;
-  /* Memphis offset shadow — the signature NB move */
+  /* Shift left by half the shadow offset so the card looks visually centered */
+  margin-left: -4px;
   box-shadow: 8px 8px 0 var(--yellow);
   transition:transform 0.2s ease, box-shadow 0.2s ease;
+  /* enough bottom margin so content doesn't hide behind sticky stub */
+  margin-bottom: 110px;
 }
 .tk-ticket-card:hover {
   transform:translate(-3px, -3px);
@@ -114,7 +116,6 @@
   overflow:hidden;
 }
 
-/* Film-strip top ── Memphis signature stripe */
 .tk-main-content::before {
   content:'';
   display:block; height:10px;
@@ -134,7 +135,6 @@
   position:relative; overflow:hidden;
 }
 
-/* Memphis dots cluster */
 .tk-hero-zone::before {
   content:'';
   position:absolute; right:-8px; top:-8px;
@@ -145,7 +145,6 @@
   pointer-events:none;
 }
 
-/* Memphis diagonal lines */
 .tk-hero-zone::after {
   content:'';
   position:absolute; left:0; bottom:-2px;
@@ -163,7 +162,6 @@
   position:relative; z-index:2;
 }
 
-/* Badge row */
 .tk-badge-row {
   display:flex; flex-wrap:wrap; gap:7px;
   position:relative; z-index:2;
@@ -199,7 +197,7 @@
 .tk-payment-stripe.rejected { background:var(--coral); color:#fff; }
 .tk-payment-stripe.required { background:#333; color:#888; }
 
-/* ── INFO GRID ── cream background, sharp borders */
+/* ── INFO GRID ── */
 .tk-info-grid {
   display:grid; grid-template-columns:1fr 1fr;
 }
@@ -233,29 +231,20 @@
   background:var(--cream);
 }
 
-/* ── PERFORATED TEAR LINE ── */
+/* ── PERFORATED TEAR LINE ── no text, just visual dashes + notches ── */
 .tk-notch-container {
   position:relative; height:28px;
   background:var(--cream);
   border-left:3px solid var(--black); border-right:3px solid var(--black);
   display:flex; align-items:center; overflow:visible;
 }
-/* Dashed line */
+/* Dashed line only — no text */
 .tk-notch-container::before {
   content:'';
   position:absolute; left:20px; right:20px;
   border-top:3px dashed rgba(13,13,13,0.3);
 }
-/* TEAR HERE label */
-.tk-notch-container::after {
-  content:'✂  TEAR HERE  ✂';
-  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-  font-family:var(--mono); font-size:8px; font-weight:700;
-  text-transform:uppercase; letter-spacing:0.15em;
-  color:rgba(13,13,13,0.2);
-  background:var(--cream); padding:0 8px;
-  white-space:nowrap;
-}
+/* ::after intentionally removed (was the TEAR HERE label) */
 .tk-notch {
   position:absolute; top:50%; width:28px; height:28px;
   transform:translateY(-50%);
@@ -266,7 +255,8 @@
 .tk-notch-left  { left:-18px; }
 .tk-notch-right { right:-18px; }
 
-/* ── STUB ── black bottom */
+/* ── STUB ── black bottom ── */
+/* On desktop: part of the card as usual */
 .tk-stub-content {
   background:var(--black);
   border:3px solid var(--black);
@@ -275,7 +265,7 @@
   display:flex; flex-direction:column; align-items:center; gap:10px;
   position:relative; overflow:hidden;
 }
-/* Memphis diagonal in stub */
+
 .tk-stub-content::before {
   content:'';
   position:absolute; inset:0;
@@ -284,19 +274,6 @@
     rgba(255,214,0,.03) 8px, rgba(255,214,0,.03) 16px
   );
   pointer-events:none;
-}
-
-/* Serial bar */
-.tk-serial-bar {
-  width:100%; display:flex; justify-content:space-between;
-  border-top:1px solid rgba(255,255,255,.07);
-  padding-top:8px;
-  position:relative; z-index:2;
-}
-.tk-serial-text {
-  font-family:var(--mono); font-size:9px; font-weight:700;
-  text-transform:uppercase; letter-spacing:0.15em;
-  color:rgba(255,255,255,.2);
 }
 
 /* ── ACTION BUTTONS ── */
@@ -309,7 +286,6 @@
   border:none;
   cursor:pointer; transition:transform .1s, filter .1s;
   position:relative; z-index:2;
-  /* Memphis inner dashed border */
   outline:2px dashed rgba(0,0,0,0.2); outline-offset:-6px;
 }
 .tk-scan-btn:hover { filter:brightness(1.1); transform:translateY(-1px); }
@@ -360,10 +336,58 @@
   background:repeating-linear-gradient(90deg, var(--black) 0,var(--black) 4px,transparent 4px,transparent 10px);
 }
 
-/* ── RESPONSIVE ── */
+/* ── RESPONSIVE — sticky stub on mobile ── */
 @media (max-width:480px) {
-  .tk-ticket-container { padding:68px 16px 32px; align-items:flex-start; }
+  .tk-ticket-container {
+    padding:68px 16px 0;
+    align-items:flex-start;
+    justify-content:center;
+  }
+
   .tk-info-grid { grid-template-columns:1fr; }
   .tk-info-grid div { border-right:none; }
   .tk-event-title { font-size:28px; }
+
+  /* The card itself: don't include the stub visually inline */
+  .tk-ticket-card {
+    margin-bottom: 0;
+    /* extra space at bottom so scrollable content clears the fixed stub */
+    padding-bottom: 120px;
+  }
+
+  /* Hide the in-card stub on mobile — we show the fixed one instead */
+  .tk-stub-content {
+    display: none;
+  }
+  .tk-notch-container {
+    display: none;
+  }
+
+  /* Fixed stub bar at bottom of screen */
+  .tk-stub-fixed {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 999;
+    background: var(--black);
+    border-top: 3px solid var(--black);
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    /* Memphis diagonal */
+    background-image: repeating-linear-gradient(
+      -45deg, transparent, transparent 8px,
+      rgba(255,214,0,.03) 8px, rgba(255,214,0,.03) 16px
+    );
+    background-color: var(--black);
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.7);
+  }
+}
+
+/* On desktop, hide the fixed stub — only show in-card stub */
+@media (min-width:481px) {
+  .tk-stub-fixed {
+    display: none;
+  }
 }
