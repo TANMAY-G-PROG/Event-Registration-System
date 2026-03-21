@@ -109,11 +109,56 @@
 .c-sub { font-size: 11px; color: var(--nb-black); font-weight: 600; font-family: 'Space Mono', monospace; }
 
 .back-btn {
-  display: inline-flex; align-items: center; gap: 8px; margin-top: 20px;
-  padding: 12px 24px; font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.06em;
-  background: var(--nb-black); color: var(--nb-yellow);
-  border: 3px solid var(--nb-black); box-shadow: 4px 4px 0px var(--nb-black);
-  cursor: pointer; transition: all 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 12px 24px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--nb-black);
+  color: var(--nb-yellow);
+  border: 3px solid var(--nb-black);
+  box-shadow: 4px 4px 0px var(--nb-black);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.1s;
 }
-.back-btn:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0px var(--nb-black); }
+
+.back-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--nb-yellow);
+  transform: translateX(-101%);
+  transition: transform 0.3s cubic-bezier(0.77, 0, 0.175, 1);
+  z-index: 0;
+}
+
+.back-btn:hover::before {
+  transform: translateX(0);
+}
+
+.back-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+.back-btn:hover {
+  color: var(--nb-black);
+  transform: translate(-3px, -3px);
+  box-shadow: 7px 7px 0px var(--nb-black);
+}
+
+.back-btn span {
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+.back-btn:hover span {
+  transform: translateX(-4px);
+}

@@ -4,12 +4,12 @@ import './ticket.css';
 import { apiFetch } from './api.js';
 
 export default function ParticipantTicket() {
-  const [eventData, setEventData]   = useState(null);
-  const [userData, setUserData]     = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const navigate                    = useNavigate();
-  const [searchParams]              = useSearchParams();
+  const [eventData, setEventData] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     const eventId = searchParams.get('eventId');
@@ -51,12 +51,12 @@ export default function ParticipantTicket() {
     return `${hr}:${m} ${ap}`;
   };
 
-  const isPaidEvent       = eventData?.regFee > 0;
-  const paymentStatus     = eventData?.paymentStatus;
+  const isPaidEvent = eventData?.regFee > 0;
+  const paymentStatus = eventData?.paymentStatus;
   const isPaymentVerified = paymentStatus === 'verified';
-  const isPaymentPending  = paymentStatus === 'pending_verification';
+  const isPaymentPending = paymentStatus === 'pending_verification';
   const isPaymentRejected = paymentStatus === 'rejected';
-  const canScan           = !isPaidEvent || (isPaidEvent && isPaymentVerified);
+  const canScan = !isPaidEvent || (isPaidEvent && isPaymentVerified);
 
   const handleScanQR = () => {
     if (!canScan) { alert('Your payment must be verified by the organizer before you can mark attendance.'); return; }
@@ -66,7 +66,7 @@ export default function ParticipantTicket() {
   const getPaymentBadge = () => {
     if (!isPaidEvent) return null;
     if (isPaymentVerified) return { text: 'PAYMENT VERIFIED', cls: 'verified', icon: 'check-circle' };
-    if (isPaymentPending)  return { text: 'PAYMENT PENDING',  cls: 'pending',  icon: 'hourglass-half' };
+    if (isPaymentPending) return { text: 'PAYMENT PENDING', cls: 'pending', icon: 'hourglass-half' };
     if (isPaymentRejected) return { text: 'PAYMENT REJECTED', cls: 'rejected', icon: 'times-circle' };
     return { text: 'PAYMENT REQUIRED', cls: 'required', icon: 'exclamation-circle' };
   };
@@ -187,7 +187,25 @@ export default function ParticipantTicket() {
 
             {/* ── STUB (desktop only — hidden on mobile via CSS) ── */}
             <div className="tk-stub-content">
-              <StubContent />
+              <div className="tk-serial-bar">
+                <span className="tk-serial-text">
+                  FLO-{String(eventData.eid || '').slice(-4).toUpperCase()}-{(userData?.userUSN || '').slice(-4).toUpperCase()}
+                </span>
+                <span className="tk-serial-text">ADMIT ONE</span>
+              </div>
+              <button
+                onClick={handleScanQR}
+                className={`tk-scan-btn ${!canScan ? 'disabled' : ''}`}
+                disabled={!canScan}
+              >
+                <i className="fas fa-qrcode" style={{ fontSize: 18 }}></i>
+                {canScan ? 'Scan to Mark Attendance' : 'Locked — Verify Payment'}
+              </button>
+              {!canScan && (
+                <p className="tk-lock-msg">
+                  {isPaymentPending ? '⏳ Awaiting organizer approval' : '💳 Complete payment to unlock'}
+                </p>
+              )}
             </div>
 
           </div>

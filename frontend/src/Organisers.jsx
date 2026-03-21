@@ -16,7 +16,7 @@ const Organisers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [generatingExcel, setGeneratingExcel] = useState({});
-  
+
   // Payment States
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedEventForPayments, setSelectedEventForPayments] = useState(null);
@@ -24,7 +24,7 @@ const Organisers = () => {
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [processingPayment, setProcessingPayment] = useState({});
   const [isTeamEvent, setIsTeamEvent] = useState(false);
-  
+
   // Scroll Assistant Refs & States
   const completedRef = useRef(null);
   const ongoingRef = useRef(null);
@@ -41,9 +41,9 @@ const Organisers = () => {
 
   // --- FIX 1: iOS Detection Logic ---
   useEffect(() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
     const wrapper = document.querySelector('.organisers-unique-wrapper');
     if (isIOS && wrapper) {
       wrapper.classList.add('is-ios');
@@ -218,7 +218,7 @@ const Organisers = () => {
   const handleVerifyPayment = async (participantUSN, eventId) => {
     // Prevent double clicks
     if (processingPayment[participantUSN]) return;
-    
+
     setProcessingPayment((prev) => ({ ...prev, [participantUSN]: 'verifying' }));
 
     try {
@@ -233,7 +233,7 @@ const Organisers = () => {
 
       // Success Animation State
       setProcessingPayment((prev) => ({ ...prev, [participantUSN]: 'success' }));
-      
+
       setTimeout(() => {
         if (data.verifiedCount && data.verifiedCount > 1) {
           alert(`${data.message}\nAll ${data.verifiedCount} team members can now mark attendance.`);
@@ -246,7 +246,7 @@ const Organisers = () => {
       console.error('Error verifying payment:', err);
       alert(`Error: ${err.message || 'Failed to verify payment. Please try again.'}`);
       setProcessingPayment((prev) => ({ ...prev, [participantUSN]: null }));
-    } 
+    }
   };
 
   const handleEventButtonClick = (eventId) => {
@@ -254,7 +254,6 @@ const Organisers = () => {
   };
 
   const handleOrganiseClick = () => navigate('/create-event');
-  const handleBack = () => navigate('/events');
 
   const handleCloseModal = () => {
     setShowPaymentModal(false);
@@ -298,7 +297,7 @@ const Organisers = () => {
   const ScrollAssistant = ({ type }) => {
     const icon = scrollPositions[type] === 'up' ? 'fa-chevron-up' : 'fa-chevron-down';
     return (
-      <button 
+      <button
         className={`card-scroll-assistant ${scrollPositions[type]}`}
         onClick={() => executeCardScroll(type)}
         title={scrollPositions[type] === 'up' ? 'Scroll to Top' : 'Scroll Down'}
@@ -328,7 +327,7 @@ const Organisers = () => {
         </span>
       </div>
       {event.eventdesc && (
-        <p className="org-card-desc" style={{padding:'0 18px 0 22px'}}>
+        <p className="org-card-desc" style={{ padding: '0 18px 0 22px' }}>
           {DOMPurify.sanitize(event.eventdesc)}
         </p>
       )}
@@ -371,7 +370,7 @@ const Organisers = () => {
   const renderEventsList = (list, type) => {
     if (loading) return (
       <div className="org-skeleton">
-        {[1,2].map(i => (
+        {[1, 2].map(i => (
           <div key={i} className="org-skel-card">
             <div className="org-skel-line w70"></div>
             <div className="org-skel-line w45"></div>
@@ -394,29 +393,23 @@ const Organisers = () => {
 
   const counts = React.useMemo(() => ({
     all: events.ongoing.length + events.completed.length + events.upcoming.length,
-    ongoing:   events.ongoing.length,
-    upcoming:  events.upcoming.length,
+    ongoing: events.ongoing.length,
+    upcoming: events.upcoming.length,
     completed: events.completed.length,
   }), [events]);
 
   const FILTERS = [
-    { key:'all', label:'All' },
-    { key:'ongoing', label:'Live Now' },
-    { key:'upcoming', label:'Upcoming' },
-    { key:'completed', label:'Completed' },
+    { key: 'all', label: 'All' },
+    { key: 'ongoing', label: 'Live Now' },
+    { key: 'upcoming', label: 'Upcoming' },
+    { key: 'completed', label: 'Completed' },
   ];
 
   return (
     <>
       <div className="org-bg-layer"></div>
       <div className="organisers-unique-wrapper">
-
-        {/* NAV */}
-        <div className="org-logout-container">
-          <button className="org-logout-btn" onClick={handleBack}>
-            <i className="fas fa-arrow-left"></i> Back
-          </button>
-        </div>
+        <div style={{ paddingBottom: 60 }} /> {/* Top Spacer for Nav */}
 
         <section className="hero-section">
           <div className="container">
@@ -428,11 +421,11 @@ const Organisers = () => {
               <div className="org-stats-row">
                 <div className="org-stat-pill">
                   <span className="org-stat-num y">{counts.all}</span>
-                  <span className="org-stat-label">Total<br/>Events</span>
+                  <span className="org-stat-label">Total<br />Events</span>
                 </div>
                 <div className="org-stat-pill">
                   <span className="org-stat-num g">{counts.ongoing}</span>
-                  <span className="org-stat-label">Live<br/>Now</span>
+                  <span className="org-stat-label">Live<br />Now</span>
                 </div>
                 <div className="org-stat-pill">
                   <span className="org-stat-num o">{counts.upcoming}</span>
@@ -443,7 +436,7 @@ const Organisers = () => {
 
             {/* FILTER TABS */}
             <div className="org-filter-bar">
-              {FILTERS.map(({key, label}) => (
+              {FILTERS.map(({ key, label }) => (
                 <button
                   key={key}
                   className="org-filter-tab"
@@ -497,11 +490,11 @@ const Organisers = () => {
                 )}
               </>
             ) : (
-              <div className="org-feed" style={{marginTop:8}}>
+              <div className="org-feed" style={{ marginTop: 8 }}>
                 {renderEventsList(
                   activeFilter === 'ongoing' ? events.ongoing :
-                  activeFilter === 'upcoming' ? events.upcoming :
-                  events.completed,
+                    activeFilter === 'upcoming' ? events.upcoming :
+                      events.completed,
                   activeFilter
                 )}
               </div>
@@ -564,7 +557,7 @@ const Organisers = () => {
                     </div>
                   )}
                   {pendingPayments.map((payment, index) => (
-                    <div className="org-payment-row-card" key={index} style={{animationDelay:`${index*0.05}s`}}>
+                    <div className="org-payment-row-card" key={index} style={{ animationDelay: `${index * 0.05}s` }}>
                       <div className="org-pay-user-info">
                         <div className="org-avatar-placeholder">{payment.studentName.charAt(0)}</div>
                         <div className="org-text-details">

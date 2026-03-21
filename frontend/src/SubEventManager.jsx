@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './subeventmanager.css';
+import './style.css';
 
 import { apiFetch } from "./api.js";
 
@@ -89,7 +90,7 @@ const SubEventManager = () => {
       setSubEvents(data.subEvents || []);
     } catch (err) {
       console.error('Error fetching sub-events:', err);
-      showToast('Failed to refresh sub-events');
+      showToast('Refresh Failed.');
     }
   };
 
@@ -105,7 +106,7 @@ const SubEventManager = () => {
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newSubEvent.se_name.trim()) {
-      showToast('Sub-event name is required');
+      showToast('Name Required.');
       return;
     }
 
@@ -127,7 +128,7 @@ const SubEventManager = () => {
 
       setNewSubEvent({ se_name: '', activity_pts: 0, se_details: '' });
       setShowAddForm(false);
-      showToast('Sub-event created successfully!', 'success');
+      showToast('Sub-event Successful!', 'success');
       fetchSubEvents();
     } catch (err) {
       console.error('Error creating sub-event:', err);
@@ -160,7 +161,7 @@ const SubEventManager = () => {
   const confirmEdit = async () => {
     const seid = updateModal.seid;
     if (!password) {
-      showToast('Password is required to confirm changes');
+      showToast('PIN Required.');
       return;
     }
 
@@ -183,7 +184,7 @@ const SubEventManager = () => {
 
       setEditingId(null);
       setEditData({ se_name: '', activity_pts: 0, se_details: '' });
-      showToast('Sub-event updated successfully!', 'success');
+      showToast('Update Successful!', 'success');
       fetchSubEvents();
     } catch (err) {
       console.error('Error updating sub-event:', err);
@@ -201,7 +202,7 @@ const SubEventManager = () => {
   const confirmDelete = async () => {
     const seid = deleteModal.seid;
     if (!password) {
-      showToast('Password is required to delete the sub-event');
+      showToast('PIN Required.');
       return;
     }
 
@@ -222,7 +223,7 @@ const SubEventManager = () => {
         throw new Error(errorData.error || 'Failed to delete sub-event');
       }
 
-      showToast('Sub-event deleted successfully!', 'success');
+      showToast('Delete Successful!', 'success');
       fetchSubEvents();
     } catch (err) {
       console.error('Error deleting sub-event:', err);
@@ -264,11 +265,11 @@ const SubEventManager = () => {
               This will also delete all attendance records for this sub-event.
             </p>
             <div className="subevent-modal-input-wrapper">
-              <label>Confirm with Password</label>
+              <label>Confirm with Organiser PIN</label>
               <input
                 type="password"
                 className="subevent-modal-input"
-                placeholder="Enter your password"
+                placeholder="Enter your PIN"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoFocus
@@ -299,14 +300,14 @@ const SubEventManager = () => {
             </div>
             <h3 className="subevent-modal-title">Confirm Changes?</h3>
             <p className="subevent-modal-message">
-              Please enter your password to save changes to "<strong>{updateModal.name}</strong>".
+              Please enter your PIN to save changes to "<strong>{updateModal.name}</strong>".
             </p>
             <div className="subevent-modal-input-wrapper">
-              <label>Verification Password</label>
+              <label>Confirm with Organiser PIN</label>
               <input
                 type="password"
                 className="subevent-modal-input"
-                placeholder="Enter your password"
+                placeholder="Enter your PIN"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoFocus
@@ -334,9 +335,11 @@ const SubEventManager = () => {
   if (loading) {
     return (
       <>
+        {/* TOAST MESSAGE */}
         {toast.show && (
-          <div className="subevent-toast-wrapper">
-            <div className={`subevent-toast ${toast.type}`}>{toast.message}</div>
+          <div className={`flo-toast ${toast.type === 'error' ? "flo-toast--error" : "flo-toast--success"}`}>
+            <span className="flo-toast-icon">{toast.type === 'error' ? "✕" : "✓"}</span>
+            {toast.message}
           </div>
         )}
         {renderModals()}
@@ -353,16 +356,18 @@ const SubEventManager = () => {
   if (error) {
     return (
       <>
+        {/* TOAST MESSAGE */}
         {toast.show && (
-          <div className="subevent-toast-wrapper">
-            <div className={`subevent-toast ${toast.type}`}>{toast.message}</div>
+          <div className={`flo-toast ${toast.type === 'error' ? "flo-toast--error" : "flo-toast--success"}`}>
+            <span className="flo-toast-icon">{toast.type === 'error' ? "✕" : "✓"}</span>
+            {toast.message}
           </div>
         )}
         {renderModals()}
+        <div style={{ paddingBottom: 60 }} /> {/* Top Spacer for Nav */}
         <div className="subevent-page">
           <div className="subevent-error">
             <p>{error}</p>
-            <button onClick={handleBack} className="subevent-back-btn">Back to Organizers</button>
           </div>
         </div>
       </>
@@ -371,20 +376,20 @@ const SubEventManager = () => {
 
   return (
     <>
+      {/* TOAST MESSAGE */}
       {toast.show && (
-        <div className="subevent-toast-wrapper">
-          <div className={`subevent-toast ${toast.type}`}>{toast.message}</div>
+        <div className={`flo-toast ${toast.type === 'error' ? "flo-toast--error" : "flo-toast--success"}`}>
+          <span className="flo-toast-icon">{toast.type === 'error' ? "✕" : "✓"}</span>
+          {toast.message}
         </div>
       )}
 
       {renderModals()}
 
+      <div style={{ paddingBottom: 60 }} /> {/* Top Spacer for Nav */}
       <div className="subevent-page">
         <div className="subevent-container">
           <div className="subevent-header">
-            <button onClick={handleBack} className="subevent-back-btn">
-              <i className="fas fa-arrow-left"></i> Back
-            </button>
             <div className="subevent-header-text">
               <h1>Manage Sub-events</h1>
               <p className="subevent-event-name">{eventData?.ename}</p>

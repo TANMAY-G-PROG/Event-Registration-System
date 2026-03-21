@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import QRCode from "qrcode"
 import "./registerevent.css"
+import "./style.css"
 import TicketAnimation from './TicketAnimation';
 
 import { apiFetch } from "./api.js";
@@ -282,7 +283,7 @@ function useSliderDrag({ trackRef, currentIndex, snapPoints, cardWidth, cardGap,
 
     const didSwipe =
       dragX < -threshold || velocity < -SLIDER_CONSTANTS.VELOCITY_THRESHOLD ||
-      dragX > threshold  || velocity > SLIDER_CONSTANTS.VELOCITY_THRESHOLD;
+      dragX > threshold || velocity > SLIDER_CONSTANTS.VELOCITY_THRESHOLD;
 
     if (dragX < -threshold || velocity < -SLIDER_CONSTANTS.VELOCITY_THRESHOLD) onSwipeLeft();
     else if (dragX > threshold || velocity > SLIDER_CONSTANTS.VELOCITY_THRESHOLD) onSwipeRight();
@@ -392,8 +393,8 @@ function useSnapPoints(trackRef, cardCount) {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', measure);
     };
-  // Re-measure whenever card count changes (filter change etc.)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Re-measure whenever card count changes (filter change etc.)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackRef, cardCount]);
 
   return { snapPoints, cardWidth, cardGap };
@@ -815,7 +816,7 @@ export default function Registerevent() {
       if (!response.ok) throw new Error("Failed")
       const data = await response.json()
       setEventsData({ upcoming: data?.events?.upcoming || [], ongoing: data?.events?.ongoing || [], completed: data?.events?.completed || [] })
-    } catch (err) { showFlash("error", "Failed to load events") }
+    } catch (err) { showFlash("error", "Load Failed.") }
     finally { setLoading(false) }
   }, [navigate]);
 
@@ -940,7 +941,7 @@ export default function Registerevent() {
   async function handleRegister(event) {
     const hasFee = (event.regFee || 0) > 0; const eventId = event.eid
     if (hasFee) {
-      if (!event.upiId) { showFlash("error", "Payment not setup."); return }
+      if (!event.upiId) { showFlash("error", "Payment Not Setup."); return }
       setTransactionId(""); setModalFlash({ type: "", message: "" }); setShowUpiModal({ event, isTeam: false }); return
     }
     try {
@@ -950,17 +951,17 @@ export default function Registerevent() {
       });
       const data = await response.json()
       if (!response.ok) { showFlash("error", data.error || "Failed"); return }
-      showFlash("success", "Registered successfully!")
+      showFlash("success", "Registration Successful!")
       setRegisteredEvents(prev => new Set(prev).add(eventId))
       setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data.userUSN || "AUTHORIZED" })
       await loadEvents()
-    } catch (err) { showFlash("error", "Network error") }
+    } catch (err) { showFlash("error", "Network Error.") }
   }
 
   async function handleCreateTeam(eventId) {
     try {
       const { teamName, memberUSNs } = teamFormData
-      if (!teamName.trim()) { showModalFlash('error', 'Team name required'); return }
+      if (!teamName.trim()) { showModalFlash('error', 'Name Required.'); return }
       const validUSNs = memberUSNs.filter(usn => usn.trim() !== '')
 
       const response = await apiFetch(`/api/events/${eventId}/create-team`, {
@@ -976,9 +977,9 @@ export default function Registerevent() {
 
       const data = await response.json()
       if (!response.ok) { showModalFlash('error', data.error); return }
-      showModalFlash('success', 'Team created!'); showFlash('success', 'Team created!')
+      showModalFlash('success', 'Team Successful!'); showFlash('success', 'Team Successful!')
       setTimeout(() => { setShowTeamModal(null); setTeamFormData({ teamName: '', memberUSNs: [''] }); loadTeamStatus(eventId) }, 1500)
-    } catch (err) { showModalFlash('error', 'Error creating team') }
+    } catch (err) { showModalFlash('error', 'Team Failed.') }
   }
 
   async function handleViewInvites(eventId) {
@@ -986,9 +987,9 @@ export default function Registerevent() {
       const response = await apiFetch(`/api/events/${eventId}/my-invites`);
       const data = await response.json()
       if (!response.ok) { showFlash('error', data.error); return }
-      if (!data.invites?.length) { showFlash('error', 'No pending invites'); setTeamInvites([]) }
+      if (!data.invites?.length) { showFlash('error', 'No Invites.'); setTeamInvites([]) }
       else { setTeamInvites(data.invites); setShowTeamModal({ eventId, mode: 'invites' }) }
-    } catch (err) { showFlash('error', 'Error loading invites') }
+    } catch (err) { showFlash('error', 'Load Failed.') }
   }
 
   async function handleConfirmJoin(teamId, eventId) {
@@ -997,8 +998,8 @@ export default function Registerevent() {
         method: "POST"
       });
 
-      if (!response.ok) { showModalFlash('error', 'Failed to join'); return }
-      showModalFlash('success', 'Joined team!');
+      if (!response.ok) { showModalFlash('error', 'Join Failed.'); return }
+      showModalFlash('success', 'Join Successful!');
       setTimeout(() => { setShowTeamModal(null); setTeamInvites([]); loadTeamStatus(eventId) }, 1500)
     } catch (err) { showModalFlash('error', 'Error') }
   }
@@ -1006,7 +1007,7 @@ export default function Registerevent() {
   async function handleRegisterTeam(event, teamState) {
     const eventId = event.eid
     try {
-      const response = await apiFetch(`/api/events/${eventId}/register-team`, { 
+      const response = await apiFetch(`/api/events/${eventId}/register-team`, {
         method: "POST"
       });
 
@@ -1014,17 +1015,17 @@ export default function Registerevent() {
 
       if (!response.ok) { showFlash('error', data.error); return }
       if (data.requiresPayment) {
-        if (!event.upiId) { showFlash("error", "Payment not setup"); return }
+        if (!event.upiId) { showFlash("error", "Payment Not Setup."); return }
         setTransactionId(""); setShowUpiModal({ event, isTeam: true, teamId: teamState.teamId }); return
       }
-      showFlash('success', 'Team registered!');
+      showFlash('success', 'Registration Successful!');
       setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data.userUSN });
       await loadTeamStatus(eventId); await loadEvents(); await fetchMyRegistrations()
-    } catch (err) { showFlash('error', 'Error registering team') }
+    } catch (err) { showFlash('error', 'Registration Failed.') }
   }
 
   async function handleSubmitUpiPayment() {
-    if (!transactionId.trim()) { showModalFlash('error', 'Enter Transaction ID'); return }
+    if (!transactionId.trim()) { showModalFlash('error', 'ID Required.'); return }
     if (isSubmitting) return; setIsSubmitting(true)
     const { event, isTeam } = showUpiModal; const eventId = event.eid;
     const url = isTeam ? `/api/events/${eventId}/register-team-upi` : `/api/events/${eventId}/register-upi`
@@ -1040,13 +1041,13 @@ export default function Registerevent() {
       });
       const data = await response.json()
       if (!response.ok) { showModalFlash('error', data.error); return }
-      showModalFlash('success', 'Submitted for verification!');
+      showModalFlash('success', 'Submitted Successful!');
       setTimeout(async () => {
-        setShowUpiModal(null); setTransactionId(""); showFlash('success', 'Submitted!');
+        setShowUpiModal(null); setTransactionId(""); showFlash('success', 'Submitted Successful!');
         setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data.userUSN || "PENDING" });
         await loadEvents(); await loadTeamStatus(eventId); await fetchMyRegistrations()
       }, 1500)
-    } catch (err) { showModalFlash('error', 'Error submitting') } finally { setIsSubmitting(false) }
+    } catch (err) { showModalFlash('error', 'Submit Failed.') } finally { setIsSubmitting(false) }
   }
 
   const handleOpenPoster = (e, url) => {
@@ -1147,325 +1148,336 @@ export default function Registerevent() {
   // ==================== RENDER ====================
 
   return (
-    <main className="registerevent-page">
-      {ticketInfo && <TicketAnimation onClose={() => setTicketInfo(null)} {...ticketInfo} />}
-      {flash.message && <div className={`registerevent-flash ${flash.type === 'success' ? 'registerevent-flash-success' : 'registerevent-flash-error'}`}>{flash.message}</div>}
+    <>
+      <div style={{ paddingBottom: 60 }} /> {/* Top Spacer for Nav */}
+      <main className="registerevent-page">
+        {ticketInfo && <TicketAnimation onClose={() => setTicketInfo(null)} {...ticketInfo} />}
+        {/* TOAST MESSAGE */}
+        {flash.message && (
+          <div className={`flo-toast ${flash.type === 'error' ? "flo-toast--error" : "flo-toast--success"}`}>
+            <span className="flo-toast-icon">{flash.type === 'error' ? "✕" : "✓"}</span>
+            {flash.message}
+          </div>
+        )}
 
-      {/* === DYNAMIC GALLERY BACKGROUND === */}
-      <div
-        className="re-gallery-bg"
-        style={{
-          background: `
-            radial-gradient(ellipse at 25% 20%, ${currentColors[0]}55 0%, transparent 50%),
-            radial-gradient(ellipse at 75% 80%, ${currentColors[1]}55 0%, transparent 50%),
-            radial-gradient(ellipse at 50% 50%, ${currentColors[2]}33 0%, transparent 65%),
-            linear-gradient(180deg, #080808 0%, #0d0d0d 100%)
-          `,
-        }}
-      />
-      <div className="re-gallery-blur-bg" />
+        {/* === DYNAMIC GALLERY BACKGROUND === */}
+        <div
+          className="re-gallery-bg"
+          style={{
+            background: `
+              radial-gradient(ellipse at 25% 20%, ${currentColors[0]}55 0%, transparent 50%),
+              radial-gradient(ellipse at 75% 80%, ${currentColors[1]}55 0%, transparent 50%),
+              radial-gradient(ellipse at 50% 50%, ${currentColors[2]}33 0%, transparent 65%),
+              linear-gradient(180deg, #080808 0%, #0d0d0d 100%)
+            `,
+          }}
+        />
+        <div className="re-gallery-blur-bg" />
 
-      {/* === HEADER === */}
-      <header className="re-gallery-header">
-        <div className="re-gallery-header-left">
-          <h1 className="re-gallery-headline">Events</h1>
-          <p className="re-gallery-subline">Discover & join events happening around you.</p>
+        {/* === HEADER === */}
+        <header className="re-gallery-header">
+          <div className="re-gallery-header-left">
+            <h1 className="re-gallery-headline">Events</h1>
+            <p className="re-gallery-subline">Discover & join events happening around you.</p>
+          </div>
+          <div className="re-gallery-header-right">
+            {filteredEvents.length > 0 && viewMode === "gallery" && (
+              <JumpCounter
+                current={currentIndex}
+                total={filteredEvents.length}
+                onJump={goToSlide}
+              />
+            )}
+            {filteredEvents.length > 0 && viewMode === "grid" && (
+              <div className="re-gallery-counter" style={{ cursor: 'default' }}>
+                <span>{filteredEvents.length}</span>
+                <span style={{ color: 'rgba(255,255,255,0.25)', margin: '0 3px' }}>·</span>
+                <span>events</span>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* === DESKTOP VIEW TOGGLE (Centered above filters) === */}
+        <div className="re-view-toggle-desktop-centered">
+          <button
+            className={`re-view-tab ${viewMode === "gallery" ? "active" : ""}`}
+            onClick={() => setViewMode("gallery")}
+          >
+            <svg viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.6" width="14" height="11">
+              <rect x="0.8" y="0.8" width="16.4" height="12.4" rx="2" />
+              <line x1="0.8" y1="4" x2="17.2" y2="4" />
+              <line x1="0.8" y1="10" x2="17.2" y2="10" />
+            </svg>
+            <span>Gallery</span>
+          </button>
+          <button
+            className={`re-view-tab ${viewMode === "grid" ? "active" : ""}`}
+            onClick={() => setViewMode("grid")}
+          >
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13">
+              <rect x="0" y="0" width="6" height="6" rx="1.2" />
+              <rect x="8" y="0" width="6" height="6" rx="1.2" opacity="0.6" />
+              <rect x="0" y="8" width="6" height="6" rx="1.2" opacity="0.6" />
+              <rect x="8" y="8" width="6" height="6" rx="1.2" opacity="0.6" />
+            </svg>
+            <span>Grid</span>
+          </button>
         </div>
-        <div className="re-gallery-header-right">
-          {/* REMOVED: Desktop toggle from header right */}
 
-          {filteredEvents.length > 0 && viewMode === "gallery" && (
-            <JumpCounter
-              current={currentIndex}
-              total={filteredEvents.length}
-              onJump={goToSlide}
+        {/* === FILTER STRIP (search left + filters) === */}
+        <div className="re-gallery-filter-strip">
+          {!loading && filteredEvents.length > 0 && (
+            <SearchBar
+              events={filteredEvents}
+              onSelect={(i) => { setViewMode("gallery"); goToSlide(i); }}
+              currentIndex={currentIndex}
             />
           )}
-          {filteredEvents.length > 0 && viewMode === "grid" && (
-            <div className="re-gallery-counter" style={{ cursor: 'default' }}>
-              <span>{filteredEvents.length}</span>
-              <span style={{ color: 'rgba(255,255,255,0.25)', margin: '0 3px' }}>·</span>
-              <span>events</span>
-            </div>
-          )}
-          <button className="re-gallery-back-btn" onClick={() => navigate('/events')}>← Dashboard</button>
+          <div className="re-filter-divider" />
+          {["all", "upcoming", "ongoing", "completed"].map(k => (
+            <button
+              key={k}
+              className={`re-gallery-filter-btn ${filter === k ? 'active' : ''}`}
+              onClick={() => { setFilter(k); goToSlide(0); }}
+            >
+              {k.charAt(0).toUpperCase() + k.slice(1)}
+              {statusCounts[k] > 0 && (
+                <span className={`re-filter-count ${filter === k ? 'active' : ''}`}>{statusCounts[k]}</span>
+              )}
+            </button>
+          ))}
         </div>
-      </header>
 
-      {/* === DESKTOP VIEW TOGGLE (Centered above filters) === */}
-      <div className="re-view-toggle-desktop-centered">
-        <button
-          className={`re-view-tab ${viewMode === "gallery" ? "active" : ""}`}
-          onClick={() => setViewMode("gallery")}
-        >
-          <svg viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.6" width="14" height="11">
-            <rect x="0.8" y="0.8" width="16.4" height="12.4" rx="2"/>
-            <line x1="0.8" y1="4" x2="17.2" y2="4"/>
-            <line x1="0.8" y1="10" x2="17.2" y2="10"/>
-          </svg>
-          <span>Gallery</span>
-        </button>
-        <button
-          className={`re-view-tab ${viewMode === "grid" ? "active" : ""}`}
-          onClick={() => setViewMode("grid")}
-        >
-          <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13">
-            <rect x="0" y="0" width="6" height="6" rx="1.2"/>
-            <rect x="8" y="0" width="6" height="6" rx="1.2" opacity="0.6"/>
-            <rect x="0" y="8" width="6" height="6" rx="1.2" opacity="0.6"/>
-            <rect x="8" y="8" width="6" height="6" rx="1.2" opacity="0.6"/>
-          </svg>
-          <span>Grid</span>
-        </button>
-      </div>
+        {/* === MOBILE VIEW TOGGLE (Moved ABOVE dots) === */}
+        <div className="re-mobile-view-toggle">
+          <button
+            className={`re-mobile-view-btn ${viewMode === "gallery" ? "active" : ""}`}
+            onClick={() => setViewMode("gallery")}
+          >
+            <svg viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.8" width="14" height="11">
+              <rect x="0.8" y="0.8" width="16.4" height="12.4" rx="2" />
+              <line x1="0.8" y1="4" x2="17.2" y2="4" />
+              <line x1="0.8" y1="10" x2="17.2" y2="10" />
+            </svg>
+            Gallery
+          </button>
+          <button
+            className={`re-mobile-view-btn ${viewMode === "grid" ? "active" : ""}`}
+            onClick={() => setViewMode("grid")}
+          >
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13">
+              <rect x="0" y="0" width="6.5" height="6.5" rx="1.2" />
+              <rect x="9.5" y="0" width="6.5" height="6.5" rx="1.2" />
+              <rect x="0" y="9.5" width="6.5" height="6.5" rx="1.2" />
+              <rect x="9.5" y="9.5" width="6.5" height="6.5" rx="1.2" />
+            </svg>
+            Grid
+          </button>
+        </div>
 
-      {/* === FILTER STRIP (search left + filters) === */}
-      <div className="re-gallery-filter-strip">
-        {!loading && filteredEvents.length > 0 && (
-          <SearchBar
+        {/* === MAIN CONTENT: GALLERY or GRID === */}
+        {loading ? (
+          <div className="re-gallery-loading">
+            <div className="re-gallery-spinner"></div>
+            <p>Loading events...</p>
+          </div>
+        ) : filteredEvents.length === 0 ? (
+          <div className="re-gallery-empty">
+            <span>No events found</span>
+          </div>
+        ) : viewMode === "gallery" ? (
+          /* ---- GALLERY SLIDER ---- */
+          <div
+            ref={sliderRef}
+            className={`re-gallery-slider ${isDragging ? 'dragging' : ''}`}
+            onMouseDown={handleDragStart}
+            onMouseMove={handleDragMove}
+            onMouseUp={handleDragEnd}
+            onMouseLeave={handleDragEnd}
+            onTouchStart={handleDragStart}
+            onTouchMove={handleDragMove}
+            onTouchEnd={handleDragEnd}
+          >
+            <div
+              ref={trackRef}
+              className="re-gallery-track"
+            >
+              {filteredEvents.map((event, index) => (
+                <EventGalleryCard
+                  key={event.eid}
+                  event={event}
+                  isActive={index === currentIndex}
+                  index={index}
+                  currentIndex={currentIndex}
+                  onOpen={setSelectedEvent}
+                  renderControls={renderControls}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* ---- BENTO GRID ---- */
+          <BentoGrid
             events={filteredEvents}
-            onSelect={(i) => { setViewMode("gallery"); goToSlide(i); }}
-            currentIndex={currentIndex}
+            onOpen={setSelectedEvent}
+            renderControls={renderControls}
           />
         )}
-        <div className="re-filter-divider" />
-        {["all", "upcoming", "ongoing", "completed"].map(k => (
-          <button
-            key={k}
-            className={`re-gallery-filter-btn ${filter === k ? 'active' : ''}`}
-            onClick={() => { setFilter(k); goToSlide(0); }}
-          >
-            {k.charAt(0).toUpperCase() + k.slice(1)}
-            {statusCounts[k] > 0 && (
-              <span className={`re-filter-count ${filter === k ? 'active' : ''}`}>{statusCounts[k]}</span>
-            )}
-          </button>
-        ))}
-      </div>
 
-      {/* === MOBILE VIEW TOGGLE (Moved ABOVE dots) === */}
-      <div className="re-mobile-view-toggle">
-        <button
-          className={`re-mobile-view-btn ${viewMode === "gallery" ? "active" : ""}`}
-          onClick={() => setViewMode("gallery")}
-        >
-          <svg viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.8" width="14" height="11">
-            <rect x="0.8" y="0.8" width="16.4" height="12.4" rx="2"/>
-            <line x1="0.8" y1="4" x2="17.2" y2="4"/>
-            <line x1="0.8" y1="10" x2="17.2" y2="10"/>
-          </svg>
-          Gallery
-        </button>
-        <button
-          className={`re-mobile-view-btn ${viewMode === "grid" ? "active" : ""}`}
-          onClick={() => setViewMode("grid")}
-        >
-          <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13">
-            <rect x="0" y="0" width="6.5" height="6.5" rx="1.2"/>
-            <rect x="9.5" y="0" width="6.5" height="6.5" rx="1.2"/>
-            <rect x="0" y="9.5" width="6.5" height="6.5" rx="1.2"/>
-            <rect x="9.5" y="9.5" width="6.5" height="6.5" rx="1.2"/>
-          </svg>
-          Grid
-        </button>
-      </div>
+        {/* === SMART NAV DOTS (gallery only) === */}
+        {!loading && filteredEvents.length > 1 && viewMode === "gallery" && (
+          <NavigationDots
+            total={filteredEvents.length}
+            current={currentIndex}
+            onSelect={goToSlide}
+            colors={currentColors}
+          />
+        )}
 
-      {/* === MAIN CONTENT: GALLERY or GRID === */}
-      {loading ? (
-        <div className="re-gallery-loading">
-          <div className="re-gallery-spinner"></div>
-          <p>Loading events...</p>
-        </div>
-      ) : filteredEvents.length === 0 ? (
-        <div className="re-gallery-empty">
-          <span>No events found</span>
-        </div>
-      ) : viewMode === "gallery" ? (
-        /* ---- GALLERY SLIDER ---- */
-        <div
-          ref={sliderRef}
-          className={`re-gallery-slider ${isDragging ? 'dragging' : ''}`}
-          onMouseDown={handleDragStart}
-          onMouseMove={handleDragMove}
-          onMouseUp={handleDragEnd}
-          onMouseLeave={handleDragEnd}
-          onTouchStart={handleDragStart}
-          onTouchMove={handleDragMove}
-          onTouchEnd={handleDragEnd}
-        >
-          <div
-            ref={trackRef}
-            className="re-gallery-track"
-          >
-            {filteredEvents.map((event, index) => (
-              <EventGalleryCard
-                key={event.eid}
-                event={event}
-                isActive={index === currentIndex}
-                index={index}
-                currentIndex={currentIndex}
-                onOpen={setSelectedEvent}
-                renderControls={renderControls}
-              />
-            ))}
+        {/* === KEYBOARD HINT (gallery only) === */}
+        {viewMode === "gallery" && (
+          <div className="re-gallery-keyboard-hint">
+            <kbd>←</kbd>
+            <kbd>→</kbd>
+            <span>navigate</span>
           </div>
-        </div>
-      ) : (
-        /* ---- BENTO GRID ---- */
-        <BentoGrid
-          events={filteredEvents}
-          onOpen={setSelectedEvent}
-          renderControls={renderControls}
-        />
-      )}
+        )}
 
-      {/* === SMART NAV DOTS (gallery only) === */}
-      {!loading && filteredEvents.length > 1 && viewMode === "gallery" && (
-        <NavigationDots
-          total={filteredEvents.length}
-          current={currentIndex}
-          onSelect={goToSlide}
-          colors={currentColors}
-        />
-      )}
-
-      {/* === KEYBOARD HINT (gallery only) === */}
-      {viewMode === "gallery" && (
-        <div className="re-gallery-keyboard-hint">
-          <kbd>←</kbd>
-          <kbd>→</kbd>
-          <span>navigate</span>
-        </div>
-      )}
-
-      {/* ===== DETAIL OVERLAY ===== */}
-      {selectedEvent && (
-        <div className="registerevent-overlay-container">
-          <div className="registerevent-overlay-split">
-            <div className="registerevent-split-top">
-              <button className="registerevent-close-btn" onClick={() => setSelectedEvent(null)}>×</button>
-              <div className="registerevent-image-wrapper">
-                <img src={resolveBanner(selectedEvent)} alt={selectedEvent.ename} />
-                <div className="registerevent-image-gradient"></div>
+        {/* ===== DETAIL OVERLAY ===== */}
+        {selectedEvent && (
+          <div className="registerevent-overlay-container">
+            <div className="registerevent-overlay-split">
+              <div className="registerevent-split-top">
+                <button className="registerevent-close-btn" onClick={() => setSelectedEvent(null)}>×</button>
+                <div className="registerevent-image-wrapper">
+                  <img src={resolveBanner(selectedEvent)} alt={selectedEvent.ename} />
+                  <div className="registerevent-image-gradient"></div>
+                </div>
               </div>
-            </div>
 
-            <div className="registerevent-split-bottom">
-              <div className="registerevent-detail-content">
-                <div className="registerevent-detail-header-flex">
-                  <div style={{ fontFamily: 'var(--nb-font-mono)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#999', marginBottom: '6px' }}>Event Details</div>
-                  <h2 className="registerevent-card-title" style={{ fontSize: '2rem', marginBottom: '8px' }}>{selectedEvent.ename}</h2>
-                  <div className="registerevent-badges" style={{ marginTop: '8px' }}>
-                    <span className="registerevent-badge registerevent-badge-upcoming">{new Date(selectedEvent.eventDate).toDateString()}</span>
-                    <span className="registerevent-badge registerevent-badge-upcoming">{formatTime12h(selectedEvent.eventTime)}</span>
-                    {selectedEvent.regFee > 0 ?
-                      <span className="registerevent-badge registerevent-badge-upcoming" style={{ background: 'var(--nb-orange)', color: '#fff', borderColor: 'var(--nb-orange)' }}>₹{selectedEvent.regFee}</span> :
-                      <span className="registerevent-badge registerevent-badge-ongoing" style={{  }}>Free</span>
-                    }
-                  </div>
-                </div>
-
-                <div className="registerevent-description-box">
-                  <h4>About Event</h4>
-                  <p>{selectedEvent.eventdesc}</p>
-                </div>
-
-                <div className="registerevent-bento-grid">
-                  <div className="registerevent-bento-item">
-                    <span className="bento-label">Venue</span>
-                    <span className="bento-value">{selectedEvent.eventLoc}</span>
-                  </div>
-                  <div className="registerevent-bento-item">
-                    <span className="bento-label">Organizer</span>
-                    <span className="bento-value">{selectedEvent.organizerName || "Club"}</span>
-                  </div>
-                  {selectedEvent.is_team && (
-                    <div className="registerevent-bento-item">
-                      <span className="bento-label">Team Size</span>
-                      <span className="bento-value">{selectedEvent.min_team_size} - {selectedEvent.max_team_size} Members</span>
+              <div className="registerevent-split-bottom">
+                <div className="registerevent-detail-content">
+                  <div className="registerevent-detail-header-flex">
+                    <div style={{ fontFamily: 'var(--nb-font-mono)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#999', marginBottom: '6px' }}>Event Details</div>
+                    <h2 className="registerevent-card-title" style={{ fontSize: '2rem', marginBottom: '8px' }}>{selectedEvent.ename}</h2>
+                    <div className="registerevent-badges" style={{ marginTop: '8px' }}>
+                      <span className="registerevent-badge registerevent-badge-upcoming">{new Date(selectedEvent.eventDate).toDateString()}</span>
+                      <span className="registerevent-badge registerevent-badge-upcoming">{formatTime12h(selectedEvent.eventTime)}</span>
+                      {selectedEvent.regFee > 0 ?
+                        <span className="registerevent-badge registerevent-badge-upcoming" style={{ background: 'var(--nb-orange)', color: '#fff', borderColor: 'var(--nb-orange)' }}>₹{selectedEvent.regFee}</span> :
+                        <span className="registerevent-badge registerevent-badge-ongoing" style={{}}>Free</span>
+                      }
                     </div>
-                  )}
-                </div>
-                <div style={{ height: '24px' }}></div>
-              </div>
+                  </div>
 
-              <div className="registerevent-action-bar">
-                {renderControls(selectedEvent, true)}
+                  <div className="registerevent-description-box">
+                    <h4>About Event</h4>
+                    <p>{selectedEvent.eventdesc}</p>
+                  </div>
+
+                  <div className="registerevent-bento-grid">
+                    <div className="registerevent-bento-item">
+                      <span className="bento-label">Venue</span>
+                      <span className="bento-value">{selectedEvent.eventLoc}</span>
+                    </div>
+                    <div className="registerevent-bento-item">
+                      <span className="bento-label">Organizer</span>
+                      <span className="bento-value">{selectedEvent.organizerName || "Club"}</span>
+                    </div>
+                    {selectedEvent.is_team && (
+                      <div className="registerevent-bento-item">
+                        <span className="bento-label">Team Size</span>
+                        <span className="bento-value">{selectedEvent.min_team_size} - {selectedEvent.max_team_size} Members</span>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ height: '24px' }}></div>
+                </div>
+
+                <div className="registerevent-action-bar">
+                  {renderControls(selectedEvent, true)}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ===== MODALS ===== */}
-      {showTeamModal && (
-        <div className="registerevent-modal-overlay" onClick={() => setShowTeamModal(null)}>
-          <div className="registerevent-modal" onClick={e => e.stopPropagation()}>
-            <div className="registerevent-modal-header">
-              <h2 className="registerevent-modal-title">{showTeamModal.mode === 'create' ? 'Create Team' : 'Invites'}</h2>
-              <button className="registerevent-modal-close" onClick={() => setShowTeamModal(null)}>×</button>
-            </div>
-            <div className="registerevent-modal-body">
-              {modalFlash.message && <div className={`registerevent-flash ${modalFlash.type === 'success' ? 'registerevent-flash-success' : 'registerevent-flash-error'}`} style={{ position: 'relative', top: 'auto', left: 'auto', transform: 'none', width: '100%', marginBottom: '14px', textAlign: 'center' }}>{modalFlash.message}</div>}
-              {showTeamModal.mode === 'create' ? (
-                <div className="registerevent-team-form">
-                  <div className="registerevent-form-group">
-                    <label className="registerevent-form-label">Team Name</label>
-                    <input className="registerevent-form-input" placeholder="Enter Team Name" value={teamFormData.teamName} onChange={e => setTeamFormData({ ...teamFormData, teamName: e.target.value })} />
+        {/* ===== MODALS ===== */}
+        {showTeamModal && (
+          <div className="registerevent-modal-overlay" onClick={() => setShowTeamModal(null)}>
+            <div className="registerevent-modal" onClick={e => e.stopPropagation()}>
+              <div className="registerevent-modal-header">
+                <h2 className="registerevent-modal-title">{showTeamModal.mode === 'create' ? 'Create Team' : 'Invites'}</h2>
+                <button className="registerevent-modal-close" onClick={() => setShowTeamModal(null)}>×</button>
+              </div>
+              <div className="registerevent-modal-body">
+                {modalFlash.message && (
+                  <div className={`flo-toast ${modalFlash.type === 'error' ? "flo-toast--error" : "flo-toast--success"}`}>
+                    <span className="flo-toast-icon">{modalFlash.type === 'error' ? "✕" : "✓"}</span>
+                    {modalFlash.message}
                   </div>
-                  <div className="registerevent-form-group">
-                    <label className="registerevent-form-label">Members (USNs)</label>
-                    {teamFormData.memberUSNs.map((usn, i) => (
-                      <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                        <input className="registerevent-form-input" placeholder="Member USN" value={usn} onChange={e => {
-                          const newUsns = [...teamFormData.memberUSNs]; newUsns[i] = e.target.value; setTeamFormData({ ...teamFormData, memberUSNs: newUsns })
-                        }} />
-                        {i > 0 && <button className="registerevent-team-action-btn" style={{ background: 'var(--nb-red)', color: '#fff', borderColor: 'var(--nb-black)', padding: '0 10px' }} onClick={() => {
-                          const newUsns = teamFormData.memberUSNs.filter((_, idx) => idx !== i);
-                          setTeamFormData({ ...teamFormData, memberUSNs: newUsns });
-                        }}>×</button>}
+                )}
+                {showTeamModal.mode === 'create' ? (
+                  <div className="registerevent-team-form">
+                    <div className="registerevent-form-group">
+                      <label className="registerevent-form-label">Team Name</label>
+                      <input className="registerevent-form-input" placeholder="Enter Team Name" value={teamFormData.teamName} onChange={e => setTeamFormData({ ...teamFormData, teamName: e.target.value })} />
+                    </div>
+                    <div className="registerevent-form-group">
+                      <label className="registerevent-form-label">Members (USNs)</label>
+                      {teamFormData.memberUSNs.map((usn, i) => (
+                        <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                          <input className="registerevent-form-input" placeholder="Member USN" value={usn} onChange={e => {
+                            const newUsns = [...teamFormData.memberUSNs]; newUsns[i] = e.target.value; setTeamFormData({ ...teamFormData, memberUSNs: newUsns })
+                          }} />
+                          {i > 0 && <button className="registerevent-team-action-btn" style={{ background: 'var(--nb-red)', color: '#fff', borderColor: 'var(--nb-black)', padding: '0 10px' }} onClick={() => {
+                            const newUsns = teamFormData.memberUSNs.filter((_, idx) => idx !== i);
+                            setTeamFormData({ ...teamFormData, memberUSNs: newUsns });
+                          }}>×</button>}
+                        </div>
+                      ))}
+                      <button className="registerevent-team-action-btn" style={{ marginTop: '8px', fontSize: '0.85rem' }} onClick={() => setTeamFormData(prev => ({ ...prev, memberUSNs: [...prev.memberUSNs, ''] }))}>+ Add Member</button>
+                    </div>
+                    <button className="registerevent-modal-submit-btn" onClick={() => handleCreateTeam(showTeamModal.eventId)}>Create Team</button>
+                  </div>
+                ) : (
+                  <div className="registerevent-invites-list">
+                    {!teamInvites.length ? <p style={{ color: 'var(--nb-black)', textAlign: 'center', fontFamily: 'var(--nb-font-mono)', fontSize: '12px', textTransform: 'uppercase' }}>No pending invites.</p> : teamInvites.map((inv, i) => (
+                      <div key={i} className="registerevent-hud-panel" style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ color: 'var(--nb-black)', fontFamily: 'var(--nb-font-mono)', fontWeight: 700, fontSize: '13px' }}>{inv.teamName}</div>
+                          <div style={{ fontSize: '11px', color: '#666', fontFamily: 'var(--nb-font-mono)', textTransform: 'uppercase' }}>Leader: {inv.leaderName}</div>
+                        </div>
+                        {!inv.registrationComplete && !inv.joinStatus && <button className="registerevent-invite-confirm-btn" style={{ width: 'auto', padding: '8px 16px' }} onClick={() => handleConfirmJoin(inv.teamId, showTeamModal.eventId)}>Join</button>}
+                        {inv.joinStatus && <span style={{ color: 'var(--nb-green)', fontFamily: 'var(--nb-font-mono)', fontSize: '11px', fontWeight: 700 }}>Joined</span>}
                       </div>
                     ))}
-                    <button className="registerevent-team-action-btn" style={{ marginTop: '8px', fontSize: '0.85rem' }} onClick={() => setTeamFormData(prev => ({ ...prev, memberUSNs: [...prev.memberUSNs, ''] }))}>+ Add Member</button>
                   </div>
-                  <button className="registerevent-modal-submit-btn" onClick={() => handleCreateTeam(showTeamModal.eventId)}>Create Team</button>
-                </div>
-              ) : (
-                <div className="registerevent-invites-list">
-                  {!teamInvites.length ? <p style={{ color: 'var(--nb-black)', textAlign: 'center', fontFamily: 'var(--nb-font-mono)', fontSize: '12px', textTransform: 'uppercase' }}>No pending invites.</p> : teamInvites.map((inv, i) => (
-                    <div key={i} className="registerevent-hud-panel" style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ color: 'var(--nb-black)', fontFamily: 'var(--nb-font-mono)', fontWeight: 700, fontSize: '13px' }}>{inv.teamName}</div>
-                        <div style={{ fontSize: '11px', color: '#666', fontFamily: 'var(--nb-font-mono)', textTransform: 'uppercase' }}>Leader: {inv.leaderName}</div>
-                      </div>
-                      {!inv.registrationComplete && !inv.joinStatus && <button className="registerevent-invite-confirm-btn" style={{ width: 'auto', padding: '8px 16px' }} onClick={() => handleConfirmJoin(inv.teamId, showTeamModal.eventId)}>Join</button>}
-                      {inv.joinStatus && <span style={{ color: 'var(--nb-green)', fontFamily: 'var(--nb-font-mono)', fontSize: '11px', fontWeight: 700 }}>Joined</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {showUpiModal && (
-        <div className="registerevent-modal-overlay" onClick={() => !isSubmitting && setShowUpiModal(null)}>
-          <div className="registerevent-modal" onClick={e => e.stopPropagation()}>
-            <div className="registerevent-modal-header">
-              <h2 className="registerevent-modal-title">Pay & Register</h2>
-              <button className="registerevent-modal-close" disabled={isSubmitting} onClick={() => setShowUpiModal(null)}>×</button>
-            </div>
-            <div className="registerevent-modal-body" style={{ textAlign: 'center' }}>
-              <div className="registerevent-qr-wrapper">{qrCodeDataUrl ? <img src={qrCodeDataUrl} alt="QR" style={{ display: 'block', maxWidth: '100%' }} /> : <div className="registerevent-spinner" style={{ margin: '40px auto' }}></div>}</div>
-              <p style={{ color: 'var(--nb-black)', marginBottom: '20px', fontFamily: 'var(--nb-font-mono)', fontSize: '13px', fontWeight: 700 }}>Pay <strong>₹{showUpiModal.event.regFee}</strong></p>
-              <div className="registerevent-payment-details"><div className="registerevent-payment-row"><span style={{ color: '#888' }}>UPI ID</span><span className="registerevent-payment-value">{showUpiModal.event.upiId}</span></div></div>
-              <input className="registerevent-form-input" placeholder="Transaction ID (UTR)" value={transactionId} onChange={e => setTransactionId(e.target.value)} disabled={isSubmitting} />
-              <button className="registerevent-modal-submit-btn" style={{ marginTop: '16px' }} onClick={handleSubmitUpiPayment} disabled={isSubmitting}>{isSubmitting ? "Verifying..." : "Submit Payment"}</button>
+        {showUpiModal && (
+          <div className="registerevent-modal-overlay" onClick={() => !isSubmitting && setShowUpiModal(null)}>
+            <div className="registerevent-modal" onClick={e => e.stopPropagation()}>
+              <div className="registerevent-modal-header">
+                <h2 className="registerevent-modal-title">Pay & Register</h2>
+                <button className="registerevent-modal-close" disabled={isSubmitting} onClick={() => setShowUpiModal(null)}>×</button>
+              </div>
+              <div className="registerevent-modal-body" style={{ textAlign: 'center' }}>
+                <div className="registerevent-qr-wrapper">{qrCodeDataUrl ? <img src={qrCodeDataUrl} alt="QR" style={{ display: 'block', maxWidth: '100%' }} /> : <div className="registerevent-spinner" style={{ margin: '40px auto' }}></div>}</div>
+                <p style={{ color: 'var(--nb-black)', marginBottom: '20px', fontFamily: 'var(--nb-font-mono)', fontSize: '13px', fontWeight: 700 }}>Pay <strong>₹{showUpiModal.event.regFee}</strong></p>
+                <div className="registerevent-payment-details"><div className="registerevent-payment-row"><span style={{ color: '#888' }}>UPI ID</span><span className="registerevent-payment-value">{showUpiModal.event.upiId}</span></div></div>
+                <input className="registerevent-form-input" placeholder="Transaction ID (UTR)" value={transactionId} onChange={e => setTransactionId(e.target.value)} disabled={isSubmitting} />
+                <button className="registerevent-modal-submit-btn" style={{ marginTop: '16px' }} onClick={handleSubmitUpiPayment} disabled={isSubmitting}>{isSubmitting ? "Verifying..." : "Submit Payment"}</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </main>
-  )
+        )}
+      </main>
+    </>
+  );
 }

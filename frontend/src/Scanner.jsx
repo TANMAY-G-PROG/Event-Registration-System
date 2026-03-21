@@ -5,17 +5,17 @@ import { apiFetch } from "./api.js";
 
 export default function Scanner() {
   const [pageState, setPageState] = useState('loading');
-  const [errorMsg, setErrorMsg]   = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [userRole, setUserRole]   = useState(null);
-  const [userUSN, setUserUSN]     = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [userUSN, setUserUSN] = useState(null);
 
   // Keep userRole accessible inside callbacks without stale closure
   const userRoleRef = useRef(null);
-  const userUSNRef  = useRef(null);
+  const userUSNRef = useRef(null);
 
   const scannerInstanceRef = useRef(null);
-  const isMountedRef       = useRef(true);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -28,9 +28,9 @@ export default function Scanner() {
     fetchUserData();
 
     if (!window.Html5Qrcode) {
-      const script   = document.createElement('script');
-      script.src     = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
-      script.onload  = () => console.log('✅ QR Lib Loaded');
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
+      script.onload = () => console.log('✅ QR Lib Loaded');
       document.head.appendChild(script);
     }
 
@@ -68,8 +68,8 @@ export default function Scanner() {
     if (scannerInstanceRef.current) return;
 
     const config = {
-      fps:         10,
-      qrbox:       { width: 250, height: 250 },
+      fps: 10,
+      qrbox: { width: 250, height: 250 },
       aspectRatio: 1.0,
       disableFlip: false,
     };
@@ -82,7 +82,7 @@ export default function Scanner() {
         { facingMode: 'environment' },
         config,
         onScanSuccess,
-        () => {} // ignore per-frame errors
+        () => { } // ignore per-frame errors
       );
 
       if (isMountedRef.current) setIsScanning(true);
@@ -95,7 +95,7 @@ export default function Scanner() {
             { facingMode: { exact: 'environment' } },
             config,
             onScanSuccess,
-            () => {}
+            () => { }
           );
           if (isMountedRef.current) setIsScanning(true);
         }
@@ -153,8 +153,8 @@ export default function Scanner() {
   // ── Mark attendance ────────────────────────────────────────────────────────
   const markAttendance = async (seid, token, timestamp) => {
     try {
-      const role     = userRoleRef.current;
-      const usn      = userUSNRef.current;
+      const role = userRoleRef.current;
+      const usn = userUSNRef.current;
       const endpoint = role === 'volunteer'
         ? '/api/mark-volunteer-attendance'
         : '/api/mark-participant-attendance';
@@ -189,7 +189,7 @@ export default function Scanner() {
 
     try {
       const scanner = new window.Html5Qrcode('reader');
-      const result  = await scanner.scanFile(file, true);
+      const result = await scanner.scanFile(file, true);
       onScanSuccess(result);
     } catch {
       setErrorMsg('Could not read QR from image. Please try again.');
@@ -197,7 +197,7 @@ export default function Scanner() {
     }
   };
 
-  const reset  = () => { setErrorMsg(null); setPageState('scanning'); };
+  const reset = () => { setErrorMsg(null); setPageState('scanning'); };
   const goBack = () => window.history.back();
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -206,11 +206,7 @@ export default function Scanner() {
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
       {/* Nav */}
-      <div className="logout-container">
-        <button className="logout-btn" onClick={goBack}>
-          <i className="fas fa-arrow-left"></i> Back
-        </button>
-      </div>
+      <div style={{ paddingBottom: 60 }} /> {/* Top Spacer for Nav */}
 
       <div className="scanner-card fade-in">
 
@@ -238,7 +234,7 @@ export default function Scanner() {
             <div className="status-icon">⚠️</div>
             <p className="error-message">{errorMsg}</p>
             <div className="button-group">
-              <button onClick={reset}  className="btn-brutal btn-black">Try Again</button>
+              <button onClick={reset} className="btn-brutal btn-black">Try Again</button>
               <button onClick={goBack} className="btn-brutal btn-white">Go Back</button>
             </div>
           </div>
@@ -288,7 +284,7 @@ export default function Scanner() {
             <h2 className="success-title">Verified!</h2>
             <p>Attendance Marked Successfully</p>
             <div className="button-group">
-              <button onClick={reset}  className="btn-brutal btn-black">Scan Next</button>
+              <button onClick={reset} className="btn-brutal btn-black">Scan Next</button>
               <button onClick={goBack} className="btn-brutal btn-white">Finish</button>
             </div>
           </div>
