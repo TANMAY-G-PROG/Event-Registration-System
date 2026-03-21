@@ -14,12 +14,12 @@ let cachedTemplateBytes = null;
 
 const Participants = () => {
   const navigate = useNavigate();
-  const [events, setEvents]         = useState({ ongoing:[], completed:[], upcoming:[] });
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [userInfo, setUserInfo]     = useState({ userName:'', userUSN:'' });
-  const [activeFilter, setActiveFilter]   = useState('all');
-  const [showFab, setShowFab]             = useState(true);
+  const [events, setEvents] = useState({ ongoing: [], completed: [], upcoming: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [userInfo, setUserInfo] = useState({ userName: '', userUSN: '' });
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [showFab, setShowFab] = useState(true);
   const ctaRef = useRef(null);
 
   // Certificate Generation States
@@ -29,7 +29,7 @@ const Participants = () => {
   useEffect(() => { fetchUserInfo(); fetchParticipantEvents(); }, []);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(([e]) => setShowFab(!e.isIntersecting), { threshold:0.1 });
+    const observer = new IntersectionObserver(([e]) => setShowFab(!e.isIntersecting), { threshold: 0.1 });
     if (ctaRef.current) observer.observe(ctaRef.current);
     return () => { if (ctaRef.current) observer.unobserve(ctaRef.current); };
   }, [loading]);
@@ -45,43 +45,43 @@ const Participants = () => {
 
   const fetchUserInfo = async () => {
     try {
-      const res = await apiFetch('/api/me', { method:'GET' });
-      if (res.ok) { const d = await res.json(); setUserInfo({ userName:d.userName, userUSN:d.userUSN }); }
-    } catch {}
+      const res = await apiFetch('/api/me', { method: 'GET' });
+      if (res.ok) { const d = await res.json(); setUserInfo({ userName: d.userName, userUSN: d.userUSN }); }
+    } catch { }
   };
 
   const fmt = (ds) => {
     if (!ds) return 'N/A';
-    return new Date(ds).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+    return new Date(ds).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
   const fmtTime = (ts) => {
     if (!ts) return 'N/A';
-    const [h,m] = ts.split(':'); let hr = parseInt(h);
-    const ap = hr >= 12 ? 'PM':'AM'; hr = hr%12||12;
+    const [h, m] = ts.split(':'); let hr = parseInt(h);
+    const ap = hr >= 12 ? 'PM' : 'AM'; hr = hr % 12 || 12;
     return `${hr}:${m} ${ap}`;
   };
 
   const categorize = (list) => {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const c = { ongoing:[], completed:[], upcoming:[] };
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const c = { ongoing: [], completed: [], upcoming: [] };
     list.forEach(ev => {
-      const d = new Date(ev.eventDate); d.setHours(0,0,0,0);
-      const diff = Math.ceil((d-today)/86400000);
-      if (diff===0) c.ongoing.push(ev);
-      else if (diff<0) c.completed.push(ev);
+      const d = new Date(ev.eventDate); d.setHours(0, 0, 0, 0);
+      const diff = Math.ceil((d - today) / 86400000);
+      if (diff === 0) c.ongoing.push(ev);
+      else if (diff < 0) c.completed.push(ev);
       else c.upcoming.push(ev);
     });
-    c.upcoming.sort((a,b) => new Date(a.eventDate)-new Date(b.eventDate));
-    c.completed.sort((a,b) => new Date(b.eventDate)-new Date(a.eventDate));
+    c.upcoming.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
+    c.completed.sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
     return c;
   };
 
   const fetchParticipantEvents = async () => {
     try {
-      const res = await apiFetch('/api/my-participant-events', { method:'GET' });
-      if (!res.ok) { if (res.status===401) { navigate('/'); return; } throw new Error(`HTTP ${res.status}`); }
+      const res = await apiFetch('/api/my-participant-events', { method: 'GET' });
+      if (!res.ok) { if (res.status === 401) { navigate('/'); return; } throw new Error(`HTTP ${res.status}`); }
       const data = await res.json();
-      setEvents(categorize(data.participantEvents||[]));
+      setEvents(categorize(data.participantEvents || []));
       setLoading(false);
     } catch (err) { setError(err.message); setLoading(false); }
   };
@@ -164,7 +164,7 @@ const Participants = () => {
           y: ptY,
           size: ptSize,
           font: boldFont,
-          color: rgb(0.97, 0.85, 0.57) 
+          color: rgb(0.97, 0.85, 0.57)
         });
       }
 
@@ -181,13 +181,13 @@ const Participants = () => {
   };
 
   const counts = useMemo(() => ({
-    all: events.ongoing.length+events.completed.length+events.upcoming.length,
-    upcoming:  events.upcoming.length,
-    ongoing:   events.ongoing.length,
+    all: events.ongoing.length + events.completed.length + events.upcoming.length,
+    upcoming: events.upcoming.length,
+    ongoing: events.ongoing.length,
     completed: events.completed.length,
   }), [events]);
 
-  const attendedCount = useMemo(() => events.completed.filter(e=>e.PartStatus).length, [events]);
+  const attendedCount = useMemo(() => events.completed.filter(e => e.PartStatus).length, [events]);
 
   const renderCard = (event, type) => {
     const isPast = type === 'completed';
@@ -195,16 +195,16 @@ const Participants = () => {
     return (
       <div key={event.eid} className={`part-event-card ${type}`}>
         <div className="part-card-header">
-          <h3 className="part-card-title">{DOMPurify.sanitize(event.ename||'N/A')}</h3>
+          <h3 className="part-card-title">{DOMPurify.sanitize(event.ename || 'N/A')}</h3>
           <span className={`part-status-chip ${type}`}>
-            {type==='ongoing' ? '🟢 Live' : type==='upcoming' ? 'Upcoming' : 'Done'}
+            {type === 'ongoing' ? '🟢 Live' : type === 'upcoming' ? 'Upcoming' : 'Done'}
           </span>
         </div>
-        
+
         <div className="part-card-meta">
           <span className="part-card-meta-item date"><i className="fas fa-calendar-alt"></i>{fmt(event.eventDate)}</span>
           <span className="part-card-meta-item time"><i className="fas fa-clock"></i>{fmtTime(event.eventTime)}</span>
-          <span className="part-card-meta-item place"><i className="fas fa-map-marker-alt"></i>{DOMPurify.sanitize(event.eventLoc||'TBD')}</span>
+          <span className="part-card-meta-item place"><i className="fas fa-map-marker-alt"></i>{DOMPurify.sanitize(event.eventLoc || 'TBD')}</span>
         </div>
 
         {/* ── FOOTER: Badges & Static Buttons Inline ── */}
@@ -218,7 +218,7 @@ const Participants = () => {
                   ? <span className="part-attend-chip attended"><i className="fas fa-check"></i> Attended</span>
                   : <span className="part-attend-chip registered"><i className="fas fa-bookmark"></i> Registered</span>
                 }
-                {(event.earnedActivityPts||0)>0 && (
+                {(event.earnedActivityPts || 0) > 0 && (
                   <span className="part-points-chip"><i className="fas fa-star"></i>{event.earnedActivityPts} pts</span>
                 )}
               </>
@@ -226,14 +226,14 @@ const Participants = () => {
 
             {/* NEW BUTTONS - Rendered alongside the tags, perfectly still */}
             {(type === 'upcoming' || type === 'ongoing') && (
-              <button 
+              <button
                 className="part-action-chip ticket-btn"
                 onClick={() => navigate(`/participant-ticket?eventId=${event.eid}`)}
               >
                 <i className="fas fa-ticket-alt"></i> View Ticket
               </button>
             )}
-            
+
             {/* Certificate Generation Logic */}
             {(type === 'completed' && event.PartStatus) && (
               generatingIds.has(event.eid) ? (
@@ -241,16 +241,16 @@ const Participants = () => {
                   <i className="fas fa-spinner fa-spin"></i> Generating...
                 </button>
               ) : downloadLinks[event.eid] ? (
-                <a 
-                  href={downloadLinks[event.eid].url} 
-                  download={downloadLinks[event.eid].filename} 
+                <a
+                  href={downloadLinks[event.eid].url}
+                  download={downloadLinks[event.eid].filename}
                   className="part-action-chip cert-btn"
                   style={{ textDecoration: 'none' }}
                 >
                   <i className="fas fa-download"></i> Download
                 </a>
               ) : (
-                <button 
+                <button
                   className="part-action-chip cert-btn"
                   onClick={() => generateCertificate(event)}
                 >
@@ -265,21 +265,17 @@ const Participants = () => {
   };
 
   const FILTERS = [
-    {key:'all',label:'All'},
-    {key:'ongoing',label:'Live Now'},
-    {key:'upcoming',label:'Upcoming'},
-    {key:'completed',label:'Completed'},
+    { key: 'all', label: 'All' },
+    { key: 'ongoing', label: 'Live Now' },
+    { key: 'upcoming', label: 'Upcoming' },
+    { key: 'completed', label: 'Completed' },
   ];
 
   return (
     <div className="participants-page">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
-      <div className="logout-container">
-        <button className="logout-btn" onClick={()=>navigate('/events')}>
-          <i className="fas fa-arrow-left"></i> Back
-        </button>
-      </div>
+      <div style={{ paddingBottom: 60 }} /> {/* Top Spacer for Nav */}
 
       <section className="hero-section">
         <div className="container">
@@ -288,7 +284,7 @@ const Participants = () => {
           <div className="part-hero-band">
             <div className="memphis-circle"></div>
             <div className="memphis-dots"></div>
-            
+
             <p className="part-hero-greeting">Participant Dashboard</p>
             <h1 className="part-hero-name">
               {userInfo.userName ? `Hey, ${userInfo.userName.split(' ')[0]} 👋` : 'Your Events'}
@@ -296,7 +292,7 @@ const Participants = () => {
             <div className="part-stats-row">
               <div className="part-stat-pill">
                 <span className="part-stat-num y">{counts.all}</span>
-                <span className="part-stat-label">Total<br/>Events</span>
+                <span className="part-stat-label">Total<br />Events</span>
               </div>
               <div className="part-stat-pill">
                 <span className="part-stat-num g">{attendedCount}</span>
@@ -311,12 +307,12 @@ const Participants = () => {
 
           {/* FILTER TABS */}
           <div className="part-filter-bar">
-            {FILTERS.map(({key,label}) => (
+            {FILTERS.map(({ key, label }) => (
               <button
                 key={key}
                 className="part-filter-tab"
-                data-active={activeFilter===key ? key : undefined}
-                onClick={()=>setActiveFilter(key)}
+                data-active={activeFilter === key ? key : undefined}
+                onClick={() => setActiveFilter(key)}
               >
                 {label}
                 <span className="part-filter-count">{counts[key]}</span>
@@ -327,7 +323,7 @@ const Participants = () => {
           {/* CONTENT */}
           {loading ? (
             <div className="part-feed" style={{ marginTop: '20px' }}>
-              <div style={{ color: 'var(--yellow)', textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)'}}>LOADING YOUR PASSES...</div>
+              <div style={{ color: 'var(--yellow)', textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)' }}>LOADING YOUR PASSES...</div>
             </div>
           ) : error ? (
             <div className="part-empty"><div className="part-empty-icon">⚠</div><p className="part-empty-txt">{error}</p></div>
@@ -335,34 +331,34 @@ const Participants = () => {
             <>
               {activeFilter === 'all' ? (
                 <>
-                  {events.ongoing.length>0 && (
+                  {events.ongoing.length > 0 && (
                     <>
                       <div className="part-section-label">
                         <span className="part-section-label-text g">🟢 Live Now</span>
                         <div className="part-section-label-line"></div>
                       </div>
-                      <div className="part-feed">{events.ongoing.map(e=>renderCard(e,'ongoing'))}</div>
+                      <div className="part-feed">{events.ongoing.map(e => renderCard(e, 'ongoing'))}</div>
                     </>
                   )}
-                  {events.upcoming.length>0 && (
+                  {events.upcoming.length > 0 && (
                     <>
                       <div className="part-section-label">
                         <span className="part-section-label-text p">Upcoming</span>
                         <div className="part-section-label-line"></div>
                       </div>
-                      <div className="part-feed">{events.upcoming.map(e=>renderCard(e,'upcoming'))}</div>
+                      <div className="part-feed">{events.upcoming.map(e => renderCard(e, 'upcoming'))}</div>
                     </>
                   )}
-                  {events.completed.length>0 && (
+                  {events.completed.length > 0 && (
                     <>
                       <div className="part-section-label">
                         <span className="part-section-label-text b">Completed</span>
                         <div className="part-section-label-line"></div>
                       </div>
-                      <div className="part-feed">{events.completed.map(e=>renderCard(e,'completed'))}</div>
+                      <div className="part-feed">{events.completed.map(e => renderCard(e, 'completed'))}</div>
                     </>
                   )}
-                  {counts.all===0 && (
+                  {counts.all === 0 && (
                     <div className="part-empty">
                       <div className="part-empty-icon">🎟</div>
                       <p className="part-empty-txt">No events yet — go join something!</p>
@@ -371,18 +367,18 @@ const Participants = () => {
                 </>
               ) : (
                 <>
-                  {(activeFilter==='ongoing' ? events.ongoing :
-                    activeFilter==='upcoming' ? events.upcoming :
-                    events.completed).length === 0 ? (
+                  {(activeFilter === 'ongoing' ? events.ongoing :
+                    activeFilter === 'upcoming' ? events.upcoming :
+                      events.completed).length === 0 ? (
                     <div className="part-empty">
                       <div className="part-empty-icon">🎟</div>
                       <p className="part-empty-txt">No {activeFilter} events</p>
                     </div>
                   ) : (
                     <div className="part-feed" style={{ marginTop: '20px' }}>
-                      {(activeFilter==='ongoing' ? events.ongoing :
-                        activeFilter==='upcoming' ? events.upcoming :
-                        events.completed).map(e=>renderCard(e,activeFilter))}
+                      {(activeFilter === 'ongoing' ? events.ongoing :
+                        activeFilter === 'upcoming' ? events.upcoming :
+                          events.completed).map(e => renderCard(e, activeFilter))}
                     </div>
                   )}
                 </>
@@ -392,7 +388,7 @@ const Participants = () => {
 
           {/* CTA */}
           <div className="part-cta-strip" ref={ctaRef}>
-            <button className="part-cta-btn" onClick={()=>navigate('/register-event')}>
+            <button className="part-cta-btn" onClick={() => navigate('/register-event')}>
               <i className="fas fa-plus"></i>
               Discover &amp; Join Events
             </button>
@@ -403,7 +399,7 @@ const Participants = () => {
 
       <button
         className={`mobile-fab ${!showFab ? 'hidden' : ''}`}
-        onClick={()=>navigate('/register-event')}
+        onClick={() => navigate('/register-event')}
       >
         <i className="fas fa-plus"></i>
         <span>Join Event</span>

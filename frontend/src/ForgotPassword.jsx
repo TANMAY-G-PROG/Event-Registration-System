@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './style.css';
-import { apiFetch } from './api.js';
+import { supabase } from './supabaseClient';
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -20,18 +20,15 @@ export default function ForgotPassword() {
     if (!/\S+@\S+\.\S+/.test(email)) return showMessage('Please enter a valid email address', true);
     setLoading(true);
     try {
-      const response = await apiFetch('/api/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
       });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        showMessage(data.message || 'Link sent! Check your email (and Spam folder).');
-        setEmail('');
-        setTimeout(() => navigate('/'), 3000);
+      if (error) {
+        showMessage(error.message || 'Something went wrong. Please try again.', true);
       } else {
-        showMessage(data.error || 'Something went wrong. Please try again.', true);
+        showMessage('Link sent! Check your email (and Spam folder).');
+        setEmail('');
+        setTimeout(() => navigate('/login'), 3000);
       }
     } catch {
       showMessage('Network error. Please try again.', true);
@@ -44,8 +41,12 @@ export default function ForgotPassword() {
     <div className="login-page">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 
+      {/* ── TOAST MESSAGE ── */}
       {message.show && (
-        <div className={`message ${message.isError ? 'error' : 'success'}`}>{message.text}</div>
+        <div className={`flo-toast ${message.isError ? "flo-toast--error" : "flo-toast--success"}`}>
+          <span className="flo-toast-icon">{message.isError ? "✕" : "✓"}</span>
+          {message.text}
+        </div>
       )}
 
       <div className="forgot-card">

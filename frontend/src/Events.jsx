@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './events.css';
 import { apiFetch } from './api.js';
+import { supabase } from './supabaseClient';
 
 export default function Events() {
   const navigate = useNavigate();
@@ -20,29 +21,15 @@ export default function Events() {
     } catch { navigate('/'); }
   };
 
-  const handleLogout = async () => {
-    try { await apiFetch('/api/signout', { method: 'POST' }); } catch {}
-    finally { localStorage.removeItem('token'); navigate('/'); }
-  };
-
   const firstName = userName ? userName.split(' ')[0] : '';
 
   return (
     <div className="events-wrapper">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
-      {/* TOP NAV */}
-      <nav className="ev-nav">
-        <span className="ev-nav-title">Dashboard</span>
-        <div className="ev-nav-right">
-          <button className="ev-profile-btn" onClick={() => navigate('/profile')}>
-            <i className="fas fa-user"></i> Profile
-          </button>
-          <button className="ev-logout-btn" onClick={handleLogout}>
-            <i className="fas fa-sign-out-alt"></i> Logout
-          </button>
-        </div>
-      </nav>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+
+      <div style={{ paddingBottom: 60 }} /> {/* Spacer for Nav */}
 
       {/* GREETING */}
       <div className="ev-hero">

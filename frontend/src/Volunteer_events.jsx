@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './volunteer_events.css';
+import './style.css';
 
 import { apiFetch } from "./api.js";
 
@@ -86,11 +87,11 @@ export default function VolunteerEvents() {
           // ✅ CHANGED: Using relative path
           const countResponse = await apiFetch(`/api/events/${event.eid}/volunteer-count`);
           const countData = await countResponse.json();
-          
+
           // Update the specific event's count
-          setEvents(prevEvents => 
-            prevEvents.map(e => 
-              e.eid === event.eid 
+          setEvents(prevEvents =>
+            prevEvents.map(e =>
+              e.eid === event.eid
                 ? { ...e, volunteerCount: countData.count }
                 : e
             )
@@ -98,9 +99,9 @@ export default function VolunteerEvents() {
         } catch (error) {
           console.error(`Error fetching count for event ${event.eid}:`, error);
           // Set count to 0 on error
-          setEvents(prevEvents => 
-            prevEvents.map(e => 
-              e.eid === event.eid 
+          setEvents(prevEvents =>
+            prevEvents.map(e =>
+              e.eid === event.eid
                 ? { ...e, volunteerCount: 0 }
                 : e
             )
@@ -175,20 +176,15 @@ export default function VolunteerEvents() {
       {/* Animated Texture Background */}
       <div className="ve-texture"></div>
 
-      {/* Message notification */}
+      {/* TOAST MESSAGE */}
       {message.text && (
-        <div className={`ve-message ${message.isError ? 'error' : 'success'}`}>
+        <div className={`flo-toast ${message.isError ? "flo-toast--error" : "flo-toast--success"}`}>
+          <span className="flo-toast-icon">{message.isError ? "✕" : "✓"}</span>
           {message.text}
         </div>
       )}
 
-      {/* Navigation buttons */}
-      <div className="ve-nav-container">
-        <button onClick={handleBack} className="ve-back-btn">
-          <i className="fas fa-arrow-left"></i>
-          Back
-        </button>
-      </div>
+      <div style={{ paddingBottom: 60 }} /> {/* Top Spacer for Nav */}
 
       {/* Main container with golden side stripes */}
       <div className="ve-container">
@@ -214,7 +210,7 @@ export default function VolunteerEvents() {
                 const volunteerCount = event.volunteerCount ?? 0;
                 const remainingVolunteers = event.maxVoln - volunteerCount;
                 const isCountLoading = event.volunteerCount === null;
-                
+
                 return (
                   <div key={event.eid} className="ve-event-item">
                     <div className="ve-event-info">

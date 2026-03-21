@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './event_form.css';
+import './style.css';
 
 import { apiFetch } from './api.js';
 
 const EventForm = () => {
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
     eventName: '',
     eventDescription: '',
@@ -19,7 +20,7 @@ const EventForm = () => {
     maxVolunteers: '',
     OrgCid: '',
     registrationFee: '',
-    upiId: '', 
+    upiId: '',
     isTeamEvent: false,
     minTeamSize: '',
     maxTeamSize: '',
@@ -29,7 +30,7 @@ const EventForm = () => {
     minVolnScans: ''
   });
 
-  const [bannerFile, setBannerFile] = useState(null); 
+  const [bannerFile, setBannerFile] = useState(null);
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [myClubs, setMyClubs] = useState([]);
@@ -43,7 +44,7 @@ const EventForm = () => {
           const data = await res.json();
           setMyClubs(data.clubs || []);
         } else if (res.status === 401) {
-           navigate('/');
+          navigate('/');
         }
       } catch (err) {
         console.error("Failed to load memberships", err);
@@ -72,7 +73,7 @@ const EventForm = () => {
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) { 
+      if (file.size > 5 * 1024 * 1024) {
         showMessage('Banner image is too large (Max 5MB).', true);
         e.target.value = null;
         setBannerFile(null);
@@ -126,7 +127,7 @@ const EventForm = () => {
       });
 
       const result = await res.json();
-      
+
       if (res.ok) {
         showMessage('Event published successfully!');
         setTimeout(() => navigate('/organisers'), 2000);
@@ -135,8 +136,8 @@ const EventForm = () => {
           showMessage('Session expired. Please login again.', true);
           setTimeout(() => navigate('/'), 2000);
         } else if (res.status === 403) {
-            showMessage('You are not authorized to organize events for this club.', true);
-            setIsSubmitting(false);
+          showMessage('You are not authorized to organize events for this club.', true);
+          setIsSubmitting(false);
         } else {
           showMessage(result.error || 'Failed to create event', true);
           setIsSubmitting(false);
@@ -151,29 +152,17 @@ const EventForm = () => {
   return (
     <div className="event-form-container">
 
-      {/* TOAST */}
+      {/* TOAST MESSAGE */}
       {message.show && (
-        <div className={`event-form-message ${message.isError ? 'event-form-message-error' : 'event-form-message-success'}`}>
+        <div className={`flo-toast ${message.isError ? "flo-toast--error" : "flo-toast--success"}`}>
+          <span className="flo-toast-icon">{message.isError ? "✕" : "✓"}</span>
           {message.text}
         </div>
       )}
 
+      <div style={{ paddingBottom: 60 }} /> {/* Top Spacer for Nav */}
       <div className="event-form-wrap">
-
-        {/* LEFT SIDEBAR */}
-        <div className="event-form-left">
-          {[{n:'01',c:'n1'},{n:'02',c:'n2'},{n:'03',c:'n3'},{n:'04',c:'n4'},{n:'05',c:'n5'}].map(({n,c}) => (
-            <div key={n} className="form-step-dot">{n}</div>
-          ))}
-          <div className="event-form-logo-text">FLO</div>
-        </div>
-
-        {/* MOBILE HEADER */}
         <div className="event-form-mobile-header">
-          <button style={{background:'var(--yellow)',border:'none',padding:'7px 14px',fontFamily:'Space Mono',fontSize:'11px',fontWeight:700,textTransform:'uppercase',cursor:'pointer',display:'flex',alignItems:'center',gap:'6px'}}
-            onClick={() => navigate('/organisers')}>
-            ← Back
-          </button>
           <span className="event-form-neon">Create <span className="event-form-neon-alt">Event</span></span>
         </div>
 

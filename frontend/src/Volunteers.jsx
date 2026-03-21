@@ -15,7 +15,7 @@ const Volunteers = () => {
   const [generatingIds, setGeneratingIds] = useState(new Set());
   const [downloadLinks, setDownloadLinks] = useState({});
   const [activeFilter, setActiveFilter] = useState('all');
-  
+
   const [showFab, setShowFab] = useState(true);
   const ctaRef = useRef(null);
 
@@ -90,11 +90,11 @@ const Volunteers = () => {
       else if (diffDays < 0) categorized.completed.push(event);
       else categorized.upcoming.push(event);
     });
-    
+
     // Sort upcoming (soonest first) and completed (most recent first)
-    categorized.upcoming.sort((a,b) => new Date(a.eventDate) - new Date(b.eventDate));
-    categorized.completed.sort((a,b) => new Date(b.eventDate) - new Date(a.eventDate));
-    
+    categorized.upcoming.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
+    categorized.completed.sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
+
     return categorized;
   };
 
@@ -145,14 +145,14 @@ const Volunteers = () => {
 
       const font = await pdfDoc.embedFont(StandardFonts.Courier);
       const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
-      
+
       const nameText = userInfo.userName;
       const nameWidth = nameFont.widthOfTextAtSize(nameText, 38);
       page.drawText(nameText, { x: (width - nameWidth) / 2, y: 250, size: 38, font: nameFont, color: rgb(0.97, 0.85, 0.57) });
-      page.drawText(userInfo.userUSN, { x: 170, y: 160, size: 19, font, color: rgb(1,1,1) });
-      page.drawText(formatDate(event.eventDate), { x: 510, y: 160, size: 16, font: boldFont, color: rgb(1,1,1) });
+      page.drawText(userInfo.userUSN, { x: 170, y: 160, size: 19, font, color: rgb(1, 1, 1) });
+      page.drawText(formatDate(event.eventDate), { x: 510, y: 160, size: 16, font: boldFont, color: rgb(1, 1, 1) });
 
-      const descFont = font; 
+      const descFont = font;
       const contentText = event.certificate_info || event.eventdesc || event.ename;
       const words = contentText.split(' ');
 
@@ -160,12 +160,12 @@ const Volunteers = () => {
       words.forEach(word => {
         const testLine = line + word + ' ';
         if (descFont.widthOfTextAtSize(testLine, 10) > 450 && line !== '') {
-          page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1,1,1) });
+          page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1, 1, 1) });
           line = word + ' '; yPos -= 15;
         } else { line = testLine; }
       });
-      if (line) page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1,1,1) });
-      
+      if (line) page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1, 1, 1) });
+
       const pdfBytes = await pdfDoc.save();
       const url = window.URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
       setDownloadLinks(prev => ({ ...prev, [event.eid]: { url, filename: `Volunteer_Certificate_${event.eid}.pdf` } }));
@@ -203,7 +203,7 @@ const Volunteers = () => {
             {type === 'ongoing' ? '🟢 Live' : type === 'upcoming' ? 'Upcoming' : 'Done'}
           </span>
         </div>
-        
+
         <p className="vol-card-desc">{event.eventdesc || 'No description available for this event.'}</p>
 
         <div className="vol-card-meta">
@@ -213,8 +213,8 @@ const Volunteers = () => {
         </div>
 
         <div className="vol-card-badges">
-          {event.VolnStatus 
-            ? <span className="status-confirmed"><i className="fas fa-check"></i> Confirmed</span> 
+          {event.VolnStatus
+            ? <span className="status-confirmed"><i className="fas fa-check"></i> Confirmed</span>
             : <span className="status-reg"><i className="fas fa-hourglass-half"></i> Registered</span>
           }
           {(event.earnedActivityPts || 0) > 0 && (
@@ -237,7 +237,7 @@ const Volunteers = () => {
             )
           ) : (
             <button className="vol-action-btn secondary" onClick={() => handleEventButtonClick(event, type)}>
-               <i className="fas fa-ticket-alt"></i> View Details
+              <i className="fas fa-ticket-alt"></i> View Details
             </button>
           )}
         </div>
@@ -256,11 +256,7 @@ const Volunteers = () => {
     <div className="volunteers-page">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
-      <div className="logout-container">
-        <button className="logout-btn" onClick={() => navigate('/events')}>
-          <i className="fas fa-arrow-left"></i> Back
-        </button>
-      </div>
+      <div style={{ paddingBottom: 60 }} /> {/* Top Spacer for Nav */}
 
       <section className="hero-section">
         <div className="container">
@@ -274,7 +270,7 @@ const Volunteers = () => {
             <div className="vol-stats-row">
               <div className="vol-stat-pill">
                 <span className="vol-stat-num y">{counts.all}</span>
-                <span className="vol-stat-label">Total<br/>Events</span>
+                <span className="vol-stat-label">Total<br />Events</span>
               </div>
               <div className="vol-stat-pill">
                 <span className="vol-stat-num g">{counts.completed}</span>
@@ -305,7 +301,7 @@ const Volunteers = () => {
           {/* CONTENT FEED */}
           {loading ? (
             <div className="vol-empty">
-              <h2 style={{fontFamily: 'var(--font-display)'}}>Loading your shifts...</h2>
+              <h2 style={{ fontFamily: 'var(--font-display)' }}>Loading your shifts...</h2>
             </div>
           ) : error ? (
             <div className="vol-empty">
@@ -319,7 +315,7 @@ const Volunteers = () => {
                   {events.ongoing.length > 0 && (
                     <>
                       <div className="vol-section-label">
-                        <span className="vol-section-label-text" style={{color: 'var(--mint)'}}>🟢 Live Now</span>
+                        <span className="vol-section-label-text" style={{ color: 'var(--mint)' }}>🟢 Live Now</span>
                         <div className="vol-section-label-line"></div>
                       </div>
                       <div className="vol-feed">{events.ongoing.map(e => renderCard(e, 'ongoing'))}</div>
@@ -328,7 +324,7 @@ const Volunteers = () => {
                   {events.upcoming.length > 0 && (
                     <>
                       <div className="vol-section-label">
-                        <span className="vol-section-label-text" style={{color: 'var(--pink)'}}>Upcoming</span>
+                        <span className="vol-section-label-text" style={{ color: 'var(--pink)' }}>Upcoming</span>
                         <div className="vol-section-label-line"></div>
                       </div>
                       <div className="vol-feed">{events.upcoming.map(e => renderCard(e, 'upcoming'))}</div>
@@ -354,7 +350,7 @@ const Volunteers = () => {
                 <>
                   {(activeFilter === 'ongoing' ? events.ongoing :
                     activeFilter === 'upcoming' ? events.upcoming :
-                    events.completed).length === 0 ? (
+                      events.completed).length === 0 ? (
                     <div className="vol-empty">
                       <div className="vol-empty-icon">🤝</div>
                       <p className="vol-empty-txt">No {activeFilter} events</p>
@@ -363,7 +359,7 @@ const Volunteers = () => {
                     <div className="vol-feed">
                       {(activeFilter === 'ongoing' ? events.ongoing :
                         activeFilter === 'upcoming' ? events.upcoming :
-                        events.completed).map(e => renderCard(e, activeFilter))}
+                          events.completed).map(e => renderCard(e, activeFilter))}
                     </div>
                   )}
                 </>

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { 
-  BrowserRouter as Router, 
-  Routes, 
-  Route, 
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
   Navigate,
   useNavigate,
   useLocation
@@ -11,6 +11,7 @@ import {
 import { apiFetch } from './api.js';
 
 import LandingPage from './LandingPage.jsx';
+import AuthCallback from './AuthCallback.jsx';
 import Login from './Login.jsx';
 import Events from './Events.jsx';
 import Participants from './Participants.jsx';
@@ -29,6 +30,8 @@ import ForgotPassword from './ForgotPassword.jsx';
 import ResetPassword from './ResetPassword.jsx';
 import SubEventManager from './SubEventManager.jsx';
 import Profile from './Profile.jsx';
+import NavBar from './NavBar.jsx';
+import { supabase } from './supabaseClient';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -39,21 +42,16 @@ function AppContent() {
 
   const handleLogout = async () => {
     if (timerId.current) clearTimeout(timerId.current);
-
     const { pathname } = location;
-
     if (pathname !== '/login' && pathname !== '/') {
       try {
-        await apiFetch('/api/signout', {
-          method: 'POST'
-        });
+        await supabase.auth.signOut();
+        await apiFetch('/api/signout', { method: 'POST' });
       } catch (error) {
         console.error("Error during auto-signout:", error);
       }
-
-      // Remove JWT token from localStorage
       localStorage.removeItem('token');
-
+      localStorage.removeItem('refresh_token');
       alert("You have been logged out due to inactivity.");
       navigate('/login');
     }
@@ -90,11 +88,14 @@ function AppContent() {
   }, [location.pathname, navigate]);
 
   return (
-    <Routes>
+    <>
+      <NavBar />
+      <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
 
       <Route path="/events" element={<Events />} />
       <Route path="/participants" element={<Participants />} />
@@ -119,6 +120,7 @@ function AppContent() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }
 
