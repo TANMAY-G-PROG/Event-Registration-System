@@ -537,6 +537,12 @@
   color: var(--black);
 }
 
+@media (max-width: 600px) {
+  .prof-back-btn span {
+    display: none;
+  }
+}
+
 @media (max-width: 480px) {
   .otp-box {
     width: 40px;

@@ -10,16 +10,10 @@ export default function AuthCallback() {
   const [session, setSession] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
-  const [showPin, setShowPin] = useState(false);
-  const [showConfirmPin, setShowConfirmPin] = useState(false);
   const [googleName, setGoogleName] = useState('');
 
   const [formData, setFormData] = useState({
-    usn: '',
-    sem: '',
-    mobno: '',
-    organizerPin: '',
-    confirmPin: '',
+    usn: '', sem: '', mobno: '',
   });
 
   const showMessage = (text, isError = false) => {
@@ -30,25 +24,17 @@ export default function AuthCallback() {
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
-        navigate('/login');
-        return;
-      }
-
+      if (!session) { navigate('/login'); return; }
       setSession(session);
       localStorage.setItem('token', session.access_token);
       localStorage.setItem('refresh_token', session.refresh_token);
-
       const fullName = session.user?.user_metadata?.full_name
         || session.user?.user_metadata?.name
-        || session.user?.email?.split('@')[0]
-        || '';
+        || session.user?.email?.split('@')[0] || '';
       setGoogleName(fullName);
-
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/me`, {
         headers: { Authorization: `Bearer ${session.access_token}` }
       });
-
       if (res.ok) {
         const data = await res.json();
         localStorage.setItem('userUSN', data.userUSN);
@@ -69,44 +55,27 @@ export default function AuthCallback() {
     }));
   };
 
-  // PIN fields — digits only, max 6 chars
-  const handlePinChange = (e) => {
-    const { name, value } = e.target;
-    const cleaned = value.replace(/\D/g, '').slice(0, 6);
-    setFormData(prev => ({ ...prev, [name]: cleaned }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { usn, sem, mobno, organizerPin, confirmPin } = formData;
-
+    const { usn, sem, mobno } = formData;
     if (!usn || !sem || !mobno) return showMessage('Please fill in all fields', true);
     if (!/^\d{10}$/.test(mobno)) return showMessage('Mobile number must be 10 digits', true);
     const semNum = parseInt(sem, 10);
     if (semNum < 1 || semNum > 8) return showMessage('Semester must be between 1 and 8', true);
-    if (!/^\d{4,6}$/.test(organizerPin)) return showMessage('Organizer PIN must be 4 to 6 digits', true);
-    if (organizerPin !== confirmPin) return showMessage('PINs do not match', true);
 
     setSubmitting(true);
-
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/complete-google-signup`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ usn, sem: semNum, mobno, organizerPin })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ usn, sem: semNum, mobno })
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         showMessage(data.error || 'Something went wrong', true);
         setSubmitting(false);
         return;
       }
-
       localStorage.setItem('userUSN', usn);
       localStorage.setItem('userName', data.userName || googleName);
       navigate('/events');
@@ -119,8 +88,7 @@ export default function AuthCallback() {
   if (loading && !needsOnboarding) {
     return (
       <div style={{
-        minHeight: '100vh',
-        background: 'var(--nb-bg, #f5f0e8)',
+        minHeight: '100vh', background: 'var(--nb-bg, #f5f0e8)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: 'var(--nb-font-display, monospace)',
       }}>
@@ -128,8 +96,7 @@ export default function AuthCallback() {
           <div style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: 24 }}>
             FLO<span style={{
               display: 'inline-block', width: 10, height: 10,
-              background: 'var(--nb-yellow, #FFE500)',
-              border: '3px solid var(--nb-black, #0a0a0a)',
+              background: 'var(--nb-yellow, #FFE500)', border: '3px solid var(--nb-black, #0a0a0a)',
               borderRadius: '50%', marginLeft: 4, verticalAlign: 'middle'
             }} />
           </div>
@@ -145,7 +112,6 @@ export default function AuthCallback() {
     <div className="forgot-password-page">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 
-      {/* Toast — fixed at viewport top, always visible regardless of scroll */}
       {message.show && (
         <div className={`flo-toast ${message.isError ? 'flo-toast--error' : 'flo-toast--success'}`}>
           <span className="flo-toast-icon">{message.isError ? '✕' : '✓'}</span>
@@ -154,27 +120,18 @@ export default function AuthCallback() {
       )}
 
       <div className="forgot-card" style={{ maxWidth: 500 }}>
-
         <h1>
           <i className="fa-brands fa-google" style={{ marginRight: 10 }} />
           Complete Your Profile
         </h1>
         <div className="divider" />
 
-        {/* Google name display — read only */}
         {googleName && (
           <div style={{
-            background: 'var(--sand-deep, #f0ece0)',
-            border: '1.5px solid var(--sand-border, #ddd)',
-            padding: '10px 14px',
-            marginBottom: 20,
-            fontFamily: 'DM Sans, sans-serif',
-            fontSize: 13,
+            background: 'var(--sand-deep, #f0ece0)', border: '1.5px solid var(--sand-border, #ddd)',
+            padding: '10px 14px', marginBottom: 20, fontFamily: 'DM Sans, sans-serif', fontSize: 13,
           }}>
-            <span style={{
-              opacity: 0.6, fontSize: 10, textTransform: 'uppercase',
-              letterSpacing: '0.06em', fontFamily: 'DM Mono, monospace', display: 'block', marginBottom: 2
-            }}>
+            <span style={{ opacity: 0.6, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'DM Mono, monospace', display: 'block', marginBottom: 2 }}>
               Signed in as
             </span>
             <strong>{googleName}</strong>
@@ -182,123 +139,37 @@ export default function AuthCallback() {
         )}
 
         <p>Just a few more details to finish setting up your FLO account.</p>
+        <p style={{ fontSize: 12.5, opacity: 0.65, margin: '4px 0 16px' }}>
+          You can set your Organizer PIN later from your profile.
+        </p>
 
         <form className="forgot-form" onSubmit={handleSubmit}>
 
-          {/* USN */}
           <div>
-            <label style={{
-              display: 'block', fontFamily: 'DM Mono, monospace', fontSize: 10,
-              fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
-              marginBottom: 6, opacity: 0.7
-            }}>University Serial No. (USN)</label>
+            <label style={{ display: 'block', fontFamily: 'DM Mono, monospace', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6, opacity: 0.7 }}>
+              University Serial No. (USN)
+            </label>
             <input
-              type="text"
-              name="usn"
-              placeholder="1AB22CS001"
-              value={formData.usn}
-              onChange={handleChange}
-              disabled={submitting}
-              autoComplete="off"
-              spellCheck="false"
+              type="text" name="usn" placeholder="1AB22CS001"
+              value={formData.usn} onChange={handleChange}
+              disabled={submitting} autoComplete="off" spellCheck="false"
             />
           </div>
 
-          {/* Semester + Mobile */}
           <div style={{ display: 'flex', gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <label style={{
-                display: 'block', fontFamily: 'DM Mono, monospace', fontSize: 10,
-                fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
-                marginBottom: 6, opacity: 0.7
-              }}>Semester</label>
-              <input
-                type="number" name="sem" placeholder="1–8" min="1" max="8"
-                value={formData.sem} onChange={handleChange} disabled={submitting}
-              />
+              <label style={{ display: 'block', fontFamily: 'DM Mono, monospace', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6, opacity: 0.7 }}>
+                Semester
+              </label>
+              <input type="number" name="sem" placeholder="1–8" min="1" max="8"
+                value={formData.sem} onChange={handleChange} disabled={submitting} />
             </div>
             <div style={{ flex: 2 }}>
-              <label style={{
-                display: 'block', fontFamily: 'DM Mono, monospace', fontSize: 10,
-                fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
-                marginBottom: 6, opacity: 0.7
-              }}>Mobile Number</label>
-              <input
-                type="tel" name="mobno" placeholder="9876543210"
-                value={formData.mobno} onChange={handleChange} disabled={submitting}
-              />
-            </div>
-          </div>
-
-          {/* PIN divider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0' }}>
-            <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.15 }} />
-            <span style={{
-              fontFamily: 'DM Mono, monospace', fontSize: 10, fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.5
-            }}>Organizer PIN</span>
-            <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.15 }} />
-          </div>
-
-          <p style={{ margin: '0 0 4px', fontSize: 12.5, opacity: 0.65 }}>
-            This PIN protects sub-event management on your device. Keep it separate from your login password.
-          </p>
-
-          {/* PIN field */}
-          <div>
-            <label style={{
-              display: 'block', fontFamily: 'DM Mono, monospace', fontSize: 10,
-              fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
-              marginBottom: 6, opacity: 0.7
-            }}>PIN (4–6 digits)</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showPin ? 'text' : 'password'}
-                name="organizerPin"
-                placeholder="e.g. 1234"
-                value={formData.organizerPin}
-                onChange={handlePinChange}
-                disabled={submitting}
-                inputMode="numeric"
-                maxLength={6}
-                style={{ paddingRight: 60 }}
-              />
-              <button
-                type="button"
-                className="flo-pw-toggle"
-                onClick={() => setShowPin(v => !v)}
-              >
-                {showPin ? 'Hide' : 'Show'}
-              </button>
-            </div>
-          </div>
-
-          {/* Confirm PIN */}
-          <div>
-            <label style={{
-              display: 'block', fontFamily: 'DM Mono, monospace', fontSize: 10,
-              fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
-              marginBottom: 6, opacity: 0.7
-            }}>Confirm PIN</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showConfirmPin ? 'text' : 'password'}
-                name="confirmPin"
-                placeholder="Re-enter PIN"
-                value={formData.confirmPin}
-                onChange={handlePinChange}
-                disabled={submitting}
-                inputMode="numeric"
-                maxLength={6}
-                style={{ paddingRight: 60 }}
-              />
-              <button
-                type="button"
-                className="flo-pw-toggle"
-                onClick={() => setShowConfirmPin(v => !v)}
-              >
-                {showConfirmPin ? 'Hide' : 'Show'}
-              </button>
+              <label style={{ display: 'block', fontFamily: 'DM Mono, monospace', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6, opacity: 0.7 }}>
+                Mobile Number
+              </label>
+              <input type="tel" name="mobno" placeholder="9876543210"
+                value={formData.mobno} onChange={handleChange} disabled={submitting} />
             </div>
           </div>
 

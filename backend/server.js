@@ -1154,7 +1154,7 @@ app.post('/api/complete-google-signup', requireAuthToken, async (req, res) => {
         if (!usn || !sem || !mobno) {
             return res.status(400).json({ error: 'USN, semester and mobile are required' });
         }
-        if (!organizerPin || !/^\d{4,6}$/.test(organizerPin)) {
+        if (organizerPin && !/^\d{4,6}$/.test(organizerPin)) {
             return res.status(400).json({ error: 'Organizer PIN must be 4 to 6 digits' });
         }
         const { data: existing } = await supabaseAdmin.from('student').select('usn').eq('usn', usn).maybeSingle();
@@ -1162,7 +1162,7 @@ app.post('/api/complete-google-signup', requireAuthToken, async (req, res) => {
         const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(req.session.authId);
         const name = user.user_metadata?.full_name || user.email.split('@')[0];
         const email = user.email;
-        const hashedPin = await bcrypt.hash(organizerPin, 10);
+        const hashedPin = organizerPin ? await bcrypt.hash(organizerPin, 10) : null;
         const { error: insertError } = await supabaseAdmin.from('student').insert([{
             usn, sname: name, sem: parseInt(sem), mobno, emailid: email,
             auth_id: req.session.authId, organizer_pin: hashedPin

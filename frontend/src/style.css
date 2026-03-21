@@ -335,13 +335,15 @@ input {
     padding: 0 12px;
   }
 
-  .flo-nav-btn span {
+  /* Only hide text on mobile for common nav buttons where icons are clear */
+  .flo-nav-back span,
+  .flo-nav-profile span,
+  .flo-nav-logout span {
     display: none;
   }
 
-  /* Hide text, keep icons on mobile */
   .flo-nav-btn {
-    padding: 8px 12px;
+    padding: 8px 10px;
   }
 
   .flo-nav-brand {
