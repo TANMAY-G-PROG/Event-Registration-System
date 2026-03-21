@@ -152,25 +152,27 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 8px 16px;
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  background: var(--yellow);
-  color: var(--black);
-  border: var(--border-thin);
-  box-shadow: var(--shadow-sm);
+  letter-spacing: 0.05em;
+  color: var(--yellow);
+  background: transparent;
+  border: 1.5px solid rgba(255, 214, 0, 0.3);
   cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s;
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   flex-shrink: 0;
   text-decoration: none;
 }
 
 .subevent-back-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 var(--yellow);
+  background: var(--yellow);
+  color: var(--black);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 214, 0, 0.2);
+  border-color: var(--yellow);
 }
 
 .subevent-header-text {

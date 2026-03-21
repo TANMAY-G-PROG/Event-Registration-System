@@ -816,7 +816,7 @@ export default function Registerevent() {
       if (!response.ok) throw new Error("Failed")
       const data = await response.json()
       setEventsData({ upcoming: data?.events?.upcoming || [], ongoing: data?.events?.ongoing || [], completed: data?.events?.completed || [] })
-    } catch (err) { showFlash("error", "Failed to load events") }
+    } catch (err) { showFlash("error", "Load Failed.") }
     finally { setLoading(false) }
   }, [navigate]);
 
@@ -941,7 +941,7 @@ export default function Registerevent() {
   async function handleRegister(event) {
     const hasFee = (event.regFee || 0) > 0; const eventId = event.eid
     if (hasFee) {
-      if (!event.upiId) { showFlash("error", "Payment not setup."); return }
+      if (!event.upiId) { showFlash("error", "Payment Not Setup."); return }
       setTransactionId(""); setModalFlash({ type: "", message: "" }); setShowUpiModal({ event, isTeam: false }); return
     }
     try {
@@ -951,17 +951,17 @@ export default function Registerevent() {
       });
       const data = await response.json()
       if (!response.ok) { showFlash("error", data.error || "Failed"); return }
-      showFlash("success", "Registered successfully!")
+      showFlash("success", "Registration Successful!")
       setRegisteredEvents(prev => new Set(prev).add(eventId))
       setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data.userUSN || "AUTHORIZED" })
       await loadEvents()
-    } catch (err) { showFlash("error", "Network error") }
+    } catch (err) { showFlash("error", "Network Error.") }
   }
 
   async function handleCreateTeam(eventId) {
     try {
       const { teamName, memberUSNs } = teamFormData
-      if (!teamName.trim()) { showModalFlash('error', 'Team name required'); return }
+      if (!teamName.trim()) { showModalFlash('error', 'Name Required.'); return }
       const validUSNs = memberUSNs.filter(usn => usn.trim() !== '')
 
       const response = await apiFetch(`/api/events/${eventId}/create-team`, {
@@ -977,9 +977,9 @@ export default function Registerevent() {
 
       const data = await response.json()
       if (!response.ok) { showModalFlash('error', data.error); return }
-      showModalFlash('success', 'Team created!'); showFlash('success', 'Team created!')
+      showModalFlash('success', 'Team Successful!'); showFlash('success', 'Team Successful!')
       setTimeout(() => { setShowTeamModal(null); setTeamFormData({ teamName: '', memberUSNs: [''] }); loadTeamStatus(eventId) }, 1500)
-    } catch (err) { showModalFlash('error', 'Error creating team') }
+    } catch (err) { showModalFlash('error', 'Team Failed.') }
   }
 
   async function handleViewInvites(eventId) {
@@ -987,9 +987,9 @@ export default function Registerevent() {
       const response = await apiFetch(`/api/events/${eventId}/my-invites`);
       const data = await response.json()
       if (!response.ok) { showFlash('error', data.error); return }
-      if (!data.invites?.length) { showFlash('error', 'No pending invites'); setTeamInvites([]) }
+      if (!data.invites?.length) { showFlash('error', 'No Invites.'); setTeamInvites([]) }
       else { setTeamInvites(data.invites); setShowTeamModal({ eventId, mode: 'invites' }) }
-    } catch (err) { showFlash('error', 'Error loading invites') }
+    } catch (err) { showFlash('error', 'Load Failed.') }
   }
 
   async function handleConfirmJoin(teamId, eventId) {
@@ -998,8 +998,8 @@ export default function Registerevent() {
         method: "POST"
       });
 
-      if (!response.ok) { showModalFlash('error', 'Failed to join'); return }
-      showModalFlash('success', 'Joined team!');
+      if (!response.ok) { showModalFlash('error', 'Join Failed.'); return }
+      showModalFlash('success', 'Join Successful!');
       setTimeout(() => { setShowTeamModal(null); setTeamInvites([]); loadTeamStatus(eventId) }, 1500)
     } catch (err) { showModalFlash('error', 'Error') }
   }
@@ -1015,17 +1015,17 @@ export default function Registerevent() {
 
       if (!response.ok) { showFlash('error', data.error); return }
       if (data.requiresPayment) {
-        if (!event.upiId) { showFlash("error", "Payment not setup"); return }
+        if (!event.upiId) { showFlash("error", "Payment Not Setup."); return }
         setTransactionId(""); setShowUpiModal({ event, isTeam: true, teamId: teamState.teamId }); return
       }
-      showFlash('success', 'Team registered!');
+      showFlash('success', 'Registration Successful!');
       setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data.userUSN });
       await loadTeamStatus(eventId); await loadEvents(); await fetchMyRegistrations()
-    } catch (err) { showFlash('error', 'Error registering team') }
+    } catch (err) { showFlash('error', 'Registration Failed.') }
   }
 
   async function handleSubmitUpiPayment() {
-    if (!transactionId.trim()) { showModalFlash('error', 'Enter Transaction ID'); return }
+    if (!transactionId.trim()) { showModalFlash('error', 'ID Required.'); return }
     if (isSubmitting) return; setIsSubmitting(true)
     const { event, isTeam } = showUpiModal; const eventId = event.eid;
     const url = isTeam ? `/api/events/${eventId}/register-team-upi` : `/api/events/${eventId}/register-upi`
@@ -1041,13 +1041,13 @@ export default function Registerevent() {
       });
       const data = await response.json()
       if (!response.ok) { showModalFlash('error', data.error); return }
-      showModalFlash('success', 'Submitted for verification!');
+      showModalFlash('success', 'Submitted Successful!');
       setTimeout(async () => {
-        setShowUpiModal(null); setTransactionId(""); showFlash('success', 'Submitted!');
+        setShowUpiModal(null); setTransactionId(""); showFlash('success', 'Submitted Successful!');
         setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: data.userUSN || "PENDING" });
         await loadEvents(); await loadTeamStatus(eventId); await fetchMyRegistrations()
       }, 1500)
-    } catch (err) { showModalFlash('error', 'Error submitting') } finally { setIsSubmitting(false) }
+    } catch (err) { showModalFlash('error', 'Submit Failed.') } finally { setIsSubmitting(false) }
   }
 
   const handleOpenPoster = (e, url) => {

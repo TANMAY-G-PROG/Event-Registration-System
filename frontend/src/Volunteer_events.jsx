@@ -51,7 +51,7 @@ export default function VolunteerEvents() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          showMessage('Please sign in to view events.', true);
+          showMessage('Please sign in.', true);
           setTimeout(() => navigate('/'), 2000);
           return;
         }
@@ -111,7 +111,7 @@ export default function VolunteerEvents() {
 
     } catch (error) {
       console.error('Error fetching events:', error);
-      showMessage('Could not load events.', true);
+      showMessage('Load failed.', true);
       setIsLoading(false);
     }
   };
@@ -145,19 +145,19 @@ export default function VolunteerEvents() {
       const data = await response.json();
 
       if (response.ok) {
-        showMessage('Successfully volunteered for the event!');
+        showMessage('Volunteer Successful!');
         fetchEvents();
       } else {
         if (response.status === 401) {
-          showMessage('Please sign in to volunteer.', true);
+          showMessage('Sign in to volunteer.', true);
           setTimeout(() => navigate('/'), 2000);
         } else {
-          showMessage(`Failed to volunteer: ${data.error}`, true);
+          showMessage(`Volunteer Failed: ${data.error}`, true);
         }
       }
     } catch (error) {
       console.error('Error volunteering:', error);
-      showMessage('Error volunteering for the event.', true);
+      showMessage('Volunteer Failed.', true);
     }
   };
 

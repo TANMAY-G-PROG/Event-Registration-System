@@ -90,7 +90,7 @@ const SubEventManager = () => {
       setSubEvents(data.subEvents || []);
     } catch (err) {
       console.error('Error fetching sub-events:', err);
-      showToast('Failed to refresh sub-events');
+      showToast('Refresh Failed.');
     }
   };
 
@@ -106,7 +106,7 @@ const SubEventManager = () => {
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newSubEvent.se_name.trim()) {
-      showToast('Sub-event name is required');
+      showToast('Name Required.');
       return;
     }
 
@@ -128,7 +128,7 @@ const SubEventManager = () => {
 
       setNewSubEvent({ se_name: '', activity_pts: 0, se_details: '' });
       setShowAddForm(false);
-      showToast('Sub-event created successfully!', 'success');
+      showToast('Sub-event Successful!', 'success');
       fetchSubEvents();
     } catch (err) {
       console.error('Error creating sub-event:', err);
@@ -161,7 +161,7 @@ const SubEventManager = () => {
   const confirmEdit = async () => {
     const seid = updateModal.seid;
     if (!password) {
-      showToast('Password is required to confirm changes');
+      showToast('PIN Required.');
       return;
     }
 
@@ -184,7 +184,7 @@ const SubEventManager = () => {
 
       setEditingId(null);
       setEditData({ se_name: '', activity_pts: 0, se_details: '' });
-      showToast('Sub-event updated successfully!', 'success');
+      showToast('Update Successful!', 'success');
       fetchSubEvents();
     } catch (err) {
       console.error('Error updating sub-event:', err);
@@ -202,7 +202,7 @@ const SubEventManager = () => {
   const confirmDelete = async () => {
     const seid = deleteModal.seid;
     if (!password) {
-      showToast('Password is required to delete the sub-event');
+      showToast('PIN Required.');
       return;
     }
 
@@ -223,7 +223,7 @@ const SubEventManager = () => {
         throw new Error(errorData.error || 'Failed to delete sub-event');
       }
 
-      showToast('Sub-event deleted successfully!', 'success');
+      showToast('Delete Successful!', 'success');
       fetchSubEvents();
     } catch (err) {
       console.error('Error deleting sub-event:', err);

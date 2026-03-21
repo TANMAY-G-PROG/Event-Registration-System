@@ -32,7 +32,7 @@ export default function ResetPassword() {
       if (session) {
         setSessionReady(true);
       } else if (!window.location.hash.includes('access_token')) {
-        showMessage('Invalid reset link', true);
+        showMessage('Invalid Link.', true);
         setTimeout(() => navigate('/login'), 2000);
       }
     });
@@ -41,11 +41,11 @@ export default function ResetPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newPassword || !confirmPassword)
-      return showMessage('Please fill in all fields', true);
+      return showMessage('Fill all fields.', true);
     if (newPassword.length < 6)
-      return showMessage('Password must be at least 6 characters', true);
+      return showMessage('Min 6 characters.', true);
     if (newPassword !== confirmPassword)
-      return showMessage('Passwords do not match', true);
+      return showMessage('Password Mismatch', true);
 
     setLoading(true);
     try {
@@ -54,9 +54,9 @@ export default function ResetPassword() {
       });
 
       if (error) {
-        showMessage(error.message || 'Failed to reset password', true);
+        showMessage(error.message || 'Reset Failed.', true);
       } else {
-        showMessage('Password reset successfully! Redirecting to sign in...');
+        showMessage('Reset success! Redirecting...');
         setTimeout(() => {
           supabase.auth.signOut();
           localStorage.removeItem('token');
@@ -65,7 +65,7 @@ export default function ResetPassword() {
         }, 2000);
       }
     } catch {
-      showMessage('Network error. Please try again.', true);
+      showMessage('Network error.', true);
     } finally {
       setLoading(false);
     }

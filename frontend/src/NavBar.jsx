@@ -39,18 +39,20 @@ export default function NavBar() {
         </div>
       </div>
 
-      <div className="flo-nav-right">
-        {location.pathname !== '/profile' && (
-          <button className="flo-nav-btn flo-nav-profile" onClick={() => navigate('/profile')}>
-            <i className="fas fa-user"></i>
-            <span>Profile</span>
+      {location.pathname !== '/about-us' && (
+        <div className="flo-nav-right">
+          {location.pathname !== '/profile' && (
+            <button className="flo-nav-btn flo-nav-profile" onClick={() => navigate('/profile')}>
+              <i className="fas fa-user"></i>
+              <span>Profile</span>
+            </button>
+          )}
+          <button className="flo-nav-btn flo-nav-logout" onClick={handleLogout}>
+            <i className="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
           </button>
-        )}
-        <button className="flo-nav-btn flo-nav-logout" onClick={handleLogout}>
-          <i className="fas fa-sign-out-alt"></i>
-          <span>Logout</span>
-        </button>
-      </div>
+        </div>
+      )}
     </nav>
   );
 }

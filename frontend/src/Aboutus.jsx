@@ -87,12 +87,7 @@ const AboutUs = () => {
   return (
     <div className="about-page" style={{ height: '100vh', overflowY: 'scroll' }}>
       
-      {/* Fixed Nav / Back Button */}
-      <div className="logout-container">
-        <button className="back-btn" onClick={() => navigate('/events')}>
-          <i className="fas fa-arrow-left"></i> Back
-        </button>
-      </div>
+      {/* Global NavBar is used here instead of local logout-container */}
 
       {/* Hero Section */}
       <section className="about-hero">

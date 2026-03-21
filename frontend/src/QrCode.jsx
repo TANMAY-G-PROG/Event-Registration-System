@@ -198,7 +198,7 @@ export default function QrCode() {
         )}
 
         <button className="back-btn" onClick={() => window.history.back()}>
-          ← Back to Event
+          <span>← Back to Event</span>
         </button>
 
       </div>

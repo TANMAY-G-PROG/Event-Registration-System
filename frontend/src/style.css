@@ -59,6 +59,7 @@ button {
 input {
   font-family: inherit;
   border-radius: 0;
+  appearance: none;
   -webkit-appearance: none;
 }
 
@@ -92,41 +93,7 @@ input {
 /* ══════════════════════════════════════
    NAV BUTTONS
 ══════════════════════════════════════ */
-.flo-nav {
-  position: fixed;
-  top: 18px;
-  right: 18px;
-  display: flex;
-  gap: 10px;
-  z-index: 500;
-}
-
-.flo-nav-btn {
-  padding: 8px 18px;
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--forest);
-  background: var(--cream);
-  border: var(--border);
-  box-shadow: var(--sh-sm);
-  transition: transform var(--ease), box-shadow var(--ease),
-    background var(--ease), color var(--ease);
-}
-
-.flo-nav-btn:hover {
-  background: var(--forest);
-  color: var(--sand);
-  transform: translate(-2px, -2px);
-  box-shadow: var(--sh);
-}
-
-.flo-nav-btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: none;
-}
+/* Removed duplicate definition */
 
 /* ══════════════════════════════════════
    TOAST MESSAGE
@@ -140,16 +107,28 @@ input {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 28px;
+  padding: 12px 20px;
   font-family: 'DM Mono', monospace;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   border: 3px solid var(--forest);
   box-shadow: 6px 6px 0 var(--forest);
-  white-space: nowrap;
+  max-width: 90vw;
+  white-space: normal;
+  word-break: break-all;
+  text-align: center;
   animation: toastIn .25s ease forwards;
+}
+
+@media (max-width: 480px) {
+  .flo-toast {
+    padding: 10px 16px;
+    font-size: 10px;
+    gap: 8px;
+    letter-spacing: 0.2px;
+  }
 }
 
 @keyframes toastIn {
@@ -215,59 +194,136 @@ input {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  font-family: inherit;
+  font-family: 'Space Mono', monospace;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border: none;
-  cursor: pointer;
-  transition: all 0.12s;
+  color: var(--gold);
   background: transparent;
+  border: 1.5px solid rgba(255, 214, 0, 0.3);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), color 0.1s;
 }
 
-/* Back Button Variant */
+/* Sweep background on hover */
+.flo-nav-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gold);
+  transform: translateX(-101%);
+  transition: transform 0.3s cubic-bezier(0.77, 0, 0.175, 1);
+  z-index: 0;
+}
+
+.flo-nav-btn:hover::before {
+  transform: translateX(0);
+}
+
+.flo-nav-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+.flo-nav-btn:hover {
+  color: var(--forest);
+  transform: translate(-3px, -3px);
+  box-shadow: 5px 5px 0 rgba(255, 214, 0, 0.35);
+  border-color: var(--gold);
+}
+
+.flo-nav-btn i {
+  transition: transform 0.2s;
+}
+
+.flo-nav-back:hover i { transform: translateX(-3px); }
+.flo-nav-logout:hover i { transform: translateX(3px); }
+.flo-nav-profile:hover i { transform: scale(1.1); }
+
+/* Back Button Variant — inherits outline style from .flo-nav-btn */
 .flo-nav-back {
-  color: #FFD600;
-  border: 1px solid rgba(255, 214, 0, 0.3);
-}
-
-.flo-nav-back:hover {
-  background: rgba(255, 214, 0, 0.1);
-  transform: translateX(-2px);
+  border-color: rgba(255, 214, 0, 0.4);
 }
 
 /* Profile Button Variant */
 .flo-nav-profile {
-  background: #FFD600;
-  color: #0D0D0D;
+  background: rgba(255, 214, 0, 0.05);
 }
 
-.flo-nav-profile:hover {
-  filter: brightness(1.1);
-  box-shadow: 3px 3px 0 rgba(255, 255, 255, 0.2);
-}
-
-/* Logout Button Variant */
+/* Logout Button Variant — matches user screenshot style */
 .flo-nav-logout {
-  color: #FF4D4D;
-  border: 1px solid rgba(255, 77, 77, 0.3);
+  color: var(--error);
+  border-color: rgba(255, 77, 77, 0.3);
+}
+
+.flo-nav-logout::before {
+  background: var(--error);
 }
 
 .flo-nav-logout:hover {
-  background: rgba(255, 77, 77, 0.1);
-  color: #FF4D4D;
+  color: var(--forest) !important;
+  border-color: var(--error) !important;
+  box-shadow: 5px 5px 0 rgba(255, 77, 77, 0.35) !important;
 }
 
 .flo-nav-brand {
   font-size: 14px;
   font-weight: 900;
   letter-spacing: 0.1em;
-  color: #FFD600;
+  color: var(--gold);
   margin: 0;
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Global back-btn with sweep effect */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  background: transparent;
+  border: 1.5px solid rgba(255, 214, 0, 0.4);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), color 0.1s;
+}
+
+.back-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gold);
+  transform: translateX(-101%);
+  transition: transform 0.3s cubic-bezier(0.77, 0, 0.175, 1);
+  z-index: 0;
+}
+
+.back-btn:hover::before {
+  transform: translateX(0);
+}
+
+.back-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+.back-btn:hover {
+  color: var(--forest);
+  transform: translate(-3px, -3px);
+  box-shadow: 4px 4px 0 rgba(255, 214, 0, 0.4);
+  border-color: var(--gold);
 }
 
 .flo-nav-brand span {
@@ -301,6 +357,7 @@ input {
   grid-template-columns: 300px 1fr;
   width: min(860px, 100%);
   min-height: 560px;
+  margin-top: 60px; /* Offset for fixed navbar */
   background: var(--cream);
   border: var(--border);
   box-shadow: var(--sh);
@@ -893,6 +950,7 @@ input {
 
 .mobile-view-wrapper {
   display: none;
+  padding-top: 60px; /* Offset for fixed navbar */
 }
 
 @media screen and (max-width: 768px) {

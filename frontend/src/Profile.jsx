@@ -97,16 +97,16 @@ export default function Profile() {
             const data = await res.json();
             if (res.ok && data.success) { showMessage('Profile updated successfully'); setEditMode(false); fetchUser(); }
             else showMessage(data.error || 'Failed to update profile', true);
-        } catch { showMessage('Network error. Please try again.', true); }
+        } catch { showMessage('Network error.', true); }
         finally { setSavingProfile(false); }
     };
 
     const handleChangePassword = async () => {
         const { currentPassword, newPassword, confirmPassword } = pwData;
-        if (!currentPassword || !newPassword || !confirmPassword) return showMessage('Please fill in all password fields', true);
-        if (newPassword.length < 6) return showMessage('New password must be at least 6 characters', true);
-        if (newPassword !== confirmPassword) return showMessage('New passwords do not match', true);
-        if (currentPassword === newPassword) return showMessage('New password must be different from current', true);
+        if (!currentPassword || !newPassword || !confirmPassword) return showMessage('Fill all fields.', true);
+        if (newPassword.length < 6) return showMessage('Min 6 characters.', true);
+        if (newPassword !== confirmPassword) return showMessage('Password Mismatch', true);
+        if (currentPassword === newPassword) return showMessage('Use different password.', true);
         setSavingPw(true);
         try {
             const res = await apiFetch('/api/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword, newPassword }) });
@@ -117,7 +117,7 @@ export default function Profile() {
                 setPwSection(false);
                 setPwData({ currentPassword: '', newPassword: '', confirmPassword: '' });
             } else showMessage(data.error || 'Failed to change password', true);
-        } catch { showMessage('Network error. Please try again.', true); }
+        } catch { showMessage('Network error.', true); }
         finally { setSavingPw(false); }
     };
 
@@ -158,7 +158,7 @@ export default function Profile() {
                 setPinSection(false); setFirstPinData({ newPin: '', confirmPin: '' }); setFirstPinErrors({ newPin: '', confirmPin: '' });
                 setUserInfo(p => ({ ...p, hasPinSet: true }));
             } else showMessage(data.error || 'Failed to set PIN', true);
-        } catch { showMessage('Network error. Please try again.', true); }
+        } catch { showMessage('Network error.', true); }
         finally { setSavingFirstPin(false); }
     };
 
@@ -167,9 +167,9 @@ export default function Profile() {
         try {
             const res = await apiFetch('/api/request-pin-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
             const data = await res.json();
-            if (res.ok && data.success) { showMessage(`OTP sent to ${userInfo.email}. Check your inbox.`); setPinStep('verify_otp'); setOtpValue(''); }
+            if (res.ok && data.success) { showMessage(`OTP sent to email.`); setPinStep('verify_otp'); setOtpValue(''); }
             else showMessage(data.error || 'Failed to send OTP', true);
-        } catch { showMessage('Network error. Please try again.', true); }
+        } catch { showMessage('Network error.', true); }
         finally { setOtpSending(false); }
     };
 
@@ -179,9 +179,9 @@ export default function Profile() {
         try {
             const res = await apiFetch('/api/verify-pin-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ otp: otpValue }) });
             const data = await res.json();
-            if (res.ok && data.success) { showMessage('OTP verified. Enter your new PIN.'); setPinStep('new_pin'); setPinData({ newPin: '', confirmPin: '' }); setPinErrors({ newPin: '', confirmPin: '' }); }
+            if (res.ok && data.success) { showMessage('OTP Verified.'); setPinStep('new_pin'); setPinData({ newPin: '', confirmPin: '' }); setPinErrors({ newPin: '', confirmPin: '' }); }
             else showMessage(data.error || 'Invalid OTP', true);
-        } catch { showMessage('Network error. Please try again.', true); }
+        } catch { showMessage('Network error.', true); }
         finally { setOtpVerifying(false); }
     };
 
@@ -205,7 +205,7 @@ export default function Profile() {
                 showMessage('Organizer PIN changed successfully');
                 setPinSection(false); setPinStep('send_otp'); setPinData({ newPin: '', confirmPin: '' }); setPinErrors({ newPin: '', confirmPin: '' }); setOtpValue('');
             } else showMessage(data.error || 'Failed to change PIN', true);
-        } catch { showMessage('Network error. Please try again.', true); }
+        } catch { showMessage('Network error.', true); }
         finally { setSavingPin(false); }
     };
 
@@ -222,7 +222,7 @@ export default function Profile() {
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
             <nav className="prof-nav">
-                <button className="prof-back-btn" onClick={() => navigate('/events')}><i className="fas fa-arrow-left" /> Back</button>
+                <button className="prof-back-btn" onClick={() => navigate('/events')}><i className="fas fa-arrow-left" /> <span>Back</span></button>
                 <span className="prof-nav-title">My Profile</span>
                 <div style={{ width: 80 }} />
             </nav>
@@ -256,11 +256,11 @@ export default function Profile() {
                             <div className="prof-info-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span className="prof-info-header-label">Account Details</span>
                                 {!editMode ? (
-                                    <button onClick={() => setEditMode(true)} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--yellow)', color: 'var(--black)', border: '2px solid var(--yellow)', padding: '4px 12px', cursor: 'pointer' }}>Edit</button>
+                                    <button onClick={() => setEditMode(true)} className="prof-action-btn prof-action-btn--primary">Edit</button>
                                 ) : (
                                     <div style={{ display: 'flex', gap: 8 }}>
-                                        <button onClick={() => { setEditMode(false); setEditData({ sname: userInfo.userName, sem: userInfo.semester, mobno: userInfo.mobile }); }} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', background: 'transparent', color: 'var(--yellow)', border: '1px solid rgba(255,214,0,0.4)', padding: '4px 10px', cursor: 'pointer' }}>Cancel</button>
-                                        <button onClick={handleSaveProfile} disabled={savingProfile} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', background: 'var(--mint)', color: 'var(--black)', border: '2px solid var(--mint)', padding: '4px 12px', cursor: 'pointer' }}>{savingProfile ? 'Saving...' : 'Save'}</button>
+                                        <button onClick={() => { setEditMode(false); setEditData({ sname: userInfo.userName, sem: userInfo.semester, mobno: userInfo.mobile }); }} className="prof-action-btn">Cancel</button>
+                                        <button onClick={handleSaveProfile} disabled={savingProfile} className="prof-action-btn prof-action-btn--mint">{savingProfile ? 'Saving...' : 'Save'}</button>
                                     </div>
                                 )}
                             </div>
@@ -342,8 +342,10 @@ export default function Profile() {
                                         <span className="prof-info-label">Organizer PIN</span>
                                         <span className="prof-info-value" style={{ fontSize: 13 }}>{userInfo.hasPinSet ? 'PIN is set — protects sub-event management' : 'No PIN set — required to manage sub-events'}</span>
                                     </div>
-                                    <button onClick={() => pinSection ? handleClosePinSection() : setPinSection(true)} className="prof-action-btn"
-                                        style={{ background: userInfo.hasPinSet ? 'transparent' : 'var(--yellow)', color: userInfo.hasPinSet ? 'var(--yellow)' : 'var(--black)', border: userInfo.hasPinSet ? '1px solid rgba(255,214,0,0.4)' : '2px solid var(--yellow)' }}>
+                                    <button 
+                                        onClick={() => pinSection ? handleClosePinSection() : setPinSection(true)} 
+                                        className={`prof-action-btn ${!userInfo.hasPinSet ? 'prof-action-btn--primary' : ''}`}
+                                    >
                                         {pinSection ? 'Cancel' : (userInfo.hasPinSet ? 'Change' : 'Set PIN')}
                                     </button>
                                 </div>
@@ -473,6 +475,10 @@ export default function Profile() {
                                 )}
                             </div>
                         </div>
+
+                        <button className="back-btn" onClick={() => window.history.back()}>
+                            <span>← Back to Event</span>
+                        </button>
 
                         {/* SIGN OUT */}
                         <button className="prof-logout-btn" onClick={handleLogout}>

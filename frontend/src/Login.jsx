@@ -46,7 +46,7 @@ export default function Login() {
       });
       if (res.ok) {
         const data = await res.json();
-        showMessage(`Already logged in as ${data.userName}. Redirecting...`);
+        showMessage(`Logged in. Redirecting...`);
         setTimeout(() => navigate("/events"), 1500);
       } else {
         localStorage.removeItem("token");
@@ -63,7 +63,7 @@ export default function Login() {
   const handleSignIn = async (e) => {
     e?.preventDefault();
     const { usn, password } = signInData;
-    if (!usn || !password) return showMessage('Please fill in all fields', true);
+    if (!usn || !password) return showMessage('Fill all fields.', true);
 
     // Clear any existing Supabase session before signing in with new credentials
     await supabase.auth.signOut();
@@ -78,14 +78,14 @@ export default function Login() {
       const data = await res.json();
       if (data.success) {
         localStorage.setItem("token", data.token);
-        showMessage(`Welcome back, ${data.userName || usn}!`);
+        showMessage(`Welcome, ${data.userName || usn}!`);
         setTimeout(() => navigate("/events"), 1500);
       } else {
-        showMessage(data.error || "Sign in failed", true);
+        showMessage(data.error || "Login failed.", true);
       }
     } catch (err) {
       console.error('[Login] Sign-in error:', err);
-      showMessage("Network error. Please try again.", true);
+      showMessage("Network error.", true);
     } finally {
       setLoading(false);
     }
@@ -102,7 +102,7 @@ export default function Login() {
       }
     });
     if (error) {
-      showMessage('Google sign-in failed. Please try again.', true);
+      showMessage('Google Login Failed.', true);
     }
   };
 
@@ -111,14 +111,14 @@ export default function Login() {
     const { name, usn, sem, mobno, email, password, organizerPin, confirmPin } = signUpData;
 
     if (!name || !usn || !sem || !mobno || !email || !password || !organizerPin || !confirmPin)
-      return showMessage("Please fill in all fields", true);
-    if (!/\S+@\S+\.\S+/.test(email)) return showMessage("Invalid email address", true);
-    if (!/^\d{10}$/.test(mobno)) return showMessage("Mobile number must be 10 digits", true);
+      return showMessage("Fill all fields.", true);
+    if (!/\S+@\S+\.\S+/.test(email)) return showMessage("Invalid email.", true);
+    if (!/^\d{10}$/.test(mobno)) return showMessage("Mobile: 10 digits.", true);
 
     const semNum = parseInt(sem, 10);
-    if (semNum < 1 || semNum > 8) return showMessage("Semester must be 1-8", true);
+    if (semNum < 1 || semNum > 8) return showMessage("Sem: 1-8", true);
 
-    if (!/^\d{4,6}$/.test(organizerPin)) return showMessage("Organizer PIN must be 4 to 6 digits", true);
+    if (!/^\d{4,6}$/.test(organizerPin)) return showMessage("PIN must be 4-6 digits", true);
     if (organizerPin !== confirmPin) return showMessage("PINs do not match", true);
 
     setLoading(true);
@@ -176,8 +176,8 @@ export default function Login() {
 
       {/* ── NAV ── */}
       <div className="flo-nav">
-        <button className="flo-nav-btn" onClick={goTo("/about-us")}>About Us</button>
-        <button className="flo-nav-btn" onClick={goToContact}>Contact Us</button>
+        <button className="flo-nav-btn" onClick={goTo("/about-us")}><span>About Us</span></button>
+        <button className="flo-nav-btn" onClick={goToContact}><span>Contact Us</span></button>
       </div>
 
       {/* ── TOAST MESSAGE ── */}
