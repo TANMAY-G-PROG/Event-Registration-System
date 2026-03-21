@@ -10,24 +10,15 @@ export default function Login() {
 
   const [isActive, setIsActive] = useState(false);
   const [message, setMessage] = useState({ text: "", isError: false, show: false });
-  const [showPassword, setShowPassword] = useState({ signIn: false, signUp: false, pin: false, confirmPin: false });
+  const [showPassword, setShowPassword] = useState({ signIn: false, signUp: false });
   const [loading, setLoading] = useState(false);
 
   const [signInData, setSignInData] = useState({ usn: "", password: "" });
   const [signUpData, setSignUpData] = useState({
-    name: "",
-    usn: "",
-    sem: "",
-    mobno: "",
-    email: "",
-    password: "",
-    organizerPin: "",
-    confirmPin: "",
+    name: "", usn: "", sem: "", mobno: "", email: "", password: "",
   });
 
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
+  useEffect(() => { checkAuthStatus(); }, []);
 
   useEffect(() => {
     if (message.show) {
@@ -40,12 +31,8 @@ export default function Login() {
     const token = localStorage.getItem("token");
     if (!token) return;
     try {
-      const res = await apiFetch("/api/me", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await apiFetch("/api/me", { method: "GET", headers: { "Content-Type": "application/json" } });
       if (res.ok) {
-        const data = await res.json();
         showMessage(`Logged in. Redirecting...`);
         setTimeout(() => navigate("/events"), 1500);
       } else {
@@ -64,10 +51,7 @@ export default function Login() {
     e?.preventDefault();
     const { usn, password } = signInData;
     if (!usn || !password) return showMessage('Fill all fields.', true);
-
-    // Clear any existing Supabase session before signing in with new credentials
     await supabase.auth.signOut();
-
     setLoading(true);
     try {
       const res = await apiFetch("/api/signin", {
@@ -96,43 +80,35 @@ export default function Login() {
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          prompt: 'select_account'  // Always show Google account picker
-        }
+        queryParams: { prompt: 'select_account' }
       }
     });
-    if (error) {
-      showMessage('Google Login Failed.', true);
-    }
+    if (error) showMessage('Google Login Failed.', true);
   };
 
   const handleSignUp = async (e) => {
     e?.preventDefault();
-    const { name, usn, sem, mobno, email, password, organizerPin, confirmPin } = signUpData;
+    const { name, usn, sem, mobno, email, password } = signUpData;
 
-    if (!name || !usn || !sem || !mobno || !email || !password || !organizerPin || !confirmPin)
+    if (!name || !usn || !sem || !mobno || !email || !password)
       return showMessage("Fill all fields.", true);
     if (!/\S+@\S+\.\S+/.test(email)) return showMessage("Invalid email.", true);
     if (!/^\d{10}$/.test(mobno)) return showMessage("Mobile: 10 digits.", true);
-
     const semNum = parseInt(sem, 10);
     if (semNum < 1 || semNum > 8) return showMessage("Sem: 1-8", true);
-
-    if (!/^\d{4,6}$/.test(organizerPin)) return showMessage("PIN must be 4-6 digits", true);
-    if (organizerPin !== confirmPin) return showMessage("PINs do not match", true);
 
     setLoading(true);
     try {
       const res = await apiFetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, usn, sem: semNum, mobno, email, password, organizerPin }),
+        body: JSON.stringify({ name, usn, sem: semNum, mobno, email, password }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         localStorage.setItem("token", data.token);
         showMessage(`Account created! Welcome, ${data.userName || name}!`);
-        setSignUpData({ name: "", usn: "", sem: "", mobno: "", email: "", password: "", organizerPin: "", confirmPin: "" });
+        setSignUpData({ name: "", usn: "", sem: "", mobno: "", email: "", password: "" });
         setTimeout(() => navigate("/events"), 2000);
       } else {
         showMessage(data.error || "Sign-up failed", true);
@@ -144,8 +120,7 @@ export default function Login() {
     }
   };
 
-  const handleSignInChange = (e) =>
-    setSignInData({ ...signInData, [e.target.name]: e.target.value });
+  const handleSignInChange = (e) => setSignInData({ ...signInData, [e.target.name]: e.target.value });
 
   const handleSignUpChange = (e) => {
     const { name, value } = e.target;
@@ -171,16 +146,21 @@ export default function Login() {
 
   return (
     <div className="flo-root">
-      {/* FontAwesome for Mobile Eye Icons */}
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 
-      {/* ── NAV ── */}
+      {/* NAV */}
       <div className="flo-nav">
-        <button className="flo-nav-btn" onClick={goTo("/about-us")}><span>About Us</span></button>
-        <button className="flo-nav-btn" onClick={goToContact}><span>Contact Us</span></button>
+        <button className="flo-nav-btn" onClick={goTo("/about-us")}>
+          <i className="fas fa-info-circle"></i>
+          <span>About Us</span>
+        </button>
+        <button className="flo-nav-btn" onClick={goToContact}>
+          <i className="fas fa-envelope"></i>
+          <span>Contact Us</span>
+        </button>
       </div>
 
-      {/* ── TOAST MESSAGE ── */}
+      {/* TOAST */}
       {message.show && (
         <div className={`flo-toast ${message.isError ? "flo-toast--error" : "flo-toast--success"}`}>
           <span className="flo-toast-icon">{message.isError ? "✕" : "✓"}</span>
@@ -188,15 +168,11 @@ export default function Login() {
         </div>
       )}
 
-      {/* ══════════════════════════════
-          DESKTOP VIEW
-      ══════════════════════════════ */}
+      {/* ══ DESKTOP VIEW ══ */}
       <div className="flo-desk desktop-view">
         <div className="flo-brand-panel">
           <div className="flo-brand-top">
-            <div className="flo-logo">
-              FLO<span className="flo-logo-dot" />
-            </div>
+            <div className="flo-logo">FLO<span className="flo-logo-dot" /></div>
             <div className="flo-logo-rule" />
             <p className="flo-brand-headline">
               {isActive ? "Welcome\nback." : "The Pulse\nof Campus."}
@@ -206,10 +182,7 @@ export default function Login() {
                 ? "Already part of the campus pulse? Head back to sign in."
                 : "New to FLO? Join thousands of students discovering campus life."}
             </p>
-            <button
-              className="flo-brand-cta"
-              onClick={() => setIsActive((a) => !a)}
-            >
+            <button className="flo-brand-cta" onClick={() => setIsActive((a) => !a)}>
               <span>{isActive ? "← Sign In" : "Create Account"}</span>
               {!isActive && <span className="flo-brand-cta-arrow">→</span>}
             </button>
@@ -229,63 +202,8 @@ export default function Login() {
               <h1 className="flo-form-title">Sign In</h1>
             </div>
             <form className="flo-form" onKeyPress={handleKeyPress}>
-              <div className="flo-field">
-                <label className="flo-label">University Serial No.</label>
-                <input
-                  type="text"
-                  name="usn"
-                  className="flo-input"
-                  placeholder="1AB22CS001"
-                  value={signInData.usn}
-                  onChange={handleSignInChange}
-                  autoComplete="off"
-                  spellCheck="false"
-                />
-              </div>
-              <div className="flo-field">
-                <label className="flo-label">Password</label>
-                <div className="flo-pw-wrap">
-                  <input
-                    type={showPassword.signIn ? "text" : "password"}
-                    name="password"
-                    className="flo-input"
-                    placeholder="Your password"
-                    value={signInData.password}
-                    onChange={handleSignInChange}
-                  />
-                  <button
-                    type="button"
-                    className="flo-pw-toggle"
-                    onClick={() => togglePasswordVisibility("signIn")}
-                  >
-                    {showPassword.signIn ? "Hide" : "Show"}
-                  </button>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="flo-forgot"
-                onClick={() => navigate("/forgot-password")}
-              >
-                Forgot password?
-              </button>
-              <button
-                type="button"
-                className="flo-submit"
-                onClick={handleSignIn}
-                disabled={loading}
-              >
-                {loading ? <span className="flo-spinner" /> : <><span>Sign In</span><span className="flo-submit-arrow">→</span></>}
-              </button>
 
-              {/* Divider */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0' }}>
-                <div style={{ flex: 1, height: 2, background: 'var(--ink-muted, #ccc)', opacity: 0.3 }} />
-                <span style={{ fontSize: 11, fontFamily: 'var(--nb-font-display, monospace)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.5 }}>or</span>
-                <div style={{ flex: 1, height: 2, background: 'var(--ink-muted, #ccc)', opacity: 0.3 }} />
-              </div>
-
-              {/* Google button — white style to differentiate from Sign In */}
+              {/* Google button FIRST */}
               <button
                 onClick={handleGoogleLogin}
                 className="flo-submit flo-submit--google"
@@ -301,13 +219,41 @@ export default function Login() {
                   </>
                 )}
               </button>
-            </form>
-            <div className="flo-register-row">
-              <p>Don't have an account?</p>
-              <button className="flo-register-link" onClick={() => setIsActive(true)}>
-                Register now
+
+              {/* Divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0' }}>
+                <div style={{ flex: 1, height: 2, background: 'var(--ink-muted, #ccc)', opacity: 0.3 }} />
+                <span style={{ fontSize: 11, fontFamily: 'var(--nb-font-display, monospace)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.5 }}>or</span>
+                <div style={{ flex: 1, height: 2, background: 'var(--ink-muted, #ccc)', opacity: 0.3 }} />
+              </div>
+
+              <div className="flo-field">
+                <label className="flo-label">University Serial No.</label>
+                <input
+                  type="text" name="usn" className="flo-input" placeholder="1AB22CS001"
+                  value={signInData.usn} onChange={handleSignInChange} autoComplete="off" spellCheck="false"
+                />
+              </div>
+              <div className="flo-field">
+                <label className="flo-label">Password</label>
+                <div className="flo-pw-wrap">
+                  <input
+                    type={showPassword.signIn ? "text" : "password"} name="password"
+                    className="flo-input" placeholder="Your password"
+                    value={signInData.password} onChange={handleSignInChange}
+                  />
+                  <button type="button" className="flo-pw-toggle" onClick={() => togglePasswordVisibility("signIn")}>
+                    {showPassword.signIn ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+              <button type="button" className="flo-forgot" onClick={() => navigate("/forgot-password")}>
+                Forgot password?
               </button>
-            </div>
+              <button type="button" className="flo-submit" onClick={handleSignIn} disabled={loading}>
+                {loading ? <span className="flo-spinner" /> : <><span>Sign In</span><span className="flo-submit-arrow">→</span></>}
+              </button>
+            </form>
           </div>
 
           {/* ── DESKTOP SIGN UP ── */}
@@ -319,158 +265,56 @@ export default function Login() {
             <form className="flo-form flo-form--signup" onKeyPress={handleKeyPress}>
               <div className="flo-field">
                 <label className="flo-label">Full Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  className="flo-input"
-                  placeholder="Rahul Sharma"
-                  value={signUpData.name}
-                  onChange={handleSignUpChange}
-                />
+                <input type="text" name="name" className="flo-input" placeholder="Rahul Sharma"
+                  value={signUpData.name} onChange={handleSignUpChange} />
               </div>
               <div className="flo-field">
                 <label className="flo-label">USN</label>
-                <input
-                  type="text"
-                  name="usn"
-                  className="flo-input"
-                  placeholder="1AB22CS001"
-                  value={signUpData.usn}
-                  onChange={handleSignUpChange}
-                  autoComplete="off"
-                />
+                <input type="text" name="usn" className="flo-input" placeholder="1AB22CS001"
+                  value={signUpData.usn} onChange={handleSignUpChange} autoComplete="off" />
               </div>
               <div className="flo-row">
                 <div className="flo-field">
                   <label className="flo-label">Semester</label>
-                  <input
-                    type="number"
-                    name="sem"
-                    className="flo-input"
-                    placeholder="1–8"
-                    min="1"
-                    max="8"
-                    value={signUpData.sem}
-                    onChange={handleSignUpChange}
-                  />
+                  <input type="number" name="sem" className="flo-input" placeholder="1–8"
+                    min="1" max="8" value={signUpData.sem} onChange={handleSignUpChange} />
                 </div>
                 <div className="flo-field">
                   <label className="flo-label">Mobile</label>
-                  <input
-                    type="tel"
-                    name="mobno"
-                    className="flo-input"
-                    placeholder="9876543210"
-                    value={signUpData.mobno}
-                    onChange={handleSignUpChange}
-                  />
+                  <input type="tel" name="mobno" className="flo-input" placeholder="9876543210"
+                    value={signUpData.mobno} onChange={handleSignUpChange} />
                 </div>
               </div>
               <div className="flo-field">
                 <label className="flo-label">Email ID</label>
-                <input
-                  type="email"
-                  name="email"
-                  className="flo-input"
-                  placeholder="you@college.edu"
-                  value={signUpData.email}
-                  onChange={handleSignUpChange}
-                />
+                <input type="email" name="email" className="flo-input" placeholder="you@college.edu"
+                  value={signUpData.email} onChange={handleSignUpChange} />
               </div>
               <div className="flo-field">
                 <label className="flo-label">Password</label>
                 <div className="flo-pw-wrap">
-                  <input
-                    type={showPassword.signUp ? "text" : "password"}
-                    name="password"
-                    className="flo-input"
-                    placeholder="Create a strong password"
-                    value={signUpData.password}
-                    onChange={handleSignUpChange}
-                  />
-                  <button
-                    type="button"
-                    className="flo-pw-toggle"
-                    onClick={() => togglePasswordVisibility("signUp")}
-                  >
+                  <input type={showPassword.signUp ? "text" : "password"} name="password"
+                    className="flo-input" placeholder="Create a strong password"
+                    value={signUpData.password} onChange={handleSignUpChange} />
+                  <button type="button" className="flo-pw-toggle" onClick={() => togglePasswordVisibility("signUp")}>
                     {showPassword.signUp ? "Hide" : "Show"}
                   </button>
                 </div>
               </div>
-
-              {/* PIN section divider */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '6px 0 10px' }}>
-                <div style={{ flex: 1, height: 2, background: 'currentColor', opacity: 0.15 }} />
-                <span className="flo-label" style={{ margin: 0, opacity: 0.6 }}>Organizer PIN</span>
-                <div style={{ flex: 1, height: 2, background: 'currentColor', opacity: 0.15 }} />
-              </div>
-
-              <div className="flo-field">
-                <label className="flo-label">PIN (4–6 digits) — protects event management</label>
-                <div className="flo-pw-wrap">
-                  <input
-                    type={showPassword.pin ? "text" : "password"}
-                    name="organizerPin"
-                    className="flo-input"
-                    placeholder="e.g. 1234"
-                    value={signUpData.organizerPin}
-                    onChange={handleSignUpChange}
-                    inputMode="numeric"
-                  />
-                  <button
-                    type="button"
-                    className="flo-pw-toggle"
-                    onClick={() => togglePasswordVisibility("pin")}
-                  >
-                    {showPassword.pin ? "Hide" : "Show"}
-                  </button>
-                </div>
-              </div>
-              <div className="flo-field">
-                <label className="flo-label">Confirm PIN</label>
-                <div className="flo-pw-wrap">
-                  <input
-                    type={showPassword.confirmPin ? "text" : "password"}
-                    name="confirmPin"
-                    className="flo-input"
-                    placeholder="Re-enter PIN"
-                    value={signUpData.confirmPin}
-                    onChange={handleSignUpChange}
-                    inputMode="numeric"
-                  />
-                  <button
-                    type="button"
-                    className="flo-pw-toggle"
-                    onClick={() => togglePasswordVisibility("confirmPin")}
-                  >
-                    {showPassword.confirmPin ? "Hide" : "Show"}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="flo-submit"
-                onClick={handleSignUp}
-                disabled={loading}
-              >
+              <button type="button" className="flo-submit" onClick={handleSignUp} disabled={loading}>
                 {loading ? <span className="flo-spinner" /> : <><span>Create Account</span><span className="flo-submit-arrow">→</span></>}
               </button>
             </form>
             <div className="flo-register-row">
               <p>Already have an account?</p>
-              <button className="flo-register-link" onClick={() => setIsActive(false)}>
-                Sign in
-              </button>
+              <button className="flo-register-link" onClick={() => setIsActive(false)}>Sign in</button>
             </div>
           </div>
 
         </div>
       </div>
 
-      {/* ══════════════════════════════
-          MOBILE VIEW
-      ══════════════════════════════ */}
+      {/* ══ MOBILE VIEW ══ */}
       <div className="mobile-view-wrapper">
         <div className="m-hero-section">
           <div className="m-hero-content">
@@ -483,10 +327,7 @@ export default function Login() {
         <div className="m-interaction-sheet">
           <div className="m-sheet-header">
             <h2 className="m-sheet-title">{isActive ? "New Account" : "Welcome Back"}</h2>
-            <button
-              onClick={() => setIsActive(!isActive)}
-              className="m-toggle-link"
-            >
+            <button onClick={() => setIsActive(!isActive)} className="m-toggle-link">
               {isActive ? "Log In Instead" : "Create Account"}
             </button>
           </div>
@@ -497,29 +338,32 @@ export default function Login() {
               {/* ── MOBILE SIGN IN ── */}
               {!isActive ? (
                 <div className="m-form-group">
-                  <MobileInput
-                    label="University Serial No."
-                    name="usn"
-                    value={signInData.usn}
-                    onChange={handleSignInChange}
-                    placeholder="USN"
-                  />
-                  <MobileInput
-                    label="Password"
-                    name="password"
-                    value={signInData.password}
-                    onChange={handleSignInChange}
-                    placeholder="Password"
-                    isPassword
-                    isVisible={showPassword.signIn}
-                    onToggleVisibility={() => togglePasswordVisibility("signIn")}
-                  />
+                  {/* Google button FIRST on mobile too */}
+                  <button
+                    type="button"
+                    className="m-submit-btn"
+                    onClick={handleGoogleLogin}
+                    disabled={loading}
+                    style={{ background: 'var(--sand-deep, #EDE4CF)', color: 'var(--ink, #1a1a1a)', marginBottom: 0 }}
+                  >
+                    <i className="fa-brands fa-google" style={{ marginRight: 8 }} />
+                    CONTINUE WITH GOOGLE
+                    <span className="m-arrow">→</span>
+                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0' }}>
+                    <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.2 }} />
+                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.45 }}>or</span>
+                    <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.2 }} />
+                  </div>
+
+                  <MobileInput label="University Serial No." name="usn" value={signInData.usn}
+                    onChange={handleSignInChange} placeholder="USN" />
+                  <MobileInput label="Password" name="password" value={signInData.password}
+                    onChange={handleSignInChange} placeholder="Password" isPassword
+                    isVisible={showPassword.signIn} onToggleVisibility={() => togglePasswordVisibility("signIn")} />
                   <div className="m-forgot-wrapper">
-                    <a
-                      href="#"
-                      onClick={(e) => { e.preventDefault(); navigate("/forgot-password"); }}
-                      className="m-forgot-link"
-                    >
+                    <a href="#" onClick={(e) => { e.preventDefault(); navigate("/forgot-password"); }} className="m-forgot-link">
                       Forgot Your Password?
                     </a>
                   </div>
@@ -534,78 +378,19 @@ export default function Login() {
                     <MobileInput label="Mobile" name="mobno" value={signUpData.mobno} onChange={handleSignUpChange} placeholder="Mobile" half type="tel" />
                   </div>
                   <MobileInput label="Email ID" name="email" value={signUpData.email} onChange={handleSignUpChange} placeholder="Email ID" type="email" />
-                  <MobileInput
-                    label="Password"
-                    name="password"
-                    value={signUpData.password}
-                    onChange={handleSignUpChange}
-                    placeholder="Password"
-                    isPassword
-                    isVisible={showPassword.signUp}
-                    onToggleVisibility={() => togglePasswordVisibility("signUp")}
-                  />
-
-                  {/* PIN divider label */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 8px' }}>
-                    <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.15 }} />
-                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.5 }}>Organizer PIN</span>
-                    <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.15 }} />
-                  </div>
-
-                  <MobileInput
-                    label="PIN (4–6 digits)"
-                    name="organizerPin"
-                    value={signUpData.organizerPin}
-                    onChange={handleSignUpChange}
-                    placeholder="e.g. 1234"
-                    isPassword
-                    isVisible={showPassword.pin}
-                    onToggleVisibility={() => togglePasswordVisibility("pin")}
-                    inputMode="numeric"
-                  />
-                  <MobileInput
-                    label="Confirm PIN"
-                    name="confirmPin"
-                    value={signUpData.confirmPin}
-                    onChange={handleSignUpChange}
-                    placeholder="Re-enter PIN"
-                    isPassword
-                    isVisible={showPassword.confirmPin}
-                    onToggleVisibility={() => togglePasswordVisibility("confirmPin")}
-                    inputMode="numeric"
-                  />
+                  <MobileInput label="Password" name="password" value={signUpData.password}
+                    onChange={handleSignUpChange} placeholder="Password" isPassword
+                    isVisible={showPassword.signUp} onToggleVisibility={() => togglePasswordVisibility("signUp")} />
                 </div>
               )}
 
-              {/* ── MOBILE SUBMIT BUTTON ── */}
+              {/* MOBILE SUBMIT */}
               <button type="submit" className="m-submit-btn" disabled={loading}>
                 {loading
                   ? <span className="flo-spinner" style={{ borderColor: "rgba(242,235,217,.3)", borderTopColor: "var(--sand)" }} />
                   : <>{isActive ? "SIGN UP" : "SIGN IN"}<span className="m-arrow">→</span></>
                 }
               </button>
-
-              {/* ── MOBILE GOOGLE BUTTON (sign in only) ── */}
-              {!isActive && (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0' }}>
-                    <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.2 }} />
-                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.45 }}>or</span>
-                    <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.2 }} />
-                  </div>
-                  <button
-                    type="button"
-                    className="m-submit-btn"
-                    onClick={handleGoogleLogin}
-                    disabled={loading}
-                    style={{ background: 'var(--sand, #f5f0e8)', color: 'var(--ink, #1a1a1a)', marginTop: 0 }}
-                  >
-                    <i className="fa-brands fa-google" style={{ marginRight: 8 }} />
-                    CONTINUE WITH GOOGLE
-                    <span className="m-arrow">→</span>
-                  </button>
-                </>
-              )}
 
             </form>
           </div>
@@ -626,21 +411,12 @@ const MobileInput = ({
       <label className="m-label">{label}</label>
       <div className="m-input-container">
         <input
-          type={inputType}
-          name={name}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          className="m-input-field"
-          inputMode={inputMode}
+          type={inputType} name={name} value={value} onChange={onChange}
+          placeholder={placeholder} className="m-input-field" inputMode={inputMode}
         />
         {isPassword && (
           <button type="button" onClick={onToggleVisibility} className="m-pass-toggle">
-            {isVisible ? (
-              <i className="fa-solid fa-eye-slash" />
-            ) : (
-              <i className="fa-solid fa-eye" />
-            )}
+            {isVisible ? <i className="fa-solid fa-eye-slash" /> : <i className="fa-solid fa-eye" />}
           </button>
         )}
       </div>
