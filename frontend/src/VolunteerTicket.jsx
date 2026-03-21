@@ -69,6 +69,21 @@ export default function VolunteerTicket() {
     return `${hr}:${m} ${ap}`;
   };
 
+  /* Shared stub content rendered in both in-card and fixed positions */
+  const StubContent = () => (
+    <>
+      <button
+        onClick={() => navigate('/scanner?role=volunteer')}
+        className="tk-scan-btn"
+        style={{ background: 'var(--pink)', borderColor: 'var(--pink)', boxShadow: '3px 3px 0 var(--pink)' }}
+      >
+        <i className="fas fa-qrcode"></i>
+        SCAN ATTENDEES
+      </button>
+      <p className="tk-lock-msg">Tap to open the QR scanner</p>
+    </>
+  );
+
   return (
     <div className="ticket-page-wrapper">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
@@ -100,7 +115,7 @@ export default function VolunteerTicket() {
             {/* MAIN BODY */}
             <div className="tk-main-content">
 
-              {/* Pink header zone — volunteers have pink accent */}
+              {/* Black header zone */}
               <div style={{
                 background: 'var(--black)', padding: '18px 20px 14px',
                 borderBottom: 'var(--border)', position: 'relative', overflow: 'hidden'
@@ -119,7 +134,6 @@ export default function VolunteerTicket() {
 
               {/* Badges */}
               <div style={{ padding: '10px 20px 10px', borderBottom: '2px solid var(--black)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {/* Volunteer badge (pink) */}
                 <span style={{
                   display: 'inline-block', padding: '3px 10px',
                   fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700,
@@ -166,30 +180,28 @@ export default function VolunteerTicket() {
               </p>
             </div>
 
-            {/* PERFORATED DIVIDER */}
+            {/* PERFORATED DIVIDER (hidden on mobile via CSS) */}
             <div className="tk-notch-container">
               <div className="tk-notch tk-notch-left"></div>
               <div className="tk-notch tk-notch-right"></div>
             </div>
 
-            {/* STUB — Volunteer scans attendees */}
+            {/* STUB (desktop only — hidden on mobile via CSS) */}
             <div className="tk-stub-content" style={{
-              /* Memphis diagonal stripe accent in stub */
               backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 6px, rgba(255,45,138,0.08) 6px, rgba(255,45,138,0.08) 12px)',
               backgroundColor: 'var(--black)',
             }}>
-              <button
-                onClick={() => navigate('/scanner?role=volunteer')}
-                className="tk-scan-btn"
-                style={{ background: 'var(--pink)', borderColor: 'var(--pink)', boxShadow: '3px 3px 0 var(--pink)' }}
-              >
-                <i className="fas fa-qrcode"></i>
-                SCAN ATTENDEES
-              </button>
-              <p className="tk-lock-msg">Tap to open the QR scanner</p>
+              <StubContent />
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* ── FIXED STUB (mobile only) ── */}
+      {!loading && !error && eventData && (
+        <div className="tk-stub-fixed">
+          <StubContent />
         </div>
       )}
     </div>
