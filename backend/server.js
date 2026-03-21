@@ -1,18 +1,24 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const supabase = require('./lib/supabase');
+const { supabaseAdmin, createUserClient } = require('./lib/supabase');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
 const crypto = require('crypto');
 const ExcelJS = require('exceljs');
 const { createClient } = require('redis');
-const jwt = require('jsonwebtoken');
 const Brevo = require('@getbrevo/brevo');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
-const QR_TOKEN_SECRET = process.env.QR_TOKEN_SECRET || 'your-qr-secret-change-in-production';
-const QR_TOKEN_VALIDITY_MS = 18000; // 15s display + 3s grace
-const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-change-in-production';
+// jwt require removed — Supabase handles token signing now
+
+const QR_TOKEN_SECRET = process.env.QR_TOKEN_SECRET;
+const QR_TOKEN_VALIDITY_MS = 18000;
+
+if (!QR_TOKEN_SECRET) {
+    throw new Error('QR_TOKEN_SECRET environment variable is required');
+}
 
 // --- File Upload Dependencies ---
 const cloudinary = require('cloudinary').v2;
@@ -38,6 +44,23 @@ const apiKey = apiInstance.authentications['apiKey'];
 apiKey.apiKey = process.env.BREVO_API_KEY;
 
 const app = express();
+
+app.use(helmet());
+
+app.use(express.json({ limit: '10kb' }));
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 500,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+        console.warn(`⚠️ Rate limit exceeded for ${req.ip} on ${req.method} ${req.url}`);
+        res.status(429).json({ error: 'Too many requests. Please wait a few minutes and try again.' });
+    }
+});
+app.use(limiter);
+
 const PORT = process.env.PORT || 3000;
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -49,7 +72,7 @@ let redisClient = {
     get: async () => null,
     set: async () => null,
     del: async () => null,
-    connect: async () => {}
+    connect: async () => { }
 };
 
 (async () => {
@@ -65,7 +88,7 @@ let redisClient = {
             }
         });
 
-        realClient.on('error', () => {});
+        realClient.on('error', () => { });
         realClient.on('connect', () => console.log('✅ Connected to Redis Cloud (cache only)'));
 
         await realClient.connect();
@@ -120,7 +143,7 @@ app.use((req, res, next) => {
 
 async function testSupabaseConnection() {
     try {
-        const { data, error } = await supabase.from('student').select('count').limit(1);
+        const { data, error } = await supabaseAdmin.from('student').select('count').limit(1);
         if (error) throw error;
         console.log('✅ Supabase connected successfully');
     } catch (err) {
@@ -129,10 +152,10 @@ async function testSupabaseConnection() {
 }
 testSupabaseConnection();
 
-// --- JWT Auth Middleware (replaces session-based requireAuth) ---
-function requireAuth(req, res, next) {
+
+async function requireAuth(req, res, next) {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
         console.log('❌ User NOT authenticated - no token');
@@ -140,17 +163,67 @@ function requireAuth(req, res, next) {
     }
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        // Keep req.session shape so all existing routes work without change
+        // Verify token with Supabase
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+        if (error || !user) {
+            console.log('❌ Invalid/expired token:', error?.message || 'no user returned');
+            return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+        }
+
+        // Look up student record from auth_id
+        const { data: student, error: studentError } = await supabaseAdmin
+            .from('student')
+            .select('usn, sname, emailid')
+            .eq('auth_id', user.id)
+            .maybeSingle();
+
+        if (studentError || !student) {
+            console.log('❌ No student record found for auth user:', user.id);
+            return res.status(401).json({ error: 'Account not fully set up. Please complete your profile.' });
+        }
+
+        // Keep same req.session shape — all existing routes work unchanged
         req.session = {
-            userUSN: decoded.usn,
-            userName: decoded.name,
-            userEmail: decoded.email
+            userUSN: student.usn,
+            userName: student.sname,
+            userEmail: student.emailid,
+            accessToken: token,
+            authId: user.id
         };
+
         next();
     } catch (err) {
-        console.log('❌ Invalid/expired JWT token');
-        return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+        console.error('❌ Auth error:', err.message, err.stack);
+        return res.status(401).json({ error: 'Authentication error' });
+    }
+}
+
+// Lighter auth for onboarding — verifies token but doesn't require student record
+async function requireAuthToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Please sign in first' });
+    }
+
+    try {
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+        if (error || !user) {
+            return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+        }
+
+        req.session = {
+            authId: user.id,
+            userEmail: user.email,
+            accessToken: token
+        };
+
+        next();
+    } catch (err) {
+        return res.status(401).json({ error: 'Authentication error' });
     }
 }
 
@@ -172,58 +245,82 @@ const uploadFromBuffer = (buffer) => {
 // Sign up endpoint
 app.post('/api/signup', async (req, res) => {
     try {
-        const { name, usn, sem, mobno, email, password } = req.body;
+        const { name, usn, sem, mobno, email, password, organizerPin } = req.body;
 
         if (!usn || !name || !email || !sem || !mobno || !password) {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
-        const { data: existingUser, error: checkError } = await supabase
+        if (organizerPin && !/^\d{4,6}$/.test(organizerPin)) {
+            return res.status(400).json({ error: 'Organizer PIN must be 4 to 6 digits' });
+        }
+
+        // Check if USN or email already exists
+        const { data: existing } = await supabaseAdmin
             .from('student')
             .select('usn')
             .or(`usn.eq.${usn},emailid.eq.${email}`)
             .limit(1);
 
-        if (checkError) {
-            console.error('Error checking existing user:', checkError);
-            return res.status(500).json({ error: 'Database error' });
-        }
-
-        if (existingUser && existingUser.length > 0) {
+        if (existing && existing.length > 0) {
             return res.status(400).json({ error: 'Student with this USN or email already exists' });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // Create auth user in Supabase Auth
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { usn, name }
+        });
 
-        const { data, error } = await supabase
-            .from('student')
-            .insert([{
-                usn: usn,
-                sname: name,
-                sem: sem,
-                mobno: mobno,
-                emailid: email,
-                password: hashedPassword
-            }])
-            .select();
-
-        if (error) {
-            console.error('Error inserting student:', error);
-            return res.status(500).json({ error: `Error registering student: ${error.message}` });
+        if (authError) {
+            console.error('Error creating auth user:', authError);
+            return res.status(400).json({ error: authError.message });
         }
 
-        // Generate JWT token
-        const token = jwt.sign(
-            { usn: usn, name: name, email: email },
-            JWT_SECRET,
-            { expiresIn: '1d' }
-        );
+        // Hash organizer PIN if provided
+        let hashedPin = null;
+        if (organizerPin) {
+            hashedPin = await bcrypt.hash(organizerPin, 10);
+        }
+
+        // Insert student record linked to auth user
+        const { error: studentError } = await supabaseAdmin
+            .from('student')
+            .insert([{
+                usn,
+                sname: name,
+                sem,
+                mobno,
+                emailid: email,
+                auth_id: authData.user.id,
+                organizer_pin: hashedPin
+            }]);
+
+        if (studentError) {
+            // Rollback — delete auth user if student insert fails
+            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+            console.error('Error inserting student:', studentError);
+            return res.status(500).json({ error: 'Error registering student' });
+        }
+
+        // Sign in to get tokens
+        const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (signInError) {
+            return res.status(500).json({ error: 'Registered but could not sign in automatically' });
+        }
 
         console.log('✅ Student registered:', usn);
         res.status(201).json({
             success: true,
             message: 'Student registered successfully!',
-            token: token,
+            token: signInData.session.access_token,
+            refresh_token: signInData.session.refresh_token,
             userUSN: usn,
             userName: name
         });
@@ -242,40 +339,33 @@ app.post('/api/signin', async (req, res) => {
             return res.status(400).json({ error: 'USN and password are required' });
         }
 
-        const { data: rows, error } = await supabase
+        // Look up email from USN
+        const { data: student, error: lookupError } = await supabaseAdmin
             .from('student')
-            .select('usn, sname, emailid, password')
+            .select('usn, sname, emailid')
             .eq('usn', usn)
-            .limit(1);
+            .maybeSingle();
+
+        if (lookupError || !student) {
+            return res.status(401).json({ error: 'Invalid USN or password' });
+        }
+
+        // Sign in with Supabase Auth using email
+        const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+            email: student.emailid,
+            password
+        });
 
         if (error) {
-            console.error('Error fetching student:', error);
-            return res.status(500).json({ error: 'Database error' });
-        }
-
-        if (!rows || rows.length === 0) {
             return res.status(401).json({ error: 'Invalid USN or password' });
         }
-
-        const student = rows[0];
-
-        const validPassword = await bcrypt.compare(password, student.password);
-        if (!validPassword) {
-            return res.status(401).json({ error: 'Invalid USN or password' });
-        }
-
-        // Generate JWT token
-        const token = jwt.sign(
-            { usn: student.usn, name: student.sname, email: student.emailid },
-            JWT_SECRET,
-            { expiresIn: '1d' }
-        );
 
         console.log('✅ User signed in:', student.usn);
         res.json({
             success: true,
             message: 'Signed in successfully',
-            token: token,
+            token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
             userUSN: student.usn,
             userName: student.sname
         });
@@ -285,41 +375,134 @@ app.post('/api/signin', async (req, res) => {
     }
 });
 
-app.get('/api/me', requireAuth, async (req, res) => {
+// Signout - client just deletes the token, server does nothing
+app.post('/api/signout', requireAuth, async (req, res) => {
     try {
-        const { data: rows, error } = await supabase
+        await supabaseAdmin.auth.admin.signOut(req.session.accessToken);
+        console.log('✅ User signed out:', req.session.userUSN);
+        res.json({ success: true, message: 'Signed out successfully' });
+    } catch (err) {
+        // Even if server signout fails, client will delete token
+        res.json({ success: true, message: 'Signed out successfully' });
+    }
+});
+
+// Update profile details (name, sem, mobno)
+app.put('/api/profile', requireAuth, async (req, res) => {
+    try {
+        const { sname, sem, mobno } = req.body;
+
+        if (!sname || !sem || !mobno) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+        if (!/^\d{10}$/.test(mobno)) {
+            return res.status(400).json({ error: 'Mobile must be 10 digits' });
+        }
+        const semNum = parseInt(sem, 10);
+        if (semNum < 1 || semNum > 8) {
+            return res.status(400).json({ error: 'Semester must be 1-8' });
+        }
+
+        const { error } = await supabaseAdmin
             .from('student')
-            .select('usn, sname, sem, mobno, emailid')
+            .update({ sname, sem: semNum, mobno })
+            .eq('usn', req.session.userUSN);
+
+        if (error) return res.status(500).json({ error: 'Failed to update profile' });
+
+        res.json({ success: true, message: 'Profile updated successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Change password (requires current password verification)
+app.post('/api/change-password', requireAuth, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'Both fields are required' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: 'New password must be at least 6 characters' });
+        }
+
+        // Verify current password by re-authenticating
+        const { error: authError } = await supabaseAdmin.auth.signInWithPassword({
+            email: req.session.userEmail,
+            password: currentPassword
+        });
+
+        if (authError) {
+            return res.status(401).json({ error: 'Current password is incorrect' });
+        }
+
+        // Update password in Supabase Auth
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+            req.session.authId,
+            { password: newPassword }
+        );
+
+        if (updateError) {
+            return res.status(500).json({ error: 'Failed to update password' });
+        }
+
+        // Sign in with new password to get fresh token
+        const { data: newSession, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+            email: req.session.userEmail,
+            password: newPassword
+        });
+
+        if (signInError || !newSession?.session) {
+            return res.status(500).json({ error: 'Password changed but could not refresh session. Please sign in again.' });
+        }
+
+        res.json({
+            success: true,
+            message: 'Password changed successfully',
+            token: newSession?.session?.access_token || null,
+            refresh_token: newSession?.session?.refresh_token || null
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get full profile info including sem, mobno, pin status
+app.get('/api/me', requireAuth, async (req, res) => {
+    // Replace your existing /api/me with this expanded version
+    try {
+        const { data: rows, error } = await supabaseAdmin
+            .from('student')
+            .select('usn, sname, sem, mobno, emailid, organizer_pin, auth_id')
             .eq('usn', req.session.userUSN)
             .limit(1);
 
-        if (error) {
-            console.error('Error fetching user info:', error);
-            return res.status(500).json({ error: 'Database error' });
-        }
-
-        if (!rows || rows.length === 0) {
+        if (error || !rows?.length) {
             return res.status(404).json({ error: 'User not found' });
         }
 
         const student = rows[0];
+
+        // Check if user has a Google identity
+        const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(student.auth_id);
+        const hasGoogleIdentity = user?.identities?.some(i => i.provider === 'google');
+        const hasPasswordIdentity = user?.identities?.some(i => i.provider === 'email');
+
         res.json({
             userUSN: student.usn,
             userName: student.sname,
             semester: student.sem,
             mobile: student.mobno,
-            email: student.emailid
+            email: student.emailid,
+            hasPinSet: !!student.organizer_pin,
+            hasGoogleIdentity,
+            hasPasswordIdentity
         });
     } catch (err) {
-        console.error('Error fetching user info:', err);
         res.status(500).json({ error: 'Error fetching user info' });
     }
-});
-
-// Signout - client just deletes the token, server does nothing
-app.post('/api/signout', (req, res) => {
-    console.log('✅ User signed out (token invalidated client-side)');
-    res.json({ success: true, message: 'Signed out successfully' });
 });
 
 // --- CACHED Get all events ---
@@ -337,7 +520,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
         } catch (cacheErr) { console.error('Redis read error:', cacheErr.message); }
 
         if (!rows) {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseAdmin
                 .from('event')
                 .select(`
                     eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
@@ -395,7 +578,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
 // Get user's participant events
 app.get('/api/my-participant-events', requireAuth, async (req, res) => {
     try {
-        const { data: participantEvents, error } = await supabase
+        const { data: participantEvents, error } = await supabaseAdmin
             .from('participant')
             .select(`
                 partstatus, partusn, parteid,
@@ -424,7 +607,7 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
             const maxActivityPts = event.max_activity_pts || 0;
 
             if (maxActivityPts > 0 && p.partstatus) {
-                const { data: attendanceData } = await supabase
+                const { data: attendanceData } = await supabaseAdmin
                     .from('sub_event_attendance')
                     .select('seid, sub_event!inner(activity_pts)')
                     .eq('eid', event.eid)
@@ -470,7 +653,7 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
 
 app.get('/api/my-volunteer-events', requireAuth, async (req, res) => {
     try {
-        const { data: volunteerEvents, error } = await supabase
+        const { data: volunteerEvents, error } = await supabaseAdmin
             .from('volunteer')
             .select(`
                 volnstatus, volnusn, volneid,
@@ -519,7 +702,7 @@ app.get('/api/my-volunteer-events', requireAuth, async (req, res) => {
 
 app.get('/api/my-organized-events', requireAuth, async (req, res) => {
     try {
-        const { data: organizerEvents, error } = await supabase
+        const { data: organizerEvents, error } = await supabaseAdmin
             .from('event')
             .select(`
                 eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee,
@@ -606,7 +789,7 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
         const points = parseInt(activityPoints) || 0;
 
         if (organizedClubId) {
-            const { data: membershipCheck, error: memberError } = await supabase
+            const { data: membershipCheck, error: memberError } = await supabaseAdmin
                 .from('memberof')
                 .select('clubid')
                 .eq('studentusn', req.session.userUSN)
@@ -658,7 +841,7 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
             min_voln_scans: parseInt(minVolnScans) || 1
         };
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from('event')
             .insert([eventData])
             .select('eid');
@@ -667,7 +850,7 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
 
         const newEventId = data[0]?.eid;
 
-        const { error: subEventError } = await supabase
+        const { error: subEventError } = await supabaseAdmin
             .from('sub_event')
             .insert([{
                 eid: newEventId,
@@ -702,7 +885,7 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        const { data: existing, error: existingError } = await supabase
+        const { data: existing, error: existingError } = await supabaseAdmin
             .from('participant')
             .select('*')
             .eq('partusn', userUSN)
@@ -718,7 +901,7 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Already joined this event' });
         }
 
-        const { data: event, error: eventError } = await supabase
+        const { data: event, error: eventError } = await supabaseAdmin
             .from('event')
             .select('maxpart, regfee')
             .eq('eid', eventId)
@@ -744,7 +927,7 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
 
         const maxPart = event[0].maxpart || 0;
         if (maxPart > 0) {
-            const { count, error: countError } = await supabase
+            const { count, error: countError } = await supabaseAdmin
                 .from('participant')
                 .select('*', { count: 'exact', head: true })
                 .eq('parteid', eventId);
@@ -759,7 +942,7 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
             }
         }
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAdmin
             .from('participant')
             .insert([{
                 partusn: userUSN,
@@ -786,7 +969,7 @@ app.post('/api/events/:eventId/volunteer', requireAuth, async (req, res) => {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        const { data: existing, error: existingError } = await supabase
+        const { data: existing, error: existingError } = await supabaseAdmin
             .from('volunteer')
             .select('*')
             .eq('volnusn', userUSN)
@@ -802,7 +985,7 @@ app.post('/api/events/:eventId/volunteer', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Already volunteered for this event' });
         }
 
-        const { data: event, error: eventError } = await supabase
+        const { data: event, error: eventError } = await supabaseAdmin
             .from('event')
             .select('maxvoln')
             .eq('eid', eventId)
@@ -819,7 +1002,7 @@ app.post('/api/events/:eventId/volunteer', requireAuth, async (req, res) => {
 
         const maxVoln = event[0].maxvoln || 0;
         if (maxVoln > 0) {
-            const { count, error: countError } = await supabase
+            const { count, error: countError } = await supabaseAdmin
                 .from('volunteer')
                 .select('*', { count: 'exact', head: true })
                 .eq('volneid', eventId);
@@ -834,7 +1017,7 @@ app.post('/api/events/:eventId/volunteer', requireAuth, async (req, res) => {
             }
         }
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAdmin
             .from('volunteer')
             .insert([{
                 volnusn: userUSN,
@@ -857,7 +1040,7 @@ app.post('/api/events/:eventId/volunteer', requireAuth, async (req, res) => {
 app.get('/api/events/:eventId/volunteer-count', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
-        const { count, error } = await supabase
+        const { count, error } = await supabaseAdmin
             .from('volunteer')
             .select('*', { count: 'exact', head: true })
             .eq('volneid', eventId);
@@ -877,7 +1060,7 @@ app.get('/api/events/:eventId/volunteer-count', requireAuth, async (req, res) =>
 app.get('/api/events/:eventId/participant-count', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
-        const { count, error } = await supabase
+        const { count, error } = await supabaseAdmin
             .from('participant')
             .select('*', { count: 'exact', head: true })
             .eq('parteid', eventId);
@@ -899,7 +1082,7 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        const { data: event, error: eventError } = await supabase
+        const { data: event, error: eventError } = await supabaseAdmin
             .from('event')
             .select(`
                 eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, regfee,
@@ -916,7 +1099,7 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
 
         if (!event) return res.status(404).json({ error: 'Event not found' });
 
-        const { data: participant, error: partError } = await supabase
+        const { data: participant, error: partError } = await supabaseAdmin
             .from('participant')
             .select('partstatus, payment_status')
             .eq('parteid', eventId)
@@ -958,7 +1141,7 @@ app.get('/api/events/:eventId/sub-events', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
 
-        const { data: subEvents, error } = await supabase
+        const { data: subEvents, error } = await supabaseAdmin
             .from('sub_event')
             .select('*')
             .eq('eid', eventId)
@@ -970,7 +1153,7 @@ app.get('/api/events/:eventId/sub-events', requireAuth, async (req, res) => {
         }
 
         const subEventsWithCount = await Promise.all((subEvents || []).map(async (se) => {
-            const { count } = await supabase
+            const { count } = await supabaseAdmin
                 .from('sub_event_attendance')
                 .select('*', { count: 'exact', head: true })
                 .eq('seid', se.seid);
@@ -1001,7 +1184,7 @@ app.post('/api/events/:eventId/sub-events', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Activity points cannot be negative' });
         }
 
-        const { data: event, error: eventError } = await supabase
+        const { data: event, error: eventError } = await supabaseAdmin
             .from('event')
             .select('orgusn')
             .eq('eid', eventId)
@@ -1015,7 +1198,7 @@ app.post('/api/events/:eventId/sub-events', requireAuth, async (req, res) => {
             return res.status(403).json({ error: 'Only the organizer can add sub-events' });
         }
 
-        const { data: newSubEvent, error: insertError } = await supabase
+        const { data: newSubEvent, error: insertError } = await supabaseAdmin
             .from('sub_event')
             .insert([{
                 eid: eventId,
@@ -1051,9 +1234,9 @@ app.put('/api/sub-events/:seid', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Activity points cannot be negative' });
         }
 
-        const { data: userData, error: userError } = await supabase
+        const { data: userData, error: userError } = await supabaseAdmin
             .from('student')
-            .select('password')
+            .select('organizer_pin')
             .eq('usn', req.session.userUSN)
             .single();
 
@@ -1061,12 +1244,18 @@ app.put('/api/sub-events/:seid', requireAuth, async (req, res) => {
             return res.status(401).json({ error: 'User verification failed' });
         }
 
-        const isValid = await bcrypt.compare(password, userData.password);
-        if (!isValid) {
-            return res.status(401).json({ error: 'Incorrect password' });
+        if (!userData.organizer_pin) {
+            return res.status(400).json({
+                error: 'You have not set an organizer PIN yet. Please set one in your profile.'
+            });
         }
 
-        const { data: subEvent, error: fetchError } = await supabase
+        const isValid = await bcrypt.compare(password, userData.organizer_pin);
+        if (!isValid) {
+            return res.status(401).json({ error: 'Incorrect organizer PIN' });
+        }
+
+        const { data: subEvent, error: fetchError } = await supabaseAdmin
             .from('sub_event')
             .select('eid')
             .eq('seid', seid)
@@ -1076,7 +1265,7 @@ app.put('/api/sub-events/:seid', requireAuth, async (req, res) => {
             return res.status(404).json({ error: 'Sub-event not found' });
         }
 
-        const { data: event, error: eventError } = await supabase
+        const { data: event, error: eventError } = await supabaseAdmin
             .from('event')
             .select('orgusn')
             .eq('eid', subEvent[0].eid)
@@ -1095,7 +1284,7 @@ app.put('/api/sub-events/:seid', requireAuth, async (req, res) => {
         if (activity_pts !== undefined) updateData.activity_pts = parseInt(activity_pts) || 0;
         if (se_details !== undefined) updateData.se_details = se_details || '';
 
-        const { data: updatedSubEvent, error: updateError } = await supabase
+        const { data: updatedSubEvent, error: updateError } = await supabaseAdmin
             .from('sub_event')
             .update(updateData)
             .eq('seid', seid)
@@ -1123,9 +1312,9 @@ app.delete('/api/sub-events/:seid', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Password is required to confirm deletion' });
         }
 
-        const { data: userData, error: userError } = await supabase
+        const { data: userData, error: userError } = await supabaseAdmin
             .from('student')
-            .select('password')
+            .select('organizer_pin')
             .eq('usn', req.session.userUSN)
             .single();
 
@@ -1133,12 +1322,18 @@ app.delete('/api/sub-events/:seid', requireAuth, async (req, res) => {
             return res.status(401).json({ error: 'User verification failed' });
         }
 
-        const isValid = await bcrypt.compare(password, userData.password);
-        if (!isValid) {
-            return res.status(401).json({ error: 'Incorrect password' });
+        if (!userData.organizer_pin) {
+            return res.status(400).json({
+                error: 'You have not set an organizer PIN yet. Please set one in your profile.'
+            });
         }
 
-        const { data: subEvent, error: fetchError } = await supabase
+        const isValid = await bcrypt.compare(password, userData.organizer_pin);
+        if (!isValid) {
+            return res.status(401).json({ error: 'Incorrect organizer PIN' });
+        }
+
+        const { data: subEvent, error: fetchError } = await supabaseAdmin
             .from('sub_event')
             .select('eid')
             .eq('seid', seid)
@@ -1148,7 +1343,7 @@ app.delete('/api/sub-events/:seid', requireAuth, async (req, res) => {
             return res.status(404).json({ error: 'Sub-event not found' });
         }
 
-        const { data: event, error: eventError } = await supabase
+        const { data: event, error: eventError } = await supabaseAdmin
             .from('event')
             .select('orgusn')
             .eq('eid', subEvent[0].eid)
@@ -1162,7 +1357,7 @@ app.delete('/api/sub-events/:seid', requireAuth, async (req, res) => {
             return res.status(403).json({ error: 'Only the organizer can delete sub-events' });
         }
 
-        const { count, error: countError } = await supabase
+        const { count, error: countError } = await supabaseAdmin
             .from('sub_event')
             .select('*', { count: 'exact', head: true })
             .eq('eid', subEvent[0].eid);
@@ -1176,7 +1371,7 @@ app.delete('/api/sub-events/:seid', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Cannot delete the last sub-event' });
         }
 
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await supabaseAdmin
             .from('sub_event')
             .delete()
             .eq('seid', seid);
@@ -1201,7 +1396,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Invalid event ID' });
         }
 
-        const { data: rows, error } = await supabase
+        const { data: rows, error } = await supabaseAdmin
             .from('event')
             .select(`
                 eid, ename, eventdesc, eventdate, eventtime, eventloc, maxpart, maxvoln, regfee, orgusn, poster_url, activity_points,
@@ -1242,14 +1437,14 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
             OrgUsn: event.orgusn
         };
 
-        const { data: participantCheck } = await supabase
+        const { data: participantCheck } = await supabaseAdmin
             .from('participant')
             .select('partstatus, payment_status')
             .eq('partusn', req.session.userUSN)
             .eq('parteid', eventId)
             .limit(1);
 
-        const { data: volunteerCheck } = await supabase
+        const { data: volunteerCheck } = await supabaseAdmin
             .from('volunteer')
             .select('volnstatus')
             .eq('volnusn', req.session.userUSN)
@@ -1272,7 +1467,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
 
 app.get('/api/clubs', requireAuth, async (req, res) => {
     try {
-        const { data: rows, error } = await supabase
+        const { data: rows, error } = await supabaseAdmin
             .from('club')
             .select('cid, cname, clubdesc');
 
@@ -1293,7 +1488,7 @@ app.get('/api/clubs', requireAuth, async (req, res) => {
 
 app.get('/api/my-clubs', requireAuth, async (req, res) => {
     try {
-        const { data: rows, error } = await supabase
+        const { data: rows, error } = await supabaseAdmin
             .from('memberof')
             .select(`
                 club:clubid (
@@ -1324,9 +1519,9 @@ app.get('/api/my-clubs', requireAuth, async (req, res) => {
 
 app.get('/api/students', requireAuth, async (req, res) => {
     try {
-        const { data: rows, error } = await supabase
+        const { data: rows, error } = await supabaseAdmin
             .from('student')
-            .select('usn, sname, sem, mobno, emailid');
+            .select('usn, sname, sem, emailid');
 
         if (error) {
             console.error('Error fetching students:', error);
@@ -1384,7 +1579,7 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
             return res.status(401).json({ error: 'QR code has expired. Please ask the organizer to show a fresh code.' });
         }
 
-        const { data: subEvent, error: subEventError } = await supabase
+        const { data: subEvent, error: subEventError } = await supabaseAdmin
             .from('sub_event')
             .select('eid, se_name')
             .eq('seid', seid)
@@ -1396,7 +1591,7 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
 
         const eventId = subEvent[0].eid;
 
-        const { data: existing, error: existingError } = await supabase
+        const { data: existing, error: existingError } = await supabaseAdmin
             .from('participant')
             .select('*')
             .eq('partusn', usn)
@@ -1409,7 +1604,7 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Your payment is pending verification' });
         }
 
-        const { data: existingAttendance, error: attendanceError } = await supabase
+        const { data: existingAttendance, error: attendanceError } = await supabaseAdmin
             .from('sub_event_attendance')
             .select('*')
             .eq('seid', seid)
@@ -1422,7 +1617,7 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
         }
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAdmin
             .from('sub_event_attendance')
             .insert([{
                 seid: parseInt(seid),
@@ -1433,7 +1628,7 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
 
         if (insertError) return res.status(500).json({ error: 'Failed to mark attendance' });
 
-        const { count: scanCount, error: countError } = await supabase
+        const { count: scanCount, error: countError } = await supabaseAdmin
             .from('sub_event_attendance')
             .select('*', { count: 'exact', head: true })
             .eq('eid', eventId)
@@ -1442,7 +1637,7 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
 
         if (countError) return res.status(500).json({ error: 'Database error' });
 
-        const { data: eventData, error: eventError } = await supabase
+        const { data: eventData, error: eventError } = await supabaseAdmin
             .from('event')
             .select('min_part_scans')
             .eq('eid', eventId)
@@ -1452,7 +1647,7 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
         const thresholdMet = (scanCount || 0) >= minPartScans;
 
         if (thresholdMet) {
-            const { error: updateError } = await supabase
+            const { error: updateError } = await supabaseAdmin
                 .from('participant')
                 .update({ partstatus: true })
                 .eq('partusn', usn)
@@ -1495,7 +1690,7 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
             return res.status(401).json({ error: 'QR code has expired. Please ask the organizer to show a fresh code.' });
         }
 
-        const { data: subEvent, error: subEventError } = await supabase
+        const { data: subEvent, error: subEventError } = await supabaseAdmin
             .from('sub_event')
             .select('eid, se_name')
             .eq('seid', seid)
@@ -1507,7 +1702,7 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
 
         const eventId = subEvent[0].eid;
 
-        const { data: existing, error: existingError } = await supabase
+        const { data: existing, error: existingError } = await supabaseAdmin
             .from('volunteer')
             .select('*')
             .eq('volnusn', usn)
@@ -1517,7 +1712,7 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
         if (existingError) return res.status(500).json({ error: 'Database error' });
         if (!existing?.length) return res.status(404).json({ error: 'You are not registered as a volunteer for this event' });
 
-        const { data: existingAttendance, error: attendanceError } = await supabase
+        const { data: existingAttendance, error: attendanceError } = await supabaseAdmin
             .from('sub_event_attendance')
             .select('*')
             .eq('seid', seid)
@@ -1530,7 +1725,7 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
         }
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAdmin
             .from('sub_event_attendance')
             .insert([{
                 seid: parseInt(seid),
@@ -1541,7 +1736,7 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
 
         if (insertError) return res.status(500).json({ error: 'Failed to mark attendance' });
 
-        const { count: scanCount, error: countError } = await supabase
+        const { count: scanCount, error: countError } = await supabaseAdmin
             .from('sub_event_attendance')
             .select('*', { count: 'exact', head: true })
             .eq('eid', eventId)
@@ -1550,7 +1745,7 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
 
         if (countError) return res.status(500).json({ error: 'Database error' });
 
-        const { data: eventData, error: eventError } = await supabase
+        const { data: eventData, error: eventError } = await supabaseAdmin
             .from('event')
             .select('min_voln_scans')
             .eq('eid', eventId)
@@ -1560,7 +1755,7 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
         const thresholdMet = (scanCount || 0) >= minVolnScans;
 
         if (thresholdMet) {
-            const { error: updateError } = await supabase
+            const { error: updateError } = await supabaseAdmin
                 .from('volunteer')
                 .update({ volnstatus: true })
                 .eq('volnusn', usn)
@@ -1584,187 +1779,275 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
 });
 
 // OLD scan-qr endpoint (DEPRECATED - kept for backward compatibility)
-app.get('/api/scan-qr', async (req, res) => {
+
+// app.get('/api/scan-qr', async (req, res) => {
+//     try {
+//         const { usn, eid } = req.query;
+
+//         if (!usn || !eid) {
+//             return res.status(400).json({ error: 'USN and Event ID are required' });
+//         }
+
+//         const { data: existing, error: existingError } = await supabaseAdmin
+//             .from('participant')
+//             .select('*')
+//             .eq('partusn', usn)
+//             .eq('parteid', eid)
+//             .limit(1);
+
+//         if (existingError) {
+//             console.error('Error checking participant:', existingError);
+//             return res.status(500).json({ error: 'Database error' });
+//         }
+
+//         if (!existing || existing.length === 0) {
+//             return res.status(404).json({ error: 'Participant not found for this event' });
+//         }
+
+//         if (existing[0].partstatus === true) {
+//             return res.status(400).json({ error: 'Participant already checked in' });
+//         }
+
+//         const { error: updateError } = await supabaseAdmin
+//             .from('participant')
+//             .update({ partstatus: true })
+//             .eq('partusn', usn)
+//             .eq('parteid', eid);
+
+//         if (updateError) {
+//             console.error('Error updating participant status:', updateError);
+//             return res.status(500).json({ error: 'Database error' });
+//         }
+
+//         res.json({ success: true, message: 'Participant status updated to checked in' });
+//     } catch (err) {
+//         console.error('Error updating participant status:', err);
+//         res.status(500).json({ error: 'Error updating participant status: ' + err.message });
+//     }
+// });
+
+
+// ==================== ORGANIZER PIN ENDPOINTS ====================
+// Replace ALL existing PIN endpoints in server.js with these
+
+// First time PIN setup — no email needed, nothing exists yet to protect
+app.post('/api/set-organizer-pin', requireAuth, async (req, res) => {
     try {
-        const { usn, eid } = req.query;
+        const { newPin, confirmPin } = req.body;
+        if (!newPin || !/^\d{4,6}$/.test(newPin))
+            return res.status(400).json({ error: 'PIN must be 4 to 6 digits' });
+        if (newPin !== confirmPin)
+            return res.status(400).json({ error: 'PINs do not match' });
 
-        if (!usn || !eid) {
-            return res.status(400).json({ error: 'USN and Event ID are required' });
-        }
+        const { data: userData } = await supabaseAdmin
+            .from('student').select('organizer_pin').eq('usn', req.session.userUSN).single();
 
-        const { data: existing, error: existingError } = await supabase
-            .from('participant')
-            .select('*')
-            .eq('partusn', usn)
-            .eq('parteid', eid)
-            .limit(1);
+        if (userData.organizer_pin)
+            return res.status(400).json({ error: 'PIN already set. Use the change PIN flow.' });
 
-        if (existingError) {
-            console.error('Error checking participant:', existingError);
-            return res.status(500).json({ error: 'Database error' });
-        }
+        const hashedPin = await bcrypt.hash(newPin, 10);
+        await supabaseAdmin.from('student')
+            .update({ organizer_pin: hashedPin }).eq('usn', req.session.userUSN);
 
-        if (!existing || existing.length === 0) {
-            return res.status(404).json({ error: 'Participant not found for this event' });
-        }
-
-        if (existing[0].partstatus === true) {
-            return res.status(400).json({ error: 'Participant already checked in' });
-        }
-
-        const { error: updateError } = await supabase
-            .from('participant')
-            .update({ partstatus: true })
-            .eq('partusn', usn)
-            .eq('parteid', eid);
-
-        if (updateError) {
-            console.error('Error updating participant status:', updateError);
-            return res.status(500).json({ error: 'Database error' });
-        }
-
-        res.json({ success: true, message: 'Participant status updated to checked in' });
+        res.json({ success: true, message: 'Organizer PIN set successfully' });
     } catch (err) {
-        console.error('Error updating participant status:', err);
-        res.status(500).json({ error: 'Error updating participant status: ' + err.message });
+        console.error('Error setting PIN:', err);
+        res.status(500).json({ error: 'Failed to set PIN' });
     }
 });
 
-// ==================== PASSWORD RESET ENDPOINTS ====================
-
-app.post('/api/forgot-password', async (req, res) => {
+// Step 1 — Send OTP to email for PIN change
+app.post('/api/request-pin-otp', requireAuth, async (req, res) => {
     try {
-        const { email } = req.body;
+        const { data: userData, error: userError } = await supabaseAdmin
+            .from('student').select('sname, emailid, organizer_pin')
+            .eq('usn', req.session.userUSN).single();
 
-        if (!email) return res.status(400).json({ error: 'Email is required' });
+        if (userError || !userData)
+            return res.status(404).json({ error: 'User not found' });
+        if (!userData.organizer_pin)
+            return res.status(400).json({ error: 'No PIN set. Use Set PIN instead.' });
 
-        const { data: user, error: userError } = await supabase
-            .from('student')
-            .select('usn, sname, emailid')
-            .eq('emailid', email)
-            .limit(1);
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-        if (userError) {
-            console.error('Error finding user:', userError);
-            return res.status(500).json({ error: 'Database error' });
-        }
+        // Hash and save OTP
+        const hashedOtp = await bcrypt.hash(otp, 10);
+        await supabaseAdmin.from('student').update({
+            pin_otp: hashedOtp,
+            pin_otp_expiry: expiry.toISOString()
+        }).eq('usn', req.session.userUSN);
 
-        if (!user || user.length === 0) {
-            return res.json({
-                success: true,
-                message: 'If an account exists, you will receive a reset link.'
-            });
-        }
-
-        const resetToken = crypto.randomBytes(32).toString('hex');
-        const resetTokenExpiry = new Date(Date.now() + 3600000);
-
-        const { error: updateError } = await supabase
-            .from('student')
-            .update({
-                reset_token: resetToken,
-                reset_token_expiry: resetTokenExpiry.toISOString()
-            })
-            .eq('emailid', email);
-
-        if (updateError) {
-            console.error('Error saving token:', updateError);
-            return res.status(500).json({ error: 'Failed to generate link' });
-        }
-
-        const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-
+        // Send OTP email
         const sendSmtpEmail = new Brevo.SendSmtpEmail();
-        sendSmtpEmail.subject = "Password Reset Request - E-Pass";
-        sendSmtpEmail.sender = { "name": "E-Pass System", "email": "flopass333@gmail.com" };
-        sendSmtpEmail.to = [{ "email": email, "name": user[0].sname }];
+        sendSmtpEmail.subject = 'Your Organizer PIN Change OTP - FLO';
+        sendSmtpEmail.sender = { name: 'FLO E-Pass System', email: 'flobms3@gmail.com' };
+        sendSmtpEmail.to = [{ email: userData.emailid, name: userData.sname }];
         sendSmtpEmail.htmlContent = `
             <html>
-                <body style="font-family: Arial, sans-serif; color: #333;">
-                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                        <h2 style="color: #1A2980;">Password Reset</h2>
-                        <p>Hello <strong>${user[0].sname}</strong>,</p>
-                        <p>Click below to reset your password:</p>
-                        <p>
-                            <a href="${resetLink}" style="background-color: #1A2980; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
-                        </p>
-                        <p>Or copy this link: <br/>${resetLink}</p>
-                        <p><i>This link expires in 1 hour.</i></p>
+                <body style="font-family: Arial, sans-serif; color: #333; background: #f5f5f5; padding: 20px;">
+                    <div style="max-width: 500px; margin: 0 auto; background: #fff; border: 3px solid #0D0D0D; padding: 32px; box-shadow: 5px 5px 0 #0D0D0D;">
+                        <h2 style="color: #0D0D0D; font-family: monospace; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 8px;">FLO E-Pass</h2>
+                        <div style="height: 4px; background: #FFD600; width: 40px; margin-bottom: 24px;"></div>
+                        <p style="margin: 0 0 8px;">Hello <strong>${userData.sname}</strong>,</p>
+                        <p style="margin: 0 0 24px; color: #555;">Your OTP to change your Organizer PIN is:</p>
+                        <div style="background: #0D0D0D; color: #FFD600; font-family: monospace; font-size: 36px; font-weight: 700; letter-spacing: 12px; text-align: center; padding: 20px; margin-bottom: 24px;">
+                            ${otp}
+                        </div>
+                        <p style="margin: 0 0 8px; color: #555; font-size: 13px;">This OTP is valid for <strong>5 minutes</strong> only.</p>
+                        <p style="margin: 0; color: #999; font-size: 12px; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">If you did not request this, ignore this email. Your PIN has not changed.</p>
                     </div>
                 </body>
             </html>
         `;
 
-        const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
-        console.log('✅ Email sent via Brevo. Message ID:', data.messageId);
-
-        res.json({
-            success: true,
-            message: 'If an account exists, you will receive a reset link.'
-        });
-
+        await apiInstance.sendTransacEmail(sendSmtpEmail);
+        console.log(`✅ PIN OTP sent to ${userData.emailid}`);
+        res.json({ success: true, message: `OTP sent to ${userData.emailid}. Valid for 5 minutes.` });
     } catch (err) {
-        console.error('Error in forgot password:', err);
-        if (err.body) console.error('Brevo Error Body:', err.body);
-        res.status(500).json({ error: 'Failed to process request' });
+        console.error('Error sending PIN OTP:', err);
+        res.status(500).json({ error: 'Failed to send OTP. Please try again.' });
     }
 });
 
-app.post('/api/reset-password', async (req, res) => {
+// Step 2 — Verify OTP
+app.post('/api/verify-pin-otp', requireAuth, async (req, res) => {
     try {
-        const { token, newPassword } = req.body;
+        const { otp } = req.body;
 
-        if (!token || !newPassword) {
-            return res.status(400).json({ error: 'Token and new password are required' });
-        }
-        if (newPassword.length < 6) {
-            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
-        }
+        if (!otp || !/^\d{6}$/.test(otp))
+            return res.status(400).json({ error: 'Please enter a valid 6-digit OTP' });
 
-        const { data: user, error: userError } = await supabase
-            .from('student')
-            .select('usn, sname, emailid, reset_token_expiry')
-            .eq('reset_token', token)
-            .limit(1);
+        const { data: userData, error: userError } = await supabaseAdmin
+            .from('student').select('pin_otp, pin_otp_expiry')
+            .eq('usn', req.session.userUSN).single();
 
-        if (userError) {
-            console.error('Error finding user with token:', userError);
-            return res.status(500).json({ error: 'Database error' });
-        }
-        if (!user || user.length === 0) {
-            return res.status(400).json({ error: 'Invalid or expired reset link' });
-        }
+        if (userError || !userData)
+            return res.status(404).json({ error: 'User not found' });
 
-        const tokenExpiry = new Date(user[0].reset_token_expiry);
-        if (tokenExpiry < new Date()) {
-            return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
+        if (!userData.pin_otp || !userData.pin_otp_expiry)
+            return res.status(400).json({ error: 'No OTP requested. Please request a new OTP first.' });
+
+        // Check expiry
+        if (new Date(userData.pin_otp_expiry) < new Date()) {
+            await supabaseAdmin.from('student')
+                .update({ pin_otp: null, pin_otp_expiry: null }).eq('usn', req.session.userUSN);
+            return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
         }
 
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        // Verify OTP
+        const isValid = await bcrypt.compare(otp, userData.pin_otp);
+        if (!isValid)
+            return res.status(401).json({ error: 'Incorrect OTP. Please try again.' });
 
-        const { error: updateError } = await supabase
-            .from('student')
-            .update({
-                password: hashedPassword,
-                reset_token: null,
-                reset_token_expiry: null
-            })
-            .eq('reset_token', token);
+        // Clear OTP so it cannot be reused
+        await supabaseAdmin.from('student')
+            .update({ pin_otp: null, pin_otp_expiry: null }).eq('usn', req.session.userUSN);
 
-        if (updateError) {
-            console.error('Error updating password:', updateError);
-            return res.status(500).json({ error: 'Failed to reset password' });
-        }
-
-        console.log('✅ Password reset successful for:', user[0].usn);
-        res.json({
-            success: true,
-            message: 'Password reset successfully! You can now sign in with your new password.',
-            userName: user[0].sname
-        });
+        res.json({ success: true, message: 'OTP verified. You can now set your new PIN.' });
     } catch (err) {
-        console.error('Error in reset password:', err);
-        res.status(500).json({ error: 'Failed to reset password' });
+        console.error('Error verifying PIN OTP:', err);
+        res.status(500).json({ error: 'Failed to verify OTP. Please try again.' });
+    }
+});
+
+// Step 3 — Set new PIN after OTP verified (also used by reset-pin page as fallback)
+app.post('/api/reset-organizer-pin', requireAuth, async (req, res) => {
+    try {
+        const { newPin, confirmPin } = req.body;
+
+        if (!newPin) return res.status(400).json({ error: 'New PIN is required' });
+        if (!/^\d+$/.test(newPin)) return res.status(400).json({ error: 'PIN must contain only digits' });
+        if (newPin.length < 4) return res.status(400).json({ error: 'PIN must be at least 4 digits' });
+        if (newPin.length > 6) return res.status(400).json({ error: 'PIN must be at most 6 digits' });
+        if (newPin !== confirmPin) return res.status(400).json({ error: 'PINs do not match' });
+
+        // Weak PIN check
+        const weakPins = ['123456', '654321', '111111', '000000', '1234', '0000', '1111', '9999', '123123', '112233', '123', '000', '111', '999'];
+        if (weakPins.includes(newPin))
+            return res.status(400).json({ error: 'This PIN is too common. Please choose a stronger PIN.' });
+
+        // All same digits
+        if (/^(\d)\1+$/.test(newPin))
+            return res.status(400).json({ error: 'PIN cannot be all the same digit' });
+
+        // Sequential digits
+        const digits = newPin.split('').map(Number);
+        let asc = true, desc = true;
+        for (let i = 1; i < digits.length; i++) {
+            if (digits[i] !== digits[i - 1] + 1) asc = false;
+            if (digits[i] !== digits[i - 1] - 1) desc = false;
+        }
+        if (asc || desc)
+            return res.status(400).json({ error: 'PIN cannot be sequential digits (e.g. 1234 or 9876)' });
+
+        const hashedPin = await bcrypt.hash(newPin, 10);
+        await supabaseAdmin.from('student')
+            .update({ organizer_pin: hashedPin }).eq('usn', req.session.userUSN);
+
+        console.log(`✅ Organizer PIN changed for: ${req.session.userUSN}`);
+        res.json({ success: true, message: 'Organizer PIN changed successfully' });
+    } catch (err) {
+        console.error('Error changing PIN:', err);
+        res.status(500).json({ error: 'Failed to change PIN. Please try again.' });
+    }
+});
+
+
+// Complete profile setup for new Google sign-in users
+app.post('/api/complete-google-signup', requireAuthToken, async (req, res) => {
+    try {
+        const { usn, sem, mobno, organizerPin } = req.body;
+
+        if (!usn || !sem || !mobno) {
+            return res.status(400).json({ error: 'USN, semester and mobile are required' });
+        }
+
+        if (!organizerPin || !/^\d{4,6}$/.test(organizerPin)) {
+            return res.status(400).json({ error: 'Organizer PIN must be 4 to 6 digits' });
+        }
+
+        // Check USN not already taken
+        const { data: existing } = await supabaseAdmin
+            .from('student')
+            .select('usn')
+            .eq('usn', usn)
+            .maybeSingle();
+
+        if (existing) {
+            return res.status(400).json({ error: 'This USN is already registered' });
+        }
+
+        // Get name and email from auth user (already in session)
+        const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(req.session.authId);
+        const name = user.user_metadata?.full_name || user.email.split('@')[0];
+        const email = user.email;
+
+        const hashedPin = await bcrypt.hash(organizerPin, 10);
+
+        const { error: insertError } = await supabaseAdmin
+            .from('student')
+            .insert([{
+                usn,
+                sname: name,
+                sem: parseInt(sem),
+                mobno,
+                emailid: email,
+                auth_id: req.session.authId,
+                organizer_pin: hashedPin
+            }]);
+
+        if (insertError) {
+            console.error('Error creating student record:', insertError);
+            return res.status(500).json({ error: 'Failed to complete profile setup' });
+        }
+
+        console.log('✅ Google user onboarded:', usn);
+        res.json({ success: true, userName: name });
+    } catch (err) {
+        console.error('Error in Google onboarding:', err);
+        res.status(500).json({ error: 'Failed to complete setup' });
     }
 });
 
@@ -1780,7 +2063,7 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Transaction ID is required' });
         }
 
-        const { data: existing, error: existingError } = await supabase
+        const { data: existing, error: existingError } = await supabaseAdmin
             .from('participant')
             .select('*')
             .eq('partusn', userUSN)
@@ -1796,7 +2079,7 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'You are already registered for this event' });
         }
 
-        const { data: eventData, error: eventError } = await supabase
+        const { data: eventData, error: eventError } = await supabaseAdmin
             .from('event')
             .select('regfee, maxpart')
             .eq('eid', eventId)
@@ -1815,7 +2098,7 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
         }
 
         if (maxPart > 0) {
-            const { count, error: countError } = await supabase
+            const { count, error: countError } = await supabaseAdmin
                 .from('participant')
                 .select('*', { count: 'exact', head: true })
                 .eq('parteid', eventId);
@@ -1829,7 +2112,7 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
             }
         }
 
-        const { error: paymentError } = await supabase.from('payment').insert([{
+        const { error: paymentError } = await supabaseAdmin.from('payment').insert([{
             usn: userUSN,
             event_id: eventId,
             amount,
@@ -1842,7 +2125,7 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Failed to save payment' });
         }
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAdmin
             .from('participant')
             .insert([{
                 partusn: userUSN,
@@ -1879,7 +2162,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Participant USN and Event ID are required' });
         }
 
-        const { data: event, error: eventError } = await supabase
+        const { data: event, error: eventError } = await supabaseAdmin
             .from('event')
             .select('orgusn, is_team')
             .eq('eid', eventId)
@@ -1896,7 +2179,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
         const isTeamEvent = event[0].is_team;
 
         if (isTeamEvent) {
-            const { data: teamData } = await supabase
+            const { data: teamData } = await supabaseAdmin
                 .from('team')
                 .select('id')
                 .eq('event_id', eventId)
@@ -1906,7 +2189,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
             const teamId = teamData?.[0]?.id;
 
             if (teamId) {
-                const { data: teamMembers, error: teamMembersError } = await supabase
+                const { data: teamMembers, error: teamMembersError } = await supabaseAdmin
                     .from('team_members')
                     .select('student_usn')
                     .eq('team_id', teamId)
@@ -1919,7 +2202,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
 
                 const allTeamUSNs = teamMembers.map(m => m.student_usn);
 
-                const { error: paymentUpdateError } = await supabase
+                const { error: paymentUpdateError } = await supabaseAdmin
                     .from('payment')
                     .update({ status: 'verified' })
                     .eq('event_id', eventId)
@@ -1931,7 +2214,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
                     return res.status(500).json({ error: 'Failed to update payment status' });
                 }
 
-                const { error: participantUpdateError } = await supabase
+                const { error: participantUpdateError } = await supabaseAdmin
                     .from('participant')
                     .update({ payment_status: 'verified' })
                     .in('partusn', allTeamUSNs)
@@ -1952,7 +2235,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
             }
         }
 
-        const { error: paymentUpdateError } = await supabase
+        const { error: paymentUpdateError } = await supabaseAdmin
             .from('payment')
             .update({ status: 'verified' })
             .eq('usn', participantUSN)
@@ -1964,7 +2247,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'Failed to update payment status' });
         }
 
-        const { error: participantUpdateError } = await supabase
+        const { error: participantUpdateError } = await supabaseAdmin
             .from('participant')
             .update({ payment_status: 'verified' })
             .eq('partusn', participantUSN)
@@ -1992,7 +2275,7 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        const { data: event, error: eventError } = await supabase
+        const { data: event, error: eventError } = await supabaseAdmin
             .from('event')
             .select('orgusn, ename, is_team')
             .eq('eid', eventId)
@@ -2010,7 +2293,7 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
         let paymentsToShow = [];
 
         if (isTeamEvent) {
-            const { data: pendingPayments, error: paymentsError } = await supabase
+            const { data: pendingPayments, error: paymentsError } = await supabaseAdmin
                 .from('payment')
                 .select(`
                     usn, amount, upi_transaction_id, created_at, status,
@@ -2025,7 +2308,7 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
             }
 
             for (const payment of pendingPayments || []) {
-                const { data: teamData } = await supabase
+                const { data: teamData } = await supabaseAdmin
                     .from('team')
                     .select('id, team_name, leader_usn')
                     .eq('event_id', eventId)
@@ -2033,7 +2316,7 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
                     .limit(1);
 
                 if (teamData && teamData.length > 0) {
-                    const { count: memberCount } = await supabase
+                    const { count: memberCount } = await supabaseAdmin
                         .from('team_members')
                         .select('*', { count: 'exact', head: true })
                         .eq('team_id', teamData[0].id)
@@ -2054,7 +2337,7 @@ app.get('/api/events/:eventId/pending-payments', requireAuth, async (req, res) =
                 }
             }
         } else {
-            const { data: pendingPayments, error: paymentsError } = await supabase
+            const { data: pendingPayments, error: paymentsError } = await supabaseAdmin
                 .from('payment')
                 .select(`
                     usn, amount, upi_transaction_id, created_at, status,
@@ -2105,7 +2388,7 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Team name and member USNs are required' });
         }
 
-        const { data: event, error: eventError } = await supabase
+        const { data: event, error: eventError } = await supabaseAdmin
             .from('event')
             .select('eid, ename, is_team, min_team_size, max_team_size, regfee')
             .eq('eid', eventId)
@@ -2129,7 +2412,7 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
             });
         }
 
-        const { data: existingTeam } = await supabase
+        const { data: existingTeam } = await supabaseAdmin
             .from('team_members')
             .select('team_id, join_status, team:team_id(event_id, leader_usn)')
             .eq('student_usn', userUSN);
@@ -2148,7 +2431,7 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
         }
 
         if (memberUSNs.length > 0) {
-            const { data: students, error: studentError } = await supabase
+            const { data: students, error: studentError } = await supabaseAdmin
                 .from('student')
                 .select('usn, sname')
                 .in('usn', memberUSNs);
@@ -2157,7 +2440,7 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
                 return res.status(400).json({ error: 'One or more member USNs are invalid' });
             }
 
-            const { data: memberTeamCheck } = await supabase
+            const { data: memberTeamCheck } = await supabaseAdmin
                 .from('team_members')
                 .select('student_usn, join_status, team:team_id(event_id)')
                 .in('student_usn', memberUSNs)
@@ -2175,7 +2458,7 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
             }
         }
 
-        const { data: teamData, error: teamError } = await supabase
+        const { data: teamData, error: teamError } = await supabaseAdmin
             .from('team')
             .insert([{
                 team_name: teamName,
@@ -2206,13 +2489,13 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
             });
         });
 
-        const { error: membersError } = await supabase
+        const { error: membersError } = await supabaseAdmin
             .from('team_members')
             .insert(teamMembersToInsert);
 
         if (membersError) {
             console.error('Error adding team members:', membersError);
-            await supabase.from('team').delete().eq('id', teamId);
+            await supabaseAdmin.from('team').delete().eq('id', teamId);
             return res.status(500).json({ error: 'Failed to add team members' });
         }
 
@@ -2242,7 +2525,7 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Team leader USN is required' });
         }
 
-        const { data: existingMembership } = await supabase
+        const { data: existingMembership } = await supabaseAdmin
             .from('team_members')
             .select('team_id, team:team_id(event_id, registration_complete)')
             .eq('student_usn', userUSN);
@@ -2259,7 +2542,7 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             }
         }
 
-        const { data: team, error: teamError } = await supabase
+        const { data: team, error: teamError } = await supabaseAdmin
             .from('team')
             .select('id, team_name, registration_complete, max_team_size:event_id(max_team_size)')
             .eq('leader_usn', leaderUSN)
@@ -2276,7 +2559,7 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'This team has already completed registration' });
         }
 
-        const { data: membership, error: membershipError } = await supabase
+        const { data: membership, error: membershipError } = await supabaseAdmin
             .from('team_members')
             .select('join_status')
             .eq('team_id', teamId)
@@ -2291,7 +2574,7 @@ app.post('/api/events/:eventId/join-team', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'You have already joined this team' });
         }
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseAdmin
             .from('team_members')
             .update({ join_status: true })
             .eq('team_id', teamId)
@@ -2318,7 +2601,7 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        const { data: event } = await supabase
+        const { data: event } = await supabaseAdmin
             .from('event')
             .select('is_team, min_team_size, max_team_size, regfee')
             .eq('eid', eventId)
@@ -2332,7 +2615,7 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
             return res.json({ isTeamEvent: false });
         }
 
-        const { data: leaderTeam } = await supabase
+        const { data: leaderTeam } = await supabaseAdmin
             .from('team')
             .select('id, team_name, registration_complete')
             .eq('leader_usn', userUSN)
@@ -2342,7 +2625,7 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
         if (leaderTeam && leaderTeam.length > 0) {
             const teamId = leaderTeam[0].id;
 
-            const { data: members } = await supabase
+            const { data: members } = await supabaseAdmin
                 .from('team_members')
                 .select('student_usn, join_status, student:student_usn(sname)')
                 .eq('team_id', teamId);
@@ -2366,7 +2649,7 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
             });
         }
 
-        const { data: memberTeam } = await supabase
+        const { data: memberTeam } = await supabaseAdmin
             .from('team_members')
             .select(`
                 team_id, join_status,
@@ -2381,7 +2664,7 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
             );
 
             if (teamInEvent) {
-                const { data: teamDetails } = await supabase
+                const { data: teamDetails } = await supabaseAdmin
                     .from('team_members')
                     .select('student_usn, join_status, student:student_usn(sname)')
                     .eq('team_id', teamInEvent.team.id);
@@ -2424,7 +2707,7 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        const { data: team, error: teamError } = await supabase
+        const { data: team, error: teamError } = await supabaseAdmin
             .from('team')
             .select('id, registration_complete, event:event_id(regfee, min_team_size)')
             .eq('leader_usn', userUSN)
@@ -2443,7 +2726,7 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
         const regFee = team[0].event?.regfee || 0;
         const minSize = team[0].event?.min_team_size || 2;
 
-        const { data: members } = await supabase
+        const { data: members } = await supabaseAdmin
             .from('team_members')
             .select('student_usn, join_status')
             .eq('team_id', teamId)
@@ -2467,7 +2750,7 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
             });
         }
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseAdmin
             .from('team')
             .update({ registration_complete: true })
             .eq('id', teamId);
@@ -2485,7 +2768,7 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
             team_id: teamId
         }));
 
-        const { error: participantError } = await supabase
+        const { error: participantError } = await supabaseAdmin
             .from('participant')
             .insert(participantsToInsert);
 
@@ -2516,7 +2799,7 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             return res.status(400).json({ error: 'Transaction ID is required' });
         }
 
-        const { data: team, error: teamError } = await supabase
+        const { data: team, error: teamError } = await supabaseAdmin
             .from('team')
             .select('id, registration_complete, event:event_id(regfee, min_team_size, maxpart)')
             .eq('leader_usn', userUSN)
@@ -2540,7 +2823,7 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             return res.status(400).json({ error: 'This is not a paid event' });
         }
 
-        const { data: members, error: memberError } = await supabase
+        const { data: members, error: memberError } = await supabaseAdmin
             .from('team_members')
             .select('student_usn, join_status')
             .eq('team_id', teamId)
@@ -2559,7 +2842,7 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
         }
 
         if (maxPart > 0) {
-            const { count, error: countError } = await supabase
+            const { count, error: countError } = await supabaseAdmin
                 .from('team')
                 .select('*', { count: 'exact', head: true })
                 .eq('event_id', eventId)
@@ -2573,7 +2856,7 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             }
         }
 
-        const { error: paymentError } = await supabase.from('payment').insert([{
+        const { error: paymentError } = await supabaseAdmin.from('payment').insert([{
             usn: userUSN,
             event_id: eventId,
             amount: regFee,
@@ -2586,7 +2869,7 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             return res.status(500).json({ error: 'Failed to save payment' });
         }
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseAdmin
             .from('team')
             .update({ registration_complete: true })
             .eq('id', teamId);
@@ -2603,7 +2886,7 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
             team_id: teamId
         }));
 
-        const { error: participantError } = await supabase
+        const { error: participantError } = await supabaseAdmin
             .from('participant')
             .insert(participantsToInsert);
 
@@ -2632,7 +2915,7 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Member USNs are required' });
         }
 
-        const { data: team } = await supabase
+        const { data: team } = await supabaseAdmin
             .from('team')
             .select('leader_usn, event_id, registration_complete, event:event_id(max_team_size)')
             .eq('id', teamId)
@@ -2650,7 +2933,7 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Cannot add members to a registered team' });
         }
 
-        const { count: currentSize } = await supabase
+        const { count: currentSize } = await supabaseAdmin
             .from('team_members')
             .select('*', { count: 'exact', head: true })
             .eq('team_id', teamId);
@@ -2660,7 +2943,7 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             return res.status(400).json({ error: `Cannot exceed maximum team size of ${maxSize}` });
         }
 
-        const { data: students } = await supabase
+        const { data: students } = await supabaseAdmin
             .from('student')
             .select('usn')
             .in('usn', memberUSNs);
@@ -2669,7 +2952,7 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'One or more member USNs are invalid' });
         }
 
-        const { data: conflictCheck } = await supabase
+        const { data: conflictCheck } = await supabaseAdmin
             .from('team_members')
             .select('student_usn, team:team_id(event_id)')
             .in('student_usn', memberUSNs);
@@ -2689,7 +2972,7 @@ app.post('/api/teams/:teamId/add-members', requireAuth, async (req, res) => {
             join_status: false
         }));
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAdmin
             .from('team_members')
             .insert(membersToInsert);
 
@@ -2710,7 +2993,7 @@ app.get('/api/events/:eventId/my-invites', requireAuth, async (req, res) => {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        const { data: invites, error } = await supabase
+        const { data: invites, error } = await supabaseAdmin
             .from('team_members')
             .select(`
                 team_id, join_status,
@@ -2749,7 +3032,7 @@ app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
 
         console.log(`Confirming join for user ${userUSN} to team ${teamId}`);
 
-        const { data: membership, error: membershipError } = await supabase
+        const { data: membership, error: membershipError } = await supabaseAdmin
             .from('team_members')
             .select('join_status, team:team_id(event_id, registration_complete, team_name)')
             .eq('team_id', teamId)
@@ -2773,7 +3056,7 @@ app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'This team has already completed registration' });
         }
 
-        const { data: otherTeams } = await supabase
+        const { data: otherTeams } = await supabaseAdmin
             .from('team_members')
             .select('team_id, team:team_id(event_id)')
             .eq('student_usn', userUSN)
@@ -2788,7 +3071,7 @@ app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
             }
         }
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseAdmin
             .from('team_members')
             .update({ join_status: true })
             .eq('team_id', teamId)
@@ -2818,7 +3101,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
 
-        const { data: event, error: eventError } = await supabase
+        const { data: event, error: eventError } = await supabaseAdmin
             .from('event')
             .select(`
                 eid, ename, eventdate, eventtime, eventloc, orgusn,
@@ -2833,7 +3116,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
 
         const eventData = event[0];
 
-        const { data: participants, error: participantError } = await supabase
+        const { data: participants, error: participantError } = await supabaseAdmin
             .from('participant')
             .select(`
                 partusn, partstatus, payment_status, team_id,
@@ -2847,7 +3130,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             return res.status(500).json({ error: 'Database error (participants)' });
         }
 
-        const { data: volunteers, error: volunteerError } = await supabase
+        const { data: volunteers, error: volunteerError } = await supabaseAdmin
             .from('volunteer')
             .select(`volnusn, volnstatus, student:volnusn (sname)`)
             .eq('volneid', eventId);
@@ -2901,7 +3184,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
 
         const maxActivityPts = eventData.max_activity_pts || 0;
 
-        const { data: attendanceMapData } = await supabase
+        const { data: attendanceMapData } = await supabaseAdmin
             .from('sub_event_attendance')
             .select('usn, sub_event!inner(activity_pts)')
             .eq('eid', eventId)
@@ -2988,7 +3271,7 @@ app.get('/api/sub-events/:seid/qr-token', requireAuth, async (req, res) => {
         const seid = req.params.seid;
         const userUSN = req.session.userUSN;
 
-        const { data: subEvent, error } = await supabase
+        const { data: subEvent, error } = await supabaseAdmin
             .from('sub_event')
             .select('eid, se_name')
             .eq('seid', seid)
@@ -3000,7 +3283,7 @@ app.get('/api/sub-events/:seid/qr-token', requireAuth, async (req, res) => {
 
         const eventId = subEvent[0].eid;
 
-        const { data: event, error: eventError } = await supabase
+        const { data: event, error: eventError } = await supabaseAdmin
             .from('event')
             .select('orgusn')
             .eq('eid', eventId)

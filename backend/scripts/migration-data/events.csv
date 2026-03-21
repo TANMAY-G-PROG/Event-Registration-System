@@ -1,0 +1,3 @@
+eid,ename,eventdesc,eventdate,eventtime,eventloc,maxpart,maxvoln,orgusn,orgcid,regfee,upi_id,is_team,min_team_size,max_team_size,poster_url,banner_url,activity_points,certificate_info,max_activity_pts,vol_activity_pts,min_part_scans,min_voln_scans
+56,Utsav Demo,"Utsav is a vibrant cultural event that celebrates tradition, creativity, and community participation.",2026-03-25,14:00:00,PJ Block,100,5,1BM23IS000,1,100.00,bmsce@okaxis,false,null,null,null,null,0,This certificate is awarded in appreciation of your participation in Utsav.We thank you for being a part of the celebration.,0,0,1,1
+69,Open Day,Project Exhibition of BMSCE,2026-03-28,09:00:00,Indoor Stadium,10000,1,1BM23IS000,1,0.00,null,false,null,null,null,null,5,null,5,10,1,1
