@@ -25,6 +25,7 @@ jobs:
 
       - name: npm install, build, and test
         run: |
+          cd backend
           npm install
           npm run build --if-present
           npm run test --if-present
@@ -51,5 +52,5 @@ jobs:
         with:
           app-name: 'flobms-site-neo'
           slot-name: 'Production'
-          package: .
+          package: ./backend
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_7597122DDDA148BCA192C73A5A7A92CA }}
