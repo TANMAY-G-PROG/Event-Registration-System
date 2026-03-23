@@ -1308,7 +1308,7 @@ app.post('/api/request-pin-otp', requireAuth, async (req, res) => {
         }).eq('usn', req.session.userUSN);
         const sendSmtpEmail = new Brevo.SendSmtpEmail();
         sendSmtpEmail.subject = 'Your Organizer PIN Change OTP - FLO';
-        sendSmtpEmail.sender = { name: 'FLO E-Pass System', email: 'flobms3@gmail.com' };
+        sendSmtpEmail.sender = { name: 'FLO', email: 'epass@flobms.com' };
         sendSmtpEmail.to = [{ email: userData.emailid, name: userData.sname }];
         sendSmtpEmail.htmlContent = `
             <html><body style="font-family: Arial, sans-serif; color: #333; background: #f5f5f5; padding: 20px;">
