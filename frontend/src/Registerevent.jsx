@@ -61,6 +61,14 @@ function resolveBanner(event) {
 // COLOR EXTRACTION
 // ============================================================================
 
+// Convert a Cloudinary URL to a tiny 50x50 thumbnail.
+// This keeps the cross-origin canvas request lightweight and avoids
+// issues with restrictive CORS headers on the original upload URL.
+function toCloudinaryThumb(url) {
+  if (!url || !url.includes('res.cloudinary.com')) return url;
+  return url.replace('/upload/', '/upload/w_50,h_50,c_fill,q_10,f_jpg/');
+}
+
 async function extractColors(imageUrl) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -132,7 +140,10 @@ async function extractColors(imageUrl) {
     };
 
     img.onerror = () => { resolve(DEFAULT_COLORS); };
-    img.src = imageUrl;
+    // Use a small Cloudinary thumbnail to avoid CORS issues on the canvas.
+    // The thumbnail transformation makes the image CORS-accessible even when
+    // the original upload URL has restrictive headers.
+    img.src = toCloudinaryThumb(imageUrl) || imageUrl;
   });
 }
 
@@ -699,7 +710,6 @@ function EventGalleryCard({ event, isActive, index, currentIndex, onOpen, render
             src={resolveBanner(event)}
             alt={event.ename}
             style={{ transform: 'scale(1)' }}
-            crossOrigin="anonymous"
             draggable={false}
             loading="lazy"
           />
