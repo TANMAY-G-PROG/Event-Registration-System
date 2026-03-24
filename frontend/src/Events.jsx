@@ -66,7 +66,7 @@ export default function Events() {
         <article className="card card--3" onClick={() => navigate('/volunteers')}>
           <span className="card__num">03</span>
           <div className="card__img">
-            <img src="https://ik.imagekit.io/flopass/participants.png?tr=w-800,h-600,fo-auto,dpr-auto,q-100" alt="Volunteers" loading="lazy" />
+            <img src="https://ik.imagekit.io/flopass/volunteers1.jpeg?tr=w-800,h-600,fo-auto,dpr-auto,q-100" alt="Volunteers" loading="lazy" />
           </div>
           <div className="card__info">
             <h3 className="card__title">Events Volunteered</h3>
