@@ -120,13 +120,16 @@ export default function Login() {
     }
   };
 
-  const handleSignInChange = (e) =>
-  setSignInData({
-    ...signInData,
-    [e.target.name]:
-      e.target.name === "usn" ? e.target.value.toUpperCase() : e.target.value,
-  });
+  // const handleSignInChange = (e) => setSignInData({ ...signInData, [e.target.name]: e.target.value });
 
+  const handleSignInChange = (e) => {
+    const { name, value } = e.target;
+
+    setSignInData((prev) => ({
+      ...prev,
+      [name]: name === "usn" ? value.toUpperCase() : value,
+    }));
+  };
   const handleSignUpChange = (e) => {
     const { name, value } = e.target;
     setSignUpData((prev) => ({
