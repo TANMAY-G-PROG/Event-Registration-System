@@ -691,6 +691,7 @@ input {
   outline: none;
   transition: border-color var(--ease), box-shadow var(--ease), background var(--ease);
   caret-color: var(--forest);
+  text-transform: uppercase;
 }
 
 .flo-input::placeholder {
