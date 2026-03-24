@@ -1,9 +1,14 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import './volunteers.css';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from "./api.js";
+
+// --- PDF Generation Imports ---
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import { apiFetch } from "./api.js";
+
+// Cache FONT only — template is never cached so coordinate changes always reflect immediately
+let cachedFontBytes = null;
 
 const Volunteers = () => {
   const navigate = useNavigate();
@@ -91,7 +96,6 @@ const Volunteers = () => {
       else categorized.upcoming.push(event);
     });
 
-    // Sort upcoming (soonest first) and completed (most recent first)
     categorized.upcoming.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
     categorized.completed.sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
 
@@ -114,10 +118,49 @@ const Volunteers = () => {
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Helper: draw centred text on a pdf-lib page
+  // ─────────────────────────────────────────────────────────────────────────
+  const drawCentred = (page, text, { font, size, color, y, pageWidth }) => {
+    const textWidth = font.widthOfTextAtSize(text, size);
+    page.drawText(text, { x: (pageWidth - textWidth) / 2, y, size, font, color });
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Helper: word-wrap and draw a paragraph centred on the page
+  // ─────────────────────────────────────────────────────────────────────────
+  const drawWrappedCentred = (page, text, { font, size, color, startY, maxWidth, lineHeight, pageWidth }) => {
+    const words = text.split(' ');
+    const lines = [];
+    let current = '';
+
+    words.forEach(word => {
+      const test = current ? current + ' ' + word : word;
+      if (font.widthOfTextAtSize(test, size) > maxWidth && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    });
+    if (current) lines.push(current);
+
+    let y = startY;
+    lines.forEach(line => {
+      const lw = font.widthOfTextAtSize(line, size);
+      page.drawText(line, { x: (pageWidth - lw) / 2, y, size, font, color });
+      y -= lineHeight;
+    });
+
+    return y; // y position after last line
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // generateCertificate
+  // ─────────────────────────────────────────────────────────────────────────
   const generateCertificate = async (event) => {
     if (downloadLinks[event.eid]?.url) window.URL.revokeObjectURL(downloadLinks[event.eid].url);
     setGeneratingIds(prev => new Set(prev).add(event.eid));
-    setDownloadLinks(prev => ({ ...prev, [event.eid]: null }));
 
     try {
       if (!event.VolnStatus) {
@@ -127,51 +170,97 @@ const Volunteers = () => {
       }
 
       const t = new Date().getTime();
-      const existingPdfBytes = await fetch(`/certificate-template.pdf?v=${t}`).then(res => {
-        if (!res.ok) throw new Error('Template not found');
-        return res.arrayBuffer();
-      });
 
-      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      // ── Load template ──
+      const res = await fetch(`/openday2.pdf?v=${t}`);
+      if (!res.ok) throw new Error('Template not found');
+      const templateBytes = await res.arrayBuffer();
+
+      const pdfDoc = await PDFDocument.load(templateBytes);
       pdfDoc.registerFontkit(fontkit);
       const page = pdfDoc.getPages()[0];
       const { width } = page.getSize();
 
+      // ── Load fonts (cached) ──
       let nameFont;
       try {
-        const fontBytes = await fetch(`/Allura-Regular.ttf?v=${t}`).then(r => r.ok ? r.arrayBuffer() : Promise.reject());
-        nameFont = await pdfDoc.embedFont(fontBytes);
-      } catch { nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold); }
+        if (!cachedFontBytes) {
+          const fontRes = await fetch(`/Allura-Regular.ttf?v=${t}`);
+          if (fontRes.ok) cachedFontBytes = await fontRes.arrayBuffer();
+          else throw new Error('Font missing');
+        }
+        nameFont = await pdfDoc.embedFont(cachedFontBytes);
+      } catch {
+        nameFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBoldItalic);
+      }
 
-      const font = await pdfDoc.embedFont(StandardFonts.Courier);
-      const boldFont = await pdfDoc.embedFont(StandardFonts.CourierBold);
+      const regularFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+      const boldFont    = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
-      const nameText = userInfo.userName;
-      const nameWidth = nameFont.widthOfTextAtSize(nameText, 38);
-      page.drawText(nameText, { x: (width - nameWidth) / 2, y: 250, size: 38, font: nameFont, color: rgb(0.97, 0.85, 0.57) });
-      page.drawText(userInfo.userUSN, { x: 170, y: 160, size: 19, font, color: rgb(1, 1, 1) });
-      page.drawText(formatDate(event.eventDate), { x: 510, y: 160, size: 16, font: boldFont, color: rgb(1, 1, 1) });
+      // ── Colours ──
+      const gold       = rgb(0.97, 0.85, 0.57);
+      const white      = rgb(1, 1, 1);
 
-      const descFont = font;
-      const contentText = event.certificate_info || event.eventdesc || event.ename;
-      const words = contentText.split(' ');
+      // ── Shared layout constants ──
+      const maxWidth   = width * 0.72;
+      const lineHeight = 18;
 
-      let line = '', yPos = 225;
-      words.forEach(word => {
-        const testLine = line + word + ' ';
-        if (descFont.widthOfTextAtSize(testLine, 10) > 450 && line !== '') {
-          page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1, 1, 1) });
-          line = word + ' '; yPos -= 15;
-        } else { line = testLine; }
+      // ── 1. Name ──
+      const nameText = userInfo.userName || 'Volunteer';
+      const nameSize = 38;
+      const nameY    = 245;
+      drawCentred(page, nameText, { font: nameFont, size: nameSize, color: gold, y: nameY, pageWidth: width });
+
+      // ── 2. Volunteering sentence ──
+      const usn = userInfo.userUSN || '______';
+      const eventName = event.ename || 'the specified';
+      const volunteerText = `bearing USN ${usn} has actively volunteered for the ${eventName} event held on ${formatDate(event.eventDate)} at BMS College of Engineering, Bangalore.`;
+
+      const partSize   = 12;
+      const partStartY = 220;
+
+      const afterPartY = drawWrappedCentred(page, volunteerText, {
+        font:       regularFont,
+        size:       partSize,
+        color:      white,
+        startY:     partStartY,
+        maxWidth,
+        lineHeight,
+        pageWidth:  width,
       });
-      if (line) page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1, 1, 1) });
 
+      // ── 3. Activity points ──
+      const rawPts = String(event.earnedActivityPts || '0').replace(/[^0-9.]/g, '');
+      let pts = parseFloat(rawPts);
+      if (isNaN(pts)) pts = 0;
+
+      if (pts > 0) {
+        const ptsText = `${pts} activity point${pts !== 1 ? 's' : ''} can be claimed from this certificate.`;
+        const ptsSize = 13; 
+        const ptsY    = afterPartY - 8;
+
+        drawWrappedCentred(page, ptsText, {
+          font:      boldFont,
+          size:      ptsSize,
+          color:     gold,
+          startY:    ptsY,
+          maxWidth,
+          lineHeight,
+          pageWidth: width,
+        });
+      }
+
+      // ── Save & trigger download ──
       const pdfBytes = await pdfDoc.save();
       const url = window.URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
-      setDownloadLinks(prev => ({ ...prev, [event.eid]: { url, filename: `Volunteer_Certificate_${event.eid}.pdf` } }));
+      setDownloadLinks(prev => ({
+        ...prev,
+        [event.eid]: { url, filename: `Volunteer_Certificate_${userInfo.userUSN || event.eid}.pdf` },
+      }));
 
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      console.error(err);
+      alert(`Error generating certificate: ${err.message}`);
     } finally {
       setGeneratingIds(prev => { const next = new Set(prev); next.delete(event.eid); return next; });
     }
@@ -256,12 +345,11 @@ const Volunteers = () => {
     <div className="volunteers-page">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
-      <div style={{ paddingBottom: 60 }} /> {/* Top Spacer for Nav */}
+      <div style={{ paddingBottom: 60 }} />
 
       <section className="hero-section">
         <div className="container">
 
-          {/* HERO BAND */}
           <div className="vol-hero-band">
             <p className="vol-hero-greeting">Volunteer Dashboard</p>
             <h1 className="vol-hero-name">
@@ -283,7 +371,6 @@ const Volunteers = () => {
             </div>
           </div>
 
-          {/* FILTER TABS */}
           <div className="vol-filter-bar">
             {FILTERS.map(({ key, label }) => (
               <button
@@ -298,7 +385,6 @@ const Volunteers = () => {
             ))}
           </div>
 
-          {/* CONTENT FEED */}
           {loading ? (
             <div className="vol-empty">
               <h2 style={{ fontFamily: 'var(--font-display)' }}>Loading your shifts...</h2>
@@ -367,7 +453,6 @@ const Volunteers = () => {
             </>
           )}
 
-          {/* CTA */}
           <div className="vol-cta-strip" ref={ctaRef}>
             <button className="vol-cta-btn" onClick={() => navigate('/volunteer-event')}>
               <i className="fas fa-hand-holding-heart"></i>
@@ -378,7 +463,6 @@ const Volunteers = () => {
         </div>
       </section>
 
-      {/* MOBILE FAB */}
       <button
         className={`mobile-fab ${!showFab ? 'hidden' : ''}`}
         onClick={() => navigate('/volunteer-event')}
