@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from './supabaseClient';
 import "./style.css";
-
 import { apiFetch } from "./api.js";
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -51,7 +51,6 @@ export default function Login() {
     e?.preventDefault();
     const { usn, password } = signInData;
     if (!usn || !password) return showMessage('Fill all fields.', true);
-    await supabase.auth.signOut();
     setLoading(true);
     try {
       const res = await apiFetch("/api/signin", {
@@ -75,15 +74,9 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: { prompt: 'select_account' }
-      }
-    });
-    if (error) showMessage('Google Login Failed.', true);
+  // Google login: redirect to YOUR backend — backend does the OAuth dance
+  const handleGoogleLogin = () => {
+    window.location.href = `${API_BASE}/auth/google`;
   };
 
   const handleSignUp = async (e) => {

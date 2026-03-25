@@ -1,20 +1,18 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from './supabaseClient';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './style.css';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const [session, setSession] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState({ text: '', isError: false, show: false });
   const [googleName, setGoogleName] = useState('');
+  const [message, setMessage] = useState({ text: '', isError: false, show: false });
+  const [formData, setFormData] = useState({ usn: '', sem: '', mobno: '' });
 
-  const [formData, setFormData] = useState({
-    usn: '', sem: '', mobno: '',
-  });
+  const API_BASE = import.meta.env.VITE_API_URL || '';
 
   const showMessage = (text, isError = false) => {
     setMessage({ text, isError, show: true });
@@ -23,28 +21,30 @@ export default function AuthCallback() {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) { navigate('/login'); return; }
-      setSession(session);
-      localStorage.setItem('token', session.access_token);
-      localStorage.setItem('refresh_token', session.refresh_token);
-      const fullName = session.user?.user_metadata?.full_name
-        || session.user?.user_metadata?.name
-        || session.user?.email?.split('@')[0] || '';
-      setGoogleName(fullName);
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/me`, {
-        headers: { Authorization: `Bearer ${session.access_token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem('userUSN', data.userUSN);
-        localStorage.setItem('userName', data.userName);
-        navigate('/events');
-      } else {
-        setNeedsOnboarding(true);
-        setLoading(false);
-      }
-    });
+    // Backend redirects to /auth/callback?token=JWT&name=FullName&needs_onboarding=true/false
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    const name = params.get('name') || '';
+    const needsOnboardingParam = params.get('needs_onboarding');
+
+    if (!token) {
+      // No token — something went wrong
+      navigate('/login');
+      return;
+    }
+
+    // Store the JWT immediately
+    localStorage.setItem('token', token);
+    if (name) setGoogleName(name);
+
+    if (needsOnboardingParam === 'true') {
+      // New Google user — needs USN/sem/mobno
+      setNeedsOnboarding(true);
+      setLoading(false);
+    } else {
+      // Existing user — go straight to events
+      navigate('/events');
+    }
   }, []);
 
   const handleChange = (e) => {
@@ -65,10 +65,14 @@ export default function AuthCallback() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/complete-google-signup`, {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/api/complete-google-signup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ usn, sem: semNum, mobno })
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ usn, sem: semNum, mobno }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -76,8 +80,6 @@ export default function AuthCallback() {
         setSubmitting(false);
         return;
       }
-      localStorage.setItem('userUSN', usn);
-      localStorage.setItem('userName', data.userName || googleName);
       navigate('/events');
     } catch {
       showMessage('Network error. Please try again.', true);
@@ -144,7 +146,6 @@ export default function AuthCallback() {
         </p>
 
         <form className="forgot-form" onSubmit={handleSubmit}>
-
           <div>
             <label style={{ display: 'block', fontFamily: 'DM Mono, monospace', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6, opacity: 0.7 }}>
               University Serial No. (USN)
@@ -176,7 +177,6 @@ export default function AuthCallback() {
           <button type="submit" disabled={submitting}>
             {submitting ? 'Setting up...' : 'Complete Setup →'}
           </button>
-
         </form>
       </div>
     </div>

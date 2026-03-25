@@ -1,21 +1,26 @@
 require('dotenv').config();
 const express = require('express');
-const { supabaseAdmin } = require('./lib/supabase');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const { Pool } = require('pg');
 const ExcelJS = require('exceljs');
 const { createClient } = require('redis');
 const Brevo = require('@getbrevo/brevo');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const nodemailer = require('nodemailer');
 
 const QR_TOKEN_SECRET = process.env.QR_TOKEN_SECRET;
 const QR_TOKEN_VALIDITY_MS = 18000;
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = '7d';
 
-if (!QR_TOKEN_SECRET) {
-    throw new Error('QR_TOKEN_SECRET environment variable is required');
-}
+if (!QR_TOKEN_SECRET) throw new Error('QR_TOKEN_SECRET environment variable is required');
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
@@ -24,62 +29,92 @@ const streamifier = require('streamifier');
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
+    api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 },
-});
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
+function uploadFromBuffer(buffer) {
+    return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream({ folder: 'flo-banners' }, (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+        });
+        streamifier.createReadStream(buffer).pipe(stream);
+    });
+}
+
+// ─── Brevo email ───────────────────────────────────────────────────────────────
 const apiInstance = new Brevo.TransactionalEmailsApi();
 const apiKey = apiInstance.authentications['apiKey'];
 apiKey.apiKey = process.env.BREVO_API_KEY;
 
+// ─── Neon (pg) pool ────────────────────────────────────────────────────────────
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL, // Neon connection string
+    ssl: { rejectUnauthorized: false },
+    max: 20,           // max pool connections — enough for 2k-3k users under Azure B1
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+});
+pool.on('error', (err) => console.error('Unexpected PG pool error', err));
+
+// Helper: run a query and return rows (throws on error)
+async function query(text, params) {
+    const client = await pool.connect();
+    try {
+        const res = await client.query(text, params);
+        return res.rows;
+    } finally {
+        client.release();
+    }
+}
+// Helper: return first row or null
+async function queryOne(text, params) {
+    const rows = await query(text, params);
+    return rows[0] || null;
+}
+// Helper: count query
+async function queryCount(text, params) {
+    const rows = await query(text, params);
+    return parseInt(rows[0]?.count || '0', 10);
+}
+
+// ─── JWT helpers ───────────────────────────────────────────────────────────────
+function signToken(payload) {
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
+
+// ─── Express app ───────────────────────────────────────────────────────────────
 const app = express();
-
 app.use(helmet());
-
-// FIX: Only call express.json() ONCE (was called twice in new server)
 app.use(express.json({ limit: '10kb' }));
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 1000, // increased from 500 — college app with many concurrent users
+    max: 1000,
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res) => {
         console.warn(`⚠️ Rate limit exceeded for ${req.ip} on ${req.method} ${req.url}`);
         res.status(429).json({ error: 'Too many requests. Please wait a few minutes and try again.' });
-    }
+    },
 });
 app.use(limiter);
 
 const PORT = process.env.PORT || 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-// --- Redis Client (caching only) ---
-let redisClient = {
-    isOpen: false,
-    get: async () => null,
-    set: async () => null,
-    del: async () => null,
-    connect: async () => { }
-};
+// ─── Redis (optional cache) ────────────────────────────────────────────────────
+let redisClient = { isOpen: false, get: async () => null, set: async () => null, del: async () => null, connect: async () => {} };
 
 (async () => {
     try {
         const realClient = createClient({
             url: process.env.REDIS_URL,
-            socket: {
-                connectTimeout: 5000,
-                reconnectStrategy: (retries) => {
-                    if (retries > 2) return false;
-                    return 1000;
-                }
-            }
+            socket: { connectTimeout: 5000, reconnectStrategy: (r) => (r > 2 ? false : 1000) },
         });
-        realClient.on('error', () => { });
+        realClient.on('error', () => {});
         realClient.on('connect', () => console.log('✅ Connected to Redis Cloud (cache only)'));
         await realClient.connect();
         redisClient = realClient;
@@ -88,174 +123,156 @@ let redisClient = {
     }
 })();
 
-if (IS_PRODUCTION) {
-    app.set('trust proxy', 1);
-}
+if (IS_PRODUCTION) app.set('trust proxy', 1);
 
 const allowedOrigins = [
     process.env.FRONTEND_URL,
     'https://www.flobms.com',
-    'https://flobms.com'
+    'https://flobms.com',
+    'http://localhost:5173',
+    'http://localhost:3000',
 ].filter(Boolean);
 
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            console.log('❌ CORS blocked origin:', origin);
-            callback(new Error('Not allowed by CORS'));
-        }
+        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        console.log('❌ CORS blocked origin:', origin);
+        callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-
 app.options('*', cors());
 
-app.get('/', (req, res) => {
-    res.send('🚀 Flobms backend server is running successfully');
-});
+// ─── Passport Google OAuth ─────────────────────────────────────────────────────
+app.use(passport.initialize());
 
-app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok' });
-});
-
-app.use((req, res, next) => {
-    console.log(`\n📝 ${req.method} ${req.url}`);
-    next();
-});
-
-async function testSupabaseConnection() {
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: `${process.env.BACKEND_URL}/auth/google/callback`,
+}, async (accessToken, refreshToken, profile, done) => {
     try {
-        const { data, error } = await supabaseAdmin.from('student').select('count').limit(1);
-        if (error) throw error;
-        console.log('✅ Supabase connected successfully');
-    } catch (err) {
-        console.error('❌ Supabase connection failed:', err);
-    }
-}
-testSupabaseConnection();
+        const email = profile.emails?.[0]?.value;
+        const googleId = profile.id;
+        const name = profile.displayName || email?.split('@')[0] || 'User';
 
-// --- Auth Middleware: requires full student profile ---
+        // Look for existing student by google_id or email
+        let student = await queryOne(
+            'SELECT usn, sname, emailid FROM student WHERE google_id = $1 OR emailid = $2 LIMIT 1',
+            [googleId, email]
+        );
+
+        if (student && !student.google_id) {
+            // Existing email-only account — link google_id
+            await query('UPDATE student SET google_id = $1 WHERE usn = $2', [googleId, student.usn]);
+        }
+
+        return done(null, { student, googleId, email, name });
+    } catch (err) {
+        return done(err);
+    }
+}));
+
+// Google OAuth routes — these are browser redirects, not API calls
+app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], prompt: 'select_account', session: false }));
+
+app.get('/auth/google/callback', passport.authenticate('google', { session: false, failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_failed` }),
+    async (req, res) => {
+        const { student, googleId, email, name } = req.user;
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+        if (student) {
+            // Existing user — issue JWT and redirect
+            const token = signToken({ usn: student.usn, name: student.sname, email: student.emailid });
+            return res.redirect(`${frontendUrl}/auth/callback?token=${token}&needs_onboarding=false`);
+        } else {
+            // New Google user — issue a short-lived onboarding token, frontend will complete profile
+            const onboardingToken = signToken({ googleId, email, name, onboarding: true });
+            const encodedName = encodeURIComponent(name);
+            return res.redirect(`${frontendUrl}/auth/callback?token=${onboardingToken}&needs_onboarding=true&name=${encodedName}`);
+        }
+    }
+);
+
+// ─── Auth Middleware ────────────────────────────────────────────────────────────
+// requireAuth: full student profile required
 async function requireAuth(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    if (!token) {
-        console.log('❌ User NOT authenticated - no token');
-        return res.status(401).json({ error: 'Please sign in first' });
-    }
+    if (!token) return res.status(401).json({ error: 'Please sign in first' });
     try {
-        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-        if (error || !user) {
-            console.log('❌ Invalid/expired token:', error?.message || 'no user returned');
-            return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded.onboarding) {
+            return res.status(401).json({ error: 'Please complete your profile setup first.', needsOnboarding: true });
         }
-        const { data: student, error: studentError } = await supabaseAdmin
-            .from('student')
-            .select('usn, sname, emailid')
-            .eq('auth_id', user.id)
-            .maybeSingle();
-        if (studentError || !student) {
-            console.log('❌ No student record found for auth user:', user.id);
-            return res.status(401).json({ error: 'Account not fully set up. Please complete your profile.', needsOnboarding: true });
-        }
-        req.session = {
-            userUSN: student.usn,
-            userName: student.sname,
-            userEmail: student.emailid,
-            accessToken: token,
-            authId: user.id
-        };
+        const student = await queryOne(
+            'SELECT usn, sname, emailid FROM student WHERE usn = $1',
+            [decoded.usn]
+        );
+        if (!student) return res.status(401).json({ error: 'Account not found. Please sign in again.' });
+        req.session = { userUSN: student.usn, userName: student.sname, userEmail: student.emailid };
         next();
     } catch (err) {
-        console.error('❌ Auth error:', err.message);
-        return res.status(401).json({ error: 'Authentication error' });
+        if (err.name === 'TokenExpiredError') return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+        return res.status(401).json({ error: 'Invalid session. Please sign in again.' });
     }
 }
 
-// --- Auth Middleware: only validates Supabase token, no student record needed (for Google onboarding) ---
+// requireAuthToken: only validates JWT (for Google onboarding — no student record yet)
 async function requireAuthToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    if (!token) {
-        return res.status(401).json({ error: 'Please sign in first' });
-    }
+    if (!token) return res.status(401).json({ error: 'Please sign in first' });
     try {
-        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-        if (error || !user) {
-            return res.status(401).json({ error: 'Session expired. Please sign in again.' });
-        }
+        const decoded = jwt.verify(token, JWT_SECRET);
         req.session = {
-            authId: user.id,
-            userEmail: user.email,
-            accessToken: token
+            userUSN: decoded.usn || null,
+            userEmail: decoded.email,
+            googleId: decoded.googleId || null,
+            userName: decoded.name || null,
+            isOnboarding: !!decoded.onboarding,
         };
         next();
     } catch (err) {
-        return res.status(401).json({ error: 'Authentication error' });
+        return res.status(401).json({ error: 'Session expired. Please sign in again.' });
     }
 }
 
-const uploadFromBuffer = (buffer) => {
-    return new Promise((resolve, reject) => {
-        const cld_upload_stream = cloudinary.uploader.upload_stream(
-            { folder: "event_banners" },
-            (error, result) => {
-                if (result) resolve(result);
-                else reject(error);
-            }
-        );
-        streamifier.createReadStream(buffer).pipe(cld_upload_stream);
-    });
-};
+// ─── Basic routes ──────────────────────────────────────────────────────────────
+app.get('/', (req, res) => res.send('🚀 Flobms backend server is running successfully'));
+app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
+app.use((req, res, next) => { console.log(`\n📝 ${req.method} ${req.url}`); next(); });
 
-// ==================== AUTH ENDPOINTS ====================
+// ─── Auth routes ───────────────────────────────────────────────────────────────
 
 app.post('/api/signup', async (req, res) => {
     try {
         const { name, usn, sem, mobno, email, password, organizerPin } = req.body;
-        if (!usn || !name || !email || !sem || !mobno || !password) {
+        if (!usn || !name || !email || !sem || !mobno || !password)
             return res.status(400).json({ error: 'All fields are required' });
-        }
-        if (organizerPin && !/^\d{4,6}$/.test(organizerPin)) {
+        if (organizerPin && !/^\d{4,6}$/.test(organizerPin))
             return res.status(400).json({ error: 'Organizer PIN must be 4 to 6 digits' });
-        }
-        const { data: existing } = await supabaseAdmin
-            .from('student').select('usn').or(`usn.eq.${usn},emailid.eq.${email}`).limit(1);
-        if (existing && existing.length > 0) {
-            return res.status(400).json({ error: 'Student with this USN or email already exists' });
-        }
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-            email, password, email_confirm: true, user_metadata: { usn, name }
-        });
-        if (authError) {
-            console.error('Error creating auth user:', authError);
-            return res.status(400).json({ error: authError.message });
-        }
-        let hashedPin = null;
-        if (organizerPin) hashedPin = await bcrypt.hash(organizerPin, 10);
-        const { error: studentError } = await supabaseAdmin.from('student').insert([{
-            usn, sname: name, sem, mobno, emailid: email,
-            auth_id: authData.user.id, organizer_pin: hashedPin
-        }]);
-        if (studentError) {
-            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-            console.error('Error inserting student:', studentError);
-            return res.status(500).json({ error: 'Error registering student' });
-        }
-        const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
-        if (signInError) {
-            return res.status(500).json({ error: 'Registered but could not sign in automatically' });
-        }
+
+        const existing = await queryOne(
+            'SELECT usn FROM student WHERE usn = $1 OR emailid = $2 LIMIT 1',
+            [usn, email]
+        );
+        if (existing) return res.status(400).json({ error: 'Student with this USN or email already exists' });
+
+        const hashedPassword = await bcrypt.hash(password, 12);
+        const hashedPin = organizerPin ? await bcrypt.hash(organizerPin, 10) : null;
+
+        await query(
+            `INSERT INTO student (usn, sname, sem, mobno, emailid, password_hash, organizer_pin)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [usn.toUpperCase(), name, parseInt(sem), mobno, email, hashedPassword, hashedPin]
+        );
+
+        const token = signToken({ usn: usn.toUpperCase(), name, email });
         console.log('✅ Student registered:', usn);
-        res.status(201).json({
-            success: true, message: 'Student registered successfully!',
-            token: signInData.session.access_token,
-            refresh_token: signInData.session.refresh_token,
-            userUSN: usn, userName: name
-        });
+        res.status(201).json({ success: true, message: 'Student registered successfully!', token, userUSN: usn.toUpperCase(), userName: name });
     } catch (err) {
         console.error('Error registering student:', err);
         res.status(500).json({ error: `Error registering student: ${err.message}` });
@@ -265,76 +282,48 @@ app.post('/api/signup', async (req, res) => {
 app.post('/api/signin', async (req, res) => {
     try {
         const { usn, password } = req.body;
-        if (!usn || !password) {
-            return res.status(400).json({ error: 'USN and password are required' });
+        if (!usn || !password) return res.status(400).json({ error: 'USN and password are required' });
+
+        const student = await queryOne(
+            'SELECT usn, sname, emailid, password_hash FROM student WHERE usn = $1',
+            [usn.toUpperCase()]
+        );
+        if (!student) return res.status(401).json({ error: 'Invalid USN or password' });
+
+        if (!student.password_hash) {
+            return res.status(401).json({ error: 'This account uses Google Sign-In. Please use "Continue with Google".' });
         }
-        const { data: student, error: lookupError } = await supabaseAdmin
-            .from('student').select('usn, sname, emailid').eq('usn', usn).maybeSingle();
-        if (lookupError || !student) {
-            return res.status(401).json({ error: 'Invalid USN or password' });
-        }
-        const { data, error } = await supabaseAdmin.auth.signInWithPassword({
-            email: student.emailid, password
-        });
-        if (error) {
-            return res.status(401).json({ error: 'Invalid USN or password' });
-        }
+        const match = await bcrypt.compare(password, student.password_hash);
+        if (!match) return res.status(401).json({ error: 'Invalid USN or password' });
+
+        const token = signToken({ usn: student.usn, name: student.sname, email: student.emailid });
         console.log('✅ User signed in:', student.usn);
-        res.json({
-            success: true, message: 'Signed in successfully',
-            token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-            userUSN: student.usn, userName: student.sname
-        });
+        res.json({ success: true, message: 'Signed in successfully', token, userUSN: student.usn, userName: student.sname });
     } catch (err) {
         console.error('Error signing in:', err);
         res.status(500).json({ error: `Error signing in: ${err.message}` });
     }
 });
 
-// FIX: signout is graceful — works even if token is missing/expired
 app.post('/api/signout', async (req, res) => {
-    try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
-        if (token) {
-            try {
-                await supabaseAdmin.auth.admin.signOut(token);
-            } catch (e) {
-                // non-fatal — token may already be expired
-            }
-        }
-        console.log('✅ User signed out');
-        res.json({ success: true, message: 'Signed out successfully' });
-    } catch (err) {
-        res.json({ success: true, message: 'Signed out successfully' });
-    }
+    // JWTs are stateless — client just deletes the token. Nothing to do server-side.
+    console.log('✅ User signed out');
+    res.json({ success: true, message: 'Signed out successfully' });
 });
 
 app.get('/api/me', requireAuth, async (req, res) => {
     try {
-        const { data: rows, error } = await supabaseAdmin
-            .from('student')
-            .select('usn, sname, sem, mobno, emailid, organizer_pin, auth_id')
-            .eq('usn', req.session.userUSN)
-            .limit(1);
-        if (error || !rows?.length) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-        const student = rows[0];
-        let hasGoogleIdentity = false;
-        let hasPasswordIdentity = false;
-        try {
-            const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(student.auth_id);
-            hasGoogleIdentity = user?.identities?.some(i => i.provider === 'google') || false;
-            hasPasswordIdentity = user?.identities?.some(i => i.provider === 'email') || false;
-        } catch (e) {
-            // non-fatal
-        }
+        const student = await queryOne(
+            'SELECT usn, sname, sem, mobno, emailid, organizer_pin, google_id, password_hash FROM student WHERE usn = $1',
+            [req.session.userUSN]
+        );
+        if (!student) return res.status(404).json({ error: 'User not found' });
         res.json({
             userUSN: student.usn, userName: student.sname, semester: student.sem,
             mobile: student.mobno, email: student.emailid,
-            hasPinSet: !!student.organizer_pin, hasGoogleIdentity, hasPasswordIdentity
+            hasPinSet: !!student.organizer_pin,
+            hasGoogleIdentity: !!student.google_id,
+            hasPasswordIdentity: !!student.password_hash,
         });
     } catch (err) {
         console.error('Error fetching user info:', err);
@@ -345,19 +334,11 @@ app.get('/api/me', requireAuth, async (req, res) => {
 app.put('/api/profile', requireAuth, async (req, res) => {
     try {
         const { sname, sem, mobno } = req.body;
-        if (!sname || !sem || !mobno) {
-            return res.status(400).json({ error: 'All fields are required' });
-        }
-        if (!/^\d{10}$/.test(mobno)) {
-            return res.status(400).json({ error: 'Mobile must be 10 digits' });
-        }
+        if (!sname || !sem || !mobno) return res.status(400).json({ error: 'All fields are required' });
+        if (!/^\d{10}$/.test(mobno)) return res.status(400).json({ error: 'Mobile must be 10 digits' });
         const semNum = parseInt(sem, 10);
-        if (semNum < 1 || semNum > 8) {
-            return res.status(400).json({ error: 'Semester must be 1-8' });
-        }
-        const { error } = await supabaseAdmin
-            .from('student').update({ sname, sem: semNum, mobno }).eq('usn', req.session.userUSN);
-        if (error) return res.status(500).json({ error: 'Failed to update profile' });
+        if (semNum < 1 || semNum > 8) return res.status(400).json({ error: 'Semester must be 1-8' });
+        await query('UPDATE student SET sname = $1, sem = $2, mobno = $3 WHERE usn = $4', [sname, semNum, mobno, req.session.userUSN]);
         res.json({ success: true, message: 'Profile updated successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -367,63 +348,61 @@ app.put('/api/profile', requireAuth, async (req, res) => {
 app.post('/api/change-password', requireAuth, async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
-        if (!currentPassword || !newPassword) {
-            return res.status(400).json({ error: 'Both fields are required' });
-        }
-        if (newPassword.length < 6) {
-            return res.status(400).json({ error: 'New password must be at least 6 characters' });
-        }
-        const { error: authError } = await supabaseAdmin.auth.signInWithPassword({
-            email: req.session.userEmail, password: currentPassword
-        });
-        if (authError) {
-            return res.status(401).json({ error: 'Current password is incorrect' });
-        }
-        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-            req.session.authId, { password: newPassword }
-        );
-        if (updateError) {
-            return res.status(500).json({ error: 'Failed to update password' });
-        }
-        const { data: newSession, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
-            email: req.session.userEmail, password: newPassword
-        });
-        if (signInError || !newSession?.session) {
-            return res.status(500).json({ error: 'Password changed but could not refresh session. Please sign in again.' });
-        }
-        res.json({
-            success: true, message: 'Password changed successfully',
-            token: newSession?.session?.access_token || null,
-            refresh_token: newSession?.session?.refresh_token || null
-        });
+        if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both fields are required' });
+        if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+
+        const student = await queryOne('SELECT password_hash FROM student WHERE usn = $1', [req.session.userUSN]);
+        if (!student?.password_hash) return res.status(400).json({ error: 'This account uses Google Sign-In and has no password to change.' });
+
+        const match = await bcrypt.compare(currentPassword, student.password_hash);
+        if (!match) return res.status(401).json({ error: 'Current password is incorrect' });
+
+        const newHash = await bcrypt.hash(newPassword, 12);
+        await query('UPDATE student SET password_hash = $1 WHERE usn = $2', [newHash, req.session.userUSN]);
+
+        // Issue fresh token
+        const s = await queryOne('SELECT usn, sname, emailid FROM student WHERE usn = $1', [req.session.userUSN]);
+        const token = signToken({ usn: s.usn, name: s.sname, email: s.emailid });
+        res.json({ success: true, message: 'Password changed successfully', token });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// ==================== PASSWORD RESET (using Supabase Auth) ====================
-
+// ─── Password Reset ─────────────────────────────────────────────────────────────
 app.post('/api/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
         if (!email) return res.status(400).json({ error: 'Email is required' });
 
-        // Always return success to prevent email enumeration
-        const { data: user } = await supabaseAdmin
-            .from('student').select('usn, sname').eq('emailid', email).maybeSingle();
+        const student = await queryOne('SELECT usn, sname FROM student WHERE emailid = $1', [email]);
+        if (student) {
+            // Create a short-lived JWT reset token
+            const resetToken = jwt.sign({ usn: student.usn, purpose: 'reset' }, JWT_SECRET, { expiresIn: '15m' });
 
-        if (user) {
-            // Use Supabase built-in password reset
-            const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-                redirectTo: `${process.env.FRONTEND_URL}/reset-password`
-            });
-            if (error) {
-                console.error('Error sending reset email:', error);
-            } else {
+            const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+            const sendSmtpEmail = new Brevo.SendSmtpEmail();
+            sendSmtpEmail.subject = 'Reset Your FLO Password';
+            sendSmtpEmail.sender = { name: 'FLO E-Pass System', email: 'flobms3@gmail.com' };
+            sendSmtpEmail.to = [{ email, name: student.sname }];
+            sendSmtpEmail.htmlContent = `
+                <html><body style="font-family: Arial, sans-serif; background:#f5f0e8; padding:20px;">
+                <div style="max-width:500px;margin:0 auto;background:#fff;border:3px solid #0D0D0D;padding:32px;box-shadow:5px 5px 0 #0D0D0D;">
+                    <h2 style="font-family:monospace;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px;">FLO</h2>
+                    <div style="height:4px;background:#FFD600;width:40px;margin-bottom:24px;"></div>
+                    <p>Hello <strong>${student.sname}</strong>,</p>
+                    <p>Click the button below to reset your password. This link expires in <strong>15 minutes</strong>.</p>
+                    <a href="${resetLink}" style="display:inline-block;background:#0D0D0D;color:#FFD600;font-family:monospace;font-weight:700;padding:14px 28px;text-decoration:none;letter-spacing:1px;margin:16px 0;">RESET PASSWORD →</a>
+                    <p style="color:#999;font-size:12px;margin-top:24px;">If you did not request this, ignore this email.</p>
+                </div></body></html>`;
+            try {
+                await apiInstance.sendTransacEmail(sendSmtpEmail);
                 console.log('✅ Password reset email sent to:', email);
+            } catch (emailErr) {
+                console.error('Error sending reset email:', emailErr);
             }
         }
-
         res.json({ success: true, message: 'If an account exists, you will receive a reset link.' });
     } catch (err) {
         console.error('Error in forgot password:', err);
@@ -431,103 +410,83 @@ app.post('/api/forgot-password', async (req, res) => {
     }
 });
 
-// FIX: Supabase Auth handles token verification — this endpoint accepts the new password
-// after the user clicks the reset link (frontend should exchange the token via Supabase client)
 app.post('/api/reset-password', async (req, res) => {
     try {
         const { token, newPassword } = req.body;
-        if (!token || !newPassword) {
-            return res.status(400).json({ error: 'Token and new password are required' });
-        }
-        if (newPassword.length < 6) {
-            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
-        }
-        // Verify the recovery token using Supabase
-        const { data, error } = await supabaseAdmin.auth.verifyOtp({
-            token_hash: token,
-            type: 'recovery'
-        });
-        if (error || !data?.user) {
+        if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password are required' });
+        if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+
+        let decoded;
+        try {
+            decoded = jwt.verify(token, JWT_SECRET);
+        } catch (e) {
             return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
         }
-        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-            data.user.id, { password: newPassword }
-        );
-        if (updateError) {
-            return res.status(500).json({ error: 'Failed to reset password' });
-        }
-        const { data: student } = await supabaseAdmin
-            .from('student').select('sname').eq('auth_id', data.user.id).maybeSingle();
-        console.log('✅ Password reset successful for auth user:', data.user.id);
-        res.json({
-            success: true,
-            message: 'Password reset successfully! You can now sign in with your new password.',
-            userName: student?.sname || ''
-        });
+        if (decoded.purpose !== 'reset') return res.status(400).json({ error: 'Invalid reset token.' });
+
+        const newHash = await bcrypt.hash(newPassword, 12);
+        await query('UPDATE student SET password_hash = $1 WHERE usn = $2', [newHash, decoded.usn]);
+
+        const student = await queryOne('SELECT sname FROM student WHERE usn = $1', [decoded.usn]);
+        console.log('✅ Password reset successful for:', decoded.usn);
+        res.json({ success: true, message: 'Password reset successfully! You can now sign in with your new password.', userName: student?.sname || '' });
     } catch (err) {
         console.error('Error in reset password:', err);
         res.status(500).json({ error: 'Failed to reset password' });
     }
 });
 
-// ==================== GOOGLE AUTH ONBOARDING ====================
-
-// FIX: Added GET handler — frontend was calling GET /api/complete-google-signup
-// This returns the current onboarding status for a Google-authed user
+// ─── Google Onboarding ──────────────────────────────────────────────────────────
 app.get('/api/complete-google-signup', requireAuthToken, async (req, res) => {
     try {
-        const { data: student } = await supabaseAdmin
-            .from('student').select('usn, sname').eq('auth_id', req.session.authId).maybeSingle();
-        if (student) {
-            return res.json({ needsOnboarding: false, userUSN: student.usn, userName: student.sname });
+        if (req.session.userUSN) {
+            const student = await queryOne('SELECT usn, sname FROM student WHERE usn = $1', [req.session.userUSN]);
+            if (student) return res.json({ needsOnboarding: false, userUSN: student.usn, userName: student.sname });
         }
-        const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(req.session.authId);
-        res.json({
-            needsOnboarding: true,
-            email: user?.email || '',
-            name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || ''
-        });
+        res.json({ needsOnboarding: true, email: req.session.userEmail || '', name: req.session.userName || '' });
     } catch (err) {
-        console.error('Error checking onboarding status:', err);
         res.status(500).json({ error: 'Failed to check onboarding status' });
     }
 });
 
 app.post('/api/complete-google-signup', requireAuthToken, async (req, res) => {
     try {
+        if (!req.session.isOnboarding) return res.status(400).json({ error: 'Not in onboarding flow' });
         const { usn, sem, mobno, organizerPin } = req.body;
-        if (!usn || !sem || !mobno) {
-            return res.status(400).json({ error: 'USN, semester and mobile are required' });
-        }
-        if (organizerPin && !/^\d{4,6}$/.test(organizerPin)) {
-            return res.status(400).json({ error: 'Organizer PIN must be 4 to 6 digits' });
-        }
-        const { data: existing } = await supabaseAdmin
-            .from('student').select('usn').eq('usn', usn).maybeSingle();
+        if (!usn || !sem || !mobno) return res.status(400).json({ error: 'USN, semester and mobile are required' });
+        if (organizerPin && !/^\d{4,6}$/.test(organizerPin)) return res.status(400).json({ error: 'Organizer PIN must be 4 to 6 digits' });
+
+        const existing = await queryOne('SELECT usn FROM student WHERE usn = $1', [usn.toUpperCase()]);
         if (existing) return res.status(400).json({ error: 'This USN is already registered' });
-        const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(req.session.authId);
-        const name = user.user_metadata?.full_name || user.email.split('@')[0];
-        const email = user.email;
+
+        const name = req.session.userName || req.session.userEmail.split('@')[0];
+        const email = req.session.userEmail;
+        const googleId = req.session.googleId;
         const hashedPin = organizerPin ? await bcrypt.hash(organizerPin, 10) : null;
-        const { error: insertError } = await supabaseAdmin.from('student').insert([{
-            usn, sname: name, sem: parseInt(sem), mobno, emailid: email,
-            auth_id: req.session.authId, organizer_pin: hashedPin
-        }]);
-        if (insertError) {
-            console.error('Error creating student record:', insertError);
-            return res.status(500).json({ error: 'Failed to complete profile setup' });
-        }
+
+        await query(
+            `INSERT INTO student (usn, sname, sem, mobno, emailid, google_id, organizer_pin)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [usn.toUpperCase(), name, parseInt(sem), mobno, email, googleId, hashedPin]
+        );
+
+        // Issue a full access token now
+        const token = signToken({ usn: usn.toUpperCase(), name, email });
         console.log('✅ Google user onboarded:', usn);
-        res.json({ success: true, userName: name, userUSN: usn });
+        res.json({ success: true, userName: name, userUSN: usn.toUpperCase(), token });
     } catch (err) {
         console.error('Error in Google onboarding:', err);
         res.status(500).json({ error: 'Failed to complete setup' });
     }
 });
 
-// ==================== EVENTS ====================
 
-// FIX: Fetch full event list with all fields including banner_url
+// ─── Wire the adapter as "supabaseAdmin" ───────────────────────────────────────
+// All existing business route calls: supabaseAdmin.from('table').select/insert/update/delete
+// now run against Neon via the pg pool.
+const { buildAdapter } = require('./lib/neon-adapter');
+const supabaseAdmin = buildAdapter(pool);
+
 app.get('/api/events', requireAuth, async (req, res) => {
     try {
         const currentDate = new Date().toISOString().split('T')[0];
@@ -2052,6 +2011,6 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Server running on port ${PORT}`);
     console.log(`📡 CORS enabled for: ${allowedOrigins.join(', ')}`);
-    console.log(`🔐 Auth: Supabase Auth`);
+    console.log(`🔐 Auth: Own JWT + Neon DB + Google OAuth (Passport)`);
     console.log(`🌱 Environment: ${IS_PRODUCTION ? 'production' : 'development'}\n`);
 });

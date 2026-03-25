@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from './supabaseClient';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sessionReady, setSessionReady] = useState(false);
+  const [token, setToken] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState({ text: '', isError: false, show: false });
+
+  const API_BASE = import.meta.env.VITE_API_URL || '';
 
   const showMessage = (text, isError = false) => {
     setMessage({ text, isError, show: true });
@@ -17,20 +19,15 @@ export default function ResetPassword() {
   };
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setSessionReady(true);
-      }
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setSessionReady(true);
-      } else if (!window.location.hash.includes('access_token')) {
-        showMessage('Invalid or expired link.', true);
-        setTimeout(() => navigate('/login'), 2000);
-      }
-    });
+    // Backend sends reset email with link: /reset-password?token=xxx
+    const params = new URLSearchParams(location.search);
+    const t = params.get('token');
+    if (!t) {
+      showMessage('Invalid or expired reset link.', true);
+      setTimeout(() => navigate('/login'), 2500);
+    } else {
+      setToken(t);
+    }
   }, []);
 
   const handleSubmit = async (e) => {
@@ -41,17 +38,18 @@ export default function ResetPassword() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) {
-        showMessage(error.message || 'Reset failed. Please try again.', true);
+      const res = await fetch(`${API_BASE}/api/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showMessage('Password reset! Redirecting to sign in...');
+        localStorage.removeItem('token');
+        setTimeout(() => navigate('/login'), 2500);
       } else {
-        showMessage('Password reset! Redirecting...');
-        setTimeout(() => {
-          supabase.auth.signOut();
-          localStorage.removeItem('token');
-          localStorage.removeItem('refresh_token');
-          navigate('/login');
-        }, 2000);
+        showMessage(data.error || 'Reset failed. Please request a new link.', true);
       }
     } catch {
       showMessage('Network error. Please try again.', true);
@@ -79,9 +77,7 @@ export default function ResetPassword() {
           background-color: #e8e0d0;
           padding: 24px 16px;
           box-sizing: border-box;
-          font-family: Arial, sans-serif;
         }
-
         .rp-card {
           width: 100%;
           max-width: 420px;
@@ -90,10 +86,8 @@ export default function ResetPassword() {
           box-shadow: 7px 7px 0 #111;
           box-sizing: border-box;
         }
-
-        /* HEADER */
         .rp-header {
-          background: #2563eb;
+          background: #5b8def;
           border-bottom: 3px solid #111;
           padding: 22px 28px 18px;
         }
@@ -104,225 +98,125 @@ export default function ResetPassword() {
           letter-spacing: 0.2em;
           text-transform: uppercase;
           color: #fff;
-          opacity: 0.6;
-          margin-bottom: 6px;
+          opacity: 0.8;
+          margin: 0 0 6px;
         }
         .rp-title {
-          font-family: 'Bebas Neue', Impact, sans-serif;
-          font-size: 42px;
-          letter-spacing: 0.04em;
+          font-family: 'Bebas Neue', sans-serif;
+          font-size: 2.4rem;
           color: #fff;
+          margin: 0;
           line-height: 1;
-          display: flex;
-          align-items: center;
-          gap: 12px;
         }
-        .rp-title i {
-          font-size: 30px;
-          color: #f5a623;
-        }
-
-        /* BODY */
-        .rp-body {
-          padding: 26px 28px 0;
-        }
-        .rp-desc {
-          font-size: 14px;
-          line-height: 1.65;
-          color: #444;
-          margin: 0 0 24px;
-        }
-
-        /* VERIFYING STATE */
-        .rp-verifying {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: #fff8e6;
-          border: 2px solid #f5a623;
-          padding: 14px 16px;
-          margin-bottom: 24px;
-          font-family: 'Space Mono', monospace;
-          font-size: 11px;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: #7a5c00;
-        }
-        .rp-spinner {
-          width: 16px;
-          height: 16px;
-          border: 2.5px solid #f5a623;
-          border-top-color: transparent;
-          border-radius: 50%;
-          animation: rp-spin 0.7s linear infinite;
-          flex-shrink: 0;
-        }
-        @keyframes rp-spin {
-          to { transform: rotate(360deg); }
-        }
-
-        /* FORM */
-        .rp-form {
-          padding: 0 28px 28px;
-        }
-
-        .rp-field {
-          position: relative;
-          margin-bottom: 14px;
-        }
-        .rp-input {
-          width: 100%;
-          padding: 13px 44px 13px 14px;
-          font-size: 14px;
-          font-family: Arial, sans-serif;
-          border: 2.5px solid #aaa;
-          background: #ede8dc;
-          color: #111;
-          box-sizing: border-box;
-          outline: none;
-          border-radius: 0;
-          transition: border-color 0.15s;
-        }
-        .rp-input:focus {
-          border-color: #111;
-        }
-        .rp-input:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-        .rp-eye {
-          position: absolute;
-          right: 14px;
-          top: 50%;
-          transform: translateY(-50%);
-          cursor: pointer;
-          font-size: 14px;
-          color: #777;
-          transition: color 0.15s;
-        }
-        .rp-eye:hover { color: #111; }
-
-        /* PASSWORD STRENGTH */
-        .rp-strength {
-          margin: -8px 0 14px;
-          display: flex;
-          gap: 4px;
-          align-items: center;
-        }
-        .rp-strength-bar {
-          height: 3px;
-          flex: 1;
-          background: #ddd;
-          border: 1px solid #bbb;
-          transition: background 0.2s;
-        }
-        .rp-strength-bar.active-weak   { background: #e53e3e; border-color: #e53e3e; }
-        .rp-strength-bar.active-medium { background: #f5a623; border-color: #f5a623; }
-        .rp-strength-bar.active-strong { background: #38a169; border-color: #38a169; }
-        .rp-strength-label {
-          font-family: 'Space Mono', monospace;
-          font-size: 9px;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: #999;
-          min-width: 48px;
-          text-align: right;
-        }
-        .rp-strength-label.weak   { color: #e53e3e; }
-        .rp-strength-label.medium { color: #f5a623; }
-        .rp-strength-label.strong { color: #38a169; }
-
-        /* MATCH INDICATOR */
-        .rp-match {
+        .rp-body { padding: 28px; }
+        .rp-label {
+          display: block;
           font-family: 'Space Mono', monospace;
           font-size: 10px;
           font-weight: 700;
-          letter-spacing: 0.06em;
           text-transform: uppercase;
-          margin: -8px 0 14px;
-          padding: 6px 10px;
-          border: 2px solid;
+          letter-spacing: 0.12em;
+          color: #111;
+          margin-bottom: 8px;
+          margin-top: 16px;
         }
-        .rp-match.ok  { color: #38a169; border-color: #38a169; background: #f0fff4; }
-        .rp-match.bad { color: #e53e3e; border-color: #e53e3e; background: #fff5f5; }
-
-        .rp-btn-primary {
+        .rp-input-wrap { position: relative; }
+        .rp-input {
           width: 100%;
-          padding: 15px;
+          padding: 12px 50px 12px 14px;
+          border: 2.5px solid #111;
+          background: #fff;
+          font-family: 'Space Mono', monospace;
+          font-size: 13px;
+          color: #111;
+          box-sizing: border-box;
+          outline: none;
+          transition: box-shadow 0.15s;
+        }
+        .rp-input:focus { box-shadow: 3px 3px 0 #111; }
+        .rp-toggle {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-family: 'Space Mono', monospace;
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: uppercase;
+          opacity: 0.5;
+          padding: 4px;
+        }
+        .rp-toggle:hover { opacity: 1; }
+        .rp-btn {
+          width: 100%;
+          padding: 14px;
+          margin-top: 24px;
           background: #111;
           color: #f5f0e4;
+          border: 2.5px solid #111;
           font-family: 'Space Mono', monospace;
           font-size: 12px;
           font-weight: 700;
-          letter-spacing: 0.1em;
           text-transform: uppercase;
-          border: 3px solid #111;
-          box-shadow: 5px 5px 0 #2563eb;
+          letter-spacing: 0.1em;
           cursor: pointer;
-          box-sizing: border-box;
-          margin-bottom: 12px;
-          transition: box-shadow 0.1s, transform 0.1s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          transition: background 0.15s, transform 0.1s;
         }
-        .rp-btn-primary:hover:not(:disabled) {
-          box-shadow: 3px 3px 0 #2563eb;
-          transform: translate(2px, 2px);
-        }
-        .rp-btn-primary:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-        .rp-btn-secondary {
-          width: 100%;
-          padding: 15px;
-          background: #f5f0e4;
+        .rp-btn:hover:not(:disabled) { background: #333; transform: translateY(-1px); }
+        .rp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .rp-back {
+          display: block;
+          text-align: center;
+          margin-top: 16px;
+          font-family: 'Space Mono', monospace;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
           color: #111;
-          font-family: 'Space Mono', monospace;
-          font-size: 12px;
-          font-weight: 700;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          border: 3px solid #111;
+          opacity: 0.6;
           cursor: pointer;
-          box-sizing: border-box;
-          transition: background 0.1s;
+          background: none;
+          border: none;
+          width: 100%;
         }
-        .rp-btn-secondary:hover:not(:disabled) { background: #e8e0d0; }
-        .rp-btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        /* TOAST */
+        .rp-back:hover { opacity: 1; text-decoration: underline; }
         .rp-toast {
           position: fixed;
           top: 20px;
           left: 50%;
           transform: translateX(-50%);
-          z-index: 9999;
           padding: 12px 20px;
-          display: flex;
-          align-items: center;
-          gap: 10px;
+          border: 2.5px solid #111;
           font-family: 'Space Mono', monospace;
           font-size: 12px;
           font-weight: 700;
-          letter-spacing: 0.06em;
-          border: 3px solid #111;
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          gap: 8px;
           box-shadow: 4px 4px 0 #111;
-          white-space: nowrap;
           max-width: 90vw;
         }
-        .rp-toast--success { background: #d4edda; color: #155724; }
-        .rp-toast--error   { background: #f8d7da; color: #721c24; }
-
-        @media (max-width: 480px) {
-          .rp-header { padding: 18px 20px 16px; }
-          .rp-title  { font-size: 34px; }
-          .rp-body   { padding: 20px 20px 0; }
-          .rp-form   { padding: 0 20px 24px; }
+        .rp-toast--success { background: #c8f5c8; color: #111; }
+        .rp-toast--error { background: #ffd6d6; color: #111; }
+        .rp-spinner {
+          width: 16px; height: 16px;
+          border: 2px solid rgba(245,240,228,0.3);
+          border-top-color: #f5f0e4;
+          border-radius: 50%;
+          animation: rp-spin 0.7s linear infinite;
         }
+        @keyframes rp-spin { to { transform: rotate(360deg); } }
       `}</style>
 
-      {/* TOAST */}
       {message.show && (
         <div className={`rp-toast ${message.isError ? 'rp-toast--error' : 'rp-toast--success'}`}>
           <span>{message.isError ? '✕' : '✓'}</span>
@@ -332,104 +226,47 @@ export default function ResetPassword() {
 
       <div className="rp-page">
         <div className="rp-card">
-
-          {/* HEADER */}
           <div className="rp-header">
-            <div className="rp-eyebrow">// Account Security</div>
-            <div className="rp-title">
-              <i className="fa-solid fa-key"></i>
-              SET NEW<br/>PASSWORD
-            </div>
+            <p className="rp-eyebrow">Account Recovery</p>
+            <h1 className="rp-title">Reset Password</h1>
           </div>
-
-          {!sessionReady ? (
-            <div className="rp-body">
-              <div className="rp-verifying">
-                <div className="rp-spinner"></div>
-                Verifying reset link...
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="rp-body">
-                <p className="rp-desc">Choose a strong new password for your FLO account.</p>
-              </div>
-
-              <form className="rp-form" onSubmit={handleSubmit}>
-                {/* NEW PASSWORD */}
-                <div className="rp-field">
-                  <input
-                    className="rp-input"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="New Password"
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    disabled={loading}
-                  />
-                  <i
-                    className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'} rp-eye`}
-                    onClick={() => setShowPassword(v => !v)}
-                  />
-                </div>
-
-                {/* STRENGTH METER */}
-                {newPassword.length > 0 && (() => {
-                  const len = newPassword.length;
-                  const hasUpper = /[A-Z]/.test(newPassword);
-                  const hasNum   = /[0-9]/.test(newPassword);
-                  const hasSpec  = /[^A-Za-z0-9]/.test(newPassword);
-                  const score = (len >= 8 ? 1 : 0) + (hasUpper ? 1 : 0) + (hasNum ? 1 : 0) + (hasSpec ? 1 : 0);
-                  const level = score <= 1 ? 'weak' : score <= 2 ? 'medium' : 'strong';
-                  const labels = { weak: 'Weak', medium: 'Fair', strong: 'Strong' };
-                  const activeClass = `active-${level}`;
-                  return (
-                    <div className="rp-strength">
-                      {[0,1,2].map(i => (
-                        <div key={i} className={`rp-strength-bar ${
-                          (level === 'weak' && i === 0) ||
-                          (level === 'medium' && i <= 1) ||
-                          (level === 'strong') ? activeClass : ''
-                        }`}/>
-                      ))}
-                      <span className={`rp-strength-label ${level}`}>{labels[level]}</span>
-                    </div>
-                  );
-                })()}
-
-                {/* CONFIRM PASSWORD */}
-                <div className="rp-field">
-                  <input
-                    className="rp-input"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Confirm Password"
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-
-                {/* MATCH INDICATOR */}
-                {confirmPassword.length > 0 && (
-                  <div className={`rp-match ${newPassword === confirmPassword ? 'ok' : 'bad'}`}>
-                    {newPassword === confirmPassword ? '✓ Passwords match' : '✕ Passwords do not match'}
-                  </div>
-                )}
-
-                <button type="submit" className="rp-btn-primary" disabled={loading}>
-                  {loading ? 'Resetting...' : '→ Reset Password'}
+          <div className="rp-body">
+            <form onSubmit={handleSubmit}>
+              <label className="rp-label">New Password</label>
+              <div className="rp-input-wrap">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="rp-input"
+                  placeholder="Min. 6 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  disabled={loading || !token}
+                />
+                <button type="button" className="rp-toggle" onClick={() => setShowPassword(s => !s)}>
+                  {showPassword ? 'Hide' : 'Show'}
                 </button>
-                <button
-                  type="button"
-                  className="rp-btn-secondary"
-                  onClick={() => navigate('/login')}
-                  disabled={loading}
-                >
-                  ← Back to Sign In
-                </button>
-              </form>
-            </>
-          )}
+              </div>
 
+              <label className="rp-label">Confirm Password</label>
+              <div className="rp-input-wrap">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="rp-input"
+                  placeholder="Repeat your new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading || !token}
+                />
+              </div>
+
+              <button type="submit" className="rp-btn" disabled={loading || !token}>
+                {loading ? <span className="rp-spinner" /> : <>Reset Password <span>→</span></>}
+              </button>
+            </form>
+            <button className="rp-back" onClick={() => navigate('/login')}>
+              ← Back to Sign In
+            </button>
+          </div>
         </div>
       </div>
     </>

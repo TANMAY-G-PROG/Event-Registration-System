@@ -1,15 +1,14 @@
 import React, { useEffect, useRef } from 'react';
-import { 
-  BrowserRouter as Router, 
-  Routes, 
-  Route, 
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
   Navigate,
   useNavigate,
   useLocation
 } from 'react-router-dom';
 import { apiFetch } from './api.js';
-// import LandingPage from './LandingPage.jsx';
-import Maintenance from './Maintenance.jsx';
+import LandingPage from './LandingPage.jsx';
 import Login from './Login.jsx';
 import Events from './Events.jsx';
 import Participants from './Participants.jsx';
@@ -27,6 +26,7 @@ import Scanner from './Scanner.jsx';
 import ForgotPassword from './ForgotPassword.jsx';
 import ResetPassword from './ResetPassword.jsx';
 import SubEventManager from './SubEventManager.jsx';
+import AuthCallback from './AuthCallback.jsx';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -41,10 +41,10 @@ function AppContent() {
       try {
         await apiFetch('/api/signout', { method: 'POST' });
       } catch (error) {
-        console.error("Error during auto-signout:", error);
+        console.error('Error during auto-signout:', error);
       }
       localStorage.removeItem('token');
-      alert("You have been logged out due to inactivity.");
+      alert('You have been logged out due to inactivity.');
       navigate('/login');
     }
   };
@@ -71,30 +71,26 @@ function AppContent() {
 
   return (
     <Routes>
-      {/* ===== MAINTENANCE MODE ===== */}
-      <Route path="/" element={<Maintenance />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/events" element={<Events />} />
+      <Route path="/participants" element={<Participants />} />
+      <Route path="/organisers" element={<Organisers />} />
+      <Route path="/volunteers" element={<Volunteers />} />
+      <Route path="/create-event" element={<EventForm />} />
+      <Route path="/register-event" element={<Registerevent />} />
+      <Route path="/volunteer-event" element={<VolunteerEvents />} />
+      <Route path="/organiser-ticket" element={<OrganizerTicket />} />
+      <Route path="/participant-ticket" element={<ParticipantTicket />} />
+      <Route path="/volunteer-ticket" element={<VolunteerTicket />} />
+      <Route path="/about-us" element={<AboutUs />} />
+      <Route path="/qr" element={<QrCode />} />
+      <Route path="/scanner" element={<Scanner />} />
+      <Route path="/sub-events" element={<SubEventManager />} />
       <Route path="*" element={<Navigate to="/" replace />} />
-
-      {/* ===== UNCOMMENT EVERYTHING BELOW WHEN MAINTENANCE IS OVER ===== */}
-      {/* <Route path="/" element={<LandingPage />} /> */}
-      {/* <Route path="/login" element={<Login />} /> */}
-      {/* <Route path="/forgot-password" element={<ForgotPassword />} /> */}
-      {/* <Route path="/reset-password" element={<ResetPassword />} /> */}
-      {/* <Route path="/events" element={<Events />} /> */}
-      {/* <Route path="/participants" element={<Participants />} /> */}
-      {/* <Route path="/organisers" element={<Organisers />} /> */}
-      {/* <Route path="/volunteers" element={<Volunteers />} /> */}
-      {/* <Route path="/create-event" element={<EventForm />} /> */}
-      {/* <Route path="/register-event" element={<Registerevent />} /> */}
-      {/* <Route path="/volunteer-event" element={<VolunteerEvents />} /> */}
-      {/* <Route path="/organiser-ticket" element={<OrganizerTicket />} /> */}
-      {/* <Route path="/participant-ticket" element={<ParticipantTicket />} /> */}
-      {/* <Route path="/volunteer-ticket" element={<VolunteerTicket />} /> */}
-      {/* <Route path="/about-us" element={<AboutUs />} /> */}
-      {/* <Route path="/qr" element={<QrCode />} /> */}
-      {/* <Route path="/scanner" element={<Scanner />} /> */}
-      {/* <Route path="/sub-events" element={<SubEventManager />} /> */}
-      {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
     </Routes>
   );
 }

@@ -1,18 +1,17 @@
 {
-  "name": "final",
-  "version": "1.0.0",
-  "description": "",
+  "name": "flo-backend",
+  "version": "2.0.0",
+  "description": "FLO Event Registration Backend — own JWT + Neon + Google OAuth",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@getbrevo/brevo": "^2.2.0",
-    "@supabase/supabase-js": "^2.76.1",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.5.1",
     "connect-redis": "^8.0.1",
@@ -21,12 +20,13 @@
     "exceljs": "^4.4.0",
     "express": "^4.18.2",
     "express-rate-limit": "^8.3.1",
-    "express-session": "^1.18.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
-    "memorystore": "^1.6.7",
     "multer": "^1.4.5-lts.1",
-    "razorpay": "^2.9.6",
+    "nodemailer": "^8.0.3",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "pg": "^8.14.1",
     "redis": "^4.6.7",
     "streamifier": "^0.1.1"
   }

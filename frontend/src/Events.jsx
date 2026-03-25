@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './events.css';
 import { apiFetch } from './api.js';
-import { supabase } from './supabaseClient';
+
 
 export default function Events() {
   const navigate = useNavigate();
