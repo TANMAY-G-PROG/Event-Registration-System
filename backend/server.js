@@ -342,10 +342,19 @@ app.post('/api/forgot-password', async (req, res) => {
                     <a href="${resetLink}" style="display:inline-block;background:#0D0D0D;color:#FFD600;font-family:monospace;font-weight:700;padding:14px 28px;text-decoration:none;letter-spacing:1px;margin:16px 0;">RESET PASSWORD →</a>
                     <p style="color:#999;font-size:12px;margin-top:24px;">If you did not request this, ignore this email.</p>
                 </div></body></html>`;
-            try { await apiInstance.sendTransacEmail(sendSmtpEmail); } catch (e) { }
+            try {
+                await apiInstance.sendTransacEmail(sendSmtpEmail);
+                console.log(`✅ Password reset email sent to ${email}`);
+            } catch (e) {
+                console.error('❌ Brevo email error (forgot-password):', e?.response?.body || e?.message || e);
+                return res.status(500).json({ error: 'Failed to send reset email. Please try again later.' });
+            }
+        } else {
+            console.log(`ℹ️ Forgot password attempted for unknown email: ${email}`);
         }
         res.json({ success: true, message: 'If an account exists, you will receive a reset link.' });
     } catch (err) {
+        console.error('❌ forgot-password route error:', err);
         res.status(500).json({ error: 'Failed to process request' });
     }
 });
