@@ -142,7 +142,7 @@ const Volunteers = () => {
       y -= lineHeight;
     });
 
-    return y; 
+    return y;
   };
 
   const generateCertificate = async (event) => {
@@ -185,6 +185,10 @@ const Volunteers = () => {
       const white      = rgb(1, 1, 1);
       const maxWidth   = width * 0.72;
       const lineHeight = 18;
+
+      // ✅ Added: matches participants.jsx exactly
+      const certifyText = 'This is to certify that';
+      drawCentred(page, certifyText, { font: regularFont, size: 13, color: white, y: 290, pageWidth: width });
 
       const nameText = userInfo.userName || 'Volunteer';
       drawCentred(page, nameText, { font: nameFont, size: 38, color: gold, y: 245, pageWidth: width });
