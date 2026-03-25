@@ -19,6 +19,14 @@ const QR_TOKEN_VALIDITY_MS = 18000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '7d';
 
+process.on('uncaughtException', (err) => {
+    console.error('💥 Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('💥 Unhandled Rejection:', reason);
+});
+
 if (!QR_TOKEN_SECRET) throw new Error('QR_TOKEN_SECRET is required');
 if (!JWT_SECRET) throw new Error('JWT_SECRET is required');
 
@@ -85,6 +93,22 @@ function signToken(payload) {
 
 // ─── Express app ───────────────────────────────────────────────────────────────
 const app = express();
+
+// 🔍 Global Request Logger
+app.use((req, res, next) => {
+    const start = Date.now();
+
+    console.log(`➡️ [${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        console.log(`⬅️ ${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`);
+    });
+
+    next();
+});
+
+
 app.use(helmet());
 app.use(express.json({ limit: '10kb' }));
 
@@ -219,6 +243,14 @@ async function requireAuthToken(req, res, next) {
 app.get('/', (req, res) => res.send('🚀 Flobms backend server is running successfully'));
 
 // ─── Complete Auth Routes ───────────────────────────────────────────────────────
+
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'OK',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
+    });
+});
 
 app.post('/api/signup', async (req, res) => {
     try {
@@ -1562,8 +1594,25 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
     }
 });
 
+// ❌ Global Error Handler
+app.use((err, req, res, next) => {
+    console.error('🔥 GLOBAL ERROR:', {
+        message: err.message,
+        stack: err.stack,
+        route: req.originalUrl,
+        method: req.method,
+        body: req.body
+    });
+
+    res.status(500).json({
+        error: 'Internal Server Error',
+        message: err.message
+    });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Server running on port ${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
     console.log(`📡 CORS enabled for: ${allowedOrigins.join(', ')}`);
     console.log(`🔐 Auth: Pure Custom JWT + Pure Raw Neon PG + Google OAuth (Passport)`);
     console.log(`🌱 Environment: ${IS_PRODUCTION ? 'production' : 'development'}\n`);
