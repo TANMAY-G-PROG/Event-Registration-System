@@ -80,6 +80,9 @@ export default function AuthCallback() {
         setSubmitting(false);
         return;
       }
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
       navigate('/events');
     } catch {
       showMessage('Network error. Please try again.', true);

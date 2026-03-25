@@ -9,8 +9,7 @@ import {
 } from 'react-router-dom';
 import { apiFetch } from './api.js';
 
-// 👉 Corrected Import to match your exact filename
-import NavBar from './NavBar.jsx'; 
+import NavBar from './NavBar.jsx';
 
 import LandingPage from './LandingPage.jsx';
 import Login from './Login.jsx';
@@ -31,7 +30,10 @@ import ForgotPassword from './ForgotPassword.jsx';
 import ResetPassword from './ResetPassword.jsx';
 import SubEventManager from './SubEventManager.jsx';
 import AuthCallback from './AuthCallback.jsx';
-import Profile from './Profile.jsx'; // Assuming you have this
+import Profile from './Profile.jsx';
+
+// Routes excluded from inactivity logout
+const EXCLUDED_FROM_TIMEOUT = ['/', '/login', '/auth/callback', '/forgot-password', '/reset-password', '/qr'];
 
 function AppContent() {
   const navigate = useNavigate();
@@ -42,7 +44,7 @@ function AppContent() {
   const handleLogout = async () => {
     if (timerId.current) clearTimeout(timerId.current);
     const { pathname } = location;
-    if (pathname !== '/login' && pathname !== '/') {
+    if (!EXCLUDED_FROM_TIMEOUT.includes(pathname)) {
       try {
         await apiFetch('/api/signout', { method: 'POST' });
       } catch (error) {
@@ -64,24 +66,26 @@ function AppContent() {
     const setupListeners = () => events.forEach(e => window.addEventListener(e, resetTimer));
     const cleanupListeners = () => events.forEach(e => window.removeEventListener(e, resetTimer));
     const { pathname } = location;
-    if (pathname !== '/login' && pathname !== '/') {
+
+    if (!EXCLUDED_FROM_TIMEOUT.includes(pathname)) {
       setupListeners();
       resetTimer();
     }
+
     return () => {
       cleanupListeners();
       if (timerId.current) clearTimeout(timerId.current);
     };
   }, [location.pathname, navigate]);
 
-  // Hide Navbar on authentication pages
+  // Hide Navbar on authentication pages and QR page
   const hideNavbarRoutes = ['/', '/login', '/auth/callback', '/forgot-password', '/reset-password'];
   const shouldShowNavbar = !hideNavbarRoutes.includes(location.pathname);
 
   return (
     <>
       {shouldShowNavbar && <NavBar />}
-      
+
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
