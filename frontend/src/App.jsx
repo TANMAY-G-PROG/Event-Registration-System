@@ -8,8 +8,7 @@ import {
   useLocation
 } from 'react-router-dom';
 import { apiFetch } from './api.js';
-// import LandingPage from './LandingPage.jsx';
-import Maintenance from './Maintenance.jsx';
+import LandingPage from './LandingPage.jsx';
 import Login from './Login.jsx';
 import Events from './Events.jsx';
 import Participants from './Participants.jsx';
@@ -77,8 +76,7 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route path="/" element={<Maintenance />} />
-      {/* <Route path="/" element={<LandingPage />} /> */}
+      <Route path="/" element={<LandingPage />}/>
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
