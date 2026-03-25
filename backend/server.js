@@ -319,6 +319,27 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
     }
 });
 
+// Set password for Google-only users (no existing password)
+app.post('/api/set-password', requireAuth, async (req, res) => {
+    try {
+        const { newPassword } = req.body;
+        if (!newPassword) return res.status(400).json({ error: 'New password is required' });
+        if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+
+        const student = await queryOne('SELECT password_hash FROM student WHERE usn = $1', [req.session.userUSN]);
+        if (student?.password_hash) return res.status(400).json({ error: 'You already have a password. Use Change Password instead.' });
+
+        const newHash = await bcrypt.hash(newPassword, 12);
+        await query('UPDATE student SET password_hash = $1 WHERE usn = $2', [newHash, req.session.userUSN]);
+
+        const s = await queryOne('SELECT usn, sname, emailid FROM student WHERE usn = $1', [req.session.userUSN]);
+        const token = signToken({ usn: s.usn, name: s.sname, email: s.emailid });
+        res.json({ success: true, message: 'Password set successfully!', token });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
