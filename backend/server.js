@@ -135,10 +135,14 @@ app.options('*', cors());
 // ─── Passport Google OAuth ─────────────────────────────────────────────────────
 app.use(passport.initialize());
 
+// Strip trailing slashes to prevent double-slash in OAuth redirect URIs
+const BACKEND_URL = (process.env.BACKEND_URL || '').replace(/\/+$/, '');
+const FRONTEND_URL_BASE = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: `${process.env.BACKEND_URL}/auth/google/callback`,
+    callbackURL: `${BACKEND_URL}/auth/google/callback`,
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         const email = profile.emails?.[0]?.value;
@@ -159,18 +163,17 @@ passport.use(new GoogleStrategy({
 
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], prompt: 'select_account', session: false }));
 
-app.get('/auth/google/callback', passport.authenticate('google', { session: false, failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_failed` }),
+app.get('/auth/google/callback', passport.authenticate('google', { session: false, failureRedirect: `${FRONTEND_URL_BASE}/login?error=google_failed` }),
     async (req, res) => {
         const { student, googleId, email, name } = req.user;
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
         if (student) {
             const token = signToken({ usn: student.usn, name: student.sname, email: student.emailid });
-            return res.redirect(`${frontendUrl}/auth/callback?token=${token}&needs_onboarding=false`);
+            return res.redirect(`${FRONTEND_URL_BASE}/auth/callback?token=${token}&needs_onboarding=false`);
         } else {
             const onboardingToken = signToken({ googleId, email, name, onboarding: true });
             const encodedName = encodeURIComponent(name);
-            return res.redirect(`${frontendUrl}/auth/callback?token=${onboardingToken}&needs_onboarding=true&name=${encodedName}`);
+            return res.redirect(`${FRONTEND_URL_BASE}/auth/callback?token=${onboardingToken}&needs_onboarding=true&name=${encodedName}`);
         }
     }
 );
@@ -324,7 +327,7 @@ app.post('/api/forgot-password', async (req, res) => {
         const student = await queryOne('SELECT usn, sname FROM student WHERE emailid = $1', [email]);
         if (student) {
             const resetToken = jwt.sign({ usn: student.usn, purpose: 'reset' }, JWT_SECRET, { expiresIn: '15m' });
-            const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+            const resetLink = `${FRONTEND_URL_BASE}/reset-password?token=${resetToken}`;
             const sendSmtpEmail = new Brevo.SendSmtpEmail();
             sendSmtpEmail.subject = 'Reset Your FLO Password';
             sendSmtpEmail.sender = { name: 'FLO E-Pass System', email: 'flobms3@gmail.com' };
