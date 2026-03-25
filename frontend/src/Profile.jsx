@@ -103,20 +103,40 @@ export default function Profile() {
 
     const handleChangePassword = async () => {
         const { currentPassword, newPassword, confirmPassword } = pwData;
-        if (!currentPassword || !newPassword || !confirmPassword) return showMessage('Fill all fields.', true);
+        const isGoogleOnly = userInfo.hasGoogleIdentity && !userInfo.hasPasswordIdentity;
+
+        // For Google-only users, only newPassword and confirmPassword are needed
+        if (isGoogleOnly) {
+            if (!newPassword || !confirmPassword) return showMessage('Fill all fields.', true);
+        } else {
+            if (!currentPassword || !newPassword || !confirmPassword) return showMessage('Fill all fields.', true);
+            if (currentPassword === newPassword) return showMessage('Use different password.', true);
+        }
         if (newPassword.length < 6) return showMessage('Min 6 characters.', true);
         if (newPassword !== confirmPassword) return showMessage('Password Mismatch', true);
-        if (currentPassword === newPassword) return showMessage('Use different password.', true);
+
         setSavingPw(true);
         try {
-            const res = await apiFetch('/api/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword, newPassword }) });
+            // Google-only users use /api/set-password, existing password users use /api/change-password
+            const endpoint = isGoogleOnly ? '/api/set-password' : '/api/change-password';
+            const body = isGoogleOnly
+                ? { newPassword }
+                : { currentPassword, newPassword };
+
+            const res = await apiFetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
             const data = await res.json();
             if (res.ok && data.success) {
-                if (data.token) { localStorage.setItem('token', data.token); localStorage.setItem('refresh_token', data.refresh_token); }
-                showMessage('Password changed successfully');
+                if (data.token) { localStorage.setItem('token', data.token); }
+                showMessage(isGoogleOnly ? 'Password set successfully!' : 'Password changed successfully');
                 setPwSection(false);
                 setPwData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-            } else showMessage(data.error || 'Failed to change password', true);
+                // Refresh user info so hasPasswordIdentity updates
+                fetchUser();
+            } else showMessage(data.error || 'Failed to update password', true);
         } catch { showMessage('Network error.', true); }
         finally { setSavingPw(false); }
     };
