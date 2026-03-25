@@ -3,11 +3,9 @@ import './volunteers.css';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from "./api.js";
 
-// --- PDF Generation Imports ---
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
-// Cache FONT only — template is never cached so coordinate changes always reflect immediately
 let cachedFontBytes = null;
 
 const Volunteers = () => {
@@ -60,9 +58,7 @@ const Volunteers = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric'
-    });
+    return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   const formatTime = (timeString) => {
@@ -118,17 +114,11 @@ const Volunteers = () => {
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Helper: draw centred text on a pdf-lib page
-  // ─────────────────────────────────────────────────────────────────────────
   const drawCentred = (page, text, { font, size, color, y, pageWidth }) => {
     const textWidth = font.widthOfTextAtSize(text, size);
     page.drawText(text, { x: (pageWidth - textWidth) / 2, y, size, font, color });
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Helper: word-wrap and draw a paragraph centred on the page
-  // ─────────────────────────────────────────────────────────────────────────
   const drawWrappedCentred = (page, text, { font, size, color, startY, maxWidth, lineHeight, pageWidth }) => {
     const words = text.split(' ');
     const lines = [];
@@ -152,12 +142,9 @@ const Volunteers = () => {
       y -= lineHeight;
     });
 
-    return y; // y position after last line
+    return y; 
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // generateCertificate
-  // ─────────────────────────────────────────────────────────────────────────
   const generateCertificate = async (event) => {
     if (downloadLinks[event.eid]?.url) window.URL.revokeObjectURL(downloadLinks[event.eid].url);
     setGeneratingIds(prev => new Set(prev).add(event.eid));
@@ -170,8 +157,6 @@ const Volunteers = () => {
       }
 
       const t = new Date().getTime();
-
-      // ── Load template ──
       const res = await fetch(`/openday2.pdf?v=${t}`);
       if (!res.ok) throw new Error('Template not found');
       const templateBytes = await res.arrayBuffer();
@@ -181,7 +166,6 @@ const Volunteers = () => {
       const page = pdfDoc.getPages()[0];
       const { width } = page.getSize();
 
-      // ── Load fonts (cached) ──
       let nameFont;
       try {
         if (!cachedFontBytes) {
@@ -197,60 +181,33 @@ const Volunteers = () => {
       const regularFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
       const boldFont    = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
-      // ── Colours ──
       const gold       = rgb(0.97, 0.85, 0.57);
       const white      = rgb(1, 1, 1);
-
-      // ── Shared layout constants ──
       const maxWidth   = width * 0.72;
       const lineHeight = 18;
 
-      // ── 1. Name ──
       const nameText = userInfo.userName || 'Volunteer';
-      const nameSize = 38;
-      const nameY    = 245;
-      drawCentred(page, nameText, { font: nameFont, size: nameSize, color: gold, y: nameY, pageWidth: width });
+      drawCentred(page, nameText, { font: nameFont, size: 38, color: gold, y: 245, pageWidth: width });
 
-      // ── 2. Volunteering sentence ──
       const usn = userInfo.userUSN || '______';
       const eventName = event.ename || 'the specified';
       const volunteerText = `bearing USN ${usn} has actively volunteered for the ${eventName} event held on ${formatDate(event.eventDate)} at BMS College of Engineering, Bangalore.`;
 
-      const partSize   = 12;
-      const partStartY = 220;
-
       const afterPartY = drawWrappedCentred(page, volunteerText, {
-        font:       regularFont,
-        size:       partSize,
-        color:      white,
-        startY:     partStartY,
-        maxWidth,
-        lineHeight,
-        pageWidth:  width,
+        font: regularFont, size: 12, color: white, startY: 220, maxWidth, lineHeight, pageWidth: width,
       });
 
-      // ── 3. Activity points ──
       const rawPts = String(event.earnedActivityPts || '0').replace(/[^0-9.]/g, '');
       let pts = parseFloat(rawPts);
       if (isNaN(pts)) pts = 0;
 
       if (pts > 0) {
         const ptsText = `${pts} activity point${pts !== 1 ? 's' : ''} can be claimed from this certificate.`;
-        const ptsSize = 13; 
-        const ptsY    = afterPartY - 8;
-
         drawWrappedCentred(page, ptsText, {
-          font:      boldFont,
-          size:      ptsSize,
-          color:     gold,
-          startY:    ptsY,
-          maxWidth,
-          lineHeight,
-          pageWidth: width,
+          font: boldFont, size: 13, color: gold, startY: afterPartY - 8, maxWidth, lineHeight, pageWidth: width,
         });
       }
 
-      // ── Save & trigger download ──
       const pdfBytes = await pdfDoc.save();
       const url = window.URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
       setDownloadLinks(prev => ({
@@ -345,6 +302,7 @@ const Volunteers = () => {
     <div className="volunteers-page">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
+      {/* Spacer to prevent Navbar overlap */}
       <div style={{ paddingBottom: 60 }} />
 
       <section className="hero-section">

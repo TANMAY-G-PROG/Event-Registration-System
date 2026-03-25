@@ -67,16 +67,16 @@ export default function Login() {
         showMessage(data.error || "Login failed.", true);
       }
     } catch (err) {
-      console.error('[Login] Sign-in error:', err);
       showMessage("Network error.", true);
     } finally {
       setLoading(false);
     }
   };
 
-  // Google login: redirect to YOUR backend — backend does the OAuth dance
+  // 👉 FIXED GOOGLE OAUTH REDIRECT
   const handleGoogleLogin = () => {
-    window.location.href = `${API_BASE}/auth/google`;
+    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    window.location.href = `${baseURL}/auth/google`;
   };
 
   const handleSignUp = async (e) => {
@@ -187,8 +187,6 @@ export default function Login() {
         </div>
 
         <div className="flo-form-panel">
-
-          {/* ── DESKTOP SIGN IN ── */}
           <div className={`flo-form-wrap${isActive ? " flo-form-wrap--hidden" : ""}`}>
             <div className="flo-form-head">
               <span className="flo-form-eyebrow">Welcome back</span>
@@ -196,7 +194,6 @@ export default function Login() {
             </div>
             <form className="flo-form" onKeyPress={handleKeyPress}>
 
-              {/* Google button FIRST */}
               <button
                 onClick={handleGoogleLogin}
                 className="flo-submit flo-submit--google"
@@ -213,7 +210,6 @@ export default function Login() {
                 )}
               </button>
 
-              {/* Divider */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0' }}>
                 <div style={{ flex: 1, height: 2, background: 'var(--ink-muted, #ccc)', opacity: 0.3 }} />
                 <span style={{ fontSize: 11, fontFamily: 'var(--nb-font-display, monospace)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.5 }}>or</span>
@@ -249,7 +245,6 @@ export default function Login() {
             </form>
           </div>
 
-          {/* ── DESKTOP SIGN UP ── */}
           <div className={`flo-form-wrap${!isActive ? " flo-form-wrap--hidden" : ""}`}>
             <div className="flo-form-head">
               <span className="flo-form-eyebrow">Join the campus</span>
@@ -303,7 +298,6 @@ export default function Login() {
               <button className="flo-register-link" onClick={() => setIsActive(false)}>Sign in</button>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -328,10 +322,8 @@ export default function Login() {
           <div className="m-form-scroll">
             <form onSubmit={isActive ? handleSignUp : handleSignIn}>
 
-              {/* ── MOBILE SIGN IN ── */}
               {!isActive ? (
                 <div className="m-form-group">
-                  {/* Google button FIRST on mobile too */}
                   <button
                     type="button"
                     className="m-submit-btn"
@@ -362,7 +354,6 @@ export default function Login() {
                   </div>
                 </div>
               ) : (
-                /* ── MOBILE SIGN UP ── */
                 <div className="m-form-group">
                   <MobileInput label="Full Name" name="name" value={signUpData.name} onChange={handleSignUpChange} placeholder="Name" />
                   <MobileInput label="USN" name="usn" value={signUpData.usn} onChange={handleSignUpChange} placeholder="USN" />
@@ -377,7 +368,6 @@ export default function Login() {
                 </div>
               )}
 
-              {/* MOBILE SUBMIT */}
               <button type="submit" className="m-submit-btn" disabled={loading}>
                 {loading
                   ? <span className="flo-spinner" style={{ borderColor: "rgba(242,235,217,.3)", borderTopColor: "var(--sand)" }} />
@@ -393,7 +383,6 @@ export default function Login() {
   );
 }
 
-/* ── Mobile Input Component ── */
 const MobileInput = ({
   label, name, value, onChange, placeholder,
   half, type = "text", isPassword, isVisible, onToggleVisibility, inputMode,

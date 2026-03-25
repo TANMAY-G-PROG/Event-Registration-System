@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from './supabaseClient';
 import { apiFetch } from './api.js';
 
 export default function NavBar() {
@@ -9,7 +8,6 @@ export default function NavBar() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
       await apiFetch('/api/signout', { method: 'POST' });
     } catch (err) {
       console.error('Logout error:', err);

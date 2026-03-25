@@ -4,11 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { apiFetch } from './api.js';
 
-// --- PDF Generation Imports ---
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
-// Cache FONT only — template is never cached so coordinate changes always reflect immediately
 let cachedFontBytes = null;
 
 const Participants = () => {
@@ -21,7 +19,6 @@ const Participants = () => {
   const [showFab, setShowFab] = useState(true);
   const ctaRef = useRef(null);
 
-  // Certificate Generation States
   const [generatingIds, setGeneratingIds] = useState(new Set());
   const [downloadLinks, setDownloadLinks] = useState({});
 
@@ -33,7 +30,6 @@ const Participants = () => {
     return () => { if (ctaRef.current) observer.unobserve(ctaRef.current); };
   }, [loading]);
 
-  // Cleanup object URLs for memory management
   useEffect(() => {
     return () => {
       Object.values(downloadLinks).forEach(link => {
@@ -84,18 +80,11 @@ const Participants = () => {
     } catch (err) { setError(err.message); setLoading(false); }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Helper: draw centred text on a pdf-lib page
-  // ─────────────────────────────────────────────────────────────────────────
   const drawCentred = (page, text, { font, size, color, y, pageWidth }) => {
     const textWidth = font.widthOfTextAtSize(text, size);
     page.drawText(text, { x: (pageWidth - textWidth) / 2, y, size, font, color });
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Helper: word-wrap and draw a paragraph centred on the page
-  // Returns the y position AFTER the last line drawn
-  // ─────────────────────────────────────────────────────────────────────────
   const drawWrappedCentred = (page, text, { font, size, color, startY, maxWidth, lineHeight, pageWidth }) => {
     const words = text.split(' ');
     const lines = [];
@@ -119,12 +108,9 @@ const Participants = () => {
       y -= lineHeight;
     });
 
-    return y; // y position after last line
+    return y; 
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // generateCertificate
-  // ─────────────────────────────────────────────────────────────────────────
   const generateCertificate = async (event) => {
     if (downloadLinks[event.eid]?.url) window.URL.revokeObjectURL(downloadLinks[event.eid].url);
     setGeneratingIds(prev => new Set(prev).add(event.eid));
@@ -137,8 +123,6 @@ const Participants = () => {
       }
 
       const t = new Date().getTime();
-
-      // ── Load template ──
       const res = await fetch(`/openday.pdf?v=${t}`);
       if (!res.ok) throw new Error('Template not found');
       const templateBytes = await res.arrayBuffer();
@@ -146,9 +130,8 @@ const Participants = () => {
       const pdfDoc = await PDFDocument.load(templateBytes);
       pdfDoc.registerFontkit(fontkit);
       const page = pdfDoc.getPages()[0];
-      const { width, height } = page.getSize();
+      const { width } = page.getSize();
 
-      // ── Load fonts (cached) ──
       let nameFont;
       try {
         if (!cachedFontBytes) {
@@ -164,68 +147,36 @@ const Participants = () => {
       const regularFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
       const boldFont    = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
-      // ── Colours ──
       const gold       = rgb(0.97, 0.85, 0.57);
       const white      = rgb(1, 1, 1);
-
-      // ── Shared layout constants ──
       const maxWidth   = width * 0.72;
       const lineHeight = 18;
 
-      // ── 1. "this is to certify that" ──
       const certifyText = 'This is to certify that';
-      const certifySize = 13;
-      const certifyY    = 290;
-      drawCentred(page, certifyText, { font: regularFont, size: certifySize, color: white, y: certifyY, pageWidth: width });
+      drawCentred(page, certifyText, { font: regularFont, size: 13, color: white, y: 290, pageWidth: width });
 
-      // ── 2. Name ──
       const nameText = userInfo.userName || 'Participant';
-      const nameSize = 38;
-      const nameY    = 245;
-      drawCentred(page, nameText, { font: nameFont, size: nameSize, color: gold, y: nameY, pageWidth: width });
+      drawCentred(page, nameText, { font: nameFont, size: 38, color: gold, y: 245, pageWidth: width });
 
-      // ── 3. Participation sentence ──
       const usn = userInfo.userUSN || '______';
       const eventName = event.ename || 'the specified';
-      const participationText =
-        `bearing USN ${usn} has actively participated in the ${eventName} event held on ${fmt(event.eventDate)} at BMS College of Engineering, Bangalore.`;
-
-      const partSize   = 12;
-      const partStartY = 220;
+      const participationText = `bearing USN ${usn} has actively participated in the ${eventName} event held on ${fmt(event.eventDate)} at BMS College of Engineering, Bangalore.`;
 
       const afterPartY = drawWrappedCentred(page, participationText, {
-        font:       regularFont,
-        size:       partSize,
-        color:      white,
-        startY:     partStartY,
-        maxWidth,
-        lineHeight,
-        pageWidth:  width,
+        font: regularFont, size: 12, color: white, startY: 220, maxWidth, lineHeight, pageWidth: width,
       });
 
-      // ── 4. Activity points ──
       const rawPts = String(event.earnedActivityPts || '0').replace(/[^0-9.]/g, '');
       let pts = parseFloat(rawPts);
       if (isNaN(pts)) pts = 0;
 
-      // Only print if points > 0
       if (pts > 0) {
         const ptsText = `${pts} activity point${pts !== 1 ? 's' : ''} can be claimed from this certificate.`;
-        const ptsSize = 13; 
-        const ptsY    = afterPartY - 18;
-
         drawWrappedCentred(page, ptsText, {
-          font:      boldFont,
-          size:      ptsSize,
-          color:     gold, // Set to 'gold' to match the participant's name color
-          startY:    ptsY,
-          maxWidth,
-          lineHeight,
-          pageWidth: width,
+          font: boldFont, size: 13, color: gold, startY: afterPartY - 18, maxWidth, lineHeight, pageWidth: width,
         });
       }
 
-      // ── Save & trigger download ──
       const pdfBytes = await pdfDoc.save();
       const url = window.URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
       setDownloadLinks(prev => ({
@@ -252,8 +203,6 @@ const Participants = () => {
 
   const renderCard = (event, type) => {
     const isPast = type === 'completed';
-    
-    // UI badge numeric extraction
     let displayPts = parseFloat(String(event.earnedActivityPts || '0').replace(/[^0-9.]/g, ''));
     if (isNaN(displayPts)) displayPts = 0;
 
@@ -282,7 +231,6 @@ const Participants = () => {
                   ? <span className="part-attend-chip attended"><i className="fas fa-check"></i> Attended</span>
                   : <span className="part-attend-chip registered"><i className="fas fa-bookmark"></i> Registered</span>
                 }
-                {/* Only show UI points chip if > 0 */}
                 {displayPts > 0 && (
                   <span className="part-points-chip"><i className="fas fa-star"></i>{displayPts} pts</span>
                 )}
@@ -290,10 +238,7 @@ const Participants = () => {
             )}
 
             {(type === 'upcoming' || type === 'ongoing') && (
-              <button
-                className="part-action-chip ticket-btn"
-                onClick={() => navigate(`/participant-ticket?eventId=${event.eid}`)}
-              >
+              <button className="part-action-chip ticket-btn" onClick={() => navigate(`/participant-ticket?eventId=${event.eid}`)}>
                 <i className="fas fa-ticket-alt"></i> View Ticket
               </button>
             )}
@@ -304,19 +249,11 @@ const Participants = () => {
                   <i className="fas fa-spinner fa-spin"></i> Generating...
                 </button>
               ) : downloadLinks[event.eid] ? (
-                <a
-                  href={downloadLinks[event.eid].url}
-                  download={downloadLinks[event.eid].filename}
-                  className="part-action-chip cert-btn"
-                  style={{ textDecoration: 'none' }}
-                >
+                <a href={downloadLinks[event.eid].url} download={downloadLinks[event.eid].filename} className="part-action-chip cert-btn" style={{ textDecoration: 'none' }}>
                   <i className="fas fa-download"></i> Download
                 </a>
               ) : (
-                <button
-                  className="part-action-chip cert-btn"
-                  onClick={() => generateCertificate(event)}
-                >
+                <button className="part-action-chip cert-btn" onClick={() => generateCertificate(event)}>
                   <i className="fas fa-certificate"></i> View Cert
                 </button>
               )
@@ -338,6 +275,7 @@ const Participants = () => {
     <div className="participants-page">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
+      {/* Spacer to prevent Navbar overlap */}
       <div style={{ paddingBottom: 60 }} />
 
       <section className="hero-section">

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './profile.css';
 import './style.css';
 import { apiFetch } from './api.js';
-import { supabase } from './supabaseClient';
+
 
 export default function Profile() {
     const navigate = useNavigate();
@@ -76,7 +76,7 @@ export default function Profile() {
 
     const handleLogout = async () => {
         try {
-            await supabase.auth.signOut();
+            
             await apiFetch('/api/signout', { method: 'POST' });
         } catch { }
         finally {
