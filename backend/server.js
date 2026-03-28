@@ -87,11 +87,6 @@ function signToken(payload) {
     return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
-function extractDept(usn) {
-    const match = usn?.toUpperCase().match(/^1[A-Z]{2}\d{2}([A-Z]{2})\d{3}$/);
-    return match ? match[1] : null;
-}
-
 // ─── Express app ───────────────────────────────────────────────────────────────
 const app = express();
 app.use(helmet());
@@ -132,40 +127,19 @@ const PORT = process.env.PORT || 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 let redisClient = { isOpen: false, get: async () => null, set: async () => null, del: async () => null, connect: async () => { } };
-let redisActive = false;
 
 (async () => {
     try {
-        if (!process.env.REDIS_URL) {
-            console.log('⚠️ No REDIS_URL set — running without Redis cache');
-            return;
-        }
-
         const realClient = createClient({
             url: process.env.REDIS_URL,
-            socket: {
-                tls: true,
-                rejectUnauthorized: false,
-                connectTimeout: 5000,
-                reconnectStrategy: (r) => (r > 2 ? false : 1000),
-            },
+            socket: { connectTimeout: 5000, reconnectStrategy: (r) => (r > 2 ? false : 1000) },
         });
-        realClient.on('error', (err) => {
-            console.log('⚠️ Redis error:', err.message);
-        });
-        realClient.on('connect', () => {
-            console.log('✅ Connected to Redis Cloud (cache only)');
-            redisActive = true;
-        });
-        realClient.on('end', () => {
-            console.log('⚠️ Redis disconnected');
-            redisActive = false;
-        });
+        realClient.on('error', () => { });
+        realClient.on('connect', () => console.log('✅ Connected to Redis Cloud (cache only)'));
         await realClient.connect();
         redisClient = realClient;
     } catch (err) {
         console.log('⚠️ Redis unavailable — running without cache (non-fatal)');
-        redisActive = false;
     }
 })();
 
@@ -275,7 +249,6 @@ async function requireAuthToken(req, res, next) {
 }
 
 app.get('/', (req, res) => res.send('🚀 Flobms backend server is running successfully'));
-app.get('/health', (req, res) => res.json({ ok: true }));
 
 // ─── Complete Auth Routes ───────────────────────────────────────────────────────
 
@@ -984,19 +957,6 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
         if (!token || !timestamp) return res.status(400).json({ error: 'QR code is outdated.' });
         if (!validateQRToken(seid, token, timestamp)) return res.status(400).json({ error: 'QR code has expired.' });
 
-        // Redis cache check — prevent duplicate DB hits
-        const cacheKey = `attendance:participant:${seid}:${usn}`;
-        try {
-            const cached = await redisClient.get(cacheKey);
-            if (cached) {
-                console.log(`   🔴 Redis HIT: ${cacheKey} — duplicate blocked`);
-                return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
-            }
-            if (redisActive) console.log(`   🟢 Redis MISS: ${cacheKey} — proceeding to DB`);
-        } catch (redisErr) {
-            console.log('   ⚠️ Redis read error (ignored):', redisErr.message);
-        }
-
         const subEvent = await queryOne('SELECT eid, se_name FROM sub_event WHERE seid = $1 LIMIT 1', [seid]);
         if (!subEvent) return res.status(404).json({ error: 'Sub-event not found' });
         const eventId = subEvent.eid;
@@ -1009,14 +969,6 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
         if (existingAttendance) return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
 
         await query('INSERT INTO sub_event_attendance (seid, eid, usn, role) VALUES ($1, $2, $3, $4)', [seid, eventId, usn, 'participant']);
-
-        // Cache the attendance in Redis after successful DB insert
-        try {
-            await redisClient.set(cacheKey, '1', { EX: 3600 });
-            if (redisActive) console.log(`   ✅ Redis SET: ${cacheKey} (TTL: 1h)`);
-        } catch (redisErr) {
-            console.log('   ⚠️ Redis write error (ignored):', redisErr.message);
-        }
 
         const scanCount = await queryCount('SELECT count(*) FROM sub_event_attendance WHERE eid = $1 AND usn = $2 AND role = $3', [eventId, usn, 'participant']);
         const eventData = await queryOne('SELECT min_part_scans FROM event WHERE eid = $1 LIMIT 1', [eventId]);
@@ -1040,19 +992,6 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
         if (!token || !timestamp) return res.status(400).json({ error: 'QR code is outdated.' });
         if (!validateQRToken(seid, token, timestamp)) return res.status(400).json({ error: 'QR code has expired.' });
 
-        // Redis cache check — prevent duplicate DB hits
-        const cacheKey = `attendance:volunteer:${seid}:${usn}`;
-        try {
-            const cached = await redisClient.get(cacheKey);
-            if (cached) {
-                console.log(`   🔴 Redis HIT: ${cacheKey} — duplicate blocked`);
-                return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
-            }
-            if (redisActive) console.log(`   🟢 Redis MISS: ${cacheKey} — proceeding to DB`);
-        } catch (redisErr) {
-            console.log('   ⚠️ Redis read error (ignored):', redisErr.message);
-        }
-
         const subEvent = await queryOne('SELECT eid, se_name FROM sub_event WHERE seid = $1 LIMIT 1', [seid]);
         if (!subEvent) return res.status(404).json({ error: 'Sub-event not found' });
         const eventId = subEvent.eid;
@@ -1064,14 +1003,6 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
         if (existingAttendance) return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
 
         await query('INSERT INTO sub_event_attendance (seid, eid, usn, role) VALUES ($1, $2, $3, $4)', [seid, eventId, usn, 'volunteer']);
-
-        // Cache the attendance in Redis after successful DB insert
-        try {
-            await redisClient.set(cacheKey, '1', { EX: 3600 });
-            if (redisActive) console.log(`   ✅ Redis SET: ${cacheKey} (TTL: 1h)`);
-        } catch (redisErr) {
-            console.log('   ⚠️ Redis write error (ignored):', redisErr.message);
-        }
 
         const scanCount = await queryCount('SELECT count(*) FROM sub_event_attendance WHERE eid = $1 AND usn = $2 AND role = $3', [eventId, usn, 'volunteer']);
         const eventData = await queryOne('SELECT min_voln_scans FROM event WHERE eid = $1 LIMIT 1', [eventId]);
@@ -1582,101 +1513,39 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         const volStudents = volUsns.length > 0 ? await query('SELECT usn, sname FROM student WHERE usn = ANY($1::text[])', [volUsns]) : [];
         const volStudentMap = volStudents.reduce((acc, s) => ({ ...acc, [s.usn]: s }), {});
 
-        const combined = [];
-
-        // Participants
-        participants.forEach(p => {
-            const dept = extractDept(p.partusn);
-            if (!dept) return;
-            const std = studentMap[p.partusn] || {};
-
-            combined.push({
-                usn: p.partusn,
-                name: std.sname || 'N/A',
-                sem: std.sem || 'N/A',
-                dept,
-                role: 'Participant',
-                registered: 1,
-                participated: p.partstatus ? 1 : 0
-            });
-        });
-
-        // Volunteers
-        volunteers.forEach(v => {
-            const dept = extractDept(v.volnusn);
-            if (!dept) return;
-            const std = volStudentMap[v.volnusn] || {};
-
-            combined.push({
-                usn: v.volnusn,
-                name: std.sname || 'N/A',
-                sem: 'N/A', // Sem not available in vol query
-                dept,
-                role: 'Volunteer',
-                registered: 1,
-                participated: v.volnstatus ? 1 : 0
-            });
-        });
-
-        // Aggregation Logic (Separate for Participants and Volunteers)
-        const partStats = {};
-        const volStats = {};
-        combined.forEach(item => {
-            const st = item.role === 'Participant' ? partStats : volStats;
-            if (!st[item.dept]) {
-                st[item.dept] = { totalRegistered: 0, totalParticipated: 0, semesters: {} };
-            }
-            st[item.dept].totalRegistered += item.registered;
-            st[item.dept].totalParticipated += item.participated;
-
-            if (!st[item.dept].semesters[item.sem]) {
-                st[item.dept].semesters[item.sem] = { registered: 0, participated: 0 };
-            }
-            st[item.dept].semesters[item.sem].registered += item.registered;
-            st[item.dept].semesters[item.sem].participated += item.participated;
-        });
-
         const workbook = new ExcelJS.Workbook();
+        const ws = workbook.addWorksheet('Event Details');
+        ws.columns = [
+            { width: 15 }, { width: 25 }, { width: 10 }, { width: 15 }, { width: 30 },
+            { width: 15 }, { width: 20 }, { width: 20 }, { width: 30 }, { width: 15 }, { width: 20 }
+        ];
 
-        // Date formatting helper to avoid timezone shifts
-        const formatExcelDate = (date) => {
-            if (!date) return 'N/A';
-            const d = new Date(date);
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear();
-            return `${day}-${month}-${year}`;
-        };
-        const eDate = formatExcelDate(event.eventdate);
+        const hdr = ws.addRow(['EVENT DETAILS']);
+        hdr.font = { size: 16, bold: true };
+        hdr.alignment = { horizontal: 'center' };
+        ws.mergeCells('A1:J1');
+        ws.addRow([]);
+        ws.addRow(['Event Name:', event.ename || 'N/A']);
+        ws.addRow(['Event Date:', event.eventdate || 'N/A']);
+        ws.addRow(['Event Time:', event.eventtime || 'N/A']);
+        ws.addRow(['Event Location:', event.eventloc || 'N/A']);
+        ws.addRow(['Organiser USN:', event.orgusn || 'N/A']);
+        ws.addRow(['Organiser Name:', organiserName]);
+        for (let i = 3; i <= 8; i++) {
+            ws.getRow(i).font = { bold: true };
+            ws.getRow(i).getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+        }
 
-        // 1. Overview Sheet
-        const overviewSheet = workbook.addWorksheet('Event Overview');
-        overviewSheet.addRow(['EVENT OVERVIEW']).font = { size: 16, bold: true };
-        overviewSheet.mergeCells('A1:B1');
-        overviewSheet.getRow(1).alignment = { horizontal: 'left' };
-        overviewSheet.addRow([]);
-        overviewSheet.addRow(['Event Name:', event.ename || 'N/A']);
-        overviewSheet.addRow(['Event Date:', eDate]);
-        overviewSheet.addRow(['Event Time:', event.eventtime || 'N/A']);
-        overviewSheet.addRow(['Event Location:', event.eventloc || 'N/A']);
-        overviewSheet.addRow(['Organiser USN:', event.orgusn || 'N/A']);
-        overviewSheet.addRow(['Organiser Name:', organiserName]);
-        overviewSheet.addRow([]);
-        overviewSheet.addRow(['SUMMARY STATISTICS']).font = { bold: true };
-        const totalRegCount = combined.length;
-        const totalPartCount = combined.filter(c => c.participated).length;
-        overviewSheet.addRow(['Total Registered:', totalRegCount]);
-        overviewSheet.addRow(['Total Participated:', totalPartCount]);
-        overviewSheet.addRow(['Participation Rate:', totalRegCount ? ((totalPartCount / totalRegCount) * 100).toFixed(2) + '%' : '0%']);
-        overviewSheet.getColumn(1).width = 25;
-        overviewSheet.getColumn(2).width = 50;
+        ws.addRow([]);
+        const partHdr = ws.addRow(['PARTICIPANTS']);
+        partHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+        partHdr.alignment = { horizontal: 'center' };
+        ws.mergeCells(`A${partHdr.number}:J${partHdr.number}`);
+        partHdr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
 
-        // 2. Participants Sheet
-        const partSheet = workbook.addWorksheet('Participants');
-        const partCols = ['USN', 'Name', 'Semester', 'Mobile No', 'Email', 'Status', 'Payment Status', 'Team Name', 'Transaction ID', 'Amount', 'Activity Pts'];
-        const pHeader = partSheet.addRow(partCols);
-        pHeader.font = { bold: true };
-        pHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
+        const partCols = ws.addRow(['USN', 'Name', 'Semester', 'Mobile No', 'Email', 'Participation Status', 'Payment Status', 'Team Name', 'UPI Transaction ID', 'Payment Amount', 'Activity Points Earned']);
+        partCols.font = { bold: true };
+        partCols.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
 
         const maxActivityPts = event.max_activity_pts || 0;
         let attendanceRaw = [];
@@ -1684,7 +1553,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         try {
             attendanceRaw = await query('SELECT usn, seid FROM sub_event_attendance WHERE eid = $1 AND role = $2', [eventId, 'participant']);
             subEventPts = await query('SELECT seid, activity_pts FROM sub_event WHERE eid = $1', [eventId]);
-        } catch (e) { console.log('Attendance tables missing'); }
+        } catch (e) { console.log('Attendance tables missing, ignoring pts'); }
 
         const seidToPts = subEventPts.reduce((acc, se) => ({ ...acc, [se.seid]: se.activity_pts || 0 }), {});
         const usnToPtsMap = {};
@@ -1698,7 +1567,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             const payment = paymentMap[p.partusn] || {};
             const teamName = teamMap[p.team_id] || 'N/A';
             const earnedPts = p.partstatus ? Math.min(usnToPtsMap[p.partusn] || 0, maxActivityPts) : 0;
-            partSheet.addRow([
+            ws.addRow([
                 p.partusn || 'N/A', student.sname || 'N/A', student.sem || 'N/A',
                 student.mobno || 'N/A', student.emailid || 'N/A',
                 p.partstatus ? 'Present' : 'Absent', p.payment_status || 'N/A',
@@ -1706,88 +1575,29 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
                 payment.amount ?? (p.payment_status === 'free' ? '0' : 'N/A'), earnedPts
             ]);
         });
-        partSheet.columns.forEach(col => { col.width = 20; });
 
-        // 3. Volunteers Sheet
-        const volSheet = workbook.addWorksheet('Volunteers');
-        const volCols = ['USN', 'Name', 'Status', 'Activity Pts'];
-        const vHeader = volSheet.addRow(volCols);
-        vHeader.font = { bold: true };
-        vHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
+        ws.addRow([]);
+        const volHdr = ws.addRow(['VOLUNTEERS']);
+        volHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+        volHdr.alignment = { horizontal: 'center' };
+        ws.mergeCells(`A${volHdr.number}:D${volHdr.number}`);
+        volHdr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF70AD47' } };
+
+        const volCols = ws.addRow(['USN', 'Name', 'Volunteer Status', 'Activity Points Earned']);
+        volCols.font = { bold: true };
+        volCols.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
 
         const volActivityPts = event.vol_activity_pts || 0;
         volunteers.forEach(v => {
-            const std = volStudentMap[v.volnusn] || {};
-            volSheet.addRow([
-                v.volnusn || 'N/A', std.sname || 'N/A',
+            const student = volStudentMap[v.volnusn] || {};
+            ws.addRow([
+                v.volnusn || 'N/A', student.sname || 'N/A',
                 v.volnstatus ? 'Present' : 'Absent', v.volnstatus ? volActivityPts : 0
             ]);
         });
-        volSheet.columns.forEach(col => { col.width = 20; });
 
-        // 4. Department Summary
-        const deptSheet = workbook.addWorksheet('Department Summary');
-
-        // Participants Section
-        deptSheet.addRow(['PARTICIPANTS SUMMARY']).font = { bold: true };
-        deptSheet.addRow(['Department', 'Registered', 'Participated', '% Participation']).font = { bold: true };
-        let pTR = 0; let pTP = 0;
-        for (const dept in partStats) {
-            const d = partStats[dept];
-            const pct = d.totalRegistered ? ((d.totalParticipated / d.totalRegistered) * 100).toFixed(2) : 0;
-            deptSheet.addRow([dept, d.totalRegistered, d.totalParticipated, pct + '%']);
-            pTR += d.totalRegistered; pTP += d.totalParticipated;
-        }
-        deptSheet.addRow(['PARTICIPANTS TOTAL', pTR, pTP, (pTR ? ((pTP / pTR) * 100).toFixed(2) : 0) + '%']).font = { bold: true };
-        deptSheet.addRow([]);
-
-        // Volunteers Section
-        deptSheet.addRow(['VOLUNTEERS SUMMARY']).font = { bold: true };
-        deptSheet.addRow(['Department', 'Registered', 'Participated', '% Participation']).font = { bold: true };
-        let vTR = 0; let vTP = 0;
-        for (const dept in volStats) {
-            const d = volStats[dept];
-            const pct = d.totalRegistered ? ((d.totalParticipated / d.totalRegistered) * 100).toFixed(2) : 0;
-            deptSheet.addRow([dept, d.totalRegistered, d.totalParticipated, pct + '%']);
-            vTR += d.totalRegistered; vTP += d.totalParticipated;
-        }
-        deptSheet.addRow(['VOLUNTEERS TOTAL', vTR, vTP, (vTR ? ((vTP / vTR) * 100).toFixed(2) : 0) + '%']).font = { bold: true };
-        deptSheet.columns.forEach(col => { col.width = 25; });
-
-        // 5. Dept-Sem Breakdown
-        const semSheet = workbook.addWorksheet('Dept-Sem Breakdown');
-
-        // Participants Section
-        semSheet.addRow(['PARTICIPANTS DEPT-SEM BREAKDOWN']).font = { bold: true };
-        semSheet.addRow(['Department', 'Semester', 'Registered', 'Participated', '%']).font = { bold: true };
-        for (const dept in partStats) {
-            const semesters = partStats[dept].semesters;
-            for (const sem in semesters) {
-                const s = semesters[sem];
-                const pct = s.registered ? ((s.participated / s.registered) * 100).toFixed(2) : 0;
-                semSheet.addRow([dept, sem, s.registered, s.participated, pct + '%']);
-            }
-        }
-        semSheet.addRow([]);
-
-        // Volunteers Section
-        semSheet.addRow(['VOLUNTEERS DEPARTMENT SUMMARY']).font = { bold: true };
-        semSheet.addRow(['Department', 'Registered', 'Participated', '%']).font = { bold: true };
-        for (const dept in volStats) {
-            const d = volStats[dept];
-            const pct = d.totalRegistered ? ((d.totalParticipated / d.totalRegistered) * 100).toFixed(2) : 0;
-            semSheet.addRow([dept, d.totalRegistered, d.totalParticipated, pct + '%']);
-        }
-        semSheet.columns.forEach(col => { col.width = 25; });
-
-        // Apply global styling: borders + left alignment for all data
-        workbook.eachSheet(sheet => {
-            sheet.eachRow(row => {
-                row.eachCell(cell => {
-                    cell.alignment = { horizontal: 'left' };
-                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-                });
-            });
+        ws.eachRow(row => {
+            row.eachCell(cell => { cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }; });
         });
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -1795,8 +1605,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         await workbook.xlsx.write(res);
         res.end();
     } catch (err) {
-        console.error('❌ Excel Error:', err);
-        res.status(500).json({ error: 'Error generating Excel file: ' + err.message });
+        res.status(500).json({ error: 'Error generating Excel file' });
     }
 });
 
