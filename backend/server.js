@@ -59,6 +59,12 @@ const pool = new Pool({
 });
 pool.on('error', (err) => console.error('❌ Unexpected PG pool error:', err.message || err));
 
+// ─── Neon Keep-Alive (prevents cold start 504s) ────────────────────────────────
+setInterval(async () => {
+    try { await pool.query('SELECT 1'); console.log('🟢 Neon keep-alive ping OK'); }
+    catch (e) { console.warn('⚠️ Neon keep-alive failed:', e.message); }
+}, 4 * 60 * 1000); // ping every 4 minutes
+
 async function query(text, params) {
     if (!IS_PRODUCTION) {
         const cleanSql = text.replace(/\s+/g, ' ').trim();
@@ -162,7 +168,15 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.options('*', cors());
+app.options('*', cors({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 // ─── Passport Google OAuth ─────────────────────────────────────────────────────
 app.use(passport.initialize());
@@ -1617,3 +1631,4 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`🌱 MODE: ${IS_PRODUCTION ? 'Production' : 'Development'}`);
     console.log('─'.repeat(50) + '\n');
 });
+
