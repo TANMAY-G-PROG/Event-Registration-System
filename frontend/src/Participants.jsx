@@ -108,7 +108,7 @@ const Participants = () => {
       y -= lineHeight;
     });
 
-    return y; 
+    return y;
   };
 
   const generateCertificate = async (event) => {
@@ -116,11 +116,7 @@ const Participants = () => {
     setGeneratingIds(prev => new Set(prev).add(event.eid));
 
     try {
-      if (!event.PartStatus) {
-        alert('Certificate is only available for attended events.');
-        setGeneratingIds(prev => { const next = new Set(prev); next.delete(event.eid); return next; });
-        return;
-      }
+      // ✅ CHANGE 1: Removed PartStatus check — certificate available for ALL registered students
 
       const t = new Date().getTime();
       const res = await fetch(`/openday.pdf?v=${t}`);
@@ -166,16 +162,11 @@ const Participants = () => {
         font: regularFont, size: 12, color: white, startY: 220, maxWidth, lineHeight, pageWidth: width,
       });
 
-      const rawPts = String(event.earnedActivityPts || '0').replace(/[^0-9.]/g, '');
-      let pts = parseFloat(rawPts);
-      if (isNaN(pts)) pts = 0;
-
-      if (pts > 0) {
-        const ptsText = `${pts} activity point${pts !== 1 ? 's' : ''} can be claimed from this certificate.`;
-        drawWrappedCentred(page, ptsText, {
-          font: boldFont, size: 13, color: gold, startY: afterPartY - 18, maxWidth, lineHeight, pageWidth: width,
-        });
-      }
+      // ✅ CHANGE 2: Hardcoded 5 activity points — shows for ALL registered students
+      const ptsText = `5 activity points can be claimed from this certificate.`;
+      drawWrappedCentred(page, ptsText, {
+        font: boldFont, size: 13, color: gold, startY: afterPartY - 18, maxWidth, lineHeight, pageWidth: width,
+      });
 
       const pdfBytes = await pdfDoc.save();
       const url = window.URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
@@ -203,8 +194,6 @@ const Participants = () => {
 
   const renderCard = (event, type) => {
     const isPast = type === 'completed';
-    let displayPts = parseFloat(String(event.earnedActivityPts || '0').replace(/[^0-9.]/g, ''));
-    if (isNaN(displayPts)) displayPts = 0;
 
     return (
       <div key={event.eid} className={`part-event-card ${type}`}>
@@ -223,18 +212,16 @@ const Participants = () => {
 
         <div className="part-card-footer">
           <div className="part-card-badges">
-            {isPast && !event.PartStatus ? (
-              <span className="part-no-attend">Did not attend</span>
-            ) : (
-              <>
-                {event.PartStatus
-                  ? <span className="part-attend-chip attended"><i className="fas fa-check"></i> Attended</span>
-                  : <span className="part-attend-chip registered"><i className="fas fa-bookmark"></i> Registered</span>
-                }
-                {displayPts > 0 && (
-                  <span className="part-points-chip"><i className="fas fa-star"></i>{displayPts} pts</span>
-                )}
-              </>
+
+            {/* ✅ CHANGE 3: Show attended/registered chip for everyone */}
+            {event.PartStatus
+              ? <span className="part-attend-chip attended"><i className="fas fa-check"></i> Attended</span>
+              : <span className="part-attend-chip registered"><i className="fas fa-bookmark"></i> Registered</span>
+            }
+
+            {/* ✅ CHANGE 4: Always show 5 pts badge for completed events */}
+            {isPast && (
+              <span className="part-points-chip"><i className="fas fa-star"></i> 5 pts</span>
             )}
 
             {(type === 'upcoming' || type === 'ongoing') && (
@@ -243,7 +230,8 @@ const Participants = () => {
               </button>
             )}
 
-            {(type === 'completed' && event.PartStatus) && (
+            {/* ✅ CHANGE 5: View Cert button for ALL completed students — scanned or not */}
+            {isPast && (
               generatingIds.has(event.eid) ? (
                 <button className="part-action-chip cert-btn" disabled>
                   <i className="fas fa-spinner fa-spin"></i> Generating...
@@ -258,6 +246,7 @@ const Participants = () => {
                 </button>
               )
             )}
+
           </div>
         </div>
       </div>
@@ -275,7 +264,6 @@ const Participants = () => {
     <div className="participants-page">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
-      {/* Spacer to prevent Navbar overlap */}
       <div style={{ paddingBottom: 60 }} />
 
       <section className="hero-section">
