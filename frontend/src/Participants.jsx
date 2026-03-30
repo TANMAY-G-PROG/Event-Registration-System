@@ -158,18 +158,16 @@ const Participants = () => {
 
   // ─────────────────────────────────────────────────────────────────────────
   // generateCertificate
-  // Shows THIS event's activity points on the certificate ONLY if attended
+  // CHANGE 1: Removed PartStatus check — certificate available for ALL
+  // CHANGE 2: Hardcoded 5 activity points for everyone
   // ─────────────────────────────────────────────────────────────────────────
   const generateCertificate = async (event) => {
     if (downloadLinks[event.eid]?.url) window.URL.revokeObjectURL(downloadLinks[event.eid].url);
     setGeneratingIds(prev => new Set(prev).add(event.eid));
 
     try {
-      if (!event.PartStatus) {
-        alert('Certificate is only available for attended events.');
-        setGeneratingIds(prev => { const next = new Set(prev); next.delete(event.eid); return next; });
-        return;
-      }
+      // ✅ CHANGE 1: REMOVED PartStatus block entirely
+      // Everyone can now generate certificate
 
       const t = new Date().getTime();
 
@@ -223,20 +221,18 @@ const Participants = () => {
       });
       if (line) page.drawText(line.trim(), { x: 190, y: yPos, size: 10, font: descFont, color: rgb(1, 1, 1) });
 
-      // ── Activity points: only printed if attended AND this event has points > 0 ──
-      if (event.PartStatus && (event.earnedActivityPts || 0) > 0) {
-        const pointsText = `Activity Points Earned: ${event.earnedActivityPts}`;
-        const ptSize = 10;
-        const ptWidth = boldFont.widthOfTextAtSize(pointsText, ptSize);
-        const ptY = yPos - 30;
-        page.drawText(pointsText, {
-          x: (width - ptWidth) / 2,
-          y: ptY,
-          size: ptSize,
-          font: boldFont,
-          color: rgb(0.97, 0.85, 0.57) // gold — matches the name colour
-        });
-      }
+      // ✅ CHANGE 2: Hardcoded 5 activity points — shows for ALL registered students
+      const pointsText = `Activity Points Earned: 5`;
+      const ptSize = 10;
+      const ptWidth = boldFont.widthOfTextAtSize(pointsText, ptSize);
+      const ptY = yPos - 30;
+      page.drawText(pointsText, {
+        x: (width - ptWidth) / 2,
+        y: ptY,
+        size: ptSize,
+        font: boldFont,
+        color: rgb(0.97, 0.85, 0.57)
+      });
 
       const pdfBytes = await pdfDoc.save();
       const url = window.URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
@@ -291,7 +287,7 @@ const Participants = () => {
   const ScrollAssistant = ({ type }) => {
     const icon = scrollPositions[type] === 'up' ? 'fa-chevron-up' : 'fa-chevron-down';
     return (
-      <button 
+      <button
         className={`card-scroll-assistant ${scrollPositions[type]}`}
         onClick={() => executeCardScroll(type)}
         title={scrollPositions[type] === 'up' ? 'Scroll to Top' : 'Scroll Down'}
@@ -326,27 +322,22 @@ const Participants = () => {
               : <span className="status-reg">Registered</span>}
           </div>
 
-          {/* Activity points badge — shown on card whenever event has earned points > 0 */}
-          {(event.earnedActivityPts || 0) > 0 && (
-            <div className="part-activity-points">
-              <i className="fas fa-star"></i> {event.earnedActivityPts} Claimable Activity Point{event.earnedActivityPts !== 1 ? 's' : ''}
-            </div>
-          )}
+          {/* ✅ CHANGE 3: Show 5 activity points badge for ALL registered students */}
+          <div className="part-activity-points">
+            <i className="fas fa-star"></i> 5 Claimable Activity Points
+          </div>
         </div>
 
         <div className="part-event-actions">
           {eventType === 'completed' ? (
-            !event.PartStatus ? (
-              <div className="part-not-participated">
-                You did not participate in the event
-              </div>
-            ) : generatingIds.has(event.eid) ? (
+            generatingIds.has(event.eid) ? (
               <button className="part-glass-btn" disabled>Generating...</button>
             ) : downloadLinks[event.eid] ? (
               <a href={downloadLinks[event.eid].url} download={downloadLinks[event.eid].filename} className="part-glass-btn success">
                 <i className="fas fa-download"></i> Download
               </a>
             ) : (
+              // ✅ CHANGE 4: View Certificate button shows for ALL — scanned or not
               <button className="part-glass-btn primary" onClick={() => handleEventButtonClick(event, eventType)}>
                 View Certificate
               </button>
@@ -379,7 +370,7 @@ const Participants = () => {
               <div className="card__background"></div>
               <div className="card__content">
                 <h3 className="card__heading">Completed Events</h3>
-                <div 
+                <div
                   className="card__details"
                   ref={completedRef}
                   onScroll={(e) => handleCardScroll(e, 'completed')}
@@ -394,7 +385,7 @@ const Participants = () => {
               <div className="card__background"></div>
               <div className="card__content">
                 <h3 className="card__heading">Ongoing Events</h3>
-                <div 
+                <div
                   className="card__details"
                   ref={ongoingRef}
                   onScroll={(e) => handleCardScroll(e, 'ongoing')}
@@ -409,7 +400,7 @@ const Participants = () => {
               <div className="card__background"></div>
               <div className="card__content">
                 <h3 className="card__heading">Upcoming Events</h3>
-                <div 
+                <div
                   className="card__details"
                   ref={upcomingRef}
                   onScroll={(e) => handleCardScroll(e, 'upcoming')}
