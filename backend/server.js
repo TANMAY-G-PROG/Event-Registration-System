@@ -410,7 +410,7 @@ app.post('/api/forgot-password', async (req, res) => {
             const resetLink = `${FRONTEND_URL_BASE}/reset-password?token=${resetToken}`;
             const sendSmtpEmail = new Brevo.SendSmtpEmail();
             sendSmtpEmail.subject = 'Reset Your FLO Password';
-            sendSmtpEmail.sender = { name: 'FLO E-Pass System', email: 'epass@flobms.com' };
+            sendSmtpEmail.sender = { name: 'FLO', email: 'flobms3@gmail.com' };
             sendSmtpEmail.to = [{ email, name: student.sname }];
             sendSmtpEmail.htmlContent = `
                 <html><body style="font-family: Arial, sans-serif; background:#f5f0e8; padding:20px;">
