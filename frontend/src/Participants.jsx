@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import './participants.css';
 import { useNavigate } from 'react-router-dom';
@@ -108,7 +109,7 @@ const Participants = () => {
       y -= lineHeight;
     });
 
-    return y;
+    return y; 
   };
 
   const generateCertificate = async (event) => {
@@ -116,7 +117,12 @@ const Participants = () => {
     setGeneratingIds(prev => new Set(prev).add(event.eid));
 
     try {
-      // No PartStatus check — certificate available for all registered participants
+      if (!event.PartStatus) {
+        alert('Certificate is only available for attended events.');
+        setGeneratingIds(prev => { const next = new Set(prev); next.delete(event.eid); return next; });
+        return;
+      }
+
       const t = new Date().getTime();
       const res = await fetch(`/openday.pdf?v=${t}`);
       if (!res.ok) throw new Error('Template not found');
@@ -161,12 +167,16 @@ const Participants = () => {
         font: regularFont, size: 12, color: white, startY: 220, maxWidth, lineHeight, pageWidth: width,
       });
 
-      // Hardcoded 5 activity points for all registered participants regardless of QR scan
-      const pts = 5;
-      const ptsText = `${pts} activity points can be claimed from this certificate.`;
-      drawWrappedCentred(page, ptsText, {
-        font: boldFont, size: 13, color: gold, startY: afterPartY - 18, maxWidth, lineHeight, pageWidth: width,
-      });
+      const rawPts = String(event.earnedActivityPts || '0').replace(/[^0-9.]/g, '');
+      let pts = parseFloat(rawPts);
+      if (isNaN(pts)) pts = 0;
+
+      if (pts > 0) {
+        const ptsText = `${pts} activity point${pts !== 1 ? 's' : ''} can be claimed from this certificate.`;
+        drawWrappedCentred(page, ptsText, {
+          font: boldFont, size: 13, color: gold, startY: afterPartY - 18, maxWidth, lineHeight, pageWidth: width,
+        });
+      }
 
       const pdfBytes = await pdfDoc.save();
       const url = window.URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
@@ -193,8 +203,9 @@ const Participants = () => {
   const attendedCount = useMemo(() => events.completed.filter(e => e.PartStatus).length, [events]);
 
   const renderCard = (event, type) => {
-    // Hardcoded 5 activity points for all registered participants
-    const displayPts = 5;
+    const isPast = type === 'completed';
+    let displayPts = parseFloat(String(event.earnedActivityPts || '0').replace(/[^0-9.]/g, ''));
+    if (isNaN(displayPts)) displayPts = 0;
 
     return (
       <div key={event.eid} className={`part-event-card ${type}`}>
@@ -213,11 +224,19 @@ const Participants = () => {
 
         <div className="part-card-footer">
           <div className="part-card-badges">
-            {event.PartStatus
-              ? <span className="part-attend-chip attended"><i className="fas fa-check"></i> Attended</span>
-              : <span className="part-attend-chip registered"><i className="fas fa-bookmark"></i> Registered</span>
-            }
-            <span className="part-points-chip"><i className="fas fa-star"></i>{displayPts} pts</span>
+            {isPast && !event.PartStatus ? (
+              <span className="part-no-attend">Did not attend</span>
+            ) : (
+              <>
+                {event.PartStatus
+                  ? <span className="part-attend-chip attended"><i className="fas fa-check"></i> Attended</span>
+                  : <span className="part-attend-chip registered"><i className="fas fa-bookmark"></i> Registered</span>
+                }
+                {displayPts > 0 && (
+                  <span className="part-points-chip"><i className="fas fa-star"></i>{displayPts} pts</span>
+                )}
+              </>
+            )}
 
             {(type === 'upcoming' || type === 'ongoing') && (
               <button className="part-action-chip ticket-btn" onClick={() => navigate(`/participant-ticket?eventId=${event.eid}`)}>
@@ -225,8 +244,7 @@ const Participants = () => {
               </button>
             )}
 
-            {/* Certificate available for ALL completed events regardless of PartStatus */}
-            {type === 'completed' && (
+            {(type === 'completed' && event.PartStatus) && (
               generatingIds.has(event.eid) ? (
                 <button className="part-action-chip cert-btn" disabled>
                   <i className="fas fa-spinner fa-spin"></i> Generating...
