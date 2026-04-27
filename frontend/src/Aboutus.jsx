@@ -17,8 +17,7 @@ const AboutUs = () => {
       title: "Developer",
       handle: "suchitks",
       status: "Available",
-      avatarUrl: null,
-      initials: "SK",
+      avatarUrl: member1,
       linkedin: "https://www.linkedin.com/in/suchit-k-s-56a648283",
     },
     {
@@ -26,17 +25,16 @@ const AboutUs = () => {
       title: "Developer",
       handle: "tanmay",
       status: "Available",
-      avatarUrl: null,
-      initials: "TG",
+      avatarUrl: member2,
       linkedin: "https://www.linkedin.com/in/tanmaya-g-shetty/",
     },
+
     {
       name: "Yashwanth",
       title: "Developer",
       handle: "yashwanth",
       status: "Available",
-      avatarUrl: null,
-      initials: "YH",
+      avatarUrl: member3,
       linkedin: "https://www.linkedin.com/in/yashwanth-hv-403ba932b/",
     },
     {
@@ -44,8 +42,7 @@ const AboutUs = () => {
       title: "Developer",
       handle: "suchithn",
       status: "Available",
-      avatarUrl: null,
-      initials: "SN",
+      avatarUrl: member4,
       linkedin: "https://www.linkedin.com/in/suchithn/",
     },
   ];
@@ -69,7 +66,7 @@ const AboutUs = () => {
 
   const handleSocialClick = (e, link) => {
     if (link.isEmail) {
-      return;
+      return; 
     }
     e.preventDefault();
     window.open(link.url, "_blank");
@@ -89,6 +86,8 @@ const AboutUs = () => {
 
   return (
     <div className="about-page" style={{ height: '100vh', overflowY: 'scroll' }}>
+      
+      {/* Global NavBar is used here instead of local logout-container */}
 
       {/* Hero Section */}
       <section className="about-hero">
@@ -113,34 +112,15 @@ const AboutUs = () => {
         <div className="team-grid">
           {teamMembers.map((member, index) => (
             <div key={index} className="card-wrapper profile-card-overrides">
-              {/* Initials avatar shown instead of photo */}
-              <div style={{
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                background: '#FFD600',
-                border: '2.5px solid #0D0D0D',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontFamily: "'DM Mono', monospace",
-                fontWeight: 700,
-                fontSize: 22,
-                color: '#0D0D0D',
-                margin: '0 auto 12px',
-                letterSpacing: 1,
-              }}>
-                {member.initials}
-              </div>
               <ProfileCard
                 name={member.name}
                 title={member.title}
                 handle={member.handle}
                 status={member.status}
                 contactText="Contact"
-                avatarUrl={null}
+                avatarUrl={member.avatarUrl}
                 showUserInfo={true}
-                enableTilt={false}
+                enableTilt={false} /* Disabled tilt to favor brutalist hover scale */
                 enableMobileTilt={false}
                 onContactClick={() => handleContactClick(member.linkedin)}
               />
@@ -171,7 +151,7 @@ const AboutUs = () => {
           </div>
         </div>
       </section>
-
+      
     </div>
   );
 };
