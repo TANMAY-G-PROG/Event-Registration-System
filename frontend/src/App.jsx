@@ -102,11 +102,11 @@ function AppContent() {
         <Route path="/organiser-ticket" element={<OrganizerTicket />} />
         <Route path="/participant-ticket" element={<ParticipantTicket />} />
         <Route path="/volunteer-ticket" element={<VolunteerTicket />} />
-        {/* <Route path="/about-us" element={<AboutUs />} /> */}
+        <Route path="/about-us" element={<AboutUs />}
         <Route path="/qr" element={<QrCode />} />
         <Route path="/scanner" element={<Scanner />} />
         <Route path="/sub-events" element={<SubEventManager />} />
-        {/* <Route path="/profile" element={<Profile />} /> */}
+        <Route path="/profile" element={<Profile />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
