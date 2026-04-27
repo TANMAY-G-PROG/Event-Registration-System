@@ -106,7 +106,7 @@ function AppContent() {
         <Route path="/qr" element={<QrCode />} />
         <Route path="/scanner" element={<Scanner />} />
         <Route path="/sub-events" element={<SubEventManager />} />
-        {/* <Route path="/profile" element={<Profile />} /> */}
+        <Route path="/profile" element={<Profile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
