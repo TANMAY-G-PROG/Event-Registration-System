@@ -57,9 +57,13 @@ const pool = new Pool({
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
 });
-pool.on('error', (err) => console.error('Unexpected PG pool error', err));
+pool.on('error', (err) => console.error('❌ Unexpected PG pool error:', err.message || err));
 
 async function query(text, params) {
+    if (!IS_PRODUCTION) {
+        const cleanSql = text.replace(/\s+/g, ' ').trim();
+        console.log(`   🗄️ SQL: ${cleanSql.length > 120 ? cleanSql.substring(0, 120) + '...' : cleanSql}`);
+    }
     const client = await pool.connect();
     try {
         const res = await client.query(text, params);
@@ -83,10 +87,43 @@ function signToken(payload) {
     return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
+function extractDept(usn) {
+    const match = usn?.toUpperCase().match(/^1[A-Z]{2}\d{2}([A-Z]{2})\d{3}$/);
+    return match ? match[1] : null;
+}
+
 // ─── Express app ───────────────────────────────────────────────────────────────
 const app = express();
 app.use(helmet());
 app.use(express.json({ limit: '10kb' }));
+
+// ─── Logging Middleware ────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+    const start = Date.now();
+    const timestamp = new Date().toLocaleTimeString();
+
+    // Log Request
+    const userSuffix = req.session?.userUSN ? ` (${req.session.userUSN})` : '';
+    console.log(`[${timestamp}] 📡 ${req.method} ${req.url}${userSuffix}`);
+    if (req.body && Object.keys(req.body).length > 0) {
+        const maskedBody = { ...req.body };
+        const secrets = ['password', 'newPassword', 'currentPassword', 'newPin', 'confirmPin', 'otp', 'token'];
+        secrets.forEach(s => { if (maskedBody[s]) maskedBody[s] = '******'; });
+        const bodyStr = JSON.stringify(maskedBody);
+        console.log(`   📦 Body: ${bodyStr.length > 200 ? bodyStr.substring(0, 200) + '...' : bodyStr}`);
+    }
+
+    // Intercept Response
+    const originalSend = res.send;
+    res.send = function (data) {
+        const duration = Date.now() - start;
+        const status = res.statusCode;
+        const emoji = status >= 400 ? '❌' : '✅';
+        console.log(`[${timestamp}] ${emoji} ${status} ${req.method} ${req.url} — ${duration}ms`);
+        return originalSend.apply(res, arguments);
+    };
+    next();
+});
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, standardHeaders: true, legacyHeaders: false });
 app.use(limiter);
@@ -94,20 +131,41 @@ app.use(limiter);
 const PORT = process.env.PORT || 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-let redisClient = { isOpen: false, get: async () => null, set: async () => null, del: async () => null, connect: async () => {} };
+let redisClient = { isOpen: false, get: async () => null, set: async () => null, del: async () => null, connect: async () => { } };
+let redisActive = false;
 
 (async () => {
     try {
+        if (!process.env.REDIS_URL) {
+            console.log('⚠️ No REDIS_URL set — running without Redis cache');
+            return;
+        }
+
         const realClient = createClient({
             url: process.env.REDIS_URL,
-            socket: { connectTimeout: 5000, reconnectStrategy: (r) => (r > 2 ? false : 1000) },
+            socket: {
+                tls: true,
+                rejectUnauthorized: false,
+                connectTimeout: 5000,
+                reconnectStrategy: (r) => (r > 2 ? false : 1000),
+            },
         });
-        realClient.on('error', () => {});
-        realClient.on('connect', () => console.log('✅ Connected to Redis Cloud (cache only)'));
+        realClient.on('error', (err) => {
+            console.log('⚠️ Redis error:', err.message);
+        });
+        realClient.on('connect', () => {
+            console.log('✅ Connected to Redis Cloud (cache only)');
+            redisActive = true;
+        });
+        realClient.on('end', () => {
+            console.log('⚠️ Redis disconnected');
+            redisActive = false;
+        });
         await realClient.connect();
         redisClient = realClient;
     } catch (err) {
         console.log('⚠️ Redis unavailable — running without cache (non-fatal)');
+        redisActive = false;
     }
 })();
 
@@ -217,6 +275,7 @@ async function requireAuthToken(req, res, next) {
 }
 
 app.get('/', (req, res) => res.send('🚀 Flobms backend server is running successfully'));
+app.get('/health', (req, res) => res.json({ ok: true }));
 
 // ─── Complete Auth Routes ───────────────────────────────────────────────────────
 
@@ -224,7 +283,7 @@ app.post('/api/signup', async (req, res) => {
     try {
         const { name, usn, sem, mobno, email, password, organizerPin } = req.body;
         if (!usn || !name || !email || !sem || !mobno || !password) return res.status(400).json({ error: 'All fields are required' });
-        
+
         const existing = await queryOne('SELECT usn FROM student WHERE usn = $1 OR emailid = $2 LIMIT 1', [usn, email]);
         if (existing) return res.status(400).json({ error: 'Student with this USN or email already exists' });
 
@@ -306,7 +365,7 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
         if (!student?.password_hash) return res.status(400).json({ error: 'This account uses Google Sign-In and has no password to change.' });
 
         const match = await bcrypt.compare(currentPassword, student.password_hash);
-        if (!match) return res.status(401).json({ error: 'Current password is incorrect' });
+        if (!match) return res.status(400).json({ error: 'Current password is incorrect' });
 
         const newHash = await bcrypt.hash(newPassword, 12);
         await query('UPDATE student SET password_hash = $1 WHERE usn = $2', [newHash, req.session.userUSN]);
@@ -371,7 +430,7 @@ app.post('/api/forgot-password', async (req, res) => {
                 return res.status(500).json({ error: 'Failed to send reset email. Please try again later.' });
             }
         } else {
-            console.log(`ℹ️ Forgot password attempted for unknown email: ${email}`);
+            // No need for a log here as the 200 response will be logged by middleware
         }
         res.json({ success: true, message: 'If an account exists, you will receive a reset link.' });
     } catch (err) {
@@ -480,7 +539,7 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         if (!eventId || isNaN(eventId)) return res.status(400).json({ error: 'Invalid event ID' });
-        
+
         const event = await queryOne(`
             SELECT e.*, c.cname AS club_cname, s.sname AS organizer_name
             FROM event e
@@ -505,14 +564,13 @@ app.get('/api/events/:eventId', requireAuth, async (req, res) => {
 
         const participantCheck = await queryOne('SELECT partstatus, payment_status FROM participant WHERE partusn = $1 AND parteid = $2 LIMIT 1', [req.session.userUSN, eventId]);
         const volunteerCheck = await queryOne('SELECT volnstatus FROM volunteer WHERE volnusn = $1 AND volneid = $2 LIMIT 1', [req.session.userUSN, eventId]);
-        
+
         transformedEvent.isRegistered = !!participantCheck;
         transformedEvent.paymentStatus = participantCheck?.payment_status || null;
         transformedEvent.isVolunteer = !!volunteerCheck;
         transformedEvent.isOrganizer = event.orgusn === req.session.userUSN;
         res.json(transformedEvent);
     } catch (err) {
-        console.error("Error in /api/events/:eventId:", err);
         res.status(500).json({ error: 'Error fetching event details: ' + err.message });
     }
 });
@@ -528,7 +586,7 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
         } = req.body;
         const file = req.file;
         let finalBannerUrl = null;
-        
+
         if (file) {
             try {
                 const result = await uploadFromBuffer(file.buffer);
@@ -537,12 +595,12 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
                 return res.status(500).json({ error: 'Failed to upload banner image' });
             }
         }
-        
+
         const organizedClubId = (clubId || OrgCid) ? parseInt(clubId || OrgCid) : null;
         const fee = parseFloat(registrationFee) || 0;
         const isTeam = isTeamEvent === 'true' || isTeamEvent === true;
         const points = parseInt(activityPoints) || 0;
-        
+
         if (organizedClubId) {
             const memberCheck = await queryOne('SELECT clubid FROM memberof WHERE studentusn = $1 AND clubid = $2 LIMIT 1', [req.session.userUSN, organizedClubId]);
             if (!memberCheck) return res.status(403).json({ error: 'Unauthorized: You are not a member of this club and cannot organize events for it.' });
@@ -572,7 +630,7 @@ app.post('/api/events/create', requireAuth, upload.single('banner'), async (req,
         ]);
 
         const newEventId = newEvent.eid;
-        await query(`INSERT INTO sub_event (eid, se_name, se_details, activity_pts) VALUES ($1, $2, $3, $4)`, 
+        await query(`INSERT INTO sub_event (eid, se_name, se_details, activity_pts) VALUES ($1, $2, $3, $4)`,
             [newEventId, eventName, '', parseInt(maxActivityPts) || 0]
         );
 
@@ -605,7 +663,7 @@ app.get('/api/my-participant-events', requireAuth, async (req, res) => {
                     JOIN sub_event se ON sea.seid = se.seid
                     WHERE sea.eid = $1 AND sea.usn = $2 AND sea.role = 'participant'
                 `, [e.eid, userUSN]);
-                
+
                 const sum = attendance.reduce((s, row) => s + (row.activity_pts || 0), 0);
                 earnedActivityPts = Math.min(sum, maxActivityPts);
             }
@@ -681,7 +739,7 @@ app.post('/api/events/:eventId/join', requireAuth, async (req, res) => {
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
-        
+
         const existing = await queryOne('SELECT * FROM participant WHERE partusn = $1 AND parteid = $2 LIMIT 1', [userUSN, eventId]);
         if (existing) return res.status(400).json({ error: 'Already joined this event' });
 
@@ -760,12 +818,12 @@ app.get('/api/events/:eventId/participant-status', requireAuth, async (req, res)
             SELECT e.eid, e.ename, e.eventdesc, e.eventdate, e.eventtime, e.eventloc, e.maxpart, e.regfee, c.cname AS club_cname
             FROM event e LEFT JOIN club c ON e.orgcid = c.cid WHERE e.eid = $1 LIMIT 1
         `, [eventId]);
-        
+
         if (!event) return res.status(404).json({ error: 'Event not found' });
-        
+
         const participant = await queryOne('SELECT partstatus, payment_status FROM participant WHERE parteid = $1 AND partusn = $2 LIMIT 1', [eventId, req.session.userUSN]);
         if (!participant) return res.json({ isRegistered: false, ename: event.ename });
-        
+
         res.json({
             isRegistered: true, ename: event.ename, clubName: event.club_cname,
             eventDate: event.eventdate, eventTime: event.eventtime, eventLoc: event.eventloc,
@@ -796,11 +854,11 @@ app.post('/api/events/:eventId/sub-events', requireAuth, async (req, res) => {
         const { se_name, activity_pts, se_details } = req.body;
         if (!se_name) return res.status(400).json({ error: 'Sub-event name is required' });
         if (activity_pts !== undefined && activity_pts < 0) return res.status(400).json({ error: 'Activity points cannot be negative' });
-        
+
         const event = await queryOne('SELECT orgusn FROM event WHERE eid = $1 LIMIT 1', [eventId]);
         if (!event) return res.status(404).json({ error: 'Event not found' });
         if (event.orgusn !== req.session.userUSN) return res.status(403).json({ error: 'Only the organizer can add sub-events' });
-        
+
         const newSubEvent = await queryOne(
             `INSERT INTO sub_event (eid, se_name, se_details, activity_pts) VALUES ($1, $2, $3, $4) RETURNING *`,
             [eventId, se_name, se_details || '', parseInt(activity_pts) || 0]
@@ -817,26 +875,26 @@ app.put('/api/sub-events/:seid', requireAuth, async (req, res) => {
         const { se_name, activity_pts, se_details, password } = req.body;
         if (!password) return res.status(400).json({ error: 'Organizer PIN is required to confirm changes' });
         if (activity_pts !== undefined && activity_pts < 0) return res.status(400).json({ error: 'Activity points cannot be negative' });
-        
+
         const userData = await queryOne('SELECT organizer_pin FROM student WHERE usn = $1', [req.session.userUSN]);
         if (!userData?.organizer_pin) return res.status(400).json({ error: 'You have not set an organizer PIN yet.' });
-        
+
         const isValid = await bcrypt.compare(password, userData.organizer_pin);
-        if (!isValid) return res.status(401).json({ error: 'Incorrect organizer PIN' });
-        
+        if (!isValid) return res.status(400).json({ error: 'Incorrect organizer PIN' });
+
         const subEvent = await queryOne('SELECT eid FROM sub_event WHERE seid = $1 LIMIT 1', [seid]);
         if (!subEvent) return res.status(404).json({ error: 'Sub-event not found' });
-        
+
         const event = await queryOne('SELECT orgusn FROM event WHERE eid = $1 LIMIT 1', [subEvent.eid]);
         if (event.orgusn !== req.session.userUSN) return res.status(403).json({ error: 'Only the organizer can update sub-events' });
-        
+
         const updateFields = [];
         const params = [];
         if (se_name !== undefined) { params.push(se_name); updateFields.push(`se_name = $${params.length}`); }
         if (activity_pts !== undefined) { params.push(parseInt(activity_pts) || 0); updateFields.push(`activity_pts = $${params.length}`); }
         if (se_details !== undefined) { params.push(se_details || ''); updateFields.push(`se_details = $${params.length}`); }
-        
-        if(updateFields.length === 0) return res.json(subEvent);
+
+        if (updateFields.length === 0) return res.json(subEvent);
 
         params.push(seid);
         const updatedSubEvent = await queryOne(`UPDATE sub_event SET ${updateFields.join(', ')} WHERE seid = $${params.length} RETURNING *`, params);
@@ -851,22 +909,22 @@ app.delete('/api/sub-events/:seid', requireAuth, async (req, res) => {
         const seid = req.params.seid;
         const { password } = req.body;
         if (!password) return res.status(400).json({ error: 'Organizer PIN is required' });
-        
+
         const userData = await queryOne('SELECT organizer_pin FROM student WHERE usn = $1', [req.session.userUSN]);
         if (!userData?.organizer_pin) return res.status(400).json({ error: 'You have not set an organizer PIN yet.' });
-        
+
         const isValid = await bcrypt.compare(password, userData.organizer_pin);
-        if (!isValid) return res.status(401).json({ error: 'Incorrect organizer PIN' });
-        
+        if (!isValid) return res.status(400).json({ error: 'Incorrect organizer PIN' });
+
         const subEvent = await queryOne('SELECT eid FROM sub_event WHERE seid = $1 LIMIT 1', [seid]);
         if (!subEvent) return res.status(404).json({ error: 'Sub-event not found' });
-        
+
         const event = await queryOne('SELECT orgusn FROM event WHERE eid = $1 LIMIT 1', [subEvent.eid]);
         if (event.orgusn !== req.session.userUSN) return res.status(403).json({ error: 'Only the organizer can delete sub-events' });
-        
+
         const count = await queryCount('SELECT count(*) FROM sub_event WHERE eid = $1', [subEvent.eid]);
         if (count <= 1) return res.status(400).json({ error: 'Cannot delete the last sub-event' });
-        
+
         await query('DELETE FROM sub_event WHERE seid = $1', [seid]);
         res.json({ success: true, message: 'Sub-event deleted successfully' });
     } catch (err) {
@@ -924,24 +982,45 @@ app.post('/api/mark-participant-attendance', requireAuth, async (req, res) => {
         if (usn !== req.session.userUSN) return res.status(403).json({ error: 'Unauthorized: USN mismatch' });
         if (!usn || !seid) return res.status(400).json({ error: 'USN and Sub-event ID are required' });
         if (!token || !timestamp) return res.status(400).json({ error: 'QR code is outdated.' });
-        if (!validateQRToken(seid, token, timestamp)) return res.status(401).json({ error: 'QR code has expired.' });
-        
+        if (!validateQRToken(seid, token, timestamp)) return res.status(400).json({ error: 'QR code has expired.' });
+
+        // Redis cache check — prevent duplicate DB hits
+        const cacheKey = `attendance:participant:${seid}:${usn}`;
+        try {
+            const cached = await redisClient.get(cacheKey);
+            if (cached) {
+                console.log(`   🔴 Redis HIT: ${cacheKey} — duplicate blocked`);
+                return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
+            }
+            if (redisActive) console.log(`   🟢 Redis MISS: ${cacheKey} — proceeding to DB`);
+        } catch (redisErr) {
+            console.log('   ⚠️ Redis read error (ignored):', redisErr.message);
+        }
+
         const subEvent = await queryOne('SELECT eid, se_name FROM sub_event WHERE seid = $1 LIMIT 1', [seid]);
         if (!subEvent) return res.status(404).json({ error: 'Sub-event not found' });
         const eventId = subEvent.eid;
-        
+
         const existing = await queryOne('SELECT partstatus, payment_status FROM participant WHERE partusn = $1 AND parteid = $2 LIMIT 1', [usn, eventId]);
         if (!existing) return res.status(404).json({ error: 'You are not registered for this event' });
         if (existing.payment_status === 'pending_verification') return res.status(400).json({ error: 'Your payment is pending verification' });
-        
+
         const existingAttendance = await queryOne('SELECT id FROM sub_event_attendance WHERE seid = $1 AND usn = $2 AND role = $3 LIMIT 1', [seid, usn, 'participant']);
         if (existingAttendance) return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
-        
+
         await query('INSERT INTO sub_event_attendance (seid, eid, usn, role) VALUES ($1, $2, $3, $4)', [seid, eventId, usn, 'participant']);
-        
+
+        // Cache the attendance in Redis after successful DB insert
+        try {
+            await redisClient.set(cacheKey, '1', { EX: 3600 });
+            if (redisActive) console.log(`   ✅ Redis SET: ${cacheKey} (TTL: 1h)`);
+        } catch (redisErr) {
+            console.log('   ⚠️ Redis write error (ignored):', redisErr.message);
+        }
+
         const scanCount = await queryCount('SELECT count(*) FROM sub_event_attendance WHERE eid = $1 AND usn = $2 AND role = $3', [eventId, usn, 'participant']);
         const eventData = await queryOne('SELECT min_part_scans FROM event WHERE eid = $1 LIMIT 1', [eventId]);
-        
+
         const minPartScans = eventData?.min_part_scans || 1;
         const thresholdMet = scanCount >= minPartScans;
         if (thresholdMet) {
@@ -959,23 +1038,44 @@ app.post('/api/mark-volunteer-attendance', requireAuth, async (req, res) => {
         if (usn !== req.session.userUSN) return res.status(403).json({ error: 'Unauthorized: USN mismatch' });
         if (!usn || !seid) return res.status(400).json({ error: 'USN and Sub-event ID are required' });
         if (!token || !timestamp) return res.status(400).json({ error: 'QR code is outdated.' });
-        if (!validateQRToken(seid, token, timestamp)) return res.status(401).json({ error: 'QR code has expired.' });
-        
+        if (!validateQRToken(seid, token, timestamp)) return res.status(400).json({ error: 'QR code has expired.' });
+
+        // Redis cache check — prevent duplicate DB hits
+        const cacheKey = `attendance:volunteer:${seid}:${usn}`;
+        try {
+            const cached = await redisClient.get(cacheKey);
+            if (cached) {
+                console.log(`   🔴 Redis HIT: ${cacheKey} — duplicate blocked`);
+                return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
+            }
+            if (redisActive) console.log(`   🟢 Redis MISS: ${cacheKey} — proceeding to DB`);
+        } catch (redisErr) {
+            console.log('   ⚠️ Redis read error (ignored):', redisErr.message);
+        }
+
         const subEvent = await queryOne('SELECT eid, se_name FROM sub_event WHERE seid = $1 LIMIT 1', [seid]);
         if (!subEvent) return res.status(404).json({ error: 'Sub-event not found' });
         const eventId = subEvent.eid;
-        
+
         const existing = await queryOne('SELECT volnstatus FROM volunteer WHERE volnusn = $1 AND volneid = $2 LIMIT 1', [usn, eventId]);
         if (!existing) return res.status(404).json({ error: 'You are not registered as a volunteer for this event' });
-        
+
         const existingAttendance = await queryOne('SELECT id FROM sub_event_attendance WHERE seid = $1 AND usn = $2 AND role = $3 LIMIT 1', [seid, usn, 'volunteer']);
         if (existingAttendance) return res.status(400).json({ error: 'Attendance already marked for this sub-event' });
-        
+
         await query('INSERT INTO sub_event_attendance (seid, eid, usn, role) VALUES ($1, $2, $3, $4)', [seid, eventId, usn, 'volunteer']);
-        
+
+        // Cache the attendance in Redis after successful DB insert
+        try {
+            await redisClient.set(cacheKey, '1', { EX: 3600 });
+            if (redisActive) console.log(`   ✅ Redis SET: ${cacheKey} (TTL: 1h)`);
+        } catch (redisErr) {
+            console.log('   ⚠️ Redis write error (ignored):', redisErr.message);
+        }
+
         const scanCount = await queryCount('SELECT count(*) FROM sub_event_attendance WHERE eid = $1 AND usn = $2 AND role = $3', [eventId, usn, 'volunteer']);
         const eventData = await queryOne('SELECT min_voln_scans FROM event WHERE eid = $1 LIMIT 1', [eventId]);
-        
+
         const minVolnScans = eventData?.min_voln_scans || 1;
         const thresholdMet = scanCount >= minVolnScans;
         if (thresholdMet) {
@@ -994,7 +1094,7 @@ app.get('/api/scan-qr', async (req, res) => {
         const existing = await queryOne('SELECT partstatus FROM participant WHERE partusn = $1 AND parteid = $2 LIMIT 1', [usn, eid]);
         if (!existing) return res.status(404).json({ error: 'Participant not found for this event' });
         if (existing.partstatus === true) return res.status(400).json({ error: 'Participant already checked in' });
-        
+
         await query('UPDATE participant SET partstatus = true WHERE partusn = $1 AND parteid = $2', [usn, eid]);
         res.json({ success: true, message: 'Participant checked in successfully' });
     } catch (err) {
@@ -1007,10 +1107,10 @@ app.get('/api/sub-events/:seid/qr-token', requireAuth, async (req, res) => {
         const seid = req.params.seid;
         const subEvent = await queryOne('SELECT eid, se_name FROM sub_event WHERE seid = $1 LIMIT 1', [seid]);
         if (!subEvent) return res.status(404).json({ error: 'Sub-event not found' });
-        
+
         const event = await queryOne('SELECT orgusn FROM event WHERE eid = $1 LIMIT 1', [subEvent.eid]);
         if (!event || event.orgusn !== req.session.userUSN) return res.status(403).json({ error: 'Only the organizer can generate QR tokens' });
-        
+
         const timestamp = Date.now().toString();
         const payload = `${seid}:${timestamp}`;
         const token = crypto.createHmac('sha256', QR_TOKEN_SECRET).update(payload).digest('hex').substring(0, 16);
@@ -1027,10 +1127,10 @@ app.post('/api/set-organizer-pin', requireAuth, async (req, res) => {
         const { newPin, confirmPin } = req.body;
         if (!newPin || !/^\d{4,6}$/.test(newPin)) return res.status(400).json({ error: 'PIN must be 4 to 6 digits' });
         if (newPin !== confirmPin) return res.status(400).json({ error: 'PINs do not match' });
-        
+
         const userData = await queryOne('SELECT organizer_pin FROM student WHERE usn = $1', [req.session.userUSN]);
         if (userData?.organizer_pin) return res.status(400).json({ error: 'PIN already set. Use the change PIN flow.' });
-        
+
         const hashedPin = await bcrypt.hash(newPin, 10);
         await query('UPDATE student SET organizer_pin = $1 WHERE usn = $2', [hashedPin, req.session.userUSN]);
         res.json({ success: true, message: 'Organizer PIN set successfully' });
@@ -1044,23 +1144,39 @@ app.post('/api/request-pin-otp', requireAuth, async (req, res) => {
         const userData = await queryOne('SELECT sname, emailid, organizer_pin FROM student WHERE usn = $1', [req.session.userUSN]);
         if (!userData) return res.status(404).json({ error: 'User not found' });
         if (!userData.organizer_pin) return res.status(400).json({ error: 'No PIN set. Use Set PIN instead.' });
-        
+
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const expiry = new Date(Date.now() + 5 * 60 * 1000);
         const hashedOtp = await bcrypt.hash(otp, 10);
-        
+
         await query('UPDATE student SET pin_otp = $1, pin_otp_expiry = $2 WHERE usn = $3', [hashedOtp, expiry.toISOString(), req.session.userUSN]);
-        
+
         const sendSmtpEmail = new Brevo.SendSmtpEmail();
         sendSmtpEmail.subject = 'Your Organizer PIN Change OTP - FLO';
         sendSmtpEmail.sender = { name: 'FLO E-Pass System', email: 'flobms3@gmail.com' };
         sendSmtpEmail.to = [{ email: userData.emailid, name: userData.sname }];
-        sendSmtpEmail.htmlContent = `<html><body><h2>${otp}</h2></body></html>`;
-        await apiInstance.sendTransacEmail(sendSmtpEmail);
-        
+        sendSmtpEmail.htmlContent = `
+            <html><body style="font-family: Arial, sans-serif; background:#f5f0e8; padding:20px;">
+            <div style="max-width:500px;margin:0 auto;background:#fff;border:3px solid #0D0D0D;padding:32px;box-shadow:5px 5px 0 #000;">
+                <h2 style="font-family:monospace;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px;">FLO</h2>
+                <div style="height:4px;background:#FFD600;width:40px;margin-bottom:24px;"></div>
+                <p>Hello <strong>${userData.sname}</strong>,</p>
+                <p>Use the OTP below to reset your organizer PIN. This OTP expires in <strong>5 minutes</strong>.</p>
+                <div style="background:#0D0D0D;color:#FFD600;font-family:monospace;font-size:32px;font-weight:700;padding:24px;text-align:center;letter-spacing:8px;margin:24px 0;">${otp}</div>
+                <p style="color:#999;font-size:12px;margin-top:24px;">If you did not request this, ignore this email.</p>
+            </div></body></html>`;
+        try {
+            await apiInstance.sendTransacEmail(sendSmtpEmail);
+            console.log(`✅ PIN reset OTP sent to ${userData.emailid}`);
+        } catch (e) {
+            console.error('❌ Brevo email error (request-pin-otp):', e?.response?.body || e?.message || e);
+            return res.status(500).json({ error: 'Failed to send OTP. Please try again later.' });
+        }
+
         res.json({ success: true, message: `OTP sent to ${userData.emailid}. Valid for 5 minutes.` });
     } catch (err) {
-        res.status(500).json({ error: 'Failed to send OTP. Please try again.' });
+        console.error('❌ request-pin-otp route error:', err);
+        res.status(500).json({ error: 'Failed to request OTP. Please try again.' });
     }
 });
 
@@ -1068,18 +1184,18 @@ app.post('/api/verify-pin-otp', requireAuth, async (req, res) => {
     try {
         const { otp } = req.body;
         if (!otp || !/^\d{6}$/.test(otp)) return res.status(400).json({ error: 'Please enter a valid 6-digit OTP' });
-        
+
         const userData = await queryOne('SELECT pin_otp, pin_otp_expiry FROM student WHERE usn = $1', [req.session.userUSN]);
         if (!userData?.pin_otp || !userData?.pin_otp_expiry) return res.status(400).json({ error: 'No OTP requested.' });
-        
+
         if (new Date(userData.pin_otp_expiry) < new Date()) {
             await query('UPDATE student SET pin_otp = null, pin_otp_expiry = null WHERE usn = $1', [req.session.userUSN]);
             return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
         }
-        
+
         const isValid = await bcrypt.compare(otp, userData.pin_otp);
-        if (!isValid) return res.status(401).json({ error: 'Incorrect OTP. Please try again.' });
-        
+        if (!isValid) return res.status(400).json({ error: 'Incorrect OTP. Please try again.' });
+
         await query('UPDATE student SET pin_otp = null, pin_otp_expiry = null WHERE usn = $1', [req.session.userUSN]);
         res.json({ success: true, message: 'OTP verified. You can now set your new PIN.' });
     } catch (err) {
@@ -1092,7 +1208,7 @@ app.post('/api/reset-organizer-pin', requireAuth, async (req, res) => {
         const { newPin, confirmPin } = req.body;
         if (!newPin || !/^\d+$/.test(newPin) || newPin.length < 4 || newPin.length > 6) return res.status(400).json({ error: 'PIN must be 4-6 digits' });
         if (newPin !== confirmPin) return res.status(400).json({ error: 'PINs do not match' });
-        
+
         const hashedPin = await bcrypt.hash(newPin, 10);
         await query('UPDATE student SET organizer_pin = $1 WHERE usn = $2', [hashedPin, req.session.userUSN]);
         res.json({ success: true, message: 'Organizer PIN changed successfully' });
@@ -1108,30 +1224,30 @@ app.post('/api/events/:eventId/register-upi', requireAuth, async (req, res) => {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
         const { transaction_id } = req.body;
-        
+
         if (!transaction_id) return res.status(400).json({ error: 'Transaction ID is required' });
-        
+
         const existing = await queryOne('SELECT partusn FROM participant WHERE partusn = $1 AND parteid = $2 LIMIT 1', [userUSN, eventId]);
         if (existing) return res.status(400).json({ error: 'You are already registered for this event' });
-        
+
         const eventData = await queryOne('SELECT regfee, maxpart, orgusn FROM event WHERE eid = $1 LIMIT 1', [eventId]);
         if (!eventData) return res.status(404).json({ error: 'Event not found' });
         if (eventData.orgusn === userUSN) return res.status(403).json({ error: 'You cannot register in an event you organize' });
-        
+
         const amount = eventData.regfee || 0;
         if (amount <= 0) return res.status(400).json({ error: 'This is not a paid event' });
-        
+
         if (eventData.maxpart > 0) {
             const count = await queryCount('SELECT count(*) FROM participant WHERE parteid = $1', [eventId]);
             if (count >= eventData.maxpart) return res.status(400).json({ error: 'Event is full' });
         }
-        
-        await query('INSERT INTO payment (usn, event_id, amount, status, upi_transaction_id) VALUES ($1, $2, $3, $4, $5)', 
+
+        await query('INSERT INTO payment (usn, event_id, amount, status, upi_transaction_id) VALUES ($1, $2, $3, $4, $5)',
             [userUSN, eventId, amount, 'pending_verification', transaction_id]);
-            
-        await query('INSERT INTO participant (partusn, parteid, partstatus, payment_status) VALUES ($1, $2, false, $3)', 
+
+        await query('INSERT INTO participant (partusn, parteid, partstatus, payment_status) VALUES ($1, $2, false, $3)',
             [userUSN, eventId, 'pending_verification']);
-            
+
         res.json({ success: true, message: 'Registration submitted! Your payment is pending verification by the organizer.', userUSN });
     } catch (err) {
         res.status(500).json({ error: 'Error submitting registration' });
@@ -1142,32 +1258,32 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
     try {
         const { participantUSN, eventId } = req.body;
         const organizerUSN = req.session.userUSN;
-        
+
         if (!participantUSN || !eventId) return res.status(400).json({ error: 'Participant USN and Event ID are required' });
-        
+
         const event = await queryOne('SELECT orgusn, is_team FROM event WHERE eid = $1 LIMIT 1', [eventId]);
         if (!event) return res.status(404).json({ error: 'Event not found' });
         if (event.orgusn !== organizerUSN) return res.status(403).json({ error: 'Not authorized to verify payments' });
-        
+
         if (event.is_team) {
             const team = await queryOne('SELECT id FROM team WHERE event_id = $1 AND leader_usn = $2 LIMIT 1', [eventId, participantUSN]);
             if (team) {
                 const teamMembers = await query('SELECT student_usn FROM team_members WHERE team_id = $1 AND join_status = true', [team.id]);
                 const allTeamUSNs = teamMembers.map(m => m.student_usn);
-                
+
                 await query('UPDATE payment SET status = $1 WHERE event_id = $2 AND usn = $3 AND status = $4', ['verified', eventId, participantUSN, 'pending_verification']);
-                
-                for(const memberUsn of allTeamUSNs) {
+
+                for (const memberUsn of allTeamUSNs) {
                     await query('UPDATE participant SET payment_status = $1 WHERE partusn = $2 AND parteid = $3', ['verified', memberUsn, eventId]);
                 }
                 await query('UPDATE team SET registration_complete = true WHERE id = $1', [team.id]);
                 return res.json({ success: true, message: `Payment verified for entire team (${allTeamUSNs.length} members)!`, verifiedCount: allTeamUSNs.length });
             }
         }
-        
+
         await query('UPDATE payment SET status = $1 WHERE event_id = $2 AND usn = $3 AND status = $4', ['verified', eventId, participantUSN, 'pending_verification']);
         await query('UPDATE participant SET payment_status = $1 WHERE partusn = $2 AND parteid = $3', ['verified', participantUSN, eventId]);
-        
+
         res.json({ success: true, message: 'Payment verified successfully!' });
     } catch (err) {
         res.status(500).json({ error: 'Error verifying payment' });
@@ -1222,9 +1338,9 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
         const { teamName, memberUSNs } = req.body;
-        
+
         if (!teamName || !Array.isArray(memberUSNs)) return res.status(400).json({ error: 'Team name and member USNs are required' });
-        
+
         const event = await queryOne('SELECT is_team, min_team_size, max_team_size, orgusn FROM event WHERE eid = $1 LIMIT 1', [eventId]);
         if (!event || !event.is_team) return res.status(400).json({ error: 'This is not a team event' });
         if (event.orgusn === userUSN) return res.status(403).json({ error: 'Organizers cannot participate in their own event' });
@@ -1238,14 +1354,14 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
             SELECT tm.team_id FROM team_members tm JOIN team t ON tm.team_id = t.id 
             WHERE tm.student_usn = $1 AND tm.join_status = true AND t.event_id = $2
         `, [userUSN, eventId]);
-        
+
         if (existingTeam.length > 0) return res.status(400).json({ error: 'You have already joined a team for this event.' });
 
         if (memberUSNs.length > 0) {
             const students = await query('SELECT usn FROM student WHERE usn = ANY($1::text[])', [memberUSNs]);
             if (students.length !== memberUSNs.length) return res.status(400).json({ error: 'One or more member USNs are invalid' });
             if (memberUSNs.includes(event.orgusn)) return res.status(400).json({ error: 'Cannot add the event organizer as a team member' });
-            
+
             const memberTeamCheck = await query(`
                 SELECT tm.student_usn FROM team_members tm JOIN team t ON tm.team_id = t.id 
                 WHERE tm.student_usn = ANY($1::text[]) AND tm.join_status = true AND t.event_id = $2
@@ -1257,10 +1373,10 @@ app.post('/api/events/:eventId/create-team', requireAuth, async (req, res) => {
         const teamId = newTeam.id;
 
         await query('INSERT INTO team_members (team_id, student_usn, join_status) VALUES ($1, $2, true)', [teamId, userUSN]);
-        for(const usn of memberUSNs) {
+        for (const usn of memberUSNs) {
             await query('INSERT INTO team_members (team_id, student_usn, join_status) VALUES ($1, $2, false)', [teamId, usn]);
         }
-        
+
         res.json({ success: true, message: 'Team created successfully! Invitations sent.', teamId, minSize: event.min_team_size, currentSize: 1, canRegister: event.min_team_size <= 1 });
     } catch (err) {
         res.status(500).json({ error: 'Error creating team' });
@@ -1272,7 +1388,7 @@ app.get('/api/events/:eventId/team-status', requireAuth, async (req, res) => {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
         const event = await queryOne('SELECT is_team, min_team_size, max_team_size, regfee FROM event WHERE eid = $1 LIMIT 1', [eventId]);
-        
+
         if (!event) return res.status(404).json({ error: 'Event not found' });
         if (!event.is_team) return res.json({ isTeamEvent: false });
 
@@ -1316,19 +1432,19 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
     try {
         const eventId = req.params.eventId;
         const userUSN = req.session.userUSN;
-        
+
         const team = await queryOne(`
             SELECT t.id, t.registration_complete, e.regfee, e.min_team_size, e.maxpart 
             FROM team t JOIN event e ON t.event_id = e.eid 
             WHERE t.leader_usn = $1 AND t.event_id = $2 LIMIT 1
         `, [userUSN, eventId]);
-        
+
         if (!team) return res.status(404).json({ error: 'Team not found or you are not the team leader' });
         if (team.registration_complete) return res.status(400).json({ error: 'Team is already registered' });
-        
+
         const members = await query('SELECT student_usn FROM team_members WHERE team_id = $1 AND join_status = true', [team.id]);
         if (members.length < team.min_team_size) return res.status(400).json({ error: `Minimum ${team.min_team_size} members required.` });
-        
+
         if (team.maxpart > 0) {
             const count = await queryCount('SELECT count(*) FROM team WHERE event_id = $1 AND registration_complete = true', [eventId]);
             if (count >= team.maxpart) return res.status(400).json({ error: `Event is full.` });
@@ -1336,7 +1452,7 @@ app.post('/api/events/:eventId/register-team', requireAuth, async (req, res) => 
         if (team.regfee > 0) return res.json({ success: true, requiresPayment: true, message: 'Payment required', teamId: team.id, regFee: team.regfee });
 
         await query('UPDATE team SET registration_complete = true WHERE id = $1', [team.id]);
-        
+
         for (const m of members) {
             await query(`
                 INSERT INTO participant (partusn, parteid, partstatus, payment_status, team_id) 
@@ -1356,13 +1472,13 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
         const userUSN = req.session.userUSN;
         const { transaction_id } = req.body;
         if (!transaction_id) return res.status(400).json({ error: 'Transaction ID is required' });
-        
+
         const team = await queryOne(`
             SELECT t.id, t.registration_complete, e.regfee, e.min_team_size, e.maxpart 
             FROM team t JOIN event e ON t.event_id = e.eid 
             WHERE t.leader_usn = $1 AND t.event_id = $2 LIMIT 1
         `, [userUSN, eventId]);
-        
+
         if (!team) return res.status(404).json({ error: 'Team not found or you are not the team leader' });
         if (team.registration_complete) return res.status(400).json({ error: 'Team is already registered' });
         if (team.regfee <= 0) return res.status(400).json({ error: 'This is not a paid event' });
@@ -1370,7 +1486,7 @@ app.post('/api/events/:eventId/register-team-upi', requireAuth, async (req, res)
         const members = await query('SELECT student_usn FROM team_members WHERE team_id = $1 AND join_status = true', [team.id]);
         if (members.length < team.min_team_size) return res.status(400).json({ error: `Minimum ${team.min_team_size} members required.` });
 
-        await query('INSERT INTO payment (usn, event_id, amount, status, upi_transaction_id) VALUES ($1, $2, $3, $4, $5)', 
+        await query('INSERT INTO payment (usn, event_id, amount, status, upi_transaction_id) VALUES ($1, $2, $3, $4, $5)',
             [userUSN, eventId, team.regfee, 'pending_verification', transaction_id]);
 
         for (const m of members) {
@@ -1390,22 +1506,22 @@ app.post('/api/teams/:teamId/confirm-join', requireAuth, async (req, res) => {
     try {
         const teamId = req.params.teamId;
         const userUSN = req.session.userUSN;
-        
+
         const membership = await queryOne(`
             SELECT tm.join_status, t.event_id, t.registration_complete, t.team_name
             FROM team_members tm JOIN team t ON tm.team_id = t.id
             WHERE tm.team_id = $1 AND tm.student_usn = $2 LIMIT 1
         `, [teamId, userUSN]);
-        
+
         if (!membership) return res.status(404).json({ error: 'You are not invited to this team' });
         if (membership.join_status) return res.status(400).json({ error: 'You have already joined this team' });
         if (membership.registration_complete) return res.status(400).json({ error: 'This team has already completed registration' });
-        
+
         const otherTeams = await query(`
             SELECT tm.team_id FROM team_members tm JOIN team t ON tm.team_id = t.id
             WHERE tm.student_usn = $1 AND tm.join_status = true AND t.event_id = $2 LIMIT 1
         `, [userUSN, membership.event_id]);
-        
+
         if (otherTeams.length > 0) return res.status(400).json({ error: 'You have already joined another team for this event' });
 
         await query('UPDATE team_members SET join_status = true WHERE team_id = $1 AND student_usn = $2', [teamId, userUSN]);
@@ -1451,7 +1567,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
 
         const participants = await query('SELECT partusn, partstatus, payment_status, team_id FROM participant WHERE parteid = $1', [eventId]);
         const partUsns = participants.length > 0 ? [...new Set(participants.map(p => p.partusn))] : [];
-        
+
         const students = partUsns.length > 0 ? await query('SELECT usn, sname, sem, mobno, emailid FROM student WHERE usn = ANY($1::text[])', [partUsns]) : [];
         const studentMap = students.reduce((acc, s) => ({ ...acc, [s.usn]: s }), {});
 
@@ -1466,39 +1582,101 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         const volStudents = volUsns.length > 0 ? await query('SELECT usn, sname FROM student WHERE usn = ANY($1::text[])', [volUsns]) : [];
         const volStudentMap = volStudents.reduce((acc, s) => ({ ...acc, [s.usn]: s }), {});
 
+        const combined = [];
+
+        // Participants
+        participants.forEach(p => {
+            const dept = extractDept(p.partusn);
+            if (!dept) return;
+            const std = studentMap[p.partusn] || {};
+
+            combined.push({
+                usn: p.partusn,
+                name: std.sname || 'N/A',
+                sem: std.sem || 'N/A',
+                dept,
+                role: 'Participant',
+                registered: 1,
+                participated: p.partstatus ? 1 : 0
+            });
+        });
+
+        // Volunteers
+        volunteers.forEach(v => {
+            const dept = extractDept(v.volnusn);
+            if (!dept) return;
+            const std = volStudentMap[v.volnusn] || {};
+
+            combined.push({
+                usn: v.volnusn,
+                name: std.sname || 'N/A',
+                sem: 'N/A', // Sem not available in vol query
+                dept,
+                role: 'Volunteer',
+                registered: 1,
+                participated: v.volnstatus ? 1 : 0
+            });
+        });
+
+        // Aggregation Logic (Separate for Participants and Volunteers)
+        const partStats = {};
+        const volStats = {};
+        combined.forEach(item => {
+            const st = item.role === 'Participant' ? partStats : volStats;
+            if (!st[item.dept]) {
+                st[item.dept] = { totalRegistered: 0, totalParticipated: 0, semesters: {} };
+            }
+            st[item.dept].totalRegistered += item.registered;
+            st[item.dept].totalParticipated += item.participated;
+
+            if (!st[item.dept].semesters[item.sem]) {
+                st[item.dept].semesters[item.sem] = { registered: 0, participated: 0 };
+            }
+            st[item.dept].semesters[item.sem].registered += item.registered;
+            st[item.dept].semesters[item.sem].participated += item.participated;
+        });
+
         const workbook = new ExcelJS.Workbook();
-        const ws = workbook.addWorksheet('Event Details');
-        ws.columns = [
-            { width: 15 }, { width: 25 }, { width: 10 }, { width: 15 }, { width: 30 },
-            { width: 15 }, { width: 20 }, { width: 20 }, { width: 30 }, { width: 15 }, { width: 20 }
-        ];
 
-        const hdr = ws.addRow(['EVENT DETAILS']);
-        hdr.font = { size: 16, bold: true };
-        hdr.alignment = { horizontal: 'center' };
-        ws.mergeCells('A1:J1');
-        ws.addRow([]);
-        ws.addRow(['Event Name:', event.ename || 'N/A']);
-        ws.addRow(['Event Date:', event.eventdate || 'N/A']);
-        ws.addRow(['Event Time:', event.eventtime || 'N/A']);
-        ws.addRow(['Event Location:', event.eventloc || 'N/A']);
-        ws.addRow(['Organiser USN:', event.orgusn || 'N/A']);
-        ws.addRow(['Organiser Name:', organiserName]);
-        for (let i = 3; i <= 8; i++) {
-            ws.getRow(i).font = { bold: true };
-            ws.getRow(i).getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
-        }
+        // Date formatting helper to avoid timezone shifts
+        const formatExcelDate = (date) => {
+            if (!date) return 'N/A';
+            const d = new Date(date);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}-${month}-${year}`;
+        };
+        const eDate = formatExcelDate(event.eventdate);
 
-        ws.addRow([]);
-        const partHdr = ws.addRow(['PARTICIPANTS']);
-        partHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
-        partHdr.alignment = { horizontal: 'center' };
-        ws.mergeCells(`A${partHdr.number}:J${partHdr.number}`);
-        partHdr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+        // 1. Overview Sheet
+        const overviewSheet = workbook.addWorksheet('Event Overview');
+        overviewSheet.addRow(['EVENT OVERVIEW']).font = { size: 16, bold: true };
+        overviewSheet.mergeCells('A1:B1');
+        overviewSheet.getRow(1).alignment = { horizontal: 'left' };
+        overviewSheet.addRow([]);
+        overviewSheet.addRow(['Event Name:', event.ename || 'N/A']);
+        overviewSheet.addRow(['Event Date:', eDate]);
+        overviewSheet.addRow(['Event Time:', event.eventtime || 'N/A']);
+        overviewSheet.addRow(['Event Location:', event.eventloc || 'N/A']);
+        overviewSheet.addRow(['Organiser USN:', event.orgusn || 'N/A']);
+        overviewSheet.addRow(['Organiser Name:', organiserName]);
+        overviewSheet.addRow([]);
+        overviewSheet.addRow(['SUMMARY STATISTICS']).font = { bold: true };
+        const totalRegCount = combined.length;
+        const totalPartCount = combined.filter(c => c.participated).length;
+        overviewSheet.addRow(['Total Registered:', totalRegCount]);
+        overviewSheet.addRow(['Total Participated:', totalPartCount]);
+        overviewSheet.addRow(['Participation Rate:', totalRegCount ? ((totalPartCount / totalRegCount) * 100).toFixed(2) + '%' : '0%']);
+        overviewSheet.getColumn(1).width = 25;
+        overviewSheet.getColumn(2).width = 50;
 
-        const partCols = ws.addRow(['USN', 'Name', 'Semester', 'Mobile No', 'Email', 'Participation Status', 'Payment Status', 'Team Name', 'UPI Transaction ID', 'Payment Amount', 'Activity Points Earned']);
-        partCols.font = { bold: true };
-        partCols.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
+        // 2. Participants Sheet
+        const partSheet = workbook.addWorksheet('Participants');
+        const partCols = ['USN', 'Name', 'Semester', 'Mobile No', 'Email', 'Status', 'Payment Status', 'Team Name', 'Transaction ID', 'Amount', 'Activity Pts'];
+        const pHeader = partSheet.addRow(partCols);
+        pHeader.font = { bold: true };
+        pHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
 
         const maxActivityPts = event.max_activity_pts || 0;
         let attendanceRaw = [];
@@ -1506,8 +1684,8 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         try {
             attendanceRaw = await query('SELECT usn, seid FROM sub_event_attendance WHERE eid = $1 AND role = $2', [eventId, 'participant']);
             subEventPts = await query('SELECT seid, activity_pts FROM sub_event WHERE eid = $1', [eventId]);
-        } catch(e) { console.log('Attendance tables missing, ignoring pts'); }
-        
+        } catch (e) { console.log('Attendance tables missing'); }
+
         const seidToPts = subEventPts.reduce((acc, se) => ({ ...acc, [se.seid]: se.activity_pts || 0 }), {});
         const usnToPtsMap = {};
         attendanceRaw.forEach(row => {
@@ -1520,7 +1698,7 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
             const payment = paymentMap[p.partusn] || {};
             const teamName = teamMap[p.team_id] || 'N/A';
             const earnedPts = p.partstatus ? Math.min(usnToPtsMap[p.partusn] || 0, maxActivityPts) : 0;
-            ws.addRow([
+            partSheet.addRow([
                 p.partusn || 'N/A', student.sname || 'N/A', student.sem || 'N/A',
                 student.mobno || 'N/A', student.emailid || 'N/A',
                 p.partstatus ? 'Present' : 'Absent', p.payment_status || 'N/A',
@@ -1528,29 +1706,88 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
                 payment.amount ?? (p.payment_status === 'free' ? '0' : 'N/A'), earnedPts
             ]);
         });
+        partSheet.columns.forEach(col => { col.width = 20; });
 
-        ws.addRow([]);
-        const volHdr = ws.addRow(['VOLUNTEERS']);
-        volHdr.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
-        volHdr.alignment = { horizontal: 'center' };
-        ws.mergeCells(`A${volHdr.number}:D${volHdr.number}`);
-        volHdr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF70AD47' } };
-
-        const volCols = ws.addRow(['USN', 'Name', 'Volunteer Status', 'Activity Points Earned']);
-        volCols.font = { bold: true };
-        volCols.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
+        // 3. Volunteers Sheet
+        const volSheet = workbook.addWorksheet('Volunteers');
+        const volCols = ['USN', 'Name', 'Status', 'Activity Pts'];
+        const vHeader = volSheet.addRow(volCols);
+        vHeader.font = { bold: true };
+        vHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
 
         const volActivityPts = event.vol_activity_pts || 0;
         volunteers.forEach(v => {
-            const student = volStudentMap[v.volnusn] || {};
-            ws.addRow([
-                v.volnusn || 'N/A', student.sname || 'N/A',
+            const std = volStudentMap[v.volnusn] || {};
+            volSheet.addRow([
+                v.volnusn || 'N/A', std.sname || 'N/A',
                 v.volnstatus ? 'Present' : 'Absent', v.volnstatus ? volActivityPts : 0
             ]);
         });
+        volSheet.columns.forEach(col => { col.width = 20; });
 
-        ws.eachRow(row => {
-            row.eachCell(cell => { cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }; });
+        // 4. Department Summary
+        const deptSheet = workbook.addWorksheet('Department Summary');
+
+        // Participants Section
+        deptSheet.addRow(['PARTICIPANTS SUMMARY']).font = { bold: true };
+        deptSheet.addRow(['Department', 'Registered', 'Participated', '% Participation']).font = { bold: true };
+        let pTR = 0; let pTP = 0;
+        for (const dept in partStats) {
+            const d = partStats[dept];
+            const pct = d.totalRegistered ? ((d.totalParticipated / d.totalRegistered) * 100).toFixed(2) : 0;
+            deptSheet.addRow([dept, d.totalRegistered, d.totalParticipated, pct + '%']);
+            pTR += d.totalRegistered; pTP += d.totalParticipated;
+        }
+        deptSheet.addRow(['PARTICIPANTS TOTAL', pTR, pTP, (pTR ? ((pTP / pTR) * 100).toFixed(2) : 0) + '%']).font = { bold: true };
+        deptSheet.addRow([]);
+
+        // Volunteers Section
+        deptSheet.addRow(['VOLUNTEERS SUMMARY']).font = { bold: true };
+        deptSheet.addRow(['Department', 'Registered', 'Participated', '% Participation']).font = { bold: true };
+        let vTR = 0; let vTP = 0;
+        for (const dept in volStats) {
+            const d = volStats[dept];
+            const pct = d.totalRegistered ? ((d.totalParticipated / d.totalRegistered) * 100).toFixed(2) : 0;
+            deptSheet.addRow([dept, d.totalRegistered, d.totalParticipated, pct + '%']);
+            vTR += d.totalRegistered; vTP += d.totalParticipated;
+        }
+        deptSheet.addRow(['VOLUNTEERS TOTAL', vTR, vTP, (vTR ? ((vTP / vTR) * 100).toFixed(2) : 0) + '%']).font = { bold: true };
+        deptSheet.columns.forEach(col => { col.width = 25; });
+
+        // 5. Dept-Sem Breakdown
+        const semSheet = workbook.addWorksheet('Dept-Sem Breakdown');
+
+        // Participants Section
+        semSheet.addRow(['PARTICIPANTS DEPT-SEM BREAKDOWN']).font = { bold: true };
+        semSheet.addRow(['Department', 'Semester', 'Registered', 'Participated', '%']).font = { bold: true };
+        for (const dept in partStats) {
+            const semesters = partStats[dept].semesters;
+            for (const sem in semesters) {
+                const s = semesters[sem];
+                const pct = s.registered ? ((s.participated / s.registered) * 100).toFixed(2) : 0;
+                semSheet.addRow([dept, sem, s.registered, s.participated, pct + '%']);
+            }
+        }
+        semSheet.addRow([]);
+
+        // Volunteers Section
+        semSheet.addRow(['VOLUNTEERS DEPARTMENT SUMMARY']).font = { bold: true };
+        semSheet.addRow(['Department', 'Registered', 'Participated', '%']).font = { bold: true };
+        for (const dept in volStats) {
+            const d = volStats[dept];
+            const pct = d.totalRegistered ? ((d.totalParticipated / d.totalRegistered) * 100).toFixed(2) : 0;
+            semSheet.addRow([dept, d.totalRegistered, d.totalParticipated, pct + '%']);
+        }
+        semSheet.columns.forEach(col => { col.width = 25; });
+
+        // Apply global styling: borders + left alignment for all data
+        workbook.eachSheet(sheet => {
+            sheet.eachRow(row => {
+                row.eachCell(cell => {
+                    cell.alignment = { horizontal: 'left' };
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                });
+            });
         });
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -1558,13 +1795,16 @@ app.get('/api/events/:eventId/generate-details', requireAuth, async (req, res) =
         await workbook.xlsx.write(res);
         res.end();
     } catch (err) {
-        res.status(500).json({ error: 'Error generating Excel file' });
+        console.error('❌ Excel Error:', err);
+        res.status(500).json({ error: 'Error generating Excel file: ' + err.message });
     }
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 Server running on port ${PORT}`);
-    console.log(`📡 CORS enabled for: ${allowedOrigins.join(', ')}`);
-    console.log(`🔐 Auth: Pure Custom JWT + Pure Raw Neon PG + Google OAuth (Passport)`);
-    console.log(`🌱 Environment: ${IS_PRODUCTION ? 'production' : 'development'}\n`);
+    console.log('\n' + '─'.repeat(50));
+    console.log(`🚀 FLO BACKEND: http://localhost:${PORT}`);
+    console.log(`📡 CORS: ${allowedOrigins.length} origins allowed`);
+    console.log(`🔐 AUTH: Custom JWT + Neon PG + Google OAuth`);
+    console.log(`🌱 MODE: ${IS_PRODUCTION ? 'Production' : 'Development'}`);
+    console.log('─'.repeat(50) + '\n');
 });
