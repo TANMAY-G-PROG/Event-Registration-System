@@ -212,26 +212,73 @@ npm run dev
 
 ## 📁 Project Structure
 
-```text
-Event-Registration-System/
-│
-├── backend/
-│   ├── routes/
-│   ├── controllers/
-│   ├── middleware/
-│   ├── services/
-│   └── config/
-│
-├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   ├── components/
-│   │   ├── services/
-│   │   └── hooks/
-│
-├── .github/
-├── README.md
-└── LICENSE
+## 🏗 Project Architecture
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                   Frontend (React + Vite)                    │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Pages:                                                │  │
+│  │  - Home (Event Discovery)                             │  │
+│  │  - Event Details                                      │  │
+│  │  - User Dashboard                                     │  │
+│  │  - Event Management (Organizer)                       │  │
+│  │  - Authentication (Login/Register)                    │  │
+│  │  - Certificate Viewer                                 │  │
+│  │  - Participant List                                   │  │
+│  └────────────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Components:                                           │  │
+│  │  - Event Cards, Event Form, Registration Form         │  │
+│  │  - Navigation, Header, Footer                         │  │
+│  │  - Payment Modal, Certificate Display                 │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+                        ↕ (HTTP/REST API)
+┌──────────────────────────────────────────────────────────────┐
+│              Backend API (Express.js + Node.js)              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  API Routes:                                           │  │
+│  │  - /auth (login, register, logout)                    │  │
+│  │  - /events (CRUD operations)                          │  │
+│  │  - /registrations (register, list, cancel)            │  │
+│  │  - /payments (process, verify, refund)                │  │
+│  │  - /certificates (generate, verify)                   │  │
+│  │  - /participants (list, export)                       │  │
+│  │  - /admin (user management)                           │  │
+│  └────────────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Services:                                             │  │
+│  │  - Auth Service (JWT)                                 │  │
+│  │  - Email Service (Brevo)                              │  │
+│  │  - Payment Service (Razorpay)                         │  │
+│  │  - Certificate Service (PDF generation)               │  │
+│  │  - Storage Service (Cloudinary)                       │  │
+│  └────────────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Middleware:                                           │  │
+│  │  - Authentication, CORS, Error Handling               │  │
+│  │  - Session Management (Redis)                         │  │
+│  │  - Request Logging                                    │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+                        ↕ (SQL/Database Access)
+┌──────────────────────────────────────────────────────────────┐
+│           Data Layer (Supabase + PostgreSQL)                 │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Tables:                                               │  │
+│  │  - users, events, registrations, payments             │  │
+│  │  - certificates, participants, audit_logs             │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+                        ↕
+┌──────────────────────────────────────────────────────────────┐
+│                 External Services                            │
+│  ┌─────────────┐ ┌──────────────┐ ┌───────────────────────┐ │
+│  │  Brevo      │ │  Razorpay    │ │  Cloudinary           │ │
+│  │  (Email)    │ │  (Payments)  │ │  (File Storage)       │ │
+│  └─────────────┘ └──────────────┘ └───────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
