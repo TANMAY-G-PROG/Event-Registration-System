@@ -1,4 +1,4 @@
-# 🎊 Event Registration System
+🎊 FLO - College Event Management Platform
 
 <div align="center">
 
