@@ -1,4 +1,4 @@
-🎊 FLO - College Event Management Platform
+# 🎊 FLO - College Event Management Platform
 
 <div align="center">
 
