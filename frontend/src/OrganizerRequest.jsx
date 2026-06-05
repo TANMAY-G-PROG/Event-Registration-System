@@ -245,7 +245,7 @@ export default function OrganizerRequest() {
                     {club.cname}
                   </option>
                 ))}
-                <option value="OTHER">Other (My club is not listed)</option>
+                <option value="OTHER">Other (Enter your club name)</option>
               </select>
 
               {/* Conditional Input for Custom Club Name */}
@@ -255,7 +255,7 @@ export default function OrganizerRequest() {
                   style={{ marginTop: '8px' }}
                   type="text"
                   name="club_name"
-                  placeholder="Type your custom club name here"
+                  placeholder="Type your club name here"
                   value={formData.club_name}
                   onChange={handleChange}
                   required
