@@ -9,7 +9,7 @@ import {
 } from 'react-router-dom';
 import { apiFetch } from './api.js';
 
-import NavBar from './NavBar.jsx'; 
+import NavBar from './NavBar.jsx';
 
 import LandingPage from './LandingPage.jsx';
 import Login from './Login.jsx';
@@ -33,11 +33,18 @@ import AboutUs from './Aboutus.jsx';
 import Profile from './Profile.jsx';
 import AdminDashboard from './AdminDashboard.jsx';
 
+// Pages where the global NavBar should NOT appear
+// (these pages render their own nav or no nav at all)
+const NO_NAVBAR_ROUTES = ['/', '/login', '/forgot-password', '/reset-password'];
+
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const timerId = useRef(null);
   const timeoutDuration = 10 * 60 * 1000;
+
+  // Only show global NavBar on authenticated app pages
+  const showNavBar = !NO_NAVBAR_ROUTES.includes(location.pathname);
 
   const handleLogout = async () => {
     if (timerId.current) clearTimeout(timerId.current);
@@ -61,7 +68,7 @@ function AppContent() {
 
   useEffect(() => {
     const events = ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll'];
-    const setupListeners = () => events.forEach(e => window.addEventListener(e, resetTimer));
+    const setupListeners   = () => events.forEach(e => window.addEventListener(e, resetTimer));
     const cleanupListeners = () => events.forEach(e => window.removeEventListener(e, resetTimer));
     const { pathname } = location;
     if (pathname !== '/login' && pathname !== '/' && pathname !== '/admin') {
@@ -76,30 +83,32 @@ function AppContent() {
 
   return (
     <>
-      <NavBar />
+      {/* Only render the global NavBar on authenticated pages */}
+      {showNavBar && <NavBar />}
+
       <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/events" element={<Events />} />
-        <Route path="/participants" element={<Participants />} />
-        <Route path="/organisers" element={<Organisers />} />
-        <Route path="/volunteers" element={<Volunteers />} />
-        <Route path="/create-event" element={<EventForm />} />
-        <Route path="/register-event" element={<Registerevent />} />
-        <Route path="/volunteer-event" element={<VolunteerEvents />} />
+        <Route path="/"                 element={<LandingPage />} />
+        <Route path="/login"            element={<Login />} />
+        <Route path="/forgot-password"  element={<ForgotPassword />} />
+        <Route path="/reset-password"   element={<ResetPassword />} />
+        <Route path="/events"           element={<Events />} />
+        <Route path="/participants"     element={<Participants />} />
+        <Route path="/organisers"       element={<Organisers />} />
+        <Route path="/volunteers"       element={<Volunteers />} />
+        <Route path="/create-event"     element={<EventForm />} />
+        <Route path="/register-event"   element={<Registerevent />} />
+        <Route path="/volunteer-event"  element={<VolunteerEvents />} />
         <Route path="/organiser-ticket" element={<OrganizerTicket />} />
         <Route path="/participant-ticket" element={<ParticipantTicket />} />
         <Route path="/volunteer-ticket" element={<VolunteerTicket />} />
-        <Route path="/qr" element={<QrCode />} />
-        <Route path="/scanner" element={<Scanner />} />
-        <Route path="/about-us" element={<AboutUs />} />
-        <Route path="/sub-events" element={<SubEventManager />} />
+        <Route path="/qr"               element={<QrCode />} />
+        <Route path="/scanner"          element={<Scanner />} />
+        <Route path="/about-us"         element={<AboutUs />} />
+        <Route path="/sub-events"       element={<SubEventManager />} />
         <Route path="/organizer-request" element={<OrganizerRequest />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/admin"            element={<AdminDashboard />} />
+        <Route path="/profile"          element={<Profile />} />
+        <Route path="*"                 element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
