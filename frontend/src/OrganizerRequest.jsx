@@ -11,13 +11,19 @@ export default function OrganizerRequest() {
     club_name: '',
     role_in_club: '',
   });
+  
   const [existingRequest, setExistingRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', isError: false });
+  
+  // New state for clubs dropdown
+  const [clubs, setClubs] = useState([]);
+  const [clubSelection, setClubSelection] = useState('');
 
   useEffect(() => {
     fetchStatus();
+    fetchClubs();
   }, []);
 
   const fetchStatus = async () => {
@@ -34,6 +40,19 @@ export default function OrganizerRequest() {
     }
   };
 
+  // Fetch available clubs from the database
+  const fetchClubs = async () => {
+    try {
+      const res = await apiFetch('/api/clubs');
+      if (res.ok) {
+        const data = await res.json();
+        setClubs(data.clubs || []);
+      }
+    } catch (err) {
+      console.error("Failed to load clubs", err);
+    }
+  };
+
   const showToast = (message, isError = false) => {
     setToast({ show: true, message, isError });
     setTimeout(() => setToast({ show: false, message: '', isError: false }), 4000);
@@ -41,6 +60,20 @@ export default function OrganizerRequest() {
 
   const handleChange = (e) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  // Handle the dropdown selection specifically
+  const handleClubSelect = (e) => {
+    const val = e.target.value;
+    setClubSelection(val);
+    
+    if (val !== 'OTHER') {
+      // If they picked an existing club, update formData
+      setFormData(prev => ({ ...prev, club_name: val }));
+    } else {
+      // If they picked OTHER, clear it so they can type
+      setFormData(prev => ({ ...prev, club_name: '' }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -199,15 +232,35 @@ export default function OrganizerRequest() {
 
             <div className="org-req-field">
               <label className="org-req-label">Club Name *</label>
-              <input
+              <select
                 className="org-req-input"
-                type="text"
-                name="club_name"
-                placeholder="e.g. IEEE Student Branch"
-                value={formData.club_name}
-                onChange={handleChange}
+                value={clubSelection}
+                onChange={handleClubSelect}
                 required
-              />
+                style={{ cursor: 'pointer' }}
+              >
+                <option value="">— Select an existing club —</option>
+                {clubs.map(club => (
+                  <option key={club.cid} value={club.cname}>
+                    {club.cname}
+                  </option>
+                ))}
+                <option value="OTHER">Other (My club is not listed)</option>
+              </select>
+
+              {/* Conditional Input for Custom Club Name */}
+              {clubSelection === 'OTHER' && (
+                <input
+                  className="org-req-input"
+                  style={{ marginTop: '8px' }}
+                  type="text"
+                  name="club_name"
+                  placeholder="Type your custom club name here"
+                  value={formData.club_name}
+                  onChange={handleChange}
+                  required
+                />
+              )}
             </div>
 
             <div className="org-req-field">
