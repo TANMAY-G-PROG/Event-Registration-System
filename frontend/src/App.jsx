@@ -8,7 +8,8 @@ import {
   useLocation
 } from 'react-router-dom';
 import { apiFetch } from './api.js';
-import NavBar from './navbar.jsx'; // <-- Imported the NavBar here
+
+import NavBar from './NavBar.jsx'; 
 
 import LandingPage from './LandingPage.jsx';
 import Login from './Login.jsx';
@@ -73,7 +74,7 @@ function AppContent() {
 
   return (
     <>
-      <NavBar /> {/* <-- Added NavBar globally here so it shows on all authorized pages */}
+      <NavBar />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
