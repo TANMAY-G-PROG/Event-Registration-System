@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import ProfileCard from './ProfileCard';
 import './Aboutus.css';
 
-// import member1 from './assets/member1.jpg';
-// import member2 from './assets/member2.jpg';
-// import member3 from './assets/member3.jpg';
-// import member4 from './assets/member4.jpg';
+import member1 from './assets/member1.jpg';
+import member2 from './assets/member2.jpg';
+import member3 from './assets/member3.jpg';
+import member4 from './assets/member4.jpg';
 
 const AboutUs = () => {
   const navigate = useNavigate();
