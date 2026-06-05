@@ -1,6 +1,6 @@
 /* ================================================================
    EVENT FORM — Neo-Brutalism LIGHT / Colorful
-   Fixed: spacing, overlapping labels, section headers, layout
+   Fixed: spacing, overlapping labels, section headers, layout, placeholder visibility, checkbox layout
    ================================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
@@ -328,8 +328,12 @@
   line-height: 1.5;
 }
 
+/* FIX: Made placeholder text much darker and more legible */
 .modern-input::placeholder,
-.modern-textarea::placeholder { color: #bbb; font-weight: 400; }
+.modern-textarea::placeholder { 
+  color: #777; 
+  font-weight: 500; 
+}
 
 .modern-input:focus,
 .modern-select:focus,
@@ -356,10 +360,12 @@
 }
 
 /* ── TOGGLE ROW ── */
+/* FIX: Adjusted flex layout to place checkbox clearly next to the label */
 .toggle-wrapper {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 12px;
   padding: 14px 18px;
   background: var(--yellow);
   border: var(--border-thin);
