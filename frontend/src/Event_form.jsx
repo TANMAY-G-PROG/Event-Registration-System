@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './event_form.css';
-import './style.css';
-
 import { apiFetch } from './api.js';
 
 const EventForm = () => {
@@ -27,7 +25,8 @@ const EventForm = () => {
     maxActivityPts: '',
     volActivityPts: '',
     minPartScans: '',
-    minVolnScans: ''
+    minVolnScans: '',
+    whatsappLink: '',
   });
 
   const [bannerFile, setBannerFile] = useState(null);
@@ -39,7 +38,7 @@ const EventForm = () => {
   useEffect(() => {
     const fetchMyClubs = async () => {
       try {
-        const res = await apiFetch('/api/my-clubs');;
+        const res = await apiFetch('/api/my-clubs');
         if (res.ok) {
           const data = await res.json();
           setMyClubs(data.clubs || []);
@@ -47,7 +46,7 @@ const EventForm = () => {
           navigate('/');
         }
       } catch (err) {
-        console.error("Failed to load memberships", err);
+        console.error('Failed to load memberships', err);
       } finally {
         setIsLoadingClubs(false);
       }
@@ -57,16 +56,14 @@ const EventForm = () => {
 
   const showMessage = (text, isError = false) => {
     setMessage({ text, isError, show: true });
-    setTimeout(() => {
-      setMessage({ text: '', isError: false, show: false });
-    }, 5000);
+    setTimeout(() => setMessage({ text: '', isError: false, show: false }), 5000);
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
@@ -94,6 +91,14 @@ const EventForm = () => {
       return;
     }
 
+    // Basic WhatsApp link validation if provided
+    const wa = formData.whatsappLink.trim();
+    if (wa && !wa.startsWith('https://chat.whatsapp.com/')) {
+      showMessage('WhatsApp link must start with https://chat.whatsapp.com/', true);
+      setIsSubmitting(false);
+      return;
+    }
+
     const submissionData = new FormData();
     submissionData.append('eventName', formData.eventName);
     submissionData.append('eventDescription', formData.eventDescription);
@@ -115,19 +120,16 @@ const EventForm = () => {
     submissionData.append('volActivityPts', formData.volActivityPts || '0');
     submissionData.append('minPartScans', formData.minPartScans || '1');
     submissionData.append('minVolnScans', formData.minVolnScans || '1');
+    submissionData.append('whatsappLink', wa);
 
-    if (bannerFile) {
-      submissionData.append('banner', bannerFile);
-    }
+    if (bannerFile) submissionData.append('banner', bannerFile);
 
     try {
       const res = await apiFetch('/api/events/create', {
         method: 'POST',
-        body: submissionData
+        body: submissionData,
       });
-
       const result = await res.json();
-
       if (res.ok) {
         showMessage('Event published successfully!');
         setTimeout(() => navigate('/organisers'), 2000);
@@ -151,213 +153,272 @@ const EventForm = () => {
 
   return (
     <div className="event-form-container">
-
-      {/* TOAST MESSAGE */}
       {message.show && (
-        <div className={`flo-toast ${message.isError ? "flo-toast--error" : "flo-toast--success"}`}>
-          <span className="flo-toast-icon">{message.isError ? "✕" : "✓"}</span>
+        <div className={`event-form-message ${message.isError ? 'event-form-message-error' : 'event-form-message-success'}`}>
           {message.text}
         </div>
       )}
 
-      <div style={{ paddingBottom: 60 }} /> {/* Top Spacer for Nav */}
       <div className="event-form-wrap">
-        <div className="event-form-mobile-header">
-          <span className="event-form-neon">Create <span className="event-form-neon-alt">Event</span></span>
+        <div className="event-form-left">
+          <div className="event-form-logo-text">Hey Organisers</div>
         </div>
 
-        {/* BACK BTN */}
-        <button className="back-button-top" onClick={() => navigate('/organisers')}>
-          <i className="fas fa-arrow-left"></i> Back
-        </button>
+        <div className="event-form-mobile-header">
+          <span className="event-form-neon">Hey</span>
+          <span className="event-form-neon event-form-neon-alt">Organisers</span>
+        </div>
 
-        {/* FORM CONTENT */}
         <div className="event-form-right">
           <div className="form-header">
-            <h1 className="event-form-title">Create <span>Event</span></h1>
-            <p className="form-subtitle">Fill in the details to publish your event on FLO</p>
+            <h2 className="event-form-title">Create Event</h2>
+            <div className="form-subtitle">Fill in the details to launch your new event.</div>
           </div>
 
           <form onSubmit={handleSubmit}>
 
-            {/* 01 — BASIC INFO */}
+            {/* --- SECTION 1: EVENT BASICS --- */}
             <div className="event-form-section">
-              <div className="section-label">
-                <span className="section-label-num n1">01</span>
-                <span className="section-label-text">Basic Info</span>
+              <span className="section-label">01. Event Basics</span>
+
+              <div className="input-group">
+                <label className="input-label">Event Name</label>
+                <input className="modern-input" type="text" name="eventName"
+                  placeholder="e.g. Annual Tech Hackathon"
+                  value={formData.eventName} onChange={handleChange} required />
               </div>
-              <div className="section-body">
+
+              <div className="input-group">
+                <label className="input-label">Description</label>
+                <textarea className="modern-textarea" name="eventDescription"
+                  placeholder="What is this event about?"
+                  value={formData.eventDescription} onChange={handleChange} rows="3" required />
+              </div>
+
+              <div className="form-grid-2">
                 <div className="input-group">
-                  <label className="input-label">Event Name <span className="req">*</span></label>
-                  <input className="modern-input" type="text" name="eventName" placeholder="e.g. Tech Fest 2026" value={formData.eventName} onChange={handleChange} required />
+                  <label className="input-label">Banner Image <span>(Optional)</span></label>
+                  <input type="file" accept="image/*" onChange={handleFileChange}
+                    className="modern-input" style={{ padding: '10px' }} />
+                  <div className="helper-text">Max 5MB. Jpeg/Png.</div>
                 </div>
+
                 <div className="input-group">
-                  <label className="input-label">Description <span className="req">*</span></label>
-                  <textarea className="modern-textarea" name="eventDescription" placeholder="What is this event about?" value={formData.eventDescription} onChange={handleChange} rows="3" required />
-                </div>
-                <div className="form-grid-2">
-                  <div className="input-group">
-                    <label className="input-label">Banner Image <span>(Optional)</span></label>
-                    <div className="file-upload-area">
-                      <input type="file" accept="image/*" onChange={handleFileChange} />
-                      <div className="file-upload-text">
-                        <i className="fas fa-image"></i>
-                        Click to Upload · Max 5MB
-                      </div>
-                      {bannerFile && <div className="file-name-preview">✓ {bannerFile.name}</div>}
-                    </div>
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label">Brochure Link <span>(Optional)</span></label>
-                    <input className="modern-input" type="url" name="posterUrl" placeholder="https://drive.google.com/..." value={formData.posterUrl} onChange={handleChange} />
-                    <span className="helper-text">Set Drive access to "Anyone with link"</span>
-                  </div>
+                  <label className="input-label">Brochure Link (Drive) <span>(Optional)</span></label>
+                  <input className="modern-input" type="url" name="posterUrl"
+                    placeholder="https://drive.google.com..."
+                    value={formData.posterUrl} onChange={handleChange} />
+                  <div className="helper-text">Set access to "Anyone with link".</div>
                 </div>
               </div>
             </div>
 
-            {/* 02 — SCHEDULE */}
+            {/* --- SECTION 2: SCHEDULE & LOCATION --- */}
             <div className="event-form-section">
-              <div className="section-label">
-                <span className="section-label-num n2">02</span>
-                <span className="section-label-text">Schedule & Location</span>
-              </div>
-              <div className="section-body">
-                <div className="form-grid-2">
-                  <div className="input-group">
-                    <label className="input-label">Date <span className="req">*</span></label>
-                    <input className="modern-input" type="date" name="eventDate" value={formData.eventDate} onChange={handleChange} required />
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label">Time <span className="req">*</span></label>
-                    <input className="modern-input" type="time" name="eventTime" value={formData.eventTime} onChange={handleChange} required />
-                  </div>
+              <span className="section-label">02. Schedule & Location</span>
+
+              <div className="form-grid-2">
+                <div className="input-group">
+                  <label className="input-label">Date</label>
+                  <input className="modern-input" type="date" name="eventDate"
+                    value={formData.eventDate} onChange={handleChange} required />
                 </div>
                 <div className="input-group">
-                  <label className="input-label">Venue / Location <span className="req">*</span></label>
-                  <input className="modern-input" type="text" name="eventLocation" placeholder="e.g. Auditorium A, Main Block" value={formData.eventLocation} onChange={handleChange} required />
+                  <label className="input-label">Time</label>
+                  <input className="modern-input" type="time" name="eventTime"
+                    value={formData.eventTime} onChange={handleChange} required />
                 </div>
+              </div>
+
+              <div className="input-group">
+                <label className="input-label">Venue / Location</label>
+                <input className="modern-input" type="text" name="eventLocation"
+                  placeholder="e.g. Auditorium A, Main Block"
+                  value={formData.eventLocation} onChange={handleChange} required />
               </div>
             </div>
 
-            {/* 03 — PARTICIPATION */}
+            {/* --- SECTION 3: PARTICIPATION --- */}
             <div className="event-form-section">
-              <div className="section-label">
-                <span className="section-label-num n3">03</span>
-                <span className="section-label-text">Participation</span>
-              </div>
-              <div className="section-body">
+              <span className="section-label">03. Participation</span>
+
+              <div className="input-group">
                 <label className="toggle-wrapper">
-                  <span className="toggle-label">Team Event?</span>
-                  <input type="checkbox" name="isTeamEvent" checked={formData.isTeamEvent} onChange={handleChange} className="toggle-checkbox" />
+                  <span className="toggle-label">Is this a Team Event?</span>
+                  <input type="checkbox" name="isTeamEvent"
+                    checked={formData.isTeamEvent} onChange={handleChange} className="toggle-checkbox" />
                 </label>
-                <div className={`conditional-fields ${formData.isTeamEvent ? 'open' : ''}`}>
-                  <div className="conditional-inner">
-                    <div className="form-grid-2">
-                      <div className="input-group">
-                        <label className="input-label">Min Team Size</label>
-                        <input className="modern-input" type="number" name="minTeamSize" placeholder="2" value={formData.minTeamSize} onChange={handleChange} min="2" />
-                      </div>
-                      <div className="input-group">
-                        <label className="input-label">Max Team Size</label>
-                        <input className="modern-input" type="number" name="maxTeamSize" placeholder="5" value={formData.maxTeamSize} onChange={handleChange} min="2" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              </div>
+
+              <div className={`conditional-fields ${formData.isTeamEvent ? 'open' : ''}`}>
                 <div className="form-grid-2">
                   <div className="input-group">
-                    <label className="input-label">{formData.isTeamEvent ? 'Max Teams' : 'Max Participants'}</label>
-                    <input className="modern-input" type="number" name="maxParticipants" placeholder="0 = Unlimited" value={formData.maxParticipants} onChange={handleChange} min="1" />
+                    <label className="input-label">Min Team Size</label>
+                    <input className="modern-input" type="number" name="minTeamSize"
+                      placeholder="2" value={formData.minTeamSize} onChange={handleChange} min="2" />
                   </div>
                   <div className="input-group">
-                    <label className="input-label">Volunteers Needed</label>
-                    <input className="modern-input" type="number" name="maxVolunteers" placeholder="0" value={formData.maxVolunteers} onChange={handleChange} min="0" />
+                    <label className="input-label">Max Team Size</label>
+                    <input className="modern-input" type="number" name="maxTeamSize"
+                      placeholder="5" value={formData.maxTeamSize} onChange={handleChange} min="2" />
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* 04 — PAYMENTS */}
-            <div className="event-form-section">
-              <div className="section-label">
-                <span className="section-label-num n4">04</span>
-                <span className="section-label-text">Payments & Club</span>
-              </div>
-              <div className="section-body">
-                <div className="form-grid-2">
-                  <div className="input-group">
-                    <label className="input-label">Organizing Club <span className="req">*</span></label>
-                    {isLoadingClubs ? (
-                      <div className="club-loading">Fetching your clubs...</div>
-                    ) : myClubs.length > 0 ? (
-                      <select className="modern-select" name="OrgCid" value={formData.OrgCid} onChange={handleChange} required>
-                        <option value="">— Select Club —</option>
-                        {myClubs.map(club => (
-                          <option key={club.cid} value={club.cid}>{club.cname || `Club ${club.cid}`}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="club-error">⚠ Not a member of any club</div>
-                    )}
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label">Registration Fee (₹) <span className="req">*</span></label>
-                    <input className="modern-input" type="number" name="registrationFee" placeholder="0" value={formData.registrationFee} onChange={handleChange} step="0.01" min="0" required />
-                  </div>
-                </div>
-                <div className={`conditional-fields ${parseFloat(formData.registrationFee) > 0 ? 'open' : ''}`}>
-                  <div className="conditional-inner">
-                    <div className="input-group">
-                      <label className="input-label">UPI ID for Payment</label>
-                      <input className="modern-input" type="text" name="upiId" placeholder="merchant@upi" value={formData.upiId} onChange={handleChange} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 05 — EXTRAS */}
-            <div className="event-form-section">
-              <div className="section-label">
-                <span className="section-label-num n5">05</span>
-                <span className="section-label-text">Activity Points & Extras</span>
-              </div>
-              <div className="section-body">
+              <div className="form-grid-2" style={{ marginTop: '16px' }}>
                 <div className="input-group">
-                  <label className="input-label">Certificate Info <span>(Optional)</span></label>
-                  <textarea className="modern-textarea" name="certificateInfo" placeholder="Text to display on the certificate" value={formData.certificateInfo} onChange={handleChange} rows="2" />
+                  <label className="input-label">{formData.isTeamEvent ? 'Max Teams' : 'Max Participants'}</label>
+                  <input className="modern-input" type="number" name="maxParticipants"
+                    placeholder="0 = Unlimited" value={formData.maxParticipants} onChange={handleChange} min="1" />
                 </div>
-                <div className="form-grid-2">
-                  <div className="input-group">
-                    <label className="input-label">Max Activity Pts — Participants</label>
-                    <input className="modern-input" type="number" name="maxActivityPts" placeholder="0 = disabled" value={formData.maxActivityPts} onChange={handleChange} min="0" />
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label">Activity Pts — Volunteers</label>
-                    <input className="modern-input" type="number" name="volActivityPts" placeholder="0 = disabled" value={formData.volActivityPts} onChange={handleChange} min="0" />
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label">Min Scans — Participant</label>
-                    <input className="modern-input" type="number" name="minPartScans" placeholder="1" value={formData.minPartScans} onChange={handleChange} min="1" />
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label">Min Scans — Volunteer</label>
-                    <input className="modern-input" type="number" name="minVolnScans" placeholder="1" value={formData.minVolnScans} onChange={handleChange} min="1" />
-                  </div>
+                <div className="input-group">
+                  <label className="input-label">Volunteers Needed</label>
+                  <input className="modern-input" type="number" name="maxVolunteers"
+                    placeholder="0" value={formData.maxVolunteers} onChange={handleChange} min="1" />
                 </div>
-                <span className="helper-text">Set min scans to 1 for single-scan attendance. Increase for multi-session events.</span>
               </div>
             </div>
 
-            {/* SUBMIT */}
+            {/* --- SECTION 4: PAYMENTS --- */}
+            <div className="event-form-section">
+              <span className="section-label">04. Payments & ID</span>
+
+              <div className="form-grid-2">
+                <div className="input-group">
+                  <label className="input-label">Organizing Club</label>
+                  {isLoadingClubs ? (
+                    <div className="modern-input" style={{ display: 'flex', alignItems: 'center', color: '#888', fontStyle: 'italic' }}>
+                      Fetching your clubs...
+                    </div>
+                  ) : myClubs.length > 0 ? (
+                    <select className="modern-input" name="OrgCid"
+                      value={formData.OrgCid} onChange={handleChange} required
+                      style={{ appearance: 'auto', paddingRight: '1rem' }}>
+                      <option value="">-- Select Your Club --</option>
+                      {myClubs.map((club) => (
+                        <option key={club.cid} value={club.cid}>
+                          {club.cname || `Club ID: ${club.cid}`}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="modern-input" style={{ border: '1px solid #ff4d4d', color: '#ff4d4d', fontSize: '0.9rem' }}>
+                      ⚠️ You are not a member of any club.
+                    </div>
+                  )}
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label">Registration Fee (₹)</label>
+                  <input className="modern-input" type="number" name="registrationFee"
+                    placeholder="0" value={formData.registrationFee} onChange={handleChange}
+                    step="0.01" min="0" required />
+                </div>
+              </div>
+
+              <div className={`conditional-fields ${parseFloat(formData.registrationFee) > 0 ? 'open' : ''}`}>
+                <div className="input-group">
+                  <label className="input-label">UPI ID for Payment</label>
+                  <input className="modern-input" type="text" name="upiId"
+                    placeholder="merchant@upi" value={formData.upiId} onChange={handleChange} />
+                </div>
+              </div>
+            </div>
+
+            {/* --- SECTION 5: EXTRAS --- */}
+            <div className="event-form-section">
+              <span className="section-label">05. Extras</span>
+
+              <div className="input-group">
+                <label className="input-label">Certificate Information <span>(Optional)</span></label>
+                <textarea className="modern-textarea" name="certificateInfo"
+                  placeholder="Text to be displayed on the certificate"
+                  value={formData.certificateInfo} onChange={handleChange} rows="2" />
+              </div>
+
+              {/* ── Certificate Note ── */}
+              <div className="event-form-info-note">
+                <span className="event-form-info-icon">📋</span>
+                <span>
+                  <strong>Flo Attendance Certificate:</strong> If attendance is marked via QR scan,
+                  students will automatically receive a Flo-verified attendance certificate
+                  downloadable from their dashboard.
+                </span>
+              </div>
+
+              <div className="input-group" style={{ marginTop: '16px' }}>
+                <label className="input-label">
+                  Max Activity Points (Participants) <span>(Optional)</span>
+                </label>
+                <input className="modern-input" type="number" name="maxActivityPts"
+                  placeholder="0 = No activity points" value={formData.maxActivityPts}
+                  onChange={handleChange} min="0" />
+                <div className="helper-text">
+                  Maximum activity points participants can earn by attending sub-events.
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label className="input-label">
+                  Activity Points for Volunteers <span>(Optional)</span>
+                </label>
+                <input className="modern-input" type="number" name="volActivityPts"
+                  placeholder="0 = No activity points" value={formData.volActivityPts}
+                  onChange={handleChange} min="0" />
+                <div className="helper-text">
+                  Fixed activity points awarded to volunteers who complete the event.
+                </div>
+              </div>
+
+              <div className="form-grid-2">
+                <div className="input-group">
+                  <label className="input-label">Min. Sub-event Scans for Participant Attendance</label>
+                  <input className="modern-input" type="number" name="minPartScans"
+                    placeholder="1" value={formData.minPartScans} onChange={handleChange} min="1" />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Min. Sub-event Scans for Volunteer Attendance</label>
+                  <input className="modern-input" type="number" name="minVolnScans"
+                    placeholder="1" value={formData.minVolnScans} onChange={handleChange} min="1" />
+                </div>
+              </div>
+              <div className="helper-text">
+                Set to 1 if attendance should be granted after a single QR scan.
+              </div>
+            </div>
+
+            {/* --- SECTION 6: COMMUNICATION --- */}
+            <div className="event-form-section">
+              <span className="section-label">06. Communication</span>
+
+              <div className="input-group">
+                <label className="input-label">
+                  WhatsApp Group Link <span>(Optional)</span>
+                </label>
+                <input
+                  className="modern-input"
+                  type="url"
+                  name="whatsappLink"
+                  placeholder="https://chat.whatsapp.com/..."
+                  value={formData.whatsappLink}
+                  onChange={handleChange}
+                />
+                <div className="helper-text">
+                  Students will see a "Join WhatsApp Group" button after registering and on their ticket.
+                  Leave blank if not applicable.
+                </div>
+              </div>
+            </div>
+
+            {/* --- SUBMIT --- */}
             <div className="submit-btn-container">
               <button
                 className="event-form-button"
                 type="submit"
                 disabled={isSubmitting || (myClubs.length === 0 && !isLoadingClubs)}
+                style={(myClubs.length === 0 && !isLoadingClubs) ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
               >
-                {isSubmitting ? 'Publishing...' : <><i className="fas fa-rocket"></i> Publish Event</>}
+                {isSubmitting ? 'Publishing Event...' : 'Publish Event'}
               </button>
             </div>
 
