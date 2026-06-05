@@ -7,7 +7,7 @@ export default function Events() {
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
   
-  // State to track if the user is part of a club
+  // State to track if the user is an organizer
   const [isOrganiser, setIsOrganiser] = useState(false);
 
   useEffect(() => { checkAuth(); }, []);
@@ -22,8 +22,7 @@ export default function Events() {
       const data = await res.json();
       setUserName(data.userName || '');
       
-      // Check if the backend returned a clubid (meaning they are in a club)
-      // Make sure your server.js sends this flag in the /api/me response!
+      // Checks backend for the new isOrganiser flag
       if (data.clubid || data.isOrganiser) {
         setIsOrganiser(true);
       } else {
