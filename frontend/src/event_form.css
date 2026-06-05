@@ -1,6 +1,6 @@
 /* ================================================================
    EVENT FORM — Neo-Brutalism LIGHT / Colorful
-   Fixed: spacing, overlapping labels, section headers, layout, placeholder visibility, checkbox layout
+   Fixed: Placeholder opacity/color, standard checkbox layout
    ================================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
@@ -328,11 +328,12 @@
   line-height: 1.5;
 }
 
-/* FIX: Made placeholder text much darker and more legible */
+/* FIX: Forced opacity to 1 so browsers don't fade it, and made it very dark */
 .modern-input::placeholder,
 .modern-textarea::placeholder { 
-  color: #777; 
+  color: #444444; 
   font-weight: 500; 
+  opacity: 1 !important; 
 }
 
 .modern-input:focus,
@@ -359,46 +360,41 @@
   gap: 20px;
 }
 
-/* ── TOGGLE ROW ── */
-/* FIX: Adjusted flex layout to place checkbox clearly next to the label */
-.toggle-wrapper {
-  display: flex;
+/* ── STANDARD CHECKBOX (Replaced yellow toggle) ── */
+.checkbox-group {
+  margin: 4px 0 12px 0;
+}
+
+.custom-checkbox-label {
+  display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
   gap: 12px;
-  padding: 14px 18px;
-  background: var(--yellow);
-  border: var(--border-thin);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--black);
   cursor: pointer;
-  transition: box-shadow 0.1s, transform 0.1s;
   user-select: none;
 }
 
-.toggle-wrapper:hover {
-  transform: translate(-2px,-2px);
-  box-shadow: var(--shadow-sm);
-}
-
-.toggle-label {
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--black);
-}
-
-.toggle-checkbox {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--black);
+.custom-checkbox-label input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
   cursor: pointer;
-  flex-shrink: 0;
+  accent-color: var(--black);
+  border: 2px solid var(--black);
 }
 
 /* ── CONDITIONAL FIELDS ── */
 .conditional-fields { display: none; }
-.conditional-fields.open { display: block; }
+.conditional-fields.open { display: block; animation: slideDown 0.2s ease-out; }
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 .conditional-inner {
   border: 2px dashed var(--black);
