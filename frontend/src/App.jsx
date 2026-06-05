@@ -96,6 +96,7 @@ function AppContent() {
         <Route path="/sub-events" element={<SubEventManager />} />
         <Route path="/organizer-request" element={<OrganizerRequest />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
