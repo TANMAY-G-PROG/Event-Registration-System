@@ -35,7 +35,7 @@ import AdminDashboard from './AdminDashboard.jsx';
 
 // Pages where the global NavBar should NOT appear
 // (these pages render their own nav or no nav at all)
-const NO_NAVBAR_ROUTES = ['/', '/login', '/forgot-password', '/reset-password'];
+const NO_NAVBAR_ROUTES = ['/', '/login', '/forgot-password', '/reset-password', '/auth/callback'];
 
 function AppContent() {
   const navigate = useNavigate();
