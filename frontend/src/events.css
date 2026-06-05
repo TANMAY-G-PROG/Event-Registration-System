@@ -1,6 +1,6 @@
 /* ================================================================
    EVENTS PAGE — Neo-Brutalism, Light/Cream Theme
-   Layout: Full-screen 3-card grid with greeting header
+   Layout: Dynamic 2 or 3-card grid with greeting header
    ================================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@400;600;700;800;900&display=swap');
 
@@ -149,7 +149,6 @@
   background: var(--blue);
 }
 
-/* New layout wrapper for Header text + Button */
 .ev-hero-header-row {
   display: flex;
   justify-content: space-between;
@@ -185,7 +184,7 @@
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
-  margin-bottom: 4px; /* Slight optical adjustment */
+  margin-bottom: 4px;
 }
 
 .ev-org-btn:hover {
@@ -202,12 +201,21 @@
 .cards {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: 0;
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
   padding: 24px 32px 48px;
+}
+
+/* Dynamic layouts based on user status */
+.cards--3-cols {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.cards--2-cols {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 1000px; /* slightly narrower so the 2 images don't distort too much */
 }
 
 /* ── INDIVIDUAL CARD ── */
