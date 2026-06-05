@@ -29,6 +29,7 @@ import ForgotPassword from './ForgotPassword.jsx';
 import ResetPassword from './ResetPassword.jsx';
 import SubEventManager from './SubEventManager.jsx';
 import OrganizerRequest from './OrganizerRequest.jsx';
+import Profile from './Profile.jsx';
 import AdminDashboard from './AdminDashboard.jsx';
 
 function AppContent() {
