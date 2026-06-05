@@ -8,9 +8,6 @@ import {
   useLocation
 } from 'react-router-dom';
 import { apiFetch } from './api.js';
-
-import NavBar from './NavBar.jsx';
-
 import LandingPage from './LandingPage.jsx';
 import Login from './Login.jsx';
 import Events from './Events.jsx';
@@ -23,17 +20,13 @@ import VolunteerEvents from './Volunteer_events.jsx';
 import OrganizerTicket from './OrganizerTicket.jsx';
 import VolunteerTicket from './VolunteerTicket.jsx';
 import ParticipantTicket from './ParticipantTicket.jsx';
-import AboutUs from './Aboutus.jsx';
 import QrCode from './QrCode.jsx';
 import Scanner from './Scanner.jsx';
 import ForgotPassword from './ForgotPassword.jsx';
 import ResetPassword from './ResetPassword.jsx';
 import SubEventManager from './SubEventManager.jsx';
-import AuthCallback from './AuthCallback.jsx';
-import Profile from './Profile.jsx';
-
-// Routes excluded from inactivity logout
-const EXCLUDED_FROM_TIMEOUT = ['/', '/login', '/auth/callback', '/forgot-password', '/reset-password', '/qr'];
+import OrganizerRequest from './OrganizerRequest.jsx';
+import AdminDashboard from './AdminDashboard.jsx';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -44,7 +37,7 @@ function AppContent() {
   const handleLogout = async () => {
     if (timerId.current) clearTimeout(timerId.current);
     const { pathname } = location;
-    if (!EXCLUDED_FROM_TIMEOUT.includes(pathname)) {
+    if (pathname !== '/login' && pathname !== '/') {
       try {
         await apiFetch('/api/signout', { method: 'POST' });
       } catch (error) {
@@ -66,57 +59,48 @@ function AppContent() {
     const setupListeners = () => events.forEach(e => window.addEventListener(e, resetTimer));
     const cleanupListeners = () => events.forEach(e => window.removeEventListener(e, resetTimer));
     const { pathname } = location;
-
-    if (!EXCLUDED_FROM_TIMEOUT.includes(pathname)) {
+    if (pathname !== '/login' && pathname !== '/' && pathname !== '/admin') {
       setupListeners();
       resetTimer();
     }
-
     return () => {
       cleanupListeners();
       if (timerId.current) clearTimeout(timerId.current);
     };
   }, [location.pathname, navigate]);
 
-  // Hide Navbar on authentication pages and QR page
-  const hideNavbarRoutes = ['/', '/login', '/auth/callback', '/forgot-password', '/reset-password'];
-  const shouldShowNavbar = !hideNavbarRoutes.includes(location.pathname);
-
   return (
-    <>
-      {shouldShowNavbar && <NavBar />}
-
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/events" element={<Events />} />
-        <Route path="/participants" element={<Participants />} />
-        <Route path="/organisers" element={<Organisers />} />
-        <Route path="/volunteers" element={<Volunteers />} />
-        <Route path="/create-event" element={<EventForm />} />
-        <Route path="/register-event" element={<Registerevent />} />
-        <Route path="/volunteer-event" element={<VolunteerEvents />} />
-        <Route path="/organiser-ticket" element={<OrganizerTicket />} />
-        <Route path="/participant-ticket" element={<ParticipantTicket />} />
-        <Route path="/volunteer-ticket" element={<VolunteerTicket />} />
-        {/* <Route path="/about-us" element={<AboutUs />} /> */}
-        <Route path="/qr" element={<QrCode />} />
-        <Route path="/scanner" element={<Scanner />} />
-        <Route path="/sub-events" element={<SubEventManager />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </>
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/events" element={<Events />} />
+      <Route path="/participants" element={<Participants />} />
+      <Route path="/organisers" element={<Organisers />} />
+      <Route path="/volunteers" element={<Volunteers />} />
+      <Route path="/create-event" element={<EventForm />} />
+      <Route path="/register-event" element={<Registerevent />} />
+      <Route path="/volunteer-event" element={<VolunteerEvents />} />
+      <Route path="/organiser-ticket" element={<OrganizerTicket />} />
+      <Route path="/participant-ticket" element={<ParticipantTicket />} />
+      <Route path="/volunteer-ticket" element={<VolunteerTicket />} />
+      <Route path="/qr" element={<QrCode />} />
+      <Route path="/scanner" element={<Scanner />} />
+      <Route path="/sub-events" element={<SubEventManager />} />
+      <Route path="/organizer-request" element={<OrganizerRequest />} />
+      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
-export default function App() {
+function App() {
   return (
     <Router>
       <AppContent />
     </Router>
   );
 }
+
+export default App;
