@@ -4,16 +4,6 @@
    ================================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@400;600;700;800;900&display=swap');
 
-/* FIX: Removed `html, body { overflow-x: hidden }` from here.
-   In a React SPA every imported CSS file stays active for the whole
-   session regardless of which route is currently rendered.
-   Putting overflow/margin/padding rules on html or body inside a
-   page-specific file poisons those properties globally — so the
-   Event Form page (and every other page) inherited overflow-x:hidden
-   on body, which causes mobile browsers (especially Safari) to
-   silently kill overflow-y scrolling as well.
-   overflow-x containment is now scoped only to .events-wrapper below. */
-
 :root {
   --cream: #F5EFE0;
   --black: #0D0D0D;
@@ -42,7 +32,6 @@
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
-  /* overflow-x scoped here — only affects this wrapper, not html/body */
   overflow-x: hidden;
   background-color: var(--cream);
   background-image: radial-gradient(circle, rgba(13, 13, 13, 0.07) 1px, transparent 1px);
@@ -53,7 +42,7 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* ── TOP NAV ── */
+/* ── TOP NAV (Legacy specific page styling) ── */
 .ev-nav {
   position: fixed;
   top: 0;
@@ -67,7 +56,6 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 28px;
-  /* Memphis film strip */
   background-image: repeating-linear-gradient(90deg, transparent, transparent 28px, rgba(255, 214, 0, 0.05) 28px, rgba(255, 214, 0, 0.05) 32px);
 }
 
@@ -86,7 +74,6 @@
   gap: 10px;
 }
 
-/* Profile button */
 .ev-profile-btn {
   display: inline-flex;
   align-items: center;
@@ -108,7 +95,6 @@
   filter: brightness(1.1);
 }
 
-/* Logout button */
 .ev-logout-btn {
   display: inline-flex;
   align-items: center;
@@ -131,7 +117,6 @@
   color: #000;
 }
 
-/* Legacy compat */
 .logout-container {
   display: none;
 }
@@ -164,6 +149,15 @@
   background: var(--blue);
 }
 
+/* New layout wrapper for Header text + Button */
+.ev-hero-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end; 
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
 .ev-hero-name {
   font-family: var(--sans);
   font-size: clamp(28px, 5vw, 48px);
@@ -172,6 +166,36 @@
   color: var(--black);
   line-height: 1.05;
   margin-bottom: 0;
+}
+
+/* Organiser CTA Button */
+.ev-org-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 24px;
+  background: var(--yellow);
+  color: var(--black);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 3px solid var(--black);
+  box-shadow: 4px 4px 0 var(--black);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  margin-bottom: 4px; /* Slight optical adjustment */
+}
+
+.ev-org-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--black);
+}
+
+.ev-org-btn:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0 var(--black);
 }
 
 /* ── CARDS GRID ── */
@@ -214,48 +238,18 @@
   box-shadow: none;
 }
 
-/* Colour accents per card */
-.card--1 {
-  background: #FFFBE6;
-}
+.card--1 { background: #FFFBE6; }
+.card--2 { background: #E8F0FF; }
+.card--3 { background: #E8FFF5; }
 
-.card--2 {
-  background: #E8F0FF;
-}
-
-.card--3 {
-  background: #E8FFF5;
-}
-
-/* Memphis top stripe per card */
 .card--1::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 5px;
-  background: var(--yellow);
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: var(--yellow);
 }
-
 .card--2::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 5px;
-  background: var(--blue);
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: var(--blue);
 }
-
 .card--3::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 5px;
-  background: var(--mint);
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: var(--mint);
 }
 
 .card__img {
@@ -265,7 +259,6 @@
   border-bottom: 3px solid var(--black);
   background: var(--black);
   margin-top: 5px;
-  /* space after stripe */
 }
 
 .card__img img {
@@ -302,7 +295,6 @@
   flex: 1;
 }
 
-/* Card number badge */
 .card__num {
   font-family: var(--mono);
   font-size: 11px;
@@ -341,18 +333,20 @@
     max-width: 480px;
     padding: 20px 20px 40px;
   }
-
   .card {
     margin-left: 0;
     margin-top: -3px;
   }
-
   .card:first-child {
     margin-top: 0;
   }
-
   .card__img {
     aspect-ratio: 16/7;
+  }
+  .ev-hero-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
   }
 }
 
@@ -360,11 +354,9 @@
   .ev-hero {
     padding: 76px 20px 16px;
   }
-
   .cards {
     padding: 16px 16px 32px;
   }
-
   .ev-nav {
     padding: 0 16px;
   }
