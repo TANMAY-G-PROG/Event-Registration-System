@@ -223,7 +223,7 @@ export default function OrganizerRequest() {
                 className="org-req-input"
                 type="text"
                 name="college_name"
-                placeholder="e.g. RV College of Engineering"
+                placeholder="e.g. BMS College of Engineering"
                 value={formData.college_name}
                 onChange={handleChange}
                 required
