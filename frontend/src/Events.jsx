@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import './events.css';
 import { apiFetch } from './api.js';
 
-
 export default function Events() {
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
@@ -27,16 +26,19 @@ export default function Events() {
     <div className="events-wrapper">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-
       <div style={{ paddingBottom: 60 }} /> {/* Spacer for Nav */}
 
-      {/* GREETING */}
+      {/* GREETING & CALL TO ACTION */}
       <div className="ev-hero">
         <p className="ev-hero-label">Welcome back</p>
-        <h1 className="ev-hero-name">
-          {firstName ? `Hey, ${firstName} 👋` : 'Your Events'}
-        </h1>
+        <div className="ev-hero-header-row">
+          <h1 className="ev-hero-name">
+            {firstName ? `Hey, ${firstName} 👋` : 'Your Events'}
+          </h1>
+          <button className="ev-org-btn" onClick={() => navigate('/organizer-request')}>
+            Become an Organiser <i className="fas fa-arrow-right" style={{marginLeft: '6px'}}></i>
+          </button>
+        </div>
       </div>
 
       {/* CARDS */}
