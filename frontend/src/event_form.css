@@ -1,6 +1,6 @@
 /* ================================================================
    EVENT FORM — Neo-Brutalism LIGHT / Colorful
-   Fixed: Placeholder opacity/color, standard checkbox layout
+   Fixed: Placeholder opacity/color, standard checkbox layout with tick mark
    ================================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
@@ -328,7 +328,7 @@
   line-height: 1.5;
 }
 
-/* FIX: Forced opacity to 1 so browsers don't fade it, and made it very dark */
+/* Forced opacity to 1 so browsers don't fade it, and made it very dark */
 .modern-input::placeholder,
 .modern-textarea::placeholder { 
   color: #444444; 
@@ -360,7 +360,7 @@
   gap: 20px;
 }
 
-/* ── STANDARD CHECKBOX (Replaced yellow toggle) ── */
+/* ── STANDARD CHECKBOX (Custom Checkbox with tick mark) ── */
 .checkbox-group {
   margin: 4px 0 12px 0;
 }
@@ -380,11 +380,42 @@
 }
 
 .custom-checkbox-label input[type="checkbox"] {
-  width: 22px;
-  height: 22px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
   cursor: pointer;
-  accent-color: var(--black);
   border: 2px solid var(--black);
+  background-color: var(--white);
+  position: relative;
+  flex-shrink: 0;
+  box-shadow: 2px 2px 0 var(--black);
+  transition: all 0.1s ease;
+}
+
+.custom-checkbox-label input[type="checkbox"]:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--black);
+}
+
+.custom-checkbox-label input[type="checkbox"]:active {
+  transform: translate(1px, 1px);
+  box-shadow: 0px 0px 0 var(--black);
+}
+
+.custom-checkbox-label input[type="checkbox"]:checked {
+  background-color: var(--yellow);
+}
+
+/* Forces the tick mark to appear */
+.custom-checkbox-label input[type="checkbox"]:checked::after {
+  content: '\2714';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16px;
+  color: var(--black);
 }
 
 /* ── CONDITIONAL FIELDS ── */
