@@ -29,7 +29,7 @@ import ForgotPassword from './ForgotPassword.jsx';
 import ResetPassword from './ResetPassword.jsx';
 import SubEventManager from './SubEventManager.jsx';
 import OrganizerRequest from './OrganizerRequest.jsx';
-import AboutUs from './AboutUs.jsx';
+import AboutUs from './Aboutus.jsx';
 import Profile from './Profile.jsx';
 import AdminDashboard from './AdminDashboard.jsx';
 
