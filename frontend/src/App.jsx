@@ -8,6 +8,8 @@ import {
   useLocation
 } from 'react-router-dom';
 import { apiFetch } from './api.js';
+import NavBar from './navbar.jsx'; // <-- Imported the NavBar here
+
 import LandingPage from './LandingPage.jsx';
 import Login from './Login.jsx';
 import Events from './Events.jsx';
@@ -70,28 +72,31 @@ function AppContent() {
   }, [location.pathname, navigate]);
 
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/events" element={<Events />} />
-      <Route path="/participants" element={<Participants />} />
-      <Route path="/organisers" element={<Organisers />} />
-      <Route path="/volunteers" element={<Volunteers />} />
-      <Route path="/create-event" element={<EventForm />} />
-      <Route path="/register-event" element={<Registerevent />} />
-      <Route path="/volunteer-event" element={<VolunteerEvents />} />
-      <Route path="/organiser-ticket" element={<OrganizerTicket />} />
-      <Route path="/participant-ticket" element={<ParticipantTicket />} />
-      <Route path="/volunteer-ticket" element={<VolunteerTicket />} />
-      <Route path="/qr" element={<QrCode />} />
-      <Route path="/scanner" element={<Scanner />} />
-      <Route path="/sub-events" element={<SubEventManager />} />
-      <Route path="/organizer-request" element={<OrganizerRequest />} />
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <NavBar /> {/* <-- Added NavBar globally here so it shows on all authorized pages */}
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/participants" element={<Participants />} />
+        <Route path="/organisers" element={<Organisers />} />
+        <Route path="/volunteers" element={<Volunteers />} />
+        <Route path="/create-event" element={<EventForm />} />
+        <Route path="/register-event" element={<Registerevent />} />
+        <Route path="/volunteer-event" element={<VolunteerEvents />} />
+        <Route path="/organiser-ticket" element={<OrganizerTicket />} />
+        <Route path="/participant-ticket" element={<ParticipantTicket />} />
+        <Route path="/volunteer-ticket" element={<VolunteerTicket />} />
+        <Route path="/qr" element={<QrCode />} />
+        <Route path="/scanner" element={<Scanner />} />
+        <Route path="/sub-events" element={<SubEventManager />} />
+        <Route path="/organizer-request" element={<OrganizerRequest />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 }
 
