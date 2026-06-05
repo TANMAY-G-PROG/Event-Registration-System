@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom"
 import QRCode from "qrcode"
 import "./registerevent.css"
 import TicketAnimation from './TicketAnimation';
+import QueueStatus from './QueueStatus';
 import { apiFetch } from "./api.js";
 
 // ============================================================================
@@ -143,17 +144,6 @@ function useSliderNavigation({ totalSlides, enableKeyboard = true }) {
 
 // ============================================================================
 // DRAG HOOK
-//
-// KEY FIX: All gesture state lives in module-level refs that are updated
-// synchronously. Touch handlers are attached once via a callback ref on the
-// slider DOM node — this guarantees they attach the instant the node exists,
-// not in a useEffect that may fire before the ref is populated.
-//
-// The callback ref pattern:
-//   const sliderRef = useCallback((node) => { ... attach/detach here ... }, []);
-//
-// This means listeners are attached ONCE when the element mounts and detached
-// when it unmounts — no dependency array thrashing, no missed frames.
 // ============================================================================
 
 function useSliderDrag({ trackRef, snapPointsRef, currentIndexRef, onSwipeLeft, onSwipeRight }) {
@@ -194,7 +184,6 @@ function useSliderDrag({ trackRef, snapPointsRef, currentIndexRef, onSwipeLeft, 
     if (sliderNodeRef.current) sliderNodeRef.current.style.touchAction = value;
   }, []);
 
-  // ── Core gesture handlers (defined once, stable) ──────────────────────────
   const handleStart = useCallback((clientX, clientY) => {
     startXRef.current       = clientX;
     startYRef.current       = clientY;
@@ -220,11 +209,9 @@ function useSliderDrag({ trackRef, snapPointsRef, currentIndexRef, onSwipeLeft, 
       directionLockedRef.current = dx > dy ? 'x' : 'y';
 
       if (directionLockedRef.current === 'x') {
-        // Take ownership immediately — same frame as lock commit
         setTouchAction('none');
         if (event) { try { event.preventDefault(); } catch (e) {} }
       } else {
-        // Vertical — hand back to browser
         setTouchAction('pan-y');
         isDraggingRef.current = false;
         setIsDragging(false);
@@ -235,7 +222,6 @@ function useSliderDrag({ trackRef, snapPointsRef, currentIndexRef, onSwipeLeft, 
 
     if (directionLockedRef.current === 'y') return;
 
-    // Keep preventing scroll for every subsequent horizontal-locked event
     if (event) { try { event.preventDefault(); } catch (e) {} }
 
     const now = Date.now();
@@ -278,17 +264,12 @@ function useSliderDrag({ trackRef, snapPointsRef, currentIndexRef, onSwipeLeft, 
     else                  applyTransformRef.current(0, true);
   }, [setTouchAction]);
 
-  // ── Mouse handlers (desktop) — fine as React props ────────────────────────
   const handleMouseDown  = useCallback((e) => { handleStart(e.clientX, e.clientY); }, [handleStart]);
   const handleMouseMove  = useCallback((e) => { handleMove(e.clientX, e.clientY, null); }, [handleMove]);
   const handleMouseUp    = useCallback(() => handleEnd(), [handleEnd]);
   const handleMouseLeave = useCallback(() => handleEnd(), [handleEnd]);
 
-  // ── Callback ref — attaches touch listeners the instant DOM node exists ───
-  // This is the critical fix: a callback ref fires synchronously when React
-  // attaches the DOM node. Unlike useEffect, it is NEVER late.
   const sliderCallbackRef = useCallback((node) => {
-    // Cleanup previous node if any
     if (sliderNodeRef.current) {
       const old = sliderNodeRef.current;
       old.removeEventListener('touchstart',  old._onTouchStart);
@@ -300,7 +281,6 @@ function useSliderDrag({ trackRef, snapPointsRef, currentIndexRef, onSwipeLeft, 
     sliderNodeRef.current = node;
     if (!node) return;
 
-    // Set initial touch-action
     node.style.touchAction = 'pan-y';
 
     const onTouchStart = (e) => {
@@ -313,7 +293,6 @@ function useSliderDrag({ trackRef, snapPointsRef, currentIndexRef, onSwipeLeft, 
     };
     const onTouchEnd = () => handleEnd();
 
-    // Store on node so cleanup above can find them
     node._onTouchStart = onTouchStart;
     node._onTouchMove  = onTouchMove;
     node._onTouchEnd   = onTouchEnd;
@@ -322,7 +301,7 @@ function useSliderDrag({ trackRef, snapPointsRef, currentIndexRef, onSwipeLeft, 
     node.addEventListener('touchmove',   onTouchMove,  { passive: false });
     node.addEventListener('touchend',    onTouchEnd,   { passive: true  });
     node.addEventListener('touchcancel', onTouchEnd,   { passive: true  });
-  }, [handleStart, handleMove, handleEnd]); // these are stable useCallbacks — won't re-fire
+  }, [handleStart, handleMove, handleEnd]);
 
   return { isDragging, sliderCallbackRef, handleMouseDown, handleMouseMove, handleMouseUp, handleMouseLeave };
 }
@@ -576,12 +555,12 @@ export default function Registerevent() {
   const [teamFormData, setTeamFormData]       = useState({ teamName:'', memberUSNs:[''] })
   const [teamInvites, setTeamInvites]         = useState([])
   const [showUpiModal, setShowUpiModal]       = useState(null)
+  const [activeQueueEvent, setActiveQueueEvent] = useState(null)
   const [transactionId, setTransactionId]     = useState("")
   const [isSubmitting, setIsSubmitting]       = useState(false)
   const [qrCodeDataUrl, setQrCodeDataUrl]     = useState("")
   const timerRef      = useRef(null)
   const modalTimerRef = useRef(null)
-  // We still need a regular ref for the wheel hook (which uses useEffect)
   const sliderDomRef  = useRef(null)
 
   function showFlash(type, message) {
@@ -631,10 +610,10 @@ export default function Registerevent() {
     active.forEach(e => loadTeamStatus(e.eid))
   }, [eventsData, loadTeamStatus])
   useEffect(() => {
-    const locked = selectedEvent || showTeamModal || showUpiModal;
+    const locked = selectedEvent || showTeamModal || showUpiModal || activeQueueEvent;
     const w = document.querySelector('.registerevent-page');
     if (w) w.style.overflowY = locked ? 'hidden' : 'auto';
-  }, [selectedEvent, showTeamModal, showUpiModal]);
+  }, [selectedEvent, showTeamModal, showUpiModal, activeQueueEvent]);
 
   const allEvents = useMemo(() => [
     ...(eventsData.upcoming||[]).map(e=>({...e,status:"upcoming"})),
@@ -668,14 +647,12 @@ export default function Registerevent() {
   // ── Slider state ──────────────────────────────────────────────────────────
   const { currentIndex, goToNext, goToPrev, goToSlide } = useSliderNavigation({
     totalSlides: filteredEvents.length,
-    enableKeyboard: !selectedEvent && !showTeamModal && !showUpiModal && viewMode==="gallery",
+    enableKeyboard: !selectedEvent && !showTeamModal && !showUpiModal && !activeQueueEvent && viewMode==="gallery",
   });
 
   const trackRef = useRef(null);
   const snapPoints = useSnapPoints(trackRef, filteredEvents.length);
 
-  // Keep refs in sync so drag/wheel callbacks always have current values
-  // without needing to be recreated
   const snapPointsRef   = useRef(snapPoints);
   const currentIndexRef = useRef(currentIndex);
   useEffect(() => { snapPointsRef.current   = snapPoints;    }, [snapPoints]);
@@ -686,13 +663,11 @@ export default function Registerevent() {
     onSwipeLeft: goToNext, onSwipeRight: goToPrev,
   });
 
-  // Combined ref: both the callback ref (for touch) and the regular ref (for wheel)
   const combinedSliderRef = useCallback((node) => {
     sliderDomRef.current = node;
     sliderCallbackRef(node);
   }, [sliderCallbackRef]);
 
-  // Snap to current card whenever index or snapPoints change
   useEffect(() => {
     const el = trackRef.current;
     if (!el || snapPoints.length === 0) return;
@@ -705,7 +680,7 @@ export default function Registerevent() {
     sliderRef: sliderDomRef,
     onScrollLeft:  goToNext,
     onScrollRight: goToPrev,
-    enabled: !selectedEvent && !showTeamModal && !showUpiModal && viewMode==="gallery",
+    enabled: !selectedEvent && !showTeamModal && !showUpiModal && !activeQueueEvent && viewMode==="gallery",
   });
 
   const colorMap     = useColorExtraction(filteredEvents);
@@ -714,20 +689,46 @@ export default function Registerevent() {
   // ==================== ACTION HANDLERS ====================
 
   async function handleRegister(event) {
-    const hasFee = (event.regFee||0) > 0;
-    if (hasFee) {
-      if (!event.upiId) { showFlash("error","Payment not setup."); return }
-      setTransactionId(""); setModalFlash({type:"",message:""}); setShowUpiModal({event,isTeam:false}); return
-    }
     try {
-      const r = await apiFetch(`/api/events/${event.eid}/join`,{method:"POST",headers:{"Content-Type":"application/json"}});
+      const r = await apiFetch(`/api/events/${event.eid}/claim-seat`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) { showFlash("error", d.error || "Failed to claim seat"); return; }
+      
+      // Successfully entered queue or claimed seat, pop up the QueueStatus tracker
+      setActiveQueueEvent({ event, claimData: d });
+    } catch { 
+      showFlash("error", "Network error claiming seat"); 
+    }
+  }
+
+  // Called by QueueStatus when seat is successfully secured/promoted
+  function handleSeatAvailable(event) {
+    setActiveQueueEvent(null);
+    const hasFee = (event.regFee || 0) > 0;
+    if (hasFee) {
+      if (!event.upiId) { showFlash("error", "Payment not setup."); return; }
+      setTransactionId(""); setModalFlash({ type: "", message: "" }); setShowUpiModal({ event, isTeam: false });
+    } else {
+      executeJoin(event);
+    }
+  }
+
+  function handleQueueExpired() {
+    setActiveQueueEvent(null);
+    showFlash("error", "Your seat reservation expired. Please try again.");
+  }
+
+  // The actual registration logic (moved out from previous handleRegister)
+  async function executeJoin(event) {
+    try {
+      const r = await apiFetch(`/api/events/${event.eid}/join`, { method: "POST", headers: { "Content-Type": "application/json" } });
       const d = await r.json()
-      if (!r.ok) { showFlash("error",d.error||"Failed"); return }
-      showFlash("success","Registered successfully!")
-      setRegisteredEvents(prev=>new Set(prev).add(event.eid))
-      setTicketInfo({eventName:event.ename,eventDate:event.eventDate,userUSN:d.userUSN||"AUTHORIZED"})
+      if (!r.ok) { showFlash("error", d.error || "Failed"); return; }
+      showFlash("success", "Registered successfully!")
+      setRegisteredEvents(prev => new Set(prev).add(event.eid))
+      setTicketInfo({ eventName: event.ename, eventDate: event.eventDate, userUSN: d.userUSN || "AUTHORIZED" })
       await loadEvents()
-    } catch { showFlash("error","Network error") }
+    } catch { showFlash("error", "Network error") }
   }
 
   async function handleCreateTeam(eventId) {
@@ -852,9 +853,28 @@ export default function Registerevent() {
   return (
     <main className="registerevent-page">
       {ticketInfo && <TicketAnimation onClose={()=>setTicketInfo(null)} {...ticketInfo} />}
+      
       {flash.message && (
         <div className={`flo-toast ${flash.type==='success'?'flo-toast--success':'flo-toast--error'}`}>
           <span className="flo-toast-icon">{flash.type==='success'?'✓':'✕'}</span>{flash.message}
+        </div>
+      )}
+
+      {/* Queue Modal Insertion point */}
+      {activeQueueEvent && (
+        <div className="registerevent-modal-overlay" onClick={() => setActiveQueueEvent(null)}>
+          <div className="registerevent-modal" onClick={e => e.stopPropagation()}>
+            <div className="registerevent-modal-header" style={{ marginBottom: "16px" }}>
+              <h2 className="registerevent-modal-title">Queue Status</h2>
+              <button className="registerevent-modal-close" onClick={() => setActiveQueueEvent(null)}>×</button>
+            </div>
+            <QueueStatus 
+              eventId={activeQueueEvent.event.eid} 
+              initialData={activeQueueEvent.claimData}
+              onSeatAvailable={() => handleSeatAvailable(activeQueueEvent.event)} 
+              onExpired={handleQueueExpired} 
+            />
+          </div>
         </div>
       )}
 
