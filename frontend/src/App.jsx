@@ -93,6 +93,7 @@ function AppContent() {
         <Route path="/volunteer-ticket" element={<VolunteerTicket />} />
         <Route path="/qr" element={<QrCode />} />
         <Route path="/scanner" element={<Scanner />} />
+        <Route path="/about-us" element={<AboutUs />} />
         <Route path="/sub-events" element={<SubEventManager />} />
         <Route path="/organizer-request" element={<OrganizerRequest />} />
         <Route path="/admin" element={<AdminDashboard />} />
