@@ -10,7 +10,7 @@ import {
 import { apiFetch } from './api.js';
 
 import NavBar from './NavBar.jsx';
-
+import AuthCallback from './AuthCallback.jsx';
 import LandingPage from './LandingPage.jsx';
 import Login from './Login.jsx';
 import Events from './Events.jsx';
