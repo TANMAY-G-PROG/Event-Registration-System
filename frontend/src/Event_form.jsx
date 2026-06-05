@@ -646,4 +646,18 @@ const EventForm = () => {
                 disabled={isSubmitting || (myClubs.length === 0 && !isLoadingClubs)}
               >
                 {isSubmitting ? (
-                  <><div
+                  <><div className="org-req-btn-spinner"></div> Submitting...</>
+                ) : (
+                  <>Publish Event →</>
+                )}
+              </button>
+            </div>
+
+          </form>
+        </div>{/* /event-form-right */}
+      </div>{/* /event-form-wrap */}
+    </div>
+  );
+};
+
+export default EventForm;
