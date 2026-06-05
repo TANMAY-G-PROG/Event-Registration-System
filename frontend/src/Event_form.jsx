@@ -357,8 +357,8 @@ const EventForm = () => {
               <div className="section-body">
 
                 <div className="input-group">
+                  {/* FIX: Moved input before the text for a standard checkbox layout */}
                   <label className="toggle-wrapper">
-                    <span className="toggle-label">Is this a Team Event?</span>
                     <input
                       type="checkbox"
                       name="isTeamEvent"
@@ -366,6 +366,7 @@ const EventForm = () => {
                       onChange={handleChange}
                       className="toggle-checkbox"
                     />
+                    <span className="toggle-label">Is this a Team Event?</span>
                   </label>
                 </div>
 
@@ -647,7 +648,7 @@ const EventForm = () => {
                 disabled={isSubmitting || (myClubs.length === 0 && !isLoadingClubs)}
               >
                 {isSubmitting ? (
-                  <>⏳ Publishing Event…</>
+                  <><div className="org-req-btn-spinner"></div> Submitting...</>
                 ) : (
                   <>Publish Event →</>
                 )}
