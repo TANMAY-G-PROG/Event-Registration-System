@@ -13,6 +13,12 @@ const TABS = [
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  
+  // Auth state for the "vibe" password check
+  const [adminAuth, setAdminAuth] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [adminPassword, setAdminPassword] = useState('');
+
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState(null);
   const [requests, setRequests] = useState([]);
@@ -85,15 +91,59 @@ export default function AdminDashboard() {
     finally { setTabLoading('organizers', false); }
   }, []);
 
-  useEffect(() => {
+  const fetchAllData = useCallback(() => {
     fetchStats();
     fetchRequests('pending');
     fetchEvents();
     fetchUsers();
     fetchOrganizers();
-  }, []);
+  }, [fetchStats, fetchRequests, fetchEvents, fetchUsers, fetchOrganizers]);
+
+  // Initial Auth Check
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const res = await apiFetch('/api/admin/check');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.isAdmin) {
+            setAdminAuth(true);
+            fetchAllData();
+            return;
+          }
+        }
+        setAdminAuth(false);
+      } catch {
+        setAdminAuth(false);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+    checkAdminStatus();
+  }, [fetchAllData]);
 
   // ── Actions ────────────────────────────────────────────────────
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: adminPassword })
+      });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        localStorage.setItem('token', data.token); // Store admin token securely
+        setAdminAuth(true);
+        fetchAllData();
+      } else {
+        showToast('Incorrect admin password', true);
+      }
+    } catch (err) {
+      showToast('Network error while logging in', true);
+    }
+  };
+
   const handleApprove = async (id) => {
     setActionLoading(prev => ({ ...prev, [id]: 'approving' }));
     try {
@@ -173,7 +223,6 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = async () => {
-    await apiFetch('/api/signout', { method: 'POST' });
     localStorage.removeItem('token');
     navigate('/');
   };
@@ -181,6 +230,33 @@ export default function AdminDashboard() {
   const fmt = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
   // ── Render sections ────────────────────────────────────────────
+  
+  if (authLoading) return <div className="adm-page"><div className="adm-loading"><div className="adm-spinner"></div></div></div>;
+
+  // New Admin Password Entry Gate
+  if (!adminAuth) {
+    return (
+      <div className="adm-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F5EFE0' }}>
+        <div style={{ background: '#fff', padding: '40px', border: '3px solid #0D0D0D', boxShadow: '8px 8px 0 #0D0D0D', maxWidth: '400px', width: '100%', textAlign: 'center' }}>
+          <h2 style={{ fontFamily: '"Space Mono", monospace', textTransform: 'uppercase', marginBottom: '20px' }}>Admin Access</h2>
+          {toast.show && <div style={{ color: toast.isError ? 'red' : 'green', marginBottom: '15px', fontSize: '14px', fontWeight: 'bold' }}>{toast.message}</div>}
+          <form onSubmit={handlePasswordSubmit}>
+            <input 
+              type="password" 
+              placeholder="Enter admin password" 
+              value={adminPassword}
+              onChange={e => setAdminPassword(e.target.value)}
+              style={{ width: '100%', padding: '12px', border: '2px solid #000', marginBottom: '20px', fontFamily: '"Space Mono", monospace' }}
+            />
+            <button type="submit" style={{ width: '100%', padding: '12px', background: '#FFD600', color: '#000', border: '2px solid #000', fontWeight: 'bold', cursor: 'pointer', fontFamily: '"Space Mono", monospace' }}>
+              ENTER DASHBOARD
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   const renderOverview = () => (
     <div className="adm-overview">
       <div className="adm-section-title">Platform Overview</div>
